@@ -82,6 +82,45 @@ void Arguments::copy(const Arguments &other) {
     count = other.count;
 }
 
+void VMRuntime::dump(BinaryOutputStream &stream) {
+    stream.writeFormat("Count of NativeMemberFunctions: %d\n", (int)nativeMemberFunctions.size());
+
+    for (auto rp : resourcePools) {
+        rp->dump(stream);
+    }
+
+    stream.write("String Values: [\n");
+    for (auto &item : stringValues) {
+        if (item.nextFreeIdx != 0) {
+            continue;
+        }
+        stream.writeFormat("  ReferIdx: %d, ", item.referIdx);
+        stream.writeFormat("StringPoolIdx: %d, ", item.stringPoolIdx);
+        stream.writeFormat("Value: %.*s,\n", (int)item.value.len, item.value.data);
+    }
+    stream.write("  ]\n");
+
+    stream.write("Double Values: [\n");
+    for (auto &item : doubleValues) {
+        if (item.nextFreeIdx != 0) {
+            continue;
+        }
+        stream.writeFormat("  ReferIdx: %d, ", item.referIdx);
+        stream.writeFormat("Value: %llf,\n", (int)item.value);
+    }
+    stream.write("]\n");
+
+    stream.write("Object Values: [\n  ");
+    for (auto &item : objValues) {
+        if (item->nextFreeIdx != 0) {
+            continue;
+        }
+        stream.writeFormat("  ReferIdx: %d, ", item->referIdx);
+        stream.writeFormat("Type: %s,\n", jsDataTypeToString(item->type));
+    }
+    stream.write("]\n");
+
+}
 
 void VMContext::throwException(ParseError err, cstr_t format, ...) {
     if (error != PE_OK) {
@@ -136,6 +175,15 @@ void JSVirtualMachine::dump(cstr_t code, size_t len, BinaryOutputStream &stream)
     auto func = paser.parse(rootFunc->scope, false);
 
     func->dump(stream);
+}
+
+void JSVirtualMachine::dump(BinaryOutputStream &stream) {
+    _globalScope->scopeDsc->function->dump(stream);
+
+    BinaryOutputStream os;
+    _runtime.dump(os);
+    stream.write("== VMRuntime ==");
+    writeIndent(stream, os.startNew(), makeSizedString("  "));
 }
 
 void JSVirtualMachine::callMember(VMContext *ctx, const JsValue &obj, const char *memberName, Arguments &args) {

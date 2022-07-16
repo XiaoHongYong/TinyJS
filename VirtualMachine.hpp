@@ -62,6 +62,8 @@ class VMScope {
 public:
     VMScope(Scope *scopeDsc) : scopeDsc(scopeDsc) { vars.resize(scopeDsc->countLocalVars); }
 
+    void dump(BinaryOutputStream &stream);
+
     Scope                       *scopeDsc;
 
     // 作用域内的所有变量
@@ -93,6 +95,8 @@ public:
 class VMRuntime {
 public:
     VMRuntime(JSVirtualMachine *vm) : vm(vm) { globalScope = nullptr; firstFreeDoubleIdx = 0; firstFreeObjIdx = 0; }
+
+    void dump(BinaryOutputStream &stream);
 
     uint32_t pushObjValue(IJsObject *value) { uint32_t n = (uint32_t)objValues.size(); objValues.push_back(value); return n; }
     uint32_t pushDoubleValue(JsDouble &value) { uint32_t n = (uint32_t)doubleValues.size(); doubleValues.push_back(value); return n; }
@@ -176,6 +180,7 @@ public:
     void callMember(VMContext *vmctx, const JsValue &obj, const char *memberName, Arguments &args);
 
     void dump(cstr_t code, size_t len, BinaryOutputStream &stream);
+    void dump(BinaryOutputStream &stream);
 
     VMContext *mainVmContext() { return _mainVmCtx; }
     VMScope *globalScope() { return _globalScope; }

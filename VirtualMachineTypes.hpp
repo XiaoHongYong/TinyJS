@@ -142,6 +142,8 @@ enum JsDataType : uint8_t {
     JDT_NATIVE_MEMBER_FUNCTION,
 };
 
+const char *jsDataTypeToString(JsDataType type);
+
 struct JsValue {
     uint8_t                     reserved[2];
     JsDataType                  type;
@@ -188,22 +190,6 @@ struct JsString {
     uint8_t                     stringPoolIdx; // 为此字符串分配内存的 Pool 是哪个
     uint32_t                    nextFreeIdx; // 下一个空闲的索引位置
     SizedString                 value;
-};
-
-/**
- * 存储 Object 类型的值
- */
-class JsObject {
-public:
-    JsObject(JsDataType type) : type(type) {
-        referIdx = 0;
-        nextFreeIdx = 0;
-    }
-
-    JsDataType                  type;
-    int8_t                      referIdx;
-    uint32_t                    nextFreeIdx;
-
 };
 
 using VecJsValues = std::vector<JsValue>;

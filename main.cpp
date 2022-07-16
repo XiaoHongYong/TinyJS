@@ -30,11 +30,13 @@ int main(int argc, const char * argv[]) {
     VecVMStackScopes stackScopes;
     Arguments args;
 
+    BinaryOutputStream stream;
+
     stackScopes.push_back(vm.globalScope());
     vm.eval(code, strlen(code), vm.mainVmContext(), stackScopes, args);
+    vm.dump(stream);
 
-    BinaryOutputStream stream;
-    vm.dump(code, strlen(code), stream);
+    // vm.dump(code, strlen(code), stream);
 
     auto s = stream.startNew();
     printf("%s\n", code);

@@ -44,6 +44,8 @@ public:
     IdentifierDeclare(const SizedString &name, Scope *scope);
     IdentifierDeclare(const Token &token, Scope *scope) : IdentifierDeclare(tokenToSizedString(token), scope) { }
 
+    void dump(BinaryOutputStream &stream);
+
     SizedString             name;
 
     // 此变量所在的 scope
@@ -110,6 +112,8 @@ public:
     bool                    isFunctionScope; // 是否为函数的 scope
 
     Scope(Function *function, Scope *parent);
+
+    void dump(BinaryOutputStream &stream);
 
     IdentifierDeclare *addVarDeclaration(const Token &token, bool isConst = false);
     void addArgumentDeclaration(const Token &token, int index);
@@ -182,6 +186,8 @@ public:
 public:
     ResourcePool();
 
+    void dump(BinaryOutputStream &stream);
+
     StreamBuffer *allocStreamBuffer();
     void freeStreamBuffer(StreamBuffer *buf);
 
@@ -193,5 +199,7 @@ protected:
     StreamBuffer            *_streamBuf;
 
 };
+
+void writeIndent(BinaryOutputStream &stream, SizedString str, const SizedString &indent);
 
 #endif /* AST_hpp */

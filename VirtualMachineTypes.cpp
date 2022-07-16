@@ -24,6 +24,27 @@ static OpCodeDesc OP_CODE_DESCRIPTIONS[] = {
     OP_CODE_DEFINES
 };
 
+const char *jsDataTypeToString(JsDataType type) {
+    const char *NAMES[] = {
+        "JDT_NOT_INITIALIZED",
+        "JDT_UNDEFINED",
+        "JDT_NULL",
+        "JDT_INT32",
+        "JDT_BOOL",
+        "JDT_NUMBER",
+        "JDT_STRING",
+        "JDT_REGEX",
+        "JDT_ARRAY",
+        "JDT_OBJECT",
+        "JDT_FUNCTION",
+        "JDT_NATIVE_FUNCTION",
+        "JDT_NATIVE_MEMBER_FUNCTION",
+    };
+
+    assert(type <= CountOf(NAMES));
+    return NAMES[type];
+}
+
 const char *readVarStorageType(uint8_t *&bytecode) {
     return varStorageTypeToString((VarStorageType)*bytecode++);
 }
