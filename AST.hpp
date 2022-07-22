@@ -66,6 +66,10 @@ public:
     // 是否为函数名
     uint8_t                 isFuncName : 1;
 
+    // 标识符是否被除函数调用外的方式引用到了(比如赋值，参数等)
+    // 此标志的目的是为了避免一进入函数就必须得把所有的子函数都初始化一遍.
+    uint8_t                 isUsedNotAsFunctionCall : 1;
+
     // 变量存储的类型
     VarStorageType          varStorageType;
     int8_t                  scopeDepth; // 所在 Scope 的层级
@@ -86,6 +90,7 @@ public:
 
     // 是否被修改了
     bool                    isModified;
+    bool                    isUsedNotAsFunctionCall;
 
     IdentifierDeclare       *declare;
 
@@ -136,7 +141,7 @@ public:
     }
 
     void dump(BinaryOutputStream &stream);
-    
+
 public:
     ResourcePool            *resourcePool;
 
@@ -167,8 +172,12 @@ public:
 
     // 是否引用到了父函数的变量
     bool                    isReferredParentVars;
-    
+
     bool                    isGenerator;
+
+    bool                    isAsync;
+
+    bool                    isMemberFunction;
 
 };
 

@@ -31,7 +31,6 @@ f2(1);
 
 //// 变量名和参数相同
 function f3(a) {
-    //// 参数 a 被修改为函数
     console.log(a);
 
     var a = 2;
@@ -40,3 +39,22 @@ function f3(a) {
     console.log(arguments[0]);
 }
 f3(1);
+
+
+//// 重新对 arguments 赋值
+function f4(a) {
+    console.log(arguments[0]);
+    arguments = [3, 4];
+    console.log(arguments.length);
+    console.log(arguments[0], a);
+}
+f4(1);
+
+
+//// arguments 在 arrow function 中
+function f5(a) {
+    var f = x => arguments[1];
+
+    console.log(f(a + 1));
+}
+f5(1, 20);

@@ -10,6 +10,10 @@
 #include "AST.hpp"
 
 
+bool operator ==(const Token &token, const char *name) {
+    return token.buf[0] == name[0] && tokenToSizedString(token).equal(name);
+}
+
 bool isRegexAllowed(TokenType token) {
     if (token == TK_CLOSE_PAREN || token == TK_POSTFIX || token == TK_NAME ||
             token == TK_STRING || token == TK_CLOSE_BRACKET || token == TK_CLOSE_PAREN)
@@ -435,10 +439,12 @@ void JSLexer::_readToken() {
 }
 
 void JSLexer::_peekToken() {
-    auto tmp = _curToken;
-    _readToken();
-    _nextToken = _curToken;
-    _curToken = tmp;
+    if (_nextToken.type == TK_ERR) {
+        auto tmp = _curToken;
+        _readToken();
+        _nextToken = _curToken;
+        _curToken = tmp;
+    }
 }
 
 bool JSLexer::_isUncs2WhiteSpace(uint8_t code) {

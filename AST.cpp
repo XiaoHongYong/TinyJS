@@ -187,6 +187,10 @@ void Scope::addVarReference(IdentifierRef *id) {
             declare->isModified |= true;
         }
 
+        if (id->isUsedNotAsFunctionCall) {
+            declare->isUsedNotAsFunctionCall = true;
+        }
+        
         id->declare = declare;
     }
 }
@@ -222,6 +226,7 @@ IdentifierRef::IdentifierRef(const Token &token, Scope *scope) : scope(scope) {
     name = tokenToSizedString(token);
 
     isModified = false;
+    isUsedNotAsFunctionCall = false;
     declare = nullptr;
     next = nullptr;
 }
@@ -237,6 +242,8 @@ Function::Function(ResourcePool *resourcePool, Scope *parent, uint16_t index) : 
     isVarsReferredByChild = false;
     isReferredParentVars = false;
     isGenerator = false;
+    isAsync = false;
+    isMemberFunction = false;
 
     line = 0;
     col = 0;
@@ -271,6 +278,8 @@ void Function::dump(BinaryOutputStream &stream) {
     if (isArgumentsReferredByChild) stream.writeFormat("IsArgumentsReferredByChild: %d\n", isArgumentsReferredByChild);
     if (isReferredParentVars) stream.writeFormat("IsReferredParentVars: %d\n", isReferredParentVars);
     if (isGenerator) stream.writeFormat("IsGenerator: %d\n", isGenerator);
+    if (isAsync) stream.writeFormat("IsAsync: %d\n", isAsync);
+    if (isMemberFunction) stream.writeFormat("IsMemberFunction: %d\n", isMemberFunction);
 
     if (declare) {
         stream.writeFormat("ID Declare: %s, %d, %d\n", varStorageTypeToString(declare->varStorageType), declare->scopeDepth, declare->storageIndex);

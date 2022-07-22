@@ -8,8 +8,8 @@
 #include "WebAPI.hpp"
 
 
-void registerConsole(VMContext *ctx, VMScope *globalScope);
+void registerConsole(VMRuntimeCommon *rt);
 
-void registerWebAPIs(VMContext *ctx, VMScope *globalScope) {
-    registerConsole(ctx, globalScope);
+void registerWebAPIs(VMRuntimeCommon *rt) {
+    registerConsole(rt);
 }

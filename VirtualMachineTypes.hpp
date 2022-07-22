@@ -25,10 +25,10 @@ class IJsObject;
     OP_ITEM(OP_JUMP_IF_FALSE, "address:u32"), \
     OP_ITEM(OP_JUMP_IF_UNDEFINED, "address:u32"), \
     OP_ITEM(OP_JUMP_IF_NOT_UNDEFINED, "address:u32"), \
+    OP_ITEM(OP_PREPARE_RAW_STRING_TEMPLATE_CALL, "raw_string_idx:u16, count_exprs:u16"), \
     OP_ITEM(OP_FUNCTION_CALL, "not_used"), \
     OP_ITEM(OP_MEMBER_FUNCTION_CALL, "count_args:u16"), \
     OP_ITEM(OP_DIRECT_FUNCTION_CALL, "scope_depth:u8, function_idx:u16, count_args:u16"), \
-    OP_ITEM(OP_PREPARE_RAW_STRING_TEMPLATE_CALL, "raw_string_idx:u16, count_exprs:u16"), \
     \
     OP_ITEM(OP_ENTER_SCOPE, "scope_idx:u16"), \
     OP_ITEM(OP_LEAVE_SCOPE, ""), \
@@ -37,10 +37,10 @@ class IJsObject;
     OP_ITEM(OP_PUSH_STACK_TOP, ""), \
     \
     OP_ITEM(OP_PUSH_IDENTIFIER, "not_used"), \
+    OP_ITEM(OP_PUSH_ID_LOCAL_SCOPE, "var_idx:u16"), \
     OP_ITEM(OP_PUSH_ID_LOCAL_ARGUMENT, "argument_idx:u16"), \
     OP_ITEM(OP_PUSH_ID_PARENT_ARGUMENT, "scope_depth:u8, argument_idx:u16"), \
     OP_ITEM(OP_PUSH_ID_GLOBAL, "var_idx:u16"), \
-    OP_ITEM(OP_PUSH_ID_LOCAL_SCOPE, "var_idx:u16"), \
     OP_ITEM(OP_PUSH_ID_PARENT_SCOPE, "scope_depth:u8, var_idx:u16"), \
     OP_ITEM(OP_PUSH_ID_GLOBAL_BY_NAME, ""), \
     OP_ITEM(OP_PUSH_ID_LOCAL_FUNCTION, "function_idx:u16"), \
@@ -61,8 +61,8 @@ class IJsObject;
     OP_ITEM(OP_PUSH_THIS_MEMBER_DOT, "property_string_idx:u32"), \
     OP_ITEM(OP_PUSH_THIS_MEMBER_DOT_OPTIONAL, "property_string_idx:u32"), \
     \
-    OP_ITEM(OP_ASSIGN_LOCAL_ARGUMENT, "argument_idx:u16"), \
     OP_ITEM(OP_ASSIGN_IDENTIFIER, "identifier_storage_type:varStorageType, scope_depth:u8, var_index:u16"), \
+    OP_ITEM(OP_ASSIGN_LOCAL_ARGUMENT, "argument_idx:u16"), \
     OP_ITEM(OP_ASSIGN_MEMBER_INDEX, ""), \
     OP_ITEM(OP_ASSIGN_MEMBER_DOT, "property_string_idx:u32"), \
     OP_ITEM(OP_INCREMENT_ID_PRE, "identifier_storage_type:varStorageType, scope_depth:u8, var_index:u16"), \
@@ -115,6 +115,13 @@ class IJsObject;
     \
     OP_ITEM(OP_NEW, ""), \
     OP_ITEM(OP_NEW_TARGET, ""), \
+    \
+    OP_ITEM(OP_OBJ_CREATE, ""), \
+    OP_ITEM(OP_OBJ_SET_PROPERTY, "property_string_idx:u32"), \
+    OP_ITEM(OP_OBJ_SET_COMPUTED_PROPERTY, ""), \
+    OP_ITEM(OP_OBJ_SPREAD_PROPERTY, ""), \
+    OP_ITEM(OP_OBJ_SET_GETTER, "property_string_idx:u32"), \
+    OP_ITEM(OP_OBJ_SET_SETTER, "property_string_idx:u32"), \
 
 
 #ifdef OP_ITEM
@@ -130,13 +137,14 @@ enum JsDataType : uint8_t {
     JDT_NOT_INITIALIZED = 0,
     JDT_UNDEFINED,
     JDT_NULL,
-    JDT_INT32,
     JDT_BOOL,
+    JDT_INT32,
     JDT_NUMBER,
     JDT_STRING,
+    JDT_OBJECT,
     JDT_REGEX,
     JDT_ARRAY,
-    JDT_OBJECT,
+    JDT_LIB_OBJECT,
     JDT_FUNCTION,
     JDT_NATIVE_FUNCTION,
     JDT_NATIVE_MEMBER_FUNCTION,
@@ -177,6 +185,9 @@ inline JsValue makeJsValueOfStringInResourcePool(uint16_t poolIndex, uint16_t in
  * 存储 double 类型的值
  */
 struct JsDouble {
+    JsDouble() { referIdx = 0; nextFreeIdx = 0; value = 0; }
+    JsDouble(double v) { referIdx = 0; nextFreeIdx = 0; value = v; }
+
     int8_t                      referIdx; // 用于资源回收时所用
     uint32_t                    nextFreeIdx; // 下一个空闲的索引位置
     double                      value;
@@ -186,11 +197,18 @@ struct JsDouble {
  * 存储 string 类型的值
  */
 struct JsString {
+    JsString() { referIdx = 0; nextFreeIdx = 0; stringPoolIdx = 0; }
+    JsString(uint8_t poolIdx, SizedString v) { referIdx = 0; nextFreeIdx = 0; stringPoolIdx = poolIdx; value = v; }
+
     int8_t                      referIdx; // 用于资源回收时所用
     uint8_t                     stringPoolIdx; // 为此字符串分配内存的 Pool 是哪个
     uint32_t                    nextFreeIdx; // 下一个空闲的索引位置
     SizedString                 value;
 };
+
+const JsValue JsNotInitializedValue = JsValue();
+const JsValue JsNullValue = JsValue(JDT_NULL, 0);
+const JsValue JsUndefinedValue = JsValue(JDT_UNDEFINED, 0);
 
 using VecJsValues = std::vector<JsValue>;
 using VecJsDoubles = std::vector<JsDouble>;

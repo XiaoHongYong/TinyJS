@@ -6,7 +6,11 @@
 //
 
 #include "Parser.hpp"
+#include "VirtualMachine.hpp"
 
+
+static SizedString SS_THIS = makeSizedString("this");
+static SizedString SS_ARGUMENTS = makeSizedString("arguments");
 
 VarInitTree::~VarInitTree() {
     for (auto item : children) {
@@ -34,7 +38,16 @@ void VarInitTree::generateInitCode(Function *function, bool initExpr) {
     }
 }
 
-JSParser::JSParser(ResourcePool *resPool, const char *buf, size_t len) : JSLexer(resPool, buf, len) {
+JSParser::JSParser(VMRuntimeCommon *rtc, ResourcePool *resPool, const char *buf, size_t len) : JSLexer(resPool, buf, len) {
+    _runtimeCommon = rtc;
+    if (rtc) {
+        _nextStringIdx = (uint32_t)rtc->stringValues.size();
+        _nextDoubleIdx = (uint32_t)rtc->doubleValues.size();
+    } else {
+        _nextStringIdx = 0;
+        _nextDoubleIdx = 0;
+    }
+
     _headIdRefs = nullptr;
     _curFunction = nullptr;
     _curFuncScope = nullptr;
@@ -166,7 +179,7 @@ void JSParser::_expectStatment() {
             break;
 
         case TK_FUNCTION: {
-            _expectFunctionDeclaration(FT_DECLARATION);
+            _expectFunction(instructions, FT_DECLARATION);
             break;
         }
 
@@ -472,6 +485,11 @@ void JSParser::_expectSemiColon() {
 }
 
 void JSParser::_assignIdentifier(Function *function, InstructionOutputStream &instructions, const Token &name) {
+    if (tokenToSizedString(name).equal(SS_THIS)) {
+        _parseError(PE_SYNTAX_ERROR, "Unexpected token 'this'");
+        return;
+    }
+    
     auto identifier = _newIdentifierRef(name, function);
     identifier->isModified = true;
     instructions.writeOpCode(OP_ASSIGN_IDENTIFIER);
@@ -483,33 +501,47 @@ void JSParser::_assignParameter(Function *function, InstructionOutputStream &ins
     instructions.writeUint16((uint16_t)index);
 }
 
-Function *JSParser::_expectFunctionDeclaration(FunctionType type) {
+Function *JSParser::_expectFunction(InstructionOutputStream &instructions, FunctionType type, bool ignoreFirstToken) {
     auto parentScope = _curScope;
     auto child = _enterFunction(_curToken);
 
-    _readToken();
+    if (ignoreFirstToken) {
+        _readToken();
+    }
 
-    if (_curToken.type == TK_MUL) {
+    if (type != FT_GETTER && type != FT_SETTER && _curToken.type == TK_MUL) {
         _readToken();
         child->isGenerator = true;
     }
 
-    if (_curToken.type == TK_NAME) {
-        child->name = tokenToSizedString(_curToken);
-
-        if (type == FT_DECLARATION) {
-            parentScope->addFunctionDeclaration(_curToken, child);
-        } else if (type == FT_EXPRESSION) {
-            // TODO: 函数表达式的名字在函数的作用域内
-            // child->addVarDeclaration(_curToken);
+    if (type == FT_DECLARATION || type == FT_EXPRESSION) {
+        if (_curToken.type == TK_NAME) {
+            child->name = tokenToSizedString(_curToken);
+            if (type == FT_DECLARATION) {
+                parentScope->addFunctionDeclaration(_curToken, child);
+            } else if (type == FT_EXPRESSION) {
+                // TODO: 函数表达式的名字在函数的作用域内
+                // child->addVarDeclaration(_curToken);
+            }
+            _readToken();
+        } else if (type == FT_DECLARATION) {
+            _expectToken(TK_NAME);
+            return child;
         }
-        _readToken();
-    } else if (type == FT_DECLARATION) {
-        _expectToken(TK_NAME);
-        return child;
     }
 
-    _expectFormalParameters();
+    if (type == FT_MEMBER_FUNCTION) {
+        child->isMemberFunction = true;
+    }
+
+    int count = _expectFormalParameters();
+    if (type == FT_GETTER && count > 0) {
+        _parseError(PE_SYNTAX_ERROR, "Getter must not have any formal parameters.");
+        return child;
+    } else if (type == FT_GETTER && count != 1) {
+        _parseError(PE_SYNTAX_ERROR, "Setter must have exactly one formal parameter.");
+        return child;
+    }
 
     // function body
     _expectToken(TK_OPEN_BRACE);
@@ -525,10 +557,16 @@ Function *JSParser::_expectFunctionDeclaration(FunctionType type) {
 
     _leaveFunction();
 
+    if (type != FT_DECLARATION) {
+        instructions.writeOpCode(OP_PUSH_FUNCTION_EXPR);
+        instructions.writeUint8(_curFunction->scope->depth);
+        instructions.writeUint16(child->index);
+    }
+
     return child;
 }
 
-void JSParser::_expectFormalParameters() {
+int JSParser::_expectFormalParameters() {
     _expectToken(TK_OPEN_PAREN);
 
     VarInitTree varInitTree;
@@ -558,6 +596,7 @@ void JSParser::_expectFormalParameters() {
     }
 
     _expectToken(TK_CLOSE_PAREN);
+    return index;
 }
 
 void JSParser::_expectParameterDeclaration(uint16_t index, VarInitTree *parentVarInitTree) {
@@ -756,7 +795,7 @@ void JSParser::_expectExpression(InstructionOutputStream &instructions, Preceden
             break;
         }
         case TK_OPEN_BRACE:
-            // objectLiteralExpression(stream);
+            _expectObjectLiteralExpression(instructions);
             break;
         case TK_OPEN_BRACKET:
             // arrayLiteralExpression(stream);
@@ -769,7 +808,7 @@ void JSParser::_expectExpression(InstructionOutputStream &instructions, Preceden
             }
             break;
         case TK_FUNCTION: {
-            _expectFunctionDeclaration(FT_EXPRESSION);
+            _expectFunction(instructions, FT_EXPRESSION);
             break;
         }
         case TK_CLASS:
@@ -818,7 +857,7 @@ void JSParser::_expectExpression(InstructionOutputStream &instructions, Preceden
             // templateLiteral(stream);
             break;
         default:
-            _parseError(PE_UNEXPECTED_TOKEN, "Unexpected token.");
+            _parseError(PE_SYNTAX_ERROR, "Unexpected token: %.*s", _curToken.len, _curToken.buf);
             break;
     }
 
@@ -872,6 +911,7 @@ void JSParser::_expectExpression(InstructionOutputStream &instructions, Preceden
 
                 if (prevOp == OP_PUSH_IDENTIFIER) {
                     // 函数调用
+                    identifier->isUsedNotAsFunctionCall = false;
                     auto push = instructions.writeFunctionCallPush(identifier);
                     int countArgs = _expectArgumentsList();
                     instructions.writeFunctionCall(push);
@@ -1241,9 +1281,123 @@ void JSParser::_expectParenExpression(InstructionOutputStream &instructions) {
 
 }
 
+void JSParser::_expectObjectLiteralExpression(InstructionOutputStream &instructions) {
+    _expectToken(TK_OPEN_BRACE);
+    bool first = true;
+
+    instructions.writeOpCode(OP_OBJ_CREATE);
+    while (_error == PE_OK && _curToken.type != TK_CLOSE_BRACE) {
+        if (first) {
+            first = false;
+        } else {
+            _expectToken(TK_COMMA);
+        }
+        if (_curToken.type == TK_CLOSE_BRACE) {
+            break;
+        }
+
+        auto type = _curToken.type;
+        auto name = _curToken;
+        _peekToken();
+
+        if (_curToken == "async" && _nextToken.type == TK_NAME) {
+            // async function
+            _readToken();
+            auto nameIdx = _getStringIndex(_curToken);
+            auto child = _expectFunction(instructions, FT_MEMBER_FUNCTION);
+            child->isAsync = true;
+            instructions.writeOpCode(OP_OBJ_SET_PROPERTY);
+            instructions.writeUint32(nameIdx);
+        } else if (type == TK_NAME && (_nextToken.type != TK_COLON && _nextToken.type != TK_OPEN_PAREN) && (name == "get" || name == "set")) {
+            // getter, setter
+            if (!canTokenBeMemberName(_nextToken.type)) {
+                _parseError(PE_SYNTAX_ERROR, "Unexpected token: %.*s", _curToken.len, _curToken.buf);
+                return;
+            }
+            auto nameIdx = _getStringIndex(_nextToken);
+            _readToken();
+            if (name == "get") {
+                _expectFunction(instructions, FT_GETTER);
+                instructions.writeOpCode(OP_OBJ_SET_GETTER);
+            } else {
+                _expectFunction(instructions, FT_SETTER);
+                instructions.writeOpCode(OP_OBJ_SET_SETTER);
+            }
+            instructions.writeUint32(nameIdx);
+        } else if (type == TK_NAME && (_nextToken.type == TK_COMMA || _nextToken.type == TK_CLOSE_BRACE)) {
+            // name,
+            auto id = _newIdentifierRef(_curToken, _curFunction);
+            instructions.writePushIdentifier(id);
+            instructions.writeOpCode(OP_OBJ_SET_PROPERTY);
+            instructions.writeUint32(_getStringIndex(id->name));
+        } else if (type == TK_ELLIPSIS) {
+            // ...expr
+            _readToken();
+            _expectExpression(instructions, PRED_NONE);
+            instructions.writeOpCode(OP_OBJ_SPREAD_PROPERTY);
+        } else if (type == TK_MUL) {
+            // * generator function
+            Function *child = nullptr;
+            _readToken();
+            if (_curToken.type == TK_OPEN_BRACKET) {
+                // [ expr ]
+                _readToken();
+                _expectExpression(instructions, PRED_NONE, true);
+                _expectToken(TK_CLOSE_BRACKET);
+                child = _expectFunction(instructions, FT_MEMBER_FUNCTION);
+                instructions.writeOpCode(OP_OBJ_SET_COMPUTED_PROPERTY);
+            } else {
+                auto nameIdx = _getStringIndex(_curToken);
+                child = _expectFunction(instructions, FT_MEMBER_FUNCTION);
+                instructions.writeOpCode(OP_OBJ_SET_PROPERTY);
+                instructions.writeUint32(nameIdx);
+            }
+            child->isGenerator = true;
+        } else {
+            int nameIdx = -1;
+            if (type == TK_OPEN_BRACKET) {
+                // [ expr ]
+                _readToken();
+                _expectExpression(instructions, PRED_NONE, true);
+                _expectToken(TK_CLOSE_BRACKET);
+            } else {
+                if (!canTokenBeMemberName(type)) {
+                    _parseError(PE_SYNTAX_ERROR, "Unexpected token: %.*s", _curToken.len, _curToken.buf);
+                    return;
+                }
+                nameIdx = _getStringIndex(_curToken);
+                _readToken();
+            }
+
+            if (_curToken.type == TK_OPEN_PAREN) {
+                // 函数
+                _expectFunction(instructions, FT_MEMBER_FUNCTION, false);
+            } else {
+                _expectToken(TK_COLON);
+                _expectExpression(instructions, PRED_NONE);
+            }
+
+            if (nameIdx == -1) {
+                instructions.writeOpCode(OP_OBJ_SET_COMPUTED_PROPERTY);
+            } else {
+                instructions.writeOpCode(OP_OBJ_SET_PROPERTY);
+                instructions.writeUint32(nameIdx);
+            }
+        }
+    }
+
+    _expectToken(TK_CLOSE_BRACE);
+}
+
 IdentifierRef *JSParser::_newIdentifierRef(const Token &token, Function *function) {
     auto ret = PoolNew(_resPool->pool, IdentifierRef)(token, _curScope);
+    if (tokenToSizedString(token).equal(SS_THIS)) {
+        // This 不需要添加到
+        return ret;
+    }
+
     ret->next = _headIdRefs;
+    ret->isUsedNotAsFunctionCall = true;
     _headIdRefs = ret;
     return ret;
 }
@@ -1366,8 +1520,8 @@ void JSParser::_allocateIdentifierStorage(Scope *scope, int registerIndex) {
         auto declare = item.second;
 
         if (declare->isFuncName) {
-            if (declare->isModified && declare->varStorageType != VST_FUNCTION_VAR) {
-                // 被修改的函数标识符，需要分配变量地址
+            if (declare->isUsedNotAsFunctionCall && declare->varStorageType != VST_FUNCTION_VAR) {
+                // 函数被引用到了（如果仅仅是函数调用，isUsedNotAsFunctionCall 不会为 true），需要分配变量地址
                 declare->varStorageType = VST_FUNCTION_VAR;
                 declare->storageIndex = functionScope->countLocalVars++;
             }
@@ -1417,10 +1571,17 @@ void JSParser::_allocateIdentifierStorage(Scope *scope, int registerIndex) {
 }
 
 int JSParser::_getDoubleIndex(double value) {
+    if (_runtimeCommon) {
+        auto idx = _runtimeCommon->findDoubleValue(value);
+        if (idx != -1) {
+            return idx;
+        }
+    }
+
     int idx;
     auto it = _doubles.find(value);
     if (it == _doubles.end()) {
-        idx = (int)_doubles.size();
+        idx = _nextDoubleIdx++;
         _doubles[value] = idx;
 
         _resPool->doubles.push_back(value);
@@ -1432,10 +1593,17 @@ int JSParser::_getDoubleIndex(double value) {
 }
 
 int JSParser::_getStringIndex(const SizedString &str) {
+    if (_runtimeCommon) {
+        auto idx = _runtimeCommon->findStringValue(str);
+        if (idx != -1) {
+            return idx;
+        }
+    }
+
     int idx;
     auto it = _strings.find(str);
     if (it == _strings.end()) {
-        idx = (int)_strings.size();
+        idx = _nextStringIdx++;
         _strings[str] = idx;
 
         _resPool->strings.push_back(str);

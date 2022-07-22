@@ -141,6 +141,8 @@ struct Token {
     double                  number;
 };
 
+bool operator ==(const Token &token, const char *name);
+
 inline SizedString tokenToSizedString(const Token &token) {
     return SizedString(token.buf, token.len);
 }
@@ -153,10 +155,18 @@ inline bool canKeywordBeVarName(TokenType type) {
     return type >= TK_EOF && type < _TK_END_VAR_KEYWORD;
 }
 
+inline bool canTokenBeMemberName(TokenType type) {
+    return (type >= TK_EOF && type < _TK_END_KEYWORD) || type == TK_NAME
+        || type == TK_NUMBER || type == TK_STRING;
+}
+
 class JSLexer {
 public:
     JSLexer(ResourcePool *resPool, const char *buf, size_t len);
 
+    ParseError error() const { return _error; }
+    const string &errorMessage() const { return _errorMessage; }
+    
 protected:
     void _readToken();
     void _peekToken();

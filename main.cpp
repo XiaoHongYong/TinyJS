@@ -8,9 +8,37 @@
 #include "Parser.hpp"
 #include "VirtualMachine.hpp"
 
+void test() {
+    char buf[256];
+    double v = 1.0 / 0.0;
+    // printf("%d, %d\n", sizeof(double), sizeof (long double));
+    floatToString(v, buf);
+    printf("%lf, %s, %s\n", v, buf, std::to_string(v).c_str());
+
+    v = -1.0 / 0.0;
+    floatToString(v, buf);
+    printf("%lf, %s, %s\n", v, buf, std::to_string(v).c_str());
+
+    v = 1.0 / 7;
+    floatToString(v, buf);
+    printf("%.30Lf, %s, %s\n", ((long double)1.0)/7, buf, std::to_string((long double)1.0/7).c_str());
+
+    v = 1.110;
+    floatToString(v, buf);
+    printf("%lf, %s, %s\n", v, buf, std::to_string(v).c_str());
+
+    v = 110;
+    floatToString(v, buf);
+    printf("%lf, %s, %s\n", v, buf, std::to_string(v).c_str());
+}
+
 
 int main(int argc, const char * argv[]) {
-    cstr_t code = "function f() { var a = .1; console.log(a, 'hello'); console.trace(); } f();";
+    // test();
+
+    // cstr_t code = "function f() { var a = .1; console.log(a, 'hello'); console.trace(); } f();";
+    // cstr_t code = "var a = { b : 1 }; a.b = 2; console.log(a.b, 'hello');";
+    cstr_t code = "function f() { this.c = 1; } var a = { b : 1 }; a.d = 2; f.prototype = a; var b = new f(); console.log(b.b, b.c, b.d, 'hello');";
 
 //    JSParser paser(code, strlen(code));
 //
@@ -32,15 +60,17 @@ int main(int argc, const char * argv[]) {
 
     BinaryOutputStream stream;
 
-    stackScopes.push_back(vm.globalScope());
-    vm.eval(code, strlen(code), vm.mainVmContext(), stackScopes, args);
-    vm.dump(stream);
+    auto &runtime = vm.defaultRuntime();
+    stackScopes.push_back(runtime.globalScope);
+    vm.eval(code, strlen(code), runtime.mainVmCtx, stackScopes, args);
+    if (runtime.mainVmCtx->error) {
+        printf("Got exception: %s\n", runtime.mainVmCtx->errorMessage.c_str());
+    }
+//    vm.dump(stream);
 
-    // vm.dump(code, strlen(code), stream);
-
-    auto s = stream.startNew();
-    printf("%s\n", code);
-    printf("%.*s\n", (int)s.len, s.data);
+//    auto s = stream.startNew();
+//    printf("%s\n", code);
+//    printf("%.*s\n", (int)s.len, s.data);
 
     return 0;
 }

@@ -13,7 +13,18 @@ void consoleLog(VMContext *ctx, const JsValue &thiz, const Arguments &args) {
     auto runtime = ctx->runtime;
 
     for (uint32_t i = 0; i < args.count; i++) {
-        auto &v = args.data[i];
+        auto v = args.data[i];
+        if (v.type >= JDT_OBJECT) {
+            Arguments noArgs;
+            runtime->vm->callMember(ctx, v, "toString", noArgs);
+            if (ctx->error == PE_OK) {
+                v = ctx->stack.back();
+                ctx->stack.pop_back();
+            } else {
+                return;
+            }
+        }
+
         switch (v.type) {
             case JDT_NOT_INITIALIZED:
                 ctx->throwException(PE_REFERECNE_ERROR, "Cannot access variable before initialization");
@@ -38,27 +49,8 @@ void consoleLog(VMContext *ctx, const JsValue &thiz, const Arguments &args) {
                 printf("%.*s ", (int)s.len, s.data);
                 break;
             }
-            case JDT_REGEX:
-            case JDT_ARRAY:
-            case JDT_OBJECT:
-            case JDT_FUNCTION:
-            case JDT_NATIVE_FUNCTION:
-            {
-                Arguments noArgs;
-                runtime->vm->callMember(ctx, v, "toString", noArgs);
-                if (ctx->error == PE_OK) {
-                    JsValue r = ctx->stack.back();
-                    ctx->stack.pop_back();
-                    assert(r.type == JDT_STRING);
-                    if (r.type == JDT_STRING) {
-                        auto s = runtime->getString(v);
-                        printf("%.*s ", (int)s.len, s.data);
-                    }
-                }
-                break;
-            }
             default:
-                assert(0);
+                printf("[Object] ");
                 break;
         }
     }
@@ -78,12 +70,12 @@ void consoleTrace(VMContext *ctx, const JsValue &thiz, const Arguments &args) {
     }
 }
 
-static JsLibFunction consoleFunctions[] = {
+static JsLibProperty consoleFunctions[] = {
     { "log", consoleLog },
     { "trace", consoleTrace },
 };
 
-void registerConsole(VMContext *ctx, VMScope *globalScope) {
-    registerGlobalObject(ctx, globalScope, "console",
-        new JsLibObject(ctx, consoleFunctions, CountOf(consoleFunctions)));
+void registerConsole(VMRuntimeCommon *rt) {
+    rt->setGlobalObject("console",
+        new JsLibObject(rt, consoleFunctions, CountOf(consoleFunctions)));
 }

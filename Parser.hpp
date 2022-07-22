@@ -15,6 +15,8 @@
 #include "InstructionOutputStream.hpp"
 
 
+class VMRuntimeCommon;
+
 enum Precedence {
     PRED_NONE,
     PRED_ASSIGNMENT,
@@ -64,7 +66,7 @@ protected:
  */
 class JSParser : public JSLexer {
 public:
-    JSParser(ResourcePool *resPool, const char *buf, size_t len);
+    JSParser(VMRuntimeCommon *rtc, ResourcePool *resPool, const char *buf, size_t len);
 
     Function *parse(Scope *parent, bool isExpr);
 
@@ -73,6 +75,8 @@ protected:
         FT_DECLARATION,
         FT_EXPRESSION,
         FT_MEMBER_FUNCTION,
+        FT_GETTER,
+        FT_SETTER,
     };
 
     //
@@ -95,14 +99,15 @@ protected:
     void _assignParameter(Function *function, InstructionOutputStream &instructions, int index);
     void _assignIdentifier(Function *function, InstructionOutputStream &instructions, const Token &name);
 
-    Function *_expectFunctionDeclaration(FunctionType type);
-    void _expectFormalParameters();
+    Function *_expectFunction(InstructionOutputStream &instructions, FunctionType type, bool ignoreFirstToken = true);
+    int _expectFormalParameters();
     void _expectParameterDeclaration(uint16_t index, VarInitTree *parentVarInitTree);
     void _expectExpression(InstructionOutputStream &instructions, Precedence pred = PRED_NONE, bool enableComma = false, bool enableIn = true);
     void _expectParenCondition();
     int _expectRawTemplateCall(InstructionOutputStream &instructions, VecInts &indices);
     void _expectArrowFunction(InstructionOutputStream &instructions);
     void _expectParenExpression(InstructionOutputStream &instructions);
+    void _expectObjectLiteralExpression(InstructionOutputStream &instructions);
 
     IdentifierRef *_newIdentifierRef(const Token &token, Function *function);
 
@@ -135,6 +140,9 @@ protected:
 protected:
     using MapStringToIdx = std::unordered_map<SizedString, int, SizedStringHash, SizedStrCmpEqual>;
     using MapDoubleToIdx = std::unordered_map<double, int>;
+
+    VMRuntimeCommon             *_runtimeCommon;
+    uint32_t                    _nextStringIdx, _nextDoubleIdx;
 
     IdentifierRef               *_headIdRefs;
     MapStringToIdx              _strings;
