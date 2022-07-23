@@ -9,9 +9,6 @@
 #include "VirtualMachine.hpp"
 
 
-static SizedString SS_THIS = makeSizedString("this");
-static SizedString SS_ARGUMENTS = makeSizedString("arguments");
-
 VarInitTree::~VarInitTree() {
     for (auto item : children) {
         delete item;
@@ -834,7 +831,7 @@ void JSParser::_expectExpression(InstructionOutputStream &instructions, Preceden
             }
 
             instructions.writeOpCode(OP_NEW);
-            instructions.writeUint32(countArgs);
+            instructions.writeUint16((uint16_t)countArgs);
             break;
         }
         case TK_UNARY_PREFIX: {
@@ -906,6 +903,7 @@ void JSParser::_expectExpression(InstructionOutputStream &instructions, Preceden
             case TK_OPEN_PAREN: {
                 // Arguments expression
                 if (pred >= PRED_POSTFIX) {
+                    writePrevInstruction(prevOp, prevStringIdx, identifier, instructions);
                     return;
                 }
 
@@ -930,6 +928,7 @@ void JSParser::_expectExpression(InstructionOutputStream &instructions, Preceden
             }
             case TK_TEMPLATE_NO_SUBSTITUTION: {
                 if (pred >= PRED_POSTFIX) {
+                    writePrevInstruction(prevOp, prevStringIdx, identifier, instructions);
                     return;
                 }
 
@@ -949,6 +948,7 @@ void JSParser::_expectExpression(InstructionOutputStream &instructions, Preceden
             }
             case TK_TEMPLATE_HEAD: {
                 if (pred >= PRED_POSTFIX) {
+                    writePrevInstruction(prevOp, prevStringIdx, identifier, instructions);
                     return;
                 }
 
@@ -1391,11 +1391,6 @@ void JSParser::_expectObjectLiteralExpression(InstructionOutputStream &instructi
 
 IdentifierRef *JSParser::_newIdentifierRef(const Token &token, Function *function) {
     auto ret = PoolNew(_resPool->pool, IdentifierRef)(token, _curScope);
-    if (tokenToSizedString(token).equal(SS_THIS)) {
-        // This 不需要添加到
-        return ret;
-    }
-
     ret->next = _headIdRefs;
     ret->isUsedNotAsFunctionCall = true;
     _headIdRefs = ret;
@@ -1518,6 +1513,16 @@ void JSParser::_allocateIdentifierStorage(Scope *scope, int registerIndex) {
 
     for (auto &item : scope->varDeclares) {
         auto declare = item.second;
+        if (declare->varStorageType != VST_NOT_SET) {
+            if (declare->isReferred) {
+                if (declare->name.equal(SS_THIS)) {
+                    declare->scope->isThisUsed = true;
+                } else if (declare->name.equal(SS_ARGUMENTS)) {
+                    declare->scope->isArgumentsUsed = true;
+                }
+            }
+            continue;
+        }
 
         if (declare->isFuncName) {
             if (declare->isUsedNotAsFunctionCall && declare->varStorageType != VST_FUNCTION_VAR) {
@@ -1525,8 +1530,6 @@ void JSParser::_allocateIdentifierStorage(Scope *scope, int registerIndex) {
                 declare->varStorageType = VST_FUNCTION_VAR;
                 declare->storageIndex = functionScope->countLocalVars++;
             }
-        } else if (declare->varStorageType == VST_ARGUMENT) {
-            // 存储在参数数组中
         } else {
             // 变量
             if (true || declare->isReferredByChild || scope->hasEval || scope->hasWith) {
@@ -1619,12 +1622,23 @@ int JSParser::_getRawStringsIndex(const VecInts &indices) {
     return (int)_v2Ints.size() - 1;
 }
 
-Function *JSParser::_enterFunction(const Token &tokenStart) {
+Function *JSParser::_enterFunction(const Token &tokenStart, bool isArrowFunction) {
     auto child = PoolNew(_resPool->pool, Function)(_resPool, _curScope, (int16_t)_curFunction->functions.size());
 
     child->line = tokenStart.line;
     child->col = tokenStart.col;
     child->srcCode.data = tokenStart.buf;
+
+    if (!isArrowFunction) {
+        // Arrow Function 的 this, arguments 使用的是父函数的.
+        // 添加 this, arguments 的声明
+        Token name = tokenStart;
+        name.buf = (uint8_t *)SS_THIS.data; name.len = SS_THIS.len;
+        child->scope->addVarDeclaration(name, false, true);
+
+        name.buf = (uint8_t *)SS_ARGUMENTS.data; name.len = SS_ARGUMENTS.len;
+        child->scope->addVarDeclaration(name, false, true);
+    }
 
     _curScope->functions.push_back(child);
     _curFunction->functions.push_back(child);
@@ -1641,7 +1655,7 @@ Function *JSParser::_enterFunction(const Token &tokenStart) {
 }
 
 void JSParser::_leaveFunction() {
-    _curFunction->srcCode.len = size_t(_curToken.buf - _curFunction->srcCode.data);
+    _curFunction->srcCode.len = uint32_t(_curToken.buf - _curFunction->srcCode.data);
 
     _curFunction->instructions.finish();
 

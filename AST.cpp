@@ -47,6 +47,9 @@ Scope::Scope(Function *function, Scope *parent) : function(function), parent(par
     hasWith = false;
     hasEval = false;
     isFunctionScope = false;
+    isThisUsed = false;
+    isArgumentsUsed = false;
+
     countLocalVars = 0;
 
     index = (uint16_t)function->scopes.size();
@@ -102,10 +105,15 @@ void Scope::dump(BinaryOutputStream &stream) {
     }
 }
 
-IdentifierDeclare *Scope::addVarDeclaration(const Token &token, bool isConst) {
+IdentifierDeclare *Scope::addVarDeclaration(const Token &token, bool isConst, bool isScopeVar) {
     auto &pool = varDeclares.get_allocator().getPool();
     auto node = PoolNew(pool, IdentifierDeclare)(token, this);
     node->isConst = isConst;
+
+    if (isScopeVar) {
+        node->varStorageType = VST_SCOPE_VAR;
+        node->storageIndex = countLocalVars++;
+    }
 
     auto it = varDeclares.find(node->name);
     if (it == varDeclares.end()) {
@@ -134,6 +142,8 @@ void Scope::addArgumentDeclaration(const Token &token, int index) {
  * 添加隐含的未声明的全局变量
  */
 void Scope::addImplicitVarDeclaration(IdentifierRef *id) {
+    assert(parent == nullptr);
+
     auto &pool = varDeclares.get_allocator().getPool();
     auto node = PoolNew(pool, IdentifierDeclare)(id->name, this);
     node->isConst = false;
@@ -166,6 +176,7 @@ void Scope::addVarReference(IdentifierRef *id) {
         }
     } else {
         auto declare = (*it).second;
+        declare->isReferred = 1;
 
         if (id->scope->function != function) {
             // 变量使用时的函数和声明的函数不在一处
@@ -199,8 +210,10 @@ IdentifierDeclare::IdentifierDeclare(const SizedString &name, Scope *scope) : na
     isConst = 0;
     isImplicitDeclaration = 0;
     isReferredByChild = 0;
+    isReferred = 0;
     isModified = 0;
     isFuncName = 0;
+    isUsedNotAsFunctionCall = 0;
 
     varStorageType = VST_NOT_SET;
     scopeDepth = scope->depth;
@@ -231,7 +244,7 @@ IdentifierRef::IdentifierRef(const Token &token, Scope *scope) : scope(scope) {
     next = nullptr;
 }
 
-Function::Function(ResourcePool *resourcePool, Scope *parent, uint16_t index) : instructions(resourcePool), index(index), resourcePool(resourcePool) {
+Function::Function(ResourcePool *resourcePool, Scope *parent, uint16_t index, bool isArrowFunction) : instructions(resourcePool), index(index), resourcePool(resourcePool) {
     scope = PoolNew(resourcePool->pool, Scope)(this, parent);
     scope->isFunctionScope = true;
 
@@ -244,6 +257,7 @@ Function::Function(ResourcePool *resourcePool, Scope *parent, uint16_t index) : 
     isGenerator = false;
     isAsync = false;
     isMemberFunction = false;
+    this->isArrowFunction = isArrowFunction;
 
     line = 0;
     col = 0;

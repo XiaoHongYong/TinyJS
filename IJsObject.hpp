@@ -26,6 +26,9 @@ public:
     virtual JsValue get(VMContext *ctx, const SizedString &prop) = 0;
     virtual void set(VMContext *ctx, const SizedString &prop, const JsValue &value) = 0;
 
+    virtual JsValue get(VMContext *ctx, uint32_t index) = 0;
+    virtual void set(VMContext *ctx, uint32_t index, const JsValue &value) = 0;
+
 public:
     JsDataType                  type;
     int8_t                      referIdx;
@@ -39,8 +42,11 @@ public:
     JsObject(const JsValue &prototype = JsNullValue);
     virtual ~JsObject() {}
 
-    virtual JsValue get(VMContext *ctx, const SizedString &prop);
-    virtual void set(VMContext *ctx, const SizedString &prop, const JsValue &value);
+    virtual JsValue get(VMContext *ctx, const SizedString &prop) override;
+    virtual void set(VMContext *ctx, const SizedString &prop, const JsValue &value) override;
+
+    virtual JsValue get(VMContext *ctx, uint32_t index) override;
+    virtual void set(VMContext *ctx, uint32_t index, const JsValue &value) override;
 
 protected:
     friend class JsLibObject;
@@ -48,6 +54,23 @@ protected:
     JsValue                     prototype;
 
     MapNameToJsValue            props;
+
+};
+
+class JsArguments : public JsObject {
+public:
+    JsArguments();
+    ~JsArguments();
+
+    virtual JsValue get(VMContext *ctx, const SizedString &prop) override;
+    virtual void set(VMContext *ctx, const SizedString &prop, const JsValue &value) override;
+
+    virtual JsValue get(VMContext *ctx, uint32_t index) override;
+    virtual void set(VMContext *ctx, uint32_t index, const JsValue &value) override;
+
+protected:
+    Arguments                   *args;
+    JsObject                    *obj;
 
 };
 
@@ -64,8 +87,11 @@ public:
     JsLibObject(VMRuntimeCommon *rt, JsLibProperty *libProps, int countProps);
     JsLibObject(JsLibObject *from);
 
-    virtual JsValue get(VMContext *ctx, const SizedString &prop);
-    virtual void set(VMContext *ctx, const SizedString &prop, const JsValue &value);
+    virtual JsValue get(VMContext *ctx, const SizedString &prop) override;
+    virtual void set(VMContext *ctx, const SizedString &prop, const JsValue &value) override;
+
+    virtual JsValue get(VMContext *ctx, uint32_t index) override;
+    virtual void set(VMContext *ctx, uint32_t index, const JsValue &value) override;
 
 protected:
     JsLibObject();

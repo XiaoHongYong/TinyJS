@@ -132,7 +132,7 @@ protected:
 
     int _getRawStringsIndex(const VecInts &indices);
 
-    Function *_enterFunction(const Token &tokenStart);
+    Function *_enterFunction(const Token &tokenStart, bool isArrowFunction = false);
     void _leaveFunction();
     void _enterScope();
     void _leaveScope();

@@ -60,6 +60,9 @@ public:
     // 此变量是否被子函数引用到了
     uint8_t                 isReferredByChild : 1;
 
+    // 此变量是否被引用到了
+    uint8_t                 isReferred : 1;
+
     // 是否被修改了
     uint8_t                 isModified : 1;
 
@@ -113,14 +116,16 @@ public:
     uint16_t                countLocalVars;
     uint16_t                index; // Scope 的索引编号
     int8_t                  depth;
-    bool                    hasWith, hasEval;
-    bool                    isFunctionScope; // 是否为函数的 scope
+    uint8_t                 hasWith : 1, hasEval : 1;
+    uint8_t                 isFunctionScope : 1; // 是否为函数的 scope
+    uint8_t                 isThisUsed : 1; // 是否 'this' 被使用了
+    uint8_t                 isArgumentsUsed : 1; // 是否 'arguments' 被使用了
 
     Scope(Function *function, Scope *parent);
 
     void dump(BinaryOutputStream &stream);
 
-    IdentifierDeclare *addVarDeclaration(const Token &token, bool isConst = false);
+    IdentifierDeclare *addVarDeclaration(const Token &token, bool isConst = false, bool isScopeVar = false);
     void addArgumentDeclaration(const Token &token, int index);
     void addImplicitVarDeclaration(IdentifierRef *id);
     void addFunctionDeclaration(const Token &name, Function *child);
@@ -133,7 +138,7 @@ public:
 
 class Function {
 public:
-    Function(ResourcePool *resourcePool, Scope *parent, uint16_t index);
+    Function(ResourcePool *resourcePool, Scope *parent, uint16_t index, bool isArrowFunction = false);
 
     void generateByteCode();
     void addFunction(Function *f) {
@@ -179,6 +184,8 @@ public:
 
     bool                    isMemberFunction;
 
+    bool                    isArrowFunction;
+    
 };
 
 /**

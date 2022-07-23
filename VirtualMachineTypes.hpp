@@ -113,7 +113,7 @@ class IJsObject;
     OP_ITEM(OP_IN, ""), \
     OP_ITEM(OP_INSTANCE_OF, ""), \
     \
-    OP_ITEM(OP_NEW, ""), \
+    OP_ITEM(OP_NEW, "count_args:u16"), \
     OP_ITEM(OP_NEW_TARGET, ""), \
     \
     OP_ITEM(OP_OBJ_CREATE, ""), \

@@ -58,3 +58,26 @@ function f5(a) {
     console.log(f(a + 1));
 }
 f5(1, 20);
+
+
+//// arguments 在 arrow function 中
+function f6(a, b) {
+    console.log(a, b, arguments.length);
+    arguments.length = 3;
+    console.log(a, b, arguments[2], arguments.length);
+
+    arguments.length = 1;
+    console.log(a, b, arguments[1], arguments.length);
+    b = 2;
+    console.log(a, b, arguments[1], arguments.length);
+
+    arguments[2] = '3'; arguments[3] = '4'; arguments['xx'] = 'xx';
+    console.log(arguments[2], arguments['3'], arguments['xx']);
+
+    arguments.length = {};
+    console.log(arguments.length);
+
+    arguments.length = undefined;
+    console.log('set as undefined', arguments.length);
+}
+f6(1, 20);

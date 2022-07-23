@@ -11,7 +11,7 @@
 #include <unordered_map>
 #include <stack>
 #include "AST.hpp"
-#include "StringIndices.hpp"
+#include "ConstStrings.hpp"
 
 
 class VMScope;
@@ -36,6 +36,9 @@ void registerGlobalObject(VMContext *ctx, VMScope *globalScope, const char *name
 
 enum VMMiscFlags {
     COMMON_STRINGS              = 1,
+
+    VAR_IDX_THIS                = 0,
+    VAR_IDX_ARGUMENTS           = 1,
 };
 
 class Arguments {

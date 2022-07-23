@@ -25,11 +25,105 @@ JsValue JsObject::get(VMContext *ctx, const SizedString &prop) {
         
     }
 
-    return JsValue();
+    return JsUndefinedValue;
 }
 
 void JsObject::set(VMContext *ctx, const SizedString &prop, const JsValue &value) {
     props[prop] = value;
+}
+
+JsValue JsObject::get(VMContext *ctx, uint32_t index) {
+    if (index < MAX_INT_TO_CONST_STR) {
+        return get(ctx, intToSizedString(index));
+    } else {
+        char buf[32];
+
+        SizedString indexStr;
+        indexStr.len = (uint32_t)itoa(index, buf);
+        indexStr.data = (uint8_t *)buf;
+        indexStr.unused = 0;
+        return get(ctx, indexStr);
+    }
+}
+
+void JsObject::set(VMContext *ctx, uint32_t index, const JsValue &value) {
+    if (index < MAX_INT_TO_CONST_STR) {
+        set(ctx, intToSizedString(index), value);
+    } else {
+        char buf[32];
+
+        SizedString indexStr;
+        indexStr.len = (uint32_t)itoa(index, buf);
+        indexStr.data = (uint8_t *)buf;
+        indexStr.unused = 0;
+        set(ctx, indexStr, value);
+    }
+}
+
+JsArguments::JsArguments() {
+    obj = nullptr;
+}
+
+JsArguments::~JsArguments() {
+    if (obj) {
+        delete obj;
+    }
+}
+
+JsValue JsArguments::get(VMContext *ctx, const SizedString &prop) {
+    bool successful = false;
+    auto n = prop.atoi(successful);
+    if (successful && n < args->count) {
+        return args->data[n];
+    }
+
+    if (obj) {
+        return obj->get(ctx, prop);
+    } else {
+        return JsUndefinedValue;
+    }
+}
+
+void JsArguments::set(VMContext *ctx, const SizedString &prop, const JsValue &value) {
+    bool successful = false;
+    auto n = prop.atoi(successful);
+    if (successful && n < args->count) {
+        args->data[n] = value;
+    }
+
+    if (obj == nullptr) {
+        obj = new JsObject();
+        // 设置 length 属性
+        obj->set(ctx, SS_LENGTH, JsValue(JDT_INT32, args->count));
+    }
+
+    obj->set(ctx, prop, value);
+}
+
+JsValue JsArguments::get(VMContext *ctx, uint32_t index) {
+    if (index < args->count) {
+        return args->data[index];
+    } else {
+        if (obj) {
+            return obj->get(ctx, index);
+        } else {
+            return JsUndefinedValue;
+        }
+    }
+}
+
+void JsArguments::set(VMContext *ctx, uint32_t index, const JsValue &value) {
+    if (index < args->count) {
+        args->data[index] = value;
+    } else {
+        if (obj == nullptr) {
+            obj = new JsObject();
+            // 设置 length 属性
+            obj->set(ctx, SS_LENGTH, JsValue(JDT_INT32, args->count));
+        }
+
+        obj->set(ctx, index, value);
+    }
 }
 
 class JsLibFunctionLessCmp {
@@ -83,7 +177,7 @@ JsValue JsLibObject::get(VMContext *ctx, const SizedString &prop) {
         return first->value;
     }
 
-    return JsValue();
+    return JsUndefinedValue;
 }
 
 void JsLibObject::set(VMContext *ctx, const SizedString &prop, const JsValue &value) {
@@ -92,4 +186,20 @@ void JsLibObject::set(VMContext *ctx, const SizedString &prop, const JsValue &va
     }
 
     _obj->set(ctx, prop, value);
+}
+
+JsValue JsLibObject::get(VMContext *ctx, uint32_t index) {
+    if (_obj) {
+        _obj->get(ctx, index);
+    }
+
+    return JsUndefinedValue;
+}
+
+void JsLibObject::set(VMContext *ctx, uint32_t index, const JsValue &value) {
+    if (!_obj) {
+        _obj = new JsObject();
+    }
+
+    _obj->set(ctx, index, value);
 }

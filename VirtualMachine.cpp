@@ -14,41 +14,6 @@
 
 #define MAX_STACK_SIZE (1024 * 1024 / 8)
 
-SizedString makeCommonString(const char *str) {
-    SizedString s(str);
-    s.unused = COMMON_STRINGS;
-    return s;
-}
-
-SizedString SS_PROTOTYPE = makeCommonString("prototype");
-SizedString SS_UNDEFINED = makeCommonString("undefined");
-SizedString SS_NULL = makeCommonString("null");
-SizedString SS_TRUE = makeCommonString("true");
-SizedString SS_FALSE = makeCommonString("false");
-// SizedString SS_ = makeCommonString("");
-SizedString SS_NUMBERS[] = {
-    { "0", 1, COMMON_STRINGS, },
-    { "1", 1, COMMON_STRINGS, },
-    { "2", 1, COMMON_STRINGS, },
-    { "3", 1, COMMON_STRINGS, },
-    { "4", 1, COMMON_STRINGS, },
-    { "5", 1, COMMON_STRINGS, },
-    { "6", 1, COMMON_STRINGS, },
-    { "7", 1, COMMON_STRINGS, },
-    { "8", 1, COMMON_STRINGS, },
-    { "9", 1, COMMON_STRINGS, },
-    { "10", 2, COMMON_STRINGS, },
-    { "11", 2, COMMON_STRINGS, },
-    { "12", 2, COMMON_STRINGS, },
-    { "13", 2, COMMON_STRINGS, },
-    { "14", 2, COMMON_STRINGS, },
-    { "15", 2, COMMON_STRINGS, },
-    { "16", 2, COMMON_STRINGS, },
-    { "17", 2, COMMON_STRINGS, },
-    { "18", 2, COMMON_STRINGS, },
-    { "19", 2, COMMON_STRINGS, },
-    { "20", 2, COMMON_STRINGS, },
-};
 
 void registerGlobalValue(VMContext *ctx, VMScope *globalScope, const char *strName, const JsValue &value) {
     auto name = makeSizedString(strName);
@@ -384,18 +349,33 @@ void JSVirtualMachine::call(Function *function, VMContext *ctx, VecVMStackScopes
     auto resourcePool = function->resourcePool;
     auto &stack = ctx->stack;
     auto functionScope = new VMScope(function->scope);
+    auto functionScopeDsc = functionScope->scopeDsc;
     auto bytecode = function->bytecode, endBytecode = bytecode + function->lenByteCode;
 
     ctx->stackFrames.push_back(new VMFunctionFrame(functionScope, function));
 
+    // 将函数根 scope 被引用到的函数添加到变量中
+    for (auto f : functionScopeDsc->functionDecls) {
+        auto index = runtime->pushObjValue(new JsObjectFunction(stackScopes, f));
+        functionScope->vars[f->declare->storageIndex] = JsValue(JDT_FUNCTION, index);
+    }
+
     auto scopeLocal = functionScope;
     stackScopes.push_back(scopeLocal);
 
-    if (function->isArgumentsReferredByChild) {
+    if (function->isArgumentsReferredByChild || functionScopeDsc->isArgumentsUsed) {
         // 参数数组需要被复制
         functionScope->args.copy(args);
     } else {
         functionScope->args = args;
+    }
+
+    if (functionScopeDsc->isThisUsed) {
+        functionScope->vars[VAR_IDX_THIS] = thiz;
+    }
+    if (functionScopeDsc->isArgumentsUsed) {
+        // TODO new arguments
+        // functionScope->vars[VAR_IDX_ARGUMENTS] = thiz;
     }
 
     while (bytecode < endBytecode) {
@@ -745,6 +725,11 @@ void JSVirtualMachine::call(Function *function, VMContext *ctx, VecVMStackScopes
                     index = stack.back();
                 }
 
+                auto pobj = runtime->getObject(obj);
+
+                stack.resize(pos);
+                stack.push_back(value);
+
                 SizedString indexStr;
                 indexStr.unused = 0;
                 char buf[256];
@@ -752,23 +737,19 @@ void JSVirtualMachine::call(Function *function, VMContext *ctx, VecVMStackScopes
                     case JDT_NOT_INITIALIZED:
                         ctx->throwException(PE_TYPE_ERROR, "Cannot access '?' before initialization");
                         return;
-                        break;
-                    case JDT_UNDEFINED: indexStr = SS_UNDEFINED; break;
-                    case JDT_NULL: indexStr = SS_NULL; break;
-                    case JDT_BOOL: indexStr = index.value.n32 ? SS_TRUE : SS_FALSE; break;
-                    case JDT_INT32:
-                        if (index.value.n32 < CountOf(SS_NUMBERS)) {
-                            indexStr = SS_NUMBERS[index.value.n32];
+                    case JDT_UNDEFINED: indexStr = SS_UNDEFINED; pobj->set(ctx, indexStr, value); break;
+                    case JDT_NULL: indexStr = SS_NULL; pobj->set(ctx, indexStr, value); break;
+                    case JDT_BOOL: indexStr = index.value.n32 ? SS_TRUE : SS_FALSE; pobj->set(ctx, indexStr, value); break;
+                    case JDT_INT32: pobj->set(ctx, index.value.n32, value); break;
+                    case JDT_NUMBER:
+                        if (index.value.n32 < MAX_INT_TO_CONST_STR) {
+                            indexStr = intToSizedString(index.value.n32);
                         } else {
                             indexStr.len = (uint32_t)itoa(index.value.n32, buf);
                             indexStr.data = (uint8_t *)buf;
                             indexStr.unused = 0;
                         }
                         break;
-                    case JDT_NUMBER:
-                        
-                        break;
-
                     case JDT_STRING: {
                         indexStr = runtime->getString(index);
                         if (!index.isInResourcePool && index.value.objIndex < runtime->countCommonStrings) {
@@ -781,11 +762,6 @@ void JSVirtualMachine::call(Function *function, VMContext *ctx, VecVMStackScopes
                         return;
                     }
                 }
-                auto pobj = runtime->getObject(obj);
-                pobj->set(ctx, indexStr, value);
-
-                stack.resize(pos);
-                stack.push_back(value);
                 break;
             }
             case OP_ASSIGN_MEMBER_DOT: {
@@ -1017,7 +993,8 @@ void JSVirtualMachine::call(Function *function, VMContext *ctx, VecVMStackScopes
             }
             case OP_NEW: {
                 uint16_t countArgs = readUInt16(bytecode);
-                JsValue func = stack.at(stack.size() - countArgs - 1);
+                auto posStack = stack.size() - countArgs - 1;
+                JsValue func = stack.at(posStack);
                 Arguments args(stack.data() + stack.size() - countArgs, countArgs);
                 switch (func.type) {
                     case JDT_FUNCTION: {
@@ -1031,12 +1008,13 @@ void JSVirtualMachine::call(Function *function, VMContext *ctx, VecVMStackScopes
                         auto thizIdx = runtime->pushObjValue(new JsObject(prototype));
                         auto thizVal = JsValue(JDT_OBJECT, thizIdx);
                         call(obj->function, ctx, obj->stackScopes, thizVal, args);
+                        stack.resize(posStack);
+                        stack.push_back(thizVal);
                         break;
                     }
                     default:
                         break;
                 }
-                
                 break;
             }
             case OP_NEW_TARGET: {
