@@ -38,7 +38,9 @@ int main(int argc, const char * argv[]) {
 
     // cstr_t code = "function f() { var a = .1; console.log(a, 'hello'); console.trace(); } f();";
     // cstr_t code = "var a = { b : 1 }; a.b = 2; console.log(a.b, 'hello');";
-    cstr_t code = "function f() { this.c = 1; } var a = { b : 1 }; a.d = 2; f.prototype = a; var b = new f(); console.log(b.b, b.c, b.d, 'hello');";
+    // cstr_t code = "function f() { console.log('f'); this.c = 1; } var b = new f(); console.log(b.b, b.c, b.d, 'hello');";
+    // cstr_t code = "function f() { this.c = 'c'; } var a = { b : 'b' }; a.d = 'd'; f.prototype = a; var b = new f(); console.log(b.b, b.c, b.d, 'hello');";
+    cstr_t code = "function f() { this.c = 'c'; } function g() { console.log('g', this.c); return 'gg'; } var a = { g : g }; f.prototype = a; var b = new f(); console.log(b.c, b.g(), 'hello');";
 
 //    JSParser paser(code, strlen(code));
 //

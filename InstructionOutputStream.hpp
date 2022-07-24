@@ -232,12 +232,14 @@ public:
         _offset += 8;
     }
 
+    void write(const uint8_t *data, size_t len);
     void writeBranch(InstructionOutputStream *branch);
     void convertToByteCode(BinaryOutputStream &stream);
     void finish();
 
 protected:
     void newBuffer();
+    void freeBuffers();
 
 protected:
     ResourcePool                *_resPool;

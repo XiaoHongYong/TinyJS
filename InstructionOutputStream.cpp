@@ -146,31 +146,43 @@ StreamBuffer *writeStreamBuffer(BinaryOutputStream &stream, StreamBuffer *buf, u
     return buf;
 }
 
+void InstructionOutputStream::write(const uint8_t *data, size_t len) {
+    while (len > 0) {
+        uint32_t avail = (uint32_t)(_end - _last);
+        if (avail < len) {
+            memcpy(_last, data, avail);
+            _last += avail;
+            data += avail;
+            len -= avail;
+
+            newBuffer();
+        } else {
+            memcpy(_last, data, len);
+            _last += len;
+            break;
+        }
+    }
+}
+
 void InstructionOutputStream::writeBranch(InstructionOutputStream *branch) {
-    branch->finish();
-    if (branch->_offset == 0 && branch->_instructions.empty()) {
-        // branch 没有数据
-        return;
+    branch->_curBuffer->last = branch->_last;
+
+    // 复制数据
+    for (auto p = branch->_header; p != nullptr; p = p->next) {
+        write(p->pos, size_t(p->last - p->pos));
     }
-
-    finish();
-
-    if (_offset == 0) {
-        _header = branch->_header;
-    }
-
-    auto p = branch->_curBuffer;
-    _curBuffer = p;
-    _last = p->last;
-    _end = p->end;
 
     // 添加 branch 的 _instructions，但是都需要偏移 _offset
     for (auto item : branch->_instructions) {
         item->offset += _offset;
         _instructions.push_back(item);
     }
+    branch->_instructions.clear();
 
     _offset += branch->_offset;
+
+    // 释放 branch
+    branch->freeBuffers();
 }
 
 void InstructionOutputStream::convertToByteCode(BinaryOutputStream &stream) {
@@ -212,4 +224,21 @@ void InstructionOutputStream::newBuffer() {
 
     _last = _curBuffer->last;
     _end = _curBuffer->end;
+}
+
+void InstructionOutputStream::freeBuffers() {
+    for (auto p = _header; p != nullptr; ) {
+        write(p->pos, size_t(p->last - p->pos));
+        auto tmp = p;
+        p = p->next;
+        tmp->next = nullptr;
+        _resPool->freeStreamBuffer(tmp);
+    }
+
+    _header = nullptr;
+    _curBuffer = nullptr;
+    _last = nullptr;
+    _end = nullptr;
+    _offset = 0;
+    assert(_instructions.empty());
 }

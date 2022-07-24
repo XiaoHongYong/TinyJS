@@ -146,7 +146,6 @@ enum JsDataType : uint8_t {
     JDT_ARRAY,
     JDT_LIB_OBJECT,
     JDT_FUNCTION,
-    JDT_NATIVE_FUNCTION,
     JDT_NATIVE_MEMBER_FUNCTION,
 };
 

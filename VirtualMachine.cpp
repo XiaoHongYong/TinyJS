@@ -386,8 +386,7 @@ void JSVirtualMachine::call(Function *function, VMContext *ctx, VecVMStackScopes
                 break;
             }
             case OP_RETURN_VALUE: {
-                assert(0);
-                break;
+                return;
             }
             case OP_RETURN: {
                 assert(0);
@@ -445,12 +444,18 @@ void JSVirtualMachine::call(Function *function, VMContext *ctx, VecVMStackScopes
                 JsValue thiz = stack.at(posThiz);
                 JsValue func = stack.at(posThiz + 1);
                 switch (func.type) {
+                    case JDT_FUNCTION: {
+                        auto f = (JsObjectFunction *)runtime->getObject(func);
+                        call(f->function, ctx, f->stackScopes, thiz, args);
+                        break;
+                    }
                     case JDT_NATIVE_MEMBER_FUNCTION: {
                         auto f = runtime->getNativeMemberFunction(func.value.objIndex);
                         f(ctx, thiz, args);
                         break;
                     }
                     default:
+                        assert(0);
                         break;
                 }
                 auto ret = stack.back();

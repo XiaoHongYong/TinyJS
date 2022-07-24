@@ -22,7 +22,33 @@ JsValue JsObject::get(VMContext *ctx, const SizedString &prop) {
     }
 
     if (prototype.type > JDT_NULL) {
-        
+        // 使用 prototype
+        switch (prototype.type) {
+            case JDT_NOT_INITIALIZED:
+            case JDT_UNDEFINED:
+            case JDT_NULL:
+                break;
+            case JDT_BOOL:
+                assert(0);
+                break;
+            case JDT_INT32:
+                assert(0);
+                break;
+            case JDT_NUMBER:
+                assert(0);
+                break;
+            case JDT_STRING:
+                assert(0);
+                break;
+            case JDT_REGEX:
+                assert(0);
+                break;
+            default: {
+                auto obj = ctx->runtime->getObject(prototype);
+                assert(obj);
+                return obj->get(ctx, prop);
+            }
+        }
     }
 
     return JsUndefinedValue;
@@ -30,6 +56,10 @@ JsValue JsObject::get(VMContext *ctx, const SizedString &prop) {
 
 void JsObject::set(VMContext *ctx, const SizedString &prop, const JsValue &value) {
     props[prop] = value;
+
+    if (prop.equal(SS_PROTOTYPE)) {
+        prototype = value;
+    }
 }
 
 JsValue JsObject::get(VMContext *ctx, uint32_t index) {
