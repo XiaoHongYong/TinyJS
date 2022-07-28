@@ -7,6 +7,9 @@
 
 #include "Parser.hpp"
 #include "VirtualMachine.hpp"
+#include "VMRuntime.hpp"
+#include "../Utils/unittest.h"
+
 
 void test() {
     char buf[256];
@@ -36,11 +39,17 @@ void test() {
 int main(int argc, const char * argv[]) {
     // test();
 
+    runUnittest(argc, argv);
+    
     // cstr_t code = "function f() { var a = .1; console.log(a, 'hello'); console.trace(); } f();";
     // cstr_t code = "var a = { b : 1 }; a.b = 2; console.log(a.b, 'hello');";
     // cstr_t code = "function f() { console.log('f'); this.c = 1; } var b = new f(); console.log(b.b, b.c, b.d, 'hello');";
     // cstr_t code = "function f() { this.c = 'c'; } var a = { b : 'b' }; a.d = 'd'; f.prototype = a; var b = new f(); console.log(b.b, b.c, b.d, 'hello');";
-    cstr_t code = "function f() { this.c = 'c'; } function g() { console.log('g', this.c); return 'gg'; } var a = { g : g }; f.prototype = a; var b = new f(); console.log(b.c, b.g(), 'hello');";
+    // cstr_t code = "function f() { this.c = 'c'; } function g() { console.log('g', this.c); return 'gg'; } var a = { g : g }; f.prototype = a; var b = new f(); console.log(b.c, b.g(), 'hello');";
+
+    // cstr_t code = "var a = { b : 1 }; a.b = 2; console.log(a.b + 'hello' + a);";
+    // cstr_t code = "var a = { b : 1 }; a.b = 'x: '; console.log(a.b + 'hello' + ', x');";
+    cstr_t code = "var a = String.fromCharCode(63, 64, 65, 66, 67.0, '67', '68.1', 'a', '69'); console.log(a, String.name, String.length);";
 
 //    JSParser paser(code, strlen(code));
 //
@@ -62,11 +71,11 @@ int main(int argc, const char * argv[]) {
 
     BinaryOutputStream stream;
 
-    auto &runtime = vm.defaultRuntime();
-    stackScopes.push_back(runtime.globalScope);
-    vm.eval(code, strlen(code), runtime.mainVmCtx, stackScopes, args);
-    if (runtime.mainVmCtx->error) {
-        printf("Got exception: %s\n", runtime.mainVmCtx->errorMessage.c_str());
+    auto runtime = vm.defaultRuntime();
+    stackScopes.push_back(runtime->globalScope);
+    vm.eval(code, strlen(code), runtime->mainVmCtx, stackScopes, args);
+    if (runtime->mainVmCtx->error) {
+        printf("Got exception: %s\n", runtime->mainVmCtx->errorMessage.c_str());
     }
 //    vm.dump(stream);
 

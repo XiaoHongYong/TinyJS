@@ -10,6 +10,7 @@
 
 #include "../IJsObject.hpp"
 
+
 void registerWebAPIs(VMRuntimeCommon *rt);
 
 #endif /* WebAPI_hpp */

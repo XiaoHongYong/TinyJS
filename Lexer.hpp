@@ -160,6 +160,9 @@ inline bool canTokenBeMemberName(TokenType type) {
         || type == TK_NUMBER || type == TK_STRING;
 }
 
+uint8_t *parseNumber(uint8_t *start, uint8_t *end, double &retValue);
+uint8_t *parseNumber(const SizedString &str, double &retValue);
+
 class JSLexer {
 public:
     JSLexer(ResourcePool *resPool, const char *buf, size_t len);
@@ -176,7 +179,7 @@ protected:
     //
     bool _isUncs2WhiteSpace(uint8_t code);
     void _readString(uint8_t quote);
-    void _readNumber(uint8_t ch);
+    void _readNumber();
     void _readRegexp();
     void _readName();
     void  _readInTemplateMid();

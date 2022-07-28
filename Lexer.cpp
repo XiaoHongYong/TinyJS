@@ -9,6 +9,123 @@
 #include <math.h>
 #include "AST.hpp"
 
+uint8_t *parseNumber(uint8_t *start, uint8_t *end, double &retValue) {
+    retValue = 0;
+    if (start >= end) {
+        return end;
+    }
+
+    if (start + 1 < end && *start == '0' && start[1] != '.') {
+        int64_t n = 0;
+        start++;
+        auto ch = *start;
+        if ((ch == 'x' || ch == 'X') && start + 1 < end) {
+            // Read hex numbers
+            start++;
+            while (start < end) {
+                ch = *start;
+                if (isDigit(ch)) {
+                    n = n * 16 + ch - '0';
+                } else if (ch >= 'a' && ch <= 'f') {
+                    n = n * 16 + (ch - 'a' + 10);
+                } else if (ch >= 'A' && ch <= 'F') {
+                    n = n * 16 + (ch - 'A' + 10);
+                } else {
+                    break;
+                }
+                start++;
+            }
+            retValue = n;
+        } else if ((ch == 'b' || ch == 'B') && start + 1 < end) {
+            // Read binary numbers
+            start++;
+            while (start < end) {
+                ch = *start;
+                if (ch == '0') {
+                    n = n * 2;
+                } else if (ch == '1') {
+                    n = n * 2 + 1;
+                } else {
+                    break;
+                }
+                start++;
+            }
+            retValue = n;
+        } else {
+            // Read octal numbers
+            if ((ch == 'o' || ch == 'O') && start + 1 < end) {
+                start++;
+            }
+            while (start < end) {
+                ch = *start;
+                if ('0' <= ch && ch <= '7') {
+                    n = n * 8 + ch - '0';
+                    start++;
+                } else {
+                    break;
+                }
+            }
+            retValue = n;
+        }
+    } else {
+        // Number
+        int64_t n = 0;
+        while (start < end && isDigit(*start)) {
+            n = n * 10 + *start - '0';
+            start++;
+        }
+
+        retValue = n;
+        if (start + 1 < end && *start == '.') {
+            start++;
+            n = 0;
+            int64_t factor = 1;
+
+            // Numbers after .
+            while (start < end) {
+                if (!isDigit(*start)) {
+                    break;
+                }
+
+                n = n * 10 + *start - '0';
+                factor *= 10;
+                start++;
+            }
+
+            retValue += (double)n / factor;
+        }
+
+        if (start + 1 < end && (*start == 'e' || *start == 'E')) {// E,e
+            start++;
+
+            bool nagative = false;
+            if (*start == '-') {
+                nagative = true;
+                start++;
+            } else if (*start == '+') {
+                start++;
+            }
+
+            n = 0;
+            while (start < end && isDigit(*start)) {
+                n = n * 10 + *start - '0';
+                start++;
+            }
+
+            if (nagative) {
+                retValue /= pow(10, n);
+            } else {
+                retValue *= pow(10, n);
+            }
+        }
+    }
+
+    return start;
+}
+
+uint8_t *parseNumber(const SizedString &str, double &retValue) {
+    return parseNumber(str.data, str.data + str.len, retValue);
+}
 
 bool operator ==(const Token &token, const char *name) {
     return token.buf[0] == name[0] && tokenToSizedString(token).equal(name);
@@ -23,7 +140,7 @@ bool isRegexAllowed(TokenType token) {
 }
 
 bool isIdentifierStart(uint8_t code) {
-    return (code >= 'a' && code <= 'z') || (code >= 'a' && code <= 'z') || code == '_' || code == '$' || code >= 0xaa;
+    return (code >= 'a' && code <= 'z') || (code >= 'A' && code <= 'Z') || code == '_' || code == '$' || code >= 0xaa;
 }
 
 cstr_t KEYWORDS[] = { "break", "case", "catch", "const", "continue", "debugger", "default",
@@ -78,7 +195,7 @@ void JSLexer::_readToken() {
 
     uint8_t code = *_bufPos++;
     _newLineBefore = false;
-    while (code == 32 || (9 <= code && code <= 13) || (code > 0x80 && _isUncs2WhiteSpace(code))) {
+    while (_bufPos < _bufEnd && (code == 32 || (9 <= code && code <= 13) || (code > 0x80 && _isUncs2WhiteSpace(code)))) {
         if (code == '\n') { // \n
             _newLineBefore = true;
             _line++;
@@ -108,7 +225,7 @@ void JSLexer::_readToken() {
         case '.':
             code = *_bufPos;
             if (isDigit(code)) {
-                _readNumber('.');
+                _readNumber();
             } else if (code == '.' && _bufPos[1] == '.') {
                 _curToken.type = TK_ELLIPSIS;
             } else {
@@ -414,7 +531,7 @@ void JSLexer::_readToken() {
         case '{': _curToken.type = TK_OPEN_BRACE; break;
         case '}': _curToken.type = TK_CLOSE_BRACE; break;
         default:
-            if ((code >= 'a' && code <= 'z') || (code >= 'a' && code <= 'z') || code == '_' || code == '$' || code >= 0xaa) {
+            if ((code >= 'a' && code <= 'z') || (code >= 'A' && code <= 'Z') || code == '_' || code == '$' || code >= 0xaa) {
                 _readName();
 
                 SizedString str(_curToken.buf, (size_t)(_bufPos - _curToken.buf));
@@ -428,7 +545,7 @@ void JSLexer::_readToken() {
 
                 _curToken.type = TK_NAME;
             } else if (code >= '0' && code <= '9') {
-                _readNumber(code);
+                _readNumber();
             } else {
                 _parseError(PE_UNEXPECTED_CHAR,  "Unexpected char: %d(%c)", code, code);
             }
@@ -480,110 +597,14 @@ void JSLexer::_readString(uint8_t quote) {
     _curToken.type = TK_STRING;
 }
 
-void JSLexer::_readNumber(uint8_t ch) {
-    double value = 0;
+void JSLexer::_readNumber() {
+    _bufPos--;
+    _bufPos = parseNumber(_bufPos, _bufEnd, _curToken.number);
 
-    if (ch == '0') {
-        int64_t n = 0;
-        ch = *_bufPos++;
-        if (ch == 'x' || ch == 'X') {
-            // Read hex numbers
-            while (true) {
-                ch = *_bufPos++;
-                if (isDigit(ch)) {
-                    n = n * 16 + ch - '0';
-                } else if (ch >= 'a' && ch <= 'f') {
-                    n = n * 16 + (ch - 'a' + 10);
-                } else if (ch >= 'A' && ch <= 'F') {
-                    n = n * 16 + (ch - 'A' + 10);
-                } else {
-                    break;
-                }
-            }
-            value = n;
-        } else if (ch == 'b' || ch == 'B') {
-            // Read binary numbers
-            while (true) {
-                ch = *_bufPos++;
-                if (ch == '0') {
-                    n = n * 2;
-                } else if (ch == '1') {
-                    n = n * 2 + 1;
-                } else {
-                    break;
-                }
-            }
-            value = n;
-        } else {
-            // Read octal numbers
-            if (ch == 'o' || ch == 'O') {
-                _bufPos++;
-            }
-            while (true) {
-                ch = *_bufPos++;
-                if ('0' <= ch && ch <= '7') {
-                    n = n * 8 + ch - '0';
-                } else {
-                    break;
-                }
-            }
-            value = n;
-        }
-    } else {
-        // Number
-        int64_t n = 0;
-        while (isDigit(ch)) {
-            n = n * 10 + ch - '0';
-            ch = *_bufPos++;
-        }
-
-        value = n;
-        if (ch == '.') {
-            n = 0;
-            int64_t factor = 1;
-
-            ch = *_bufPos++;
-            // Numbers after .
-            while (isDigit(ch)) {
-                n = n * 10 + ch - '0';
-                factor *= 10;
-                ch = *_bufPos++;
-            }
-
-            value += (double)n / factor;
-        }
-
-        if (ch == 'e' || ch == 'E') {// E,e
-            ch = *_bufPos++;
-
-            bool nagative = false;
-            if (ch == '-') {
-                nagative = true;
-                ch = *_bufPos++;
-            } else if (ch == '+') {
-                ch = *_bufPos++;
-            }
-
-            n = 0;
-            while (isDigit(ch)) {
-                ch = *_bufPos++;
-                n = n * 10 + ch - '0';
-            }
-
-            if (nagative) {
-                value /= pow(10, n);
-            } else {
-                value *= pow(10, n);
-            }
-        }
-    }
-
-    _curToken.number = value;
     _curToken.type = TK_NUMBER;
 
-    if (isIdentifierStart(ch))
+    if (isIdentifierStart(*_bufPos))
         _parseError(PE_UNEXPECTED_NUMBER_ENDING, "unexpected number ending.");
-    _bufPos--; // Seek back one char
 }
 
 void JSLexer::_readRegexp() {

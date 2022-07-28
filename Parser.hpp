@@ -90,7 +90,7 @@ protected:
     void _expectForStatment();
     void _expectSwitchStmt();
     void _expectTryStmt();
-    int _expectArgumentsList();
+    int _expectArgumentsList(InstructionOutputStream &instructions);
     void _expectVariableDeclarationList(TokenType declareType);
     void _expectVariableDeclaration(TokenType declareType, VarInitTree *parentVarInitTree);
     void _expectArrayAssignable(TokenType declareType, VarInitTree *parentVarInitTree);

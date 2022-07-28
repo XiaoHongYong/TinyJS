@@ -151,32 +151,29 @@ enum JsDataType : uint8_t {
 
 const char *jsDataTypeToString(JsDataType type);
 
+
+inline uint32_t makeResourceIndex(uint16_t poolIdx, uint16_t resIdx) { return (poolIdx << 16) | resIdx; }
+inline uint16_t getPoolIndexOfResource(uint32_t resIndex) { return resIndex >> 16; }
+inline uint16_t getIndexOfResource(uint32_t resIndex) { return resIndex & 0xFFFF; }
+
 struct JsValue {
-    uint8_t                     reserved[2];
+    uint8_t                     reserved[1];
     JsDataType                  type;
     bool                        isInResourcePool;
-    // bool                        isInSysLib; // 不参与引用释放
     union {
         int32_t                 n32;
-        uint32_t                objIndex;
-        struct {
-            uint16_t            poolIndex;
-            uint16_t            index;
-        } resourcePool;
+        uint32_t                index;
     } value;
 
     JsValue() { *(uint64_t *)this = 0; }
     JsValue(bool b) { *(uint64_t *)this = 0; type = JDT_BOOL; value.n32 = b; }
     JsValue(int32_t n32) { *(uint64_t *)this = 0; type = JDT_INT32; value.n32 = n32; }
-    JsValue(JsDataType type, uint32_t objIdx) { *(uint64_t *)this = 0; this->type = type; value.objIndex = objIdx; }
+    JsValue(JsDataType type, uint32_t objIdx) { *(uint64_t *)this = 0; this->type = type; value.index = objIdx; }
 };
 
 inline JsValue makeJsValueOfStringInResourcePool(uint16_t poolIndex, uint16_t index) {
-    JsValue r;
-    r.type = JDT_STRING;
+    JsValue r(JDT_STRING, makeResourceIndex(poolIndex, index));
     r.isInResourcePool = true;
-    r.value.resourcePool.poolIndex = poolIndex;
-    r.value.resourcePool.index = index;
     return r;
 }
 
@@ -192,18 +189,55 @@ struct JsDouble {
     double                      value;
 };
 
+//
+// 为了压缩 JsString 的存储空间，因此改为 2 字节对齐。
+// 后续增加成员时，需仔细考虑对齐
+//
+#pragma pack(push)
+#pragma pack(2)
+
+/**
+ * 存储 pool string 类型的值
+ */
+struct JsPoolString {
+    uint8_t                     reserved;
+    uint8_t                     poolIdx; // 为此字符串分配内存的 Pool 是哪个
+    SizedString                 value;
+};
+
+/**
+ * 存储 joined string 类型的值
+ */
+struct JsJoinedString {
+    bool                        isStringIdxInResourcePool; // stringIdx 指向的是 ResourcePool?
+    bool                        isNextStringIdxInResourcePool; // nextStringIdx 指向的是 ResourcePool?
+    uint32_t                    stringIdx;
+    uint32_t                    nextStringIdx; // 下一个连接的字符串索引位置
+    uint32_t                    len; // 长度大小
+};
+
 /**
  * 存储 string 类型的值
  */
 struct JsString {
-    JsString() { referIdx = 0; nextFreeIdx = 0; stringPoolIdx = 0; }
-    JsString(uint8_t poolIdx, SizedString v) { referIdx = 0; nextFreeIdx = 0; stringPoolIdx = poolIdx; value = v; }
+    JsString() { referIdx = 0; nextFreeIdx = 0; isJoinedString = false; }
+    JsString(const JsPoolString &poolString) { referIdx = 0; nextFreeIdx = 0; isJoinedString = false; value.poolString = poolString; }
+    JsString(const JsJoinedString &joinedString) { referIdx = 0; nextFreeIdx = 0; isJoinedString = true; value.joinedString = joinedString; }
 
-    int8_t                      referIdx; // 用于资源回收时所用
-    uint8_t                     stringPoolIdx; // 为此字符串分配内存的 Pool 是哪个
     uint32_t                    nextFreeIdx; // 下一个空闲的索引位置
-    SizedString                 value;
+    int8_t                      referIdx; // 用于资源回收时所用
+    bool                        isJoinedString;
+    union Value {
+        Value() { }
+        JsJoinedString          joinedString;
+        JsPoolString            poolString;
+    } value;
 };
+
+static_assert(sizeof(JsString) == 24, "JsPoolString should be 24 bytes long.");
+
+#pragma pack(pop)
+
 
 const JsValue JsNotInitializedValue = JsValue();
 const JsValue JsNullValue = JsValue(JDT_NULL, 0);

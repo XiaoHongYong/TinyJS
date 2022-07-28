@@ -9,10 +9,7 @@
 #include "JitCodeCompiler.hpp"
 #include "Parser.hpp"
 #include "IJsObject.hpp"
-#include "WebAPI/WebAPI.hpp"
-
-
-#define MAX_STACK_SIZE (1024 * 1024 / 8)
+#include "VMRuntime.hpp"
 
 
 void registerGlobalValue(VMContext *ctx, VMScope *globalScope, const char *strName, const JsValue &value) {
@@ -83,189 +80,6 @@ void Arguments::copy(const Arguments &other) {
     count = other.count;
 }
 
-VMRuntimeCommon::VMRuntimeCommon() {
-    auto resourcePool = new ResourcePool();
-    Function *rootFunc = new Function(resourcePool, nullptr, 0);
-    globalScope = new VMScope(rootFunc->scope);
-
-    registerWebAPIs(this);
-}
-
-void VMRuntimeCommon::dump(BinaryOutputStream &stream) {
-    stream.writeFormat("Count nativeMemberFunctions: %d\n", (int)nativeMemberFunctions.size());
-
-    stream.write("Strings: [\n");
-    for (uint32_t i = 0; i < stringValues.size(); i++) {
-        auto &s = stringValues[i].value;
-        stream.writeFormat("  %d: %.*s,\n", i, (int)s.len, s.data);
-    }
-    stream.write("]\n");
-
-    stream.write("Doubles: [\n");
-    for (uint32_t i = 0; i < doubleValues.size(); i++) {
-        auto d = doubleValues[i].value;
-        stream.writeFormat("  %d: %llf,\n", i, d);
-    }
-    stream.write("]\n");
-
-    stream.write("Objects: [\n");
-    for (uint32_t i = 0; i < objValues.size(); i++) {
-        auto obj = objValues[i];
-        stream.writeFormat("  %d: %llf, Type: %s\n", i, obj, jsDataTypeToString(obj->type));
-    }
-    stream.write("]\n");
-}
-
-void VMRuntimeCommon::setGlobalValue(const char *strName, const JsValue &value) {
-    auto name = makeSizedString(strName);
-    auto scopeDsc = globalScope->scopeDsc;
-
-    auto id = PoolNew(scopeDsc->function->resourcePool->pool, IdentifierDeclare)(name, scopeDsc);
-    id->storageIndex = scopeDsc->countLocalVars++;
-    id->scopeDepth = scopeDsc->depth;
-    id->varStorageType = VST_GLOBAL_VAR;
-    id->isReferredByChild = true;
-
-    assert(scopeDsc->varDeclares.find(name) == scopeDsc->varDeclares.end());
-    scopeDsc->varDeclares[name] = id;
-
-    assert(id->storageIndex == globalScope->vars.size());
-    globalScope->vars.push_back(value);
-}
-
-void VMRuntimeCommon::setGlobalObject(const char *strName, IJsObject *obj) {
-    auto idx = pushObjValue(obj);
-    setGlobalValue(strName, JsValue(JDT_OBJECT, idx));
-}
-
-uint32_t VMRuntimeCommon::pushDoubleValue(double value) {
-    auto it = mapDoubles.find(value);
-    if (it == mapDoubles.end()) {
-        uint32_t index = (uint32_t)doubleValues.size();
-        mapDoubles[value] = index;
-        doubleValues.push_back(JsDouble(value));
-        return index;
-    } else {
-        return (*it).second;
-    }
-}
-
-uint32_t VMRuntimeCommon::pushStringValue(const SizedString &value) {
-    auto it = mapStrings.find(value);
-    if (it == mapStrings.end()) {
-        uint32_t index = (uint32_t)stringValues.size();
-        mapStrings[value] = index;
-        stringValues.push_back(JsString(0, value));
-        return index;
-    } else {
-        return (*it).second;
-    }
-}
-
-uint32_t VMRuntimeCommon::findDoubleValue(double value) {
-    auto it = mapDoubles.find(value);
-    if (it == mapDoubles.end()) {
-        return -1;
-    } else {
-        return (*it).second;
-    }
-}
-
-uint32_t VMRuntimeCommon::findStringValue(const SizedString &value) {
-    auto it = mapStrings.find(value);
-    if (it == mapStrings.end()) {
-        return -1;
-    } else {
-        return (*it).second;
-    }
-}
-
-VMRuntime::VMRuntime() {
-    vm = nullptr;
-    rtCommon = nullptr;
-    globalScope = nullptr;
-
-    countCommonDobules = 0;
-    countCommonStrings = 0;
-    countCommonObjs = 0;
-
-    firstFreeDoubleIdx = 0;
-    firstFreeObjIdx = 0;
-}
-
-void VMRuntime::init(JSVirtualMachine *vm, VMRuntimeCommon *rtCommon) {
-    this->vm = vm;
-    this->rtCommon = rtCommon;
-
-    countCommonDobules = (int)rtCommon->doubleValues.size();
-    countCommonStrings = (int)rtCommon->stringValues.size();
-    countCommonObjs = (int)rtCommon->objValues.size();
-
-    doubleValues = rtCommon->doubleValues;
-    stringValues = rtCommon->stringValues;
-
-    // 需要将 rtCommon 中的对象都复制一份.
-    for (auto item : rtCommon->objValues) {
-        assert(item->type == JDT_LIB_OBJECT);
-        if (item->type == JDT_LIB_OBJECT) {
-            objValues.push_back(new JsLibObject((JsLibObject *)item));
-        } else {
-            objValues.push_back(item);
-        }
-    }
-    globalScope = rtCommon->globalScope;
-    firstFreeDoubleIdx = 0;
-    firstFreeObjIdx = 0;
-
-    mainVmCtx = new VMContext(this);
-    mainVmCtx->stack.reserve(MAX_STACK_SIZE);
-}
-
-void VMRuntime::dump(BinaryOutputStream &stream) {
-    BinaryOutputStream os;
-
-    stream.write("== Common VMRuntime ==\n");
-    rtCommon->dump(os);
-    writeIndent(stream, os.startNew(), makeSizedString("  "));
-
-    for (auto rp : resourcePools) {
-        rp->dump(stream);
-    }
-
-    stream.write("String Values: [\n");
-    for (auto &item : stringValues) {
-        if (item.nextFreeIdx != 0) {
-            continue;
-        }
-        stream.writeFormat("  ReferIdx: %d, ", item.referIdx);
-        stream.writeFormat("StringPoolIdx: %d, ", item.stringPoolIdx);
-        stream.writeFormat("Value: %.*s,\n", (int)item.value.len, item.value.data);
-    }
-    stream.write("  ]\n");
-
-    stream.write("Double Values: [\n");
-    for (auto &item : doubleValues) {
-        if (item.nextFreeIdx != 0) {
-            continue;
-        }
-        stream.writeFormat("  ReferIdx: %d, ", item.referIdx);
-        stream.writeFormat("Value: %llf,\n", (int)item.value);
-    }
-    stream.write("]\n");
-
-    stream.write("Object Values: [\n  ");
-    for (auto &item : objValues) {
-        if (item->nextFreeIdx != 0) {
-            continue;
-        }
-        stream.writeFormat("  ReferIdx: %d, ", item->referIdx);
-        stream.writeFormat("Type: %s,\n", jsDataTypeToString(item->type));
-    }
-    stream.write("]\n");
-
-    globalScope->scopeDsc->function->dump(stream);
-}
-
 void VMContext::throwException(ParseError err, cstr_t format, ...) {
     if (error != PE_OK) {
         return;
@@ -285,7 +99,10 @@ void VMContext::throwException(ParseError err, cstr_t format, ...) {
 
 
 JSVirtualMachine::JSVirtualMachine() {
-    _runtime.init(this, &_runtimeCommon);
+    _runtimeCommon = new VMRuntimeCommon();
+    _runtime = new VMRuntime();
+
+    _runtime->init(this, _runtimeCommon);
 }
 
 void JSVirtualMachine::eval(cstr_t code, size_t len, VMContext *vmctx, VecVMStackScopes &stackScopes, const Arguments &args) {
@@ -294,9 +111,12 @@ void JSVirtualMachine::eval(cstr_t code, size_t len, VMContext *vmctx, VecVMStac
     resPool->index = (uint32_t)runtime->resourcePools.size();
     runtime->resourcePools.push_back(resPool);
 
-    code = resPool->pool.duplicate(code, len);
+    auto p = (char *)resPool->pool.allocate(len + 4);
+    memcpy(p, code, len);
+    memset(p + len, 0, 4);
+    code = p;
 
-    JSParser parser(&_runtimeCommon, resPool, code, strlen(code));
+    JSParser parser(_runtimeCommon, resPool, code, len);
 
     auto func = parser.parse(stackScopes.back()->scopeDsc, false);
     if (parser.error() != PE_OK) {
@@ -320,7 +140,7 @@ void JSVirtualMachine::dump(cstr_t code, size_t len, BinaryOutputStream &stream)
     ResourcePool *resPool = new ResourcePool();
     resPool->index = 0;
 
-    JSParser paser(&_runtimeCommon, resPool, code, strlen(code));
+    JSParser paser(_runtimeCommon, resPool, code, strlen(code));
 
     Function *rootFunc = new Function(resPool, nullptr, 0);
     auto func = paser.parse(rootFunc->scope, false);
@@ -330,7 +150,7 @@ void JSVirtualMachine::dump(cstr_t code, size_t len, BinaryOutputStream &stream)
 
 void JSVirtualMachine::dump(BinaryOutputStream &stream) {
     BinaryOutputStream os;
-    _runtime.dump(os);
+    _runtime->dump(os);
     stream.write("== VMRuntime ==\n");
     writeIndent(stream, os.startNew(), makeSizedString("  "));
 }
@@ -450,7 +270,7 @@ void JSVirtualMachine::call(Function *function, VMContext *ctx, VecVMStackScopes
                         break;
                     }
                     case JDT_NATIVE_MEMBER_FUNCTION: {
-                        auto f = runtime->getNativeMemberFunction(func.value.objIndex);
+                        auto f = runtime->getNativeMemberFunction(func.value.index);
                         f(ctx, thiz, args);
                         break;
                     }
@@ -575,8 +395,7 @@ void JSVirtualMachine::call(Function *function, VMContext *ctx, VecVMStackScopes
                 JsValue v;
                 v.type = JDT_NUMBER;
                 v.isInResourcePool = true;
-                v.value.resourcePool.poolIndex = function->resourcePool->index;
-                v.value.resourcePool.index = idx;
+                v.value.index = makeResourceIndex(function->resourcePool->index, idx);
 
                 stack.push_back(v);
                 break;
@@ -636,7 +455,7 @@ void JSVirtualMachine::call(Function *function, VMContext *ctx, VecVMStackScopes
             }
             case OP_PUSH_THIS_MEMBER_DOT: {
                 auto idx = readUInt32(bytecode);
-                auto prop = resourcePool->strings[idx];
+                auto prop = runtime->getStringByIdx(idx, resourcePool);
                 const JsValue &obj = stack.back();
                 switch (obj.type) {
                     case JDT_NOT_INITIALIZED:
@@ -757,7 +576,7 @@ void JSVirtualMachine::call(Function *function, VMContext *ctx, VecVMStackScopes
                         break;
                     case JDT_STRING: {
                         indexStr = runtime->getString(index);
-                        if (!index.isInResourcePool && index.value.objIndex < runtime->countCommonStrings) {
+                        if (!index.isInResourcePool && index.value.index < runtime->countCommonStrings) {
                             indexStr.unused = COMMON_STRINGS;
                         }
                         break;
@@ -862,10 +681,22 @@ void JSVirtualMachine::call(Function *function, VMContext *ctx, VecVMStackScopes
                                 left.type = JDT_INT32;
                                 break;
                             default:
+                                assert(0);
+                                break;
+                        }
+                        break;
+                    case JDT_STRING:
+                        switch (right.type) {
+                            case JDT_STRING:
+                                left = runtime->addString(left, right);
+                                break;
+                            default:
+                                assert(0);
                                 break;
                         }
                         break;
                     default:
+                        assert(0);
                         break;
                 }
 

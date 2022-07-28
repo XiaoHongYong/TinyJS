@@ -297,7 +297,7 @@ void JSParser::_expectTryStmt() {
 /**
  * 匹配参数列表，返回参数的个数.
  */
-int JSParser::_expectArgumentsList() {
+int JSParser::_expectArgumentsList(InstructionOutputStream &instructions) {
     _readToken();
 
     int count = 0;
@@ -312,7 +312,7 @@ int JSParser::_expectArgumentsList() {
             _readToken();
         }
 
-        _expectExpression(_curFunction->instructions);
+        _expectExpression(instructions);
         count++;
     }
 
@@ -477,7 +477,7 @@ void JSParser::_expectSemiColon() {
     if (_curToken.type == TK_SEMI_COLON) {
         _readToken();
     } else if (!_canInsertSemicolon()) {
-        _parseError(PE_EXPECTED_SEMI_COLON, "SemiColon is expected, unexpected token: %d.", _curToken.type);
+        _parseError(PE_EXPECTED_SEMI_COLON, "SemiColon is expected, unexpected token: %d", _curToken.type);
     }
 }
 
@@ -758,8 +758,8 @@ void JSParser::_expectExpression(InstructionOutputStream &instructions, Preceden
                 if (_curToken.type == TK_OPEN_BRACE) {
                     _expectBlock();
                 } else {
-                    _expectExpression(_curFunction->instructions, PRED_NONE, false);
-                    _curFunction->instructions.writeOpCode(OP_RETURN_VALUE);
+                    _expectExpression(instructions, PRED_NONE, false);
+                    instructions.writeOpCode(OP_RETURN_VALUE);
                 }
 
                 instructions.writeOpCode(OP_PUSH_FUNCTION_EXPR);
@@ -827,7 +827,7 @@ void JSParser::_expectExpression(InstructionOutputStream &instructions, Preceden
 
             int countArgs = 0;
             if (_curToken.type == TK_OPEN_PAREN) {
-                countArgs = _expectArgumentsList();
+                countArgs = _expectArgumentsList(instructions);
             }
 
             instructions.writeOpCode(OP_NEW);
@@ -911,13 +911,13 @@ void JSParser::_expectExpression(InstructionOutputStream &instructions, Preceden
                     // 函数调用
                     identifier->isUsedNotAsFunctionCall = false;
                     auto push = instructions.writeFunctionCallPush(identifier);
-                    int countArgs = _expectArgumentsList();
+                    int countArgs = _expectArgumentsList(instructions);
                     instructions.writeFunctionCall(push);
                     instructions.writeUint16((uint16_t)countArgs);
                 } else {
                     auto op = writePrevInstructionFunctionCall(prevOp, prevStringIdx, identifier, instructions);
 
-                    int countArgs = _expectArgumentsList();
+                    int countArgs = _expectArgumentsList(instructions);
 
                     instructions.writeOpCode(op);
                     instructions.writeUint16((uint16_t)countArgs);
@@ -1207,6 +1207,7 @@ void JSParser::_expectExpression(InstructionOutputStream &instructions, Preceden
                 if (pred >= PRED_ADD)
                     return;
                 auto opcode = _curToken.opr;
+                _readToken();
                 _expectExpression(instructions, PRED_ADD, false);
                 instructions.writeUint8(opcode);
                 break;

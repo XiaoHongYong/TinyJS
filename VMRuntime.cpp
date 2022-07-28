@@ -1,0 +1,471 @@
+//
+//  VMRuntime.cpp
+//  TinyJS
+//
+//  Created by henry_xiao on 2022/7/25.
+//
+
+#include "VMRuntime.hpp"
+#include "VirtualMachine.hpp"
+#include "WebAPI/WebAPI.hpp"
+#include "Built-in/BuiltIn.hpp"
+#include <algorithm>
+
+
+#define MAX_STACK_SIZE          (1024 * 1024 / 8)
+#define JOINED_STRING_MIN_SIZE  256
+#define POOL_STRING_SMALL       64
+#define POOL_STRING_MID         1024 * 32
+
+#define SMALL_STRING_POOL_COUNT 10
+#define MID_STRING_POOL_COUNT   5
+
+#define SMALL_STRING_POOL_SIZE  (1024 * 64)
+#define MID_STRING_POOL_SIZE    (1024 * 128)
+
+
+VMRuntimeCommon::VMRuntimeCommon() {
+    auto resourcePool = new ResourcePool();
+    Function *rootFunc = new Function(resourcePool, nullptr, 0);
+    globalScope = new VMScope(rootFunc->scope);
+
+    registerBuiltIns(this);
+    registerWebAPIs(this);
+}
+
+void VMRuntimeCommon::dump(BinaryOutputStream &stream) {
+    stream.writeFormat("Count nativeMemberFunctions: %d\n", (int)nativeMemberFunctions.size());
+
+    stream.write("Strings: [\n");
+    for (uint32_t i = 0; i < stringValues.size(); i++) {
+        auto item = stringValues[i];
+        assert(!item.isJoinedString);
+        auto &s = item.value.poolString.value;
+        stream.writeFormat("  %d: %.*s,\n", i, (int)s.len, s.data);
+    }
+    stream.write("]\n");
+
+    stream.write("Doubles: [\n");
+    for (uint32_t i = 0; i < doubleValues.size(); i++) {
+        auto d = doubleValues[i].value;
+        stream.writeFormat("  %d: %llf,\n", i, d);
+    }
+    stream.write("]\n");
+
+    stream.write("Objects: [\n");
+    for (uint32_t i = 0; i < objValues.size(); i++) {
+        auto obj = objValues[i];
+        stream.writeFormat("  %d: %llf, Type: %s\n", i, obj, jsDataTypeToString(obj->type));
+    }
+    stream.write("]\n");
+}
+
+void VMRuntimeCommon::setGlobalValue(const char *strName, const JsValue &value) {
+    auto name = makeSizedString(strName);
+    auto scopeDsc = globalScope->scopeDsc;
+
+    auto id = PoolNew(scopeDsc->function->resourcePool->pool, IdentifierDeclare)(name, scopeDsc);
+    id->storageIndex = scopeDsc->countLocalVars++;
+    id->scopeDepth = scopeDsc->depth;
+    id->varStorageType = VST_GLOBAL_VAR;
+    id->isReferredByChild = true;
+
+    assert(scopeDsc->varDeclares.find(name) == scopeDsc->varDeclares.end());
+    scopeDsc->varDeclares[name] = id;
+
+    assert(id->storageIndex == globalScope->vars.size());
+    globalScope->vars.push_back(value);
+}
+
+void VMRuntimeCommon::setGlobalObject(const char *strName, IJsObject *obj) {
+    auto idx = pushObjValue(obj);
+    setGlobalValue(strName, JsValue(JDT_OBJECT, idx));
+}
+
+uint32_t VMRuntimeCommon::pushDoubleValue(double value) {
+    auto it = mapDoubles.find(value);
+    if (it == mapDoubles.end()) {
+        uint32_t index = (uint32_t)doubleValues.size();
+        mapDoubles[value] = index;
+        doubleValues.push_back(JsDouble(value));
+        return index;
+    } else {
+        return (*it).second;
+    }
+}
+
+uint32_t VMRuntimeCommon::pushStringValue(const SizedString &value) {
+    auto it = mapStrings.find(value);
+    if (it == mapStrings.end()) {
+        uint32_t index = (uint32_t)stringValues.size();
+        mapStrings[value] = index;
+        JsString s;
+        s.value.poolString.value = value;
+        s.value.poolString.poolIdx = POOL_STRING_IDX_INVALID;
+        stringValues.push_back(s);
+        return index;
+    } else {
+        return (*it).second;
+    }
+}
+
+uint32_t VMRuntimeCommon::findDoubleValue(double value) {
+    auto it = mapDoubles.find(value);
+    if (it == mapDoubles.end()) {
+        return -1;
+    } else {
+        return (*it).second;
+    }
+}
+
+uint32_t VMRuntimeCommon::findStringValue(const SizedString &value) {
+    auto it = mapStrings.find(value);
+    if (it == mapStrings.end()) {
+        return -1;
+    } else {
+        return (*it).second;
+    }
+}
+
+VMRuntime::VMRuntime() {
+    vm = nullptr;
+    rtCommon = nullptr;
+    globalScope = nullptr;
+
+    countCommonDobules = 0;
+    countCommonStrings = 0;
+    countCommonObjs = 0;
+
+    firstFreeDoubleIdx = 0;
+    firstFreeObjIdx = 0;
+
+    // 第一个 string pool 是保留不用的: POOL_STRING_IDX_INVALID
+    stringPools.push_back(nullptr);
+}
+
+void VMRuntime::init(JSVirtualMachine *vm, VMRuntimeCommon *rtCommon) {
+    this->vm = vm;
+    this->rtCommon = rtCommon;
+
+    countCommonDobules = (int)rtCommon->doubleValues.size();
+    countCommonStrings = (int)rtCommon->stringValues.size();
+    countCommonObjs = (int)rtCommon->objValues.size();
+
+    doubleValues = rtCommon->doubleValues;
+    stringValues = rtCommon->stringValues;
+
+    // 需要将 rtCommon 中的对象都复制一份.
+    for (auto item : rtCommon->objValues) {
+        assert(item->type == JDT_LIB_OBJECT);
+        if (item->type == JDT_LIB_OBJECT) {
+            objValues.push_back(new JsLibObject((JsLibObject *)item));
+        } else {
+            objValues.push_back(item);
+        }
+    }
+    globalScope = rtCommon->globalScope;
+    firstFreeDoubleIdx = 0;
+    firstFreeObjIdx = 0;
+
+    mainVmCtx = new VMContext(this);
+    mainVmCtx->stack.reserve(MAX_STACK_SIZE);
+
+    for (int i = 0; i < SMALL_STRING_POOL_COUNT; i++) {
+        auto pool = newStringPool(SMALL_STRING_POOL_SIZE);
+        smallStringPools.append(pool);
+    }
+
+    for (int i = 0; i < MID_STRING_POOL_COUNT; i++) {
+        auto pool = newStringPool(MID_STRING_POOL_SIZE);
+        smallStringPools.append(pool);
+    }
+
+}
+
+void VMRuntime::dump(BinaryOutputStream &stream) {
+    BinaryOutputStream os;
+
+    stream.write("== Common VMRuntime ==\n");
+    rtCommon->dump(os);
+    writeIndent(stream, os.startNew(), makeSizedString("  "));
+
+    for (auto rp : resourcePools) {
+        rp->dump(stream);
+    }
+
+    int index = 0;
+    stream.write("String Values: [\n");
+    for (auto &item : stringValues) {
+        if (item.nextFreeIdx != 0) {
+            continue;
+        }
+        if (item.isJoinedString) {
+            stream.writeFormat("  %d: ReferIdx: %d, JoinedString: ", index, item.referIdx);
+            auto &joinedString = item.value.joinedString;
+            if (joinedString.isStringIdxInResourcePool) {
+                auto ss = getStringInResourcePool(joinedString.stringIdx);
+                stream.writeFormat("'%.*s' + ", int(ss.len), ss.data);
+            } else {
+                stream.writeFormat("[%d] + ", joinedString.stringIdx);
+            }
+
+            if (joinedString.isNextStringIdxInResourcePool) {
+                auto ss = getStringInResourcePool(joinedString.nextStringIdx);
+                stream.writeFormat("'%.*s' + ", int(ss.len), ss.data);
+            } else {
+                stream.writeFormat("[%d] + ", joinedString.nextStringIdx);
+            }
+        } else {
+            auto &poolString = item.value.poolString;
+            if (poolString.poolIdx == POOL_STRING_IDX_INVALID) {
+                continue;
+            }
+
+            stream.writeFormat("  %d: ReferIdx: %d, ", index, item.referIdx);
+            stream.writeFormat("PoolIdx: %d, ", poolString.poolIdx);
+            stream.writeFormat("Value: %.*s,\n", (int)poolString.value.len, poolString.value.data);
+        }
+        index++;
+    }
+    stream.write("  ]\n");
+
+    stream.write("Double Values: [\n");
+    for (auto &item : doubleValues) {
+        if (item.nextFreeIdx != 0) {
+            continue;
+        }
+        stream.writeFormat("  ReferIdx: %d, ", item.referIdx);
+        stream.writeFormat("Value: %llf,\n", (int)item.value);
+    }
+    stream.write("]\n");
+
+    stream.write("Object Values: [\n  ");
+    for (auto &item : objValues) {
+        if (item->nextFreeIdx != 0) {
+            continue;
+        }
+        stream.writeFormat("  ReferIdx: %d, ", item->referIdx);
+        stream.writeFormat("Type: %s,\n", jsDataTypeToString(item->type));
+    }
+    stream.write("]\n");
+
+    globalScope->scopeDsc->function->dump(stream);
+}
+
+/**
+ * 为了提高性能，以及避免堆栈溢出，采用 stack 以及循环的方式来拼接字符串
+ */
+void VMRuntime::joinString(JsString &js) {
+    struct Item {
+        uint8_t         *p;
+        JsJoinedString  *joinedStr;
+        // uint32_t        len;
+    };
+
+    assert(js.isJoinedString);
+
+    auto poolStr = allocString(js.value.joinedString.len);
+
+    std::stack<Item> tasks;
+    tasks.push({ (uint8_t *)poolStr.value.data, &js.value.joinedString });
+
+    while (!tasks.empty()) {
+        auto &task = tasks.top();
+        auto joinedStr = task.joinedStr;
+        auto p = task.p;
+        tasks.pop();
+
+        while (joinedStr) {
+            // 复制 head
+            if (joinedStr->isStringIdxInResourcePool) {
+                // 在 ResourcePool 中
+                auto ss = getStringInResourcePool(joinedStr->stringIdx);
+                memcpy(p, ss.data, ss.len);
+                p += ss.len;
+            } else {
+                auto &head = stringValues[joinedStr->stringIdx];
+                if (head.isJoinedString) {
+                    // 先复制尾部
+                    auto tailP = p + head.value.joinedString.len;
+                    if (joinedStr->isNextStringIdxInResourcePool) {
+                        // 在 ResourcePool 中
+                        auto ss = getStringInResourcePool(joinedStr->nextStringIdx);
+                        memcpy(tailP, ss.data, ss.len);
+                    } else {
+                        auto &tail = stringValues[joinedStr->nextStringIdx];
+                        if (tail.isJoinedString) {
+                            // 添加到 tasks 中
+                            tasks.push({tailP, &tail.value.joinedString});
+                        } else {
+                            // 是 string pool 类型
+                            auto &ss = tail.value.poolString.value;
+                            memcpy(tailP, ss.data, ss.len);
+                        }
+                    }
+
+                    // 继续循环
+                    joinedStr = &head.value.joinedString;
+                    continue;
+                } else {
+                    // head 是 poolString 类型
+                    auto &ss = head.value.poolString.value;
+                    memcpy(p, ss.data, ss.len);
+                    p += ss.len;
+                }
+            }
+
+            // 复制尾部
+            if (joinedStr->isNextStringIdxInResourcePool) {
+                // 在 ResourcePool 中
+                auto ss = getStringInResourcePool(joinedStr->nextStringIdx);
+                memcpy(p, ss.data, ss.len);
+            } else {
+                auto &tail = stringValues[joinedStr->nextStringIdx];
+                if (tail.isJoinedString) {
+                    // 继续循环
+                    joinedStr = &tail.value.joinedString;
+                    continue;
+                } else {
+                    // 是 string pool 类型
+                    auto &ss = tail.value.poolString.value;
+                    memcpy(p, ss.data, ss.len);
+                }
+            }
+
+            // joinedStr 已经完全复制
+            break;
+        }
+    }
+    
+    js.value.poolString = poolStr;
+}
+
+JsValue VMRuntime::joinSmallString(const SizedString &sz1, const SizedString &sz2) {
+    JsPoolString js = allocString(sz1.len + sz2.len);
+
+    auto p = (uint8_t *)js.value.data;
+    memcpy(p, sz1.data, sz1.len); p += sz1.len;
+    memcpy(p, sz2.data, sz2.len);
+
+    return JsValue(JDT_STRING, pushString(JsString(js)));
+}
+
+JsValue VMRuntime::addString(const JsValue &s1, const JsValue &s2) {
+    JsString js1, js2;
+    SizedString ss1, ss2;
+
+    if (s1.isInResourcePool) {
+        ss1 = getStringInResourcePool(s1.value.index);
+    } else {
+        js1 = stringValues[s1.value.index];
+        if (!js1.isJoinedString) {
+            ss1 = js1.value.poolString.value;
+        }
+    }
+
+    if (s2.isInResourcePool) {
+        ss2 = getStringInResourcePool(s2.value.index);
+    } else {
+        js2 = stringValues[s2.value.index];
+        if (!js2.isJoinedString) {
+            ss2 = js2.value.poolString.value;
+        }
+    }
+
+    if ((!s1.isInResourcePool && js1.isJoinedString) || (!s2.isInResourcePool && js2.isJoinedString)) {
+        // 任何一个是 JoinedString
+        JsJoinedString js;
+
+        js.stringIdx = s1.value.index;
+        js.isStringIdxInResourcePool = s1.isInResourcePool;
+
+        js.nextStringIdx = s2.value.index;
+        js.isNextStringIdxInResourcePool = s2.isInResourcePool;
+        return JsValue(JDT_STRING, pushString(JsString(js)));
+    }
+
+    if (!s1.isInResourcePool && js1.value.poolString.poolIdx != POOL_STRING_IDX_INVALID) {
+        // 看看能否直接扩展 string
+        auto &poolString = js1.value.poolString;
+
+        assert(poolString.poolIdx < stringPools.size());
+        auto pool = stringPools[poolString.poolIdx];
+
+        if (pool->ptr() == poolString.value.data + poolString.value.len && pool->capacity() >= ss2.len) {
+            // poolString 正好是 pool 的最后一个，刚好可以扩展
+            memcpy(pool->ptr(), ss2.data, ss2.len);
+            pool->alloc(ss2.len);
+            JsPoolString poolStr2 = poolString;
+            poolStr2.value.len += ss2.len;
+            return JsValue(JDT_STRING, pushString(JsString(poolStr2)));
+        }
+    }
+
+    if (ss1.len + ss2.len >= JOINED_STRING_MIN_SIZE) {
+        // 超过 JOINED_STRING_MIN_SIZE，连接两个字符串
+        JsJoinedString js;
+
+        js.stringIdx = s1.value.index;
+        js.isStringIdxInResourcePool = s1.isInResourcePool;
+
+        js.nextStringIdx = s2.value.index;
+        js.isNextStringIdxInResourcePool = s2.isInResourcePool;
+        return JsValue(JDT_STRING, pushString(JsString(js)));
+    } else {
+        // 直接拼接
+        return joinSmallString(ss1, ss2);
+    }
+}
+
+JsPoolString VMRuntime::allocString(uint32_t size) {
+    StringPool *pool = nullptr;
+    if (size <= POOL_STRING_SMALL) {
+        while (smallStringPools.count() >= SMALL_STRING_POOL_COUNT) {
+            pool = smallStringPools.front();
+            if (pool != nullptr && pool->capacity() >= size) {
+                break;
+            } else {
+                smallStringPools.remove(pool);
+                pool = nullptr;
+            }
+        }
+
+        if (!pool) {
+            pool = newStringPool(SMALL_STRING_POOL_SIZE);
+            smallStringPools.append(pool);
+        }
+    } else if (size <= POOL_STRING_MID) {
+        StringPool *pool = midStringPools.front();
+        if (pool != nullptr && pool->capacity() < size) {
+            midStringPools.remove(pool);
+            smallStringPools.append(pool);
+            pool = nullptr;
+        }
+
+        if (!pool) {
+            pool = newStringPool(MID_STRING_POOL_SIZE);
+            midStringPools.append(pool);
+        }
+    } else {
+        // 较大的字符串，分配独立的 pool.
+        pool = newStringPool(size + 1024 * 16);
+        largeStringPools.append(pool);
+    }
+
+    auto p = pool->alloc(size);
+    JsPoolString poolStr;
+    poolStr.value.data = p;
+    poolStr.value.len = size;
+    poolStr.poolIdx = pool->id();
+    return poolStr;
+}
+
+StringPool *VMRuntime::newStringPool(uint32_t size) {
+    if (stringPools.size() + 1 >= 0xFFFF) {
+        throw std::bad_alloc();
+    }
+
+    auto pool = new StringPool((uint16_t)stringPools.size(), size);
+    stringPools.push_back(pool);
+    return pool;
+}
