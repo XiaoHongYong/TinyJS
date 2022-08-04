@@ -32,12 +32,14 @@ const char *jsDataTypeToString(JsDataType type) {
         "JDT_BOOL",
         "JDT_INT32",
         "JDT_NUMBER",
+        "JDT_SYMBOL",
+        "JDT_CHAR",
         "JDT_STRING",
         "JDT_REGEX",
         "JDT_ARRAY",
         "JDT_OBJECT",
         "JDT_FUNCTION",
-        "JDT_NATIVE_MEMBER_FUNCTION",
+        "JDT_NATIVE_FUNCTION",
     };
 
     assert(type <= CountOf(NAMES));

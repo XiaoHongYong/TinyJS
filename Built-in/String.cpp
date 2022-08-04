@@ -6,7 +6,6 @@
 //
 
 #include "BuiltIn.hpp"
-#include "../VirtualMachineTypes.hpp"
 
 
 void ucs2ToUtf8(uint16_t code, string &out) {
@@ -36,61 +35,16 @@ void stringFromCharCode(VMContext *ctx, const JsValue &thiz, const Arguments &ar
             continue;
         }
 
-        auto v = item;
-        if (item.type >= JDT_OBJECT) {
-            Arguments noArgs;
-            runtime->vm->callMember(ctx, v, "toString", noArgs);
-            if (ctx->error == PE_OK) {
-                v = ctx->stack.back();
-                ctx->stack.pop_back();
-            }
-        }
-        
-        switch (v.type) {
-            case JDT_NOT_INITIALIZED:
-                ctx->throwException(PE_REFERECNE_ERROR, "Cannot access variable before initialization");
-                break;
-            case JDT_UNDEFINED:
-            case JDT_NULL:
-                str.push_back('\0');
-                break;
-            case JDT_INT32:
-            case JDT_BOOL:
-                if (v.value.n32 >= 0 && v.value.n32 <= 0xFFFF) {
-                    ucs2ToUtf8(v.value.n32, str);
-                }
-                break;
-            case JDT_STRING: {
-                auto s = runtime->getString(v);
-                s.trim();
-                double v;
-                auto p = parseNumber(s, v);
-                if (p == s.data + s.len) {
-                    ucs2ToUtf8((int)v, str);
-                } else {
-                    str.push_back('\0');
-                }
-                break;
-            }
-            case JDT_NUMBER: {
-                int n = (int)runtime->getDouble(v);
-                if (n >= 0 && n <= 0xFFFF) {
-                    ucs2ToUtf8(n, str);
-                }
-                break;
-            }
-            default:
-                break;
-        }
+        auto f = runtime->toNumber(ctx, item);
+        ucs2ToUtf8((uint16_t)f, str);
     }
 
     auto poolStr = runtime->allocString((uint32_t)str.size());
     memcpy(poolStr.value.data, str.c_str(), str.size());
-    ctx->stack.push_back(JsValue(JDT_STRING, runtime->pushString(JsString(poolStr))));
+    ctx->stack.push_back(runtime->pushString(JsString(poolStr)));
 }
 
 void stringFromCodePoint(VMContext *ctx, const JsValue &thiz, const Arguments &args) {
-    
 }
 
 static JsLibProperty stringFunctions[] = {
@@ -98,9 +52,117 @@ static JsLibProperty stringFunctions[] = {
     { "fromCodePoint", stringFromCodePoint },
     { "name", nullptr, "String" },
     { "length", nullptr, nullptr, JsValue(JDT_INT32, 1) },
+    { "prototype", nullptr, nullptr, JsValue(JDT_INT32, 1) },
+};
+
+
+void stringPrototypeAt(VMContext *ctx, const JsValue &thiz, const Arguments &args) {
+    auto runtime = ctx->runtime;
+    if (thiz.type != JDT_STRING && thiz.type != JDT_CHAR) {
+        ctx->throwException(PE_TYPE_ERROR, "String.prototype.at requires that 'this' be a String");
+        return;
+    }
+
+    SizedString str;
+    uint8_t buf[32];
+    if (thiz.type == JDT_STRING) {
+        str = runtime->getString(thiz);
+    } else {
+        buf[0] = thiz.value.n32;
+        str = SizedString(buf, 1);
+    }
+
+    int32_t index = 0;
+    if (args.count > 0) {
+        index = (int32_t)runtime->toNumber(ctx, args.data[0]);
+    }
+
+    if (index < 0) {
+        index = str.len + index;
+        if (index < 0) {
+            ctx->stack.push_back(JsUndefinedValue);
+            return;
+        }
+    }
+
+    if (index < str.len) {
+        ctx->stack.push_back(JsValue(JDT_CHAR, str.data[index]));
+    } else {
+        ctx->stack.push_back(JsUndefinedValue);
+    }
+}
+
+void stringPrototypeCharAt(VMContext *ctx, const JsValue &thiz, const Arguments &args) {
+    auto runtime = ctx->runtime;
+    if (thiz.type != JDT_STRING && thiz.type != JDT_CHAR) {
+        ctx->throwException(PE_TYPE_ERROR, "String.prototype.at requires that 'this' be a String");
+        return;
+    }
+
+    SizedString str;
+    uint8_t buf[32];
+    if (thiz.type == JDT_STRING) {
+        str = runtime->getString(thiz);
+    } else {
+        buf[0] = thiz.value.n32;
+        str = SizedString(buf, 1);
+    }
+
+    int32_t index = 0;
+    if (args.count > 0) {
+        index = (int32_t)runtime->toNumber(ctx, args.data[0]);
+    }
+
+    if (index < 0 || index >= str.len) {
+        ctx->stack.push_back(JsStringValueEmpty);
+        return;
+    }
+
+    ctx->stack.push_back(JsValue(JDT_CHAR, str.data[index]));
+}
+
+void stringPrototypeLength(VMContext *ctx, const JsValue &thiz, const Arguments &args) {
+    auto runtime = ctx->runtime;
+    if (thiz.type != JDT_STRING && thiz.type != JDT_CHAR) {
+        ctx->throwException(PE_TYPE_ERROR, "String.prototype.length requires that 'this' be a String");
+        return;
+    }
+
+    uint32_t len = 0;
+    if (thiz.type == JDT_CHAR) {
+        len = 1;
+    } else {
+        if (thiz.isInResourcePool) {
+            auto ss = runtime->getStringInResourcePool(thiz.value.index);
+            len = ss.len;
+        } else {
+            auto &js = runtime->stringValues[thiz.value.index];
+            if (js.isJoinedString) {
+                len = js.value.joinedString.len;
+            } else {
+                len = js.value.poolString.value.len;
+            }
+        }
+    }
+
+    ctx->stack.push_back(JsValue(JDT_INT32, len));
+}
+
+static JsLibProperty stringPrototypeFunctions[] = {
+    { "at", stringPrototypeAt },
+    { "charAt", stringPrototypeCharAt },
+    makeJsLibPropertyGetter("length", stringPrototypeLength),
 };
 
 void registerString(VMRuntimeCommon *rt) {
+    auto prototype = new JsLibObject(rt, stringPrototypeFunctions, CountOf(stringPrototypeFunctions));
+    rt->prototypeString = prototype;
+
+    auto idxPrototype = CountOf(stringFunctions) - 1;
+    assert(stringFunctions[idxPrototype].name.equal("prototype"));
+    stringFunctions[idxPrototype].value = JsValue(JDT_OBJECT, rt->pushObjValue(prototype));
+
     rt->setGlobalObject("String",
         new JsLibObject(rt, stringFunctions, CountOf(stringFunctions)));
+
 }

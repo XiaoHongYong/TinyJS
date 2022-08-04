@@ -8,7 +8,7 @@
 #ifndef BuiltIn_hpp
 #define BuiltIn_hpp
 
-#include "../IJsObject.hpp"
+#include "../JsLibObject.hpp"
 
 
 void registerBuiltIns(VMRuntimeCommon *rt);

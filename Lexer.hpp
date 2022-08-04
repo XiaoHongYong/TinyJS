@@ -115,6 +115,7 @@ enum ParseError {
     PE_OK                   = 0,
     PE_SYNTAX_ERROR,
     PE_TYPE_ERROR,
+    PE_RANGE_ERROR,
     PE_REFERECNE_ERROR,
     PE_UNEXPECTED_TOKEN,
     PE_EXPECTED_SEMI_COLON,

@@ -44,8 +44,16 @@ void consoleLog(VMContext *ctx, const JsValue &thiz, const Arguments &args) {
             case JDT_NUMBER:
                 printf("%lf ", runtime->getDouble(v));
                 break;
+            case JDT_CHAR:
+                printf("%c ", v.value.n32);
+                break;
             case JDT_STRING: {
                 auto s = runtime->getString(v);
+                printf("%.*s ", (int)s.len, s.data);
+                break;
+            }
+            case JDT_SYMBOL: {
+                auto s = runtime->getSymbolName(v);
                 printf("%.*s ", (int)s.len, s.data);
                 break;
             }

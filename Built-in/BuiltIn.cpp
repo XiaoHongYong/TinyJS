@@ -9,7 +9,11 @@
 
 
 void registerString(VMRuntimeCommon *rt);
+void registerObject(VMRuntimeCommon *rt);
+void registerSymbol(VMRuntimeCommon *rt);
 
 void registerBuiltIns(VMRuntimeCommon *rt) {
     registerString(rt);
+    registerObject(rt);
+    registerSymbol(rt);
 }

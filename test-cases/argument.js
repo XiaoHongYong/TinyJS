@@ -79,5 +79,8 @@ function f6(a, b) {
 
     arguments.length = undefined;
     console.log('set as undefined', arguments.length);
+
+    arguments.length = 'xy';
+    console.log(arguments.length);
 }
 f6(1, 20);

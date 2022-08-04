@@ -140,13 +140,15 @@ enum JsDataType : uint8_t {
     JDT_BOOL,
     JDT_INT32,
     JDT_NUMBER,
+    JDT_SYMBOL,
+    JDT_CHAR, // 单个字符的 String
     JDT_STRING,
     JDT_OBJECT,
     JDT_REGEX,
     JDT_ARRAY,
     JDT_LIB_OBJECT,
     JDT_FUNCTION,
-    JDT_NATIVE_MEMBER_FUNCTION,
+    JDT_NATIVE_FUNCTION,
 };
 
 const char *jsDataTypeToString(JsDataType type);
@@ -171,6 +173,10 @@ struct JsValue {
     JsValue(JsDataType type, uint32_t objIdx) { *(uint64_t *)this = 0; this->type = type; value.index = objIdx; }
 };
 
+inline bool operator==(const JsValue &a, const JsValue &b) {
+    return a.type == b.type && a.isInResourcePool == b.isInResourcePool && a.value.index == b.value.index;
+}
+
 inline JsValue makeJsValueOfStringInResourcePool(uint16_t poolIndex, uint16_t index) {
     JsValue r(JDT_STRING, makeResourceIndex(poolIndex, index));
     r.isInResourcePool = true;
@@ -187,6 +193,18 @@ struct JsDouble {
     int8_t                      referIdx; // 用于资源回收时所用
     uint32_t                    nextFreeIdx; // 下一个空闲的索引位置
     double                      value;
+};
+
+/**
+ * 存储 Symbol 类型的值
+ */
+struct JsSymbol {
+    JsSymbol() { referIdx = 0; nextFreeIdx = 0; name = nullptr; }
+    JsSymbol(const char *name) { referIdx = 0; nextFreeIdx = 0; this->name = name; }
+
+    int8_t                      referIdx; // 用于资源回收时所用
+    uint32_t                    nextFreeIdx; // 下一个空闲的索引位置
+    const char                  *name;
 };
 
 //
@@ -238,14 +256,28 @@ static_assert(sizeof(JsString) == 24, "JsPoolString should be 24 bytes long.");
 
 #pragma pack(pop)
 
+enum JsValueStringIndex {
+    JS_STRING_IDX_EMPTY         = 0,
+    JS_STRING_IDX_UNDEFINED,
+    JS_STRING_IDX_NULL,
+    JS_STRING_IDX_TRUE,
+    JS_STRING_IDX_FALSE,
+};
 
 const JsValue JsNotInitializedValue = JsValue();
 const JsValue JsNullValue = JsValue(JDT_NULL, 0);
 const JsValue JsUndefinedValue = JsValue(JDT_UNDEFINED, 0);
+const JsValue JsStringValueEmpty = JsValue(JDT_STRING, JS_STRING_IDX_EMPTY);
+const JsValue JsStringValueUndefined = JsValue(JDT_STRING, JS_STRING_IDX_UNDEFINED);
+const JsValue JsStringValueNull = JsValue(JDT_STRING, JS_STRING_IDX_NULL);
+const JsValue JsStringValueTrue = JsValue(JDT_STRING, JS_STRING_IDX_TRUE);
+const JsValue JsStringValueFalse = JsValue(JDT_STRING, JS_STRING_IDX_FALSE);
+
 
 using VecJsValues = std::vector<JsValue>;
 using VecJsDoubles = std::vector<JsDouble>;
 using VecJsStrings = std::vector<JsString>;
+using VecJsSymbols = std::vector<JsSymbol>;
 using VecJsObjects = std::vector<IJsObject *>;
 
 // NameAtom 用于将 JavaScript 中的 name string 转换为对应的 name index.

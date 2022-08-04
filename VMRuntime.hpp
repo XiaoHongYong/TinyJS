@@ -18,12 +18,23 @@
 class VMScope;
 class VMContext;
 class Arguments;
-class JSVirtualMachine;
+class JsVirtualMachine;
 
 
-typedef void (*JsNativeMemberFunction)(VMContext *ctx, const JsValue &thiz, const Arguments &args);
+typedef void (*JsNativeFunction)(VMContext *ctx, const JsValue &thiz, const Arguments &args);
 
-using VecJsNativeMemberFunction = std::vector<JsNativeMemberFunction>;
+struct JsNativeFunctionObject {
+    JsNativeFunction            func;
+    uint32_t                    objIndx;
+    bool                        isAddedToModified;
+
+    JsNativeFunctionObject(JsNativeFunction f) : func(f) {
+        objIndx = 0;
+        isAddedToModified = false;
+    }
+};
+
+using VecJsNativeFunction = std::vector<JsNativeFunctionObject>;
 
 /**
  * 在系统初始化阶段用来存储缺省使用的字符串、double、functions 等资源，这些资源不参与后期的资源释放统计
@@ -42,10 +53,10 @@ public:
     void setGlobalObject(const char *name, IJsObject *obj);
 
     uint32_t pushObjValue(IJsObject *value) { uint32_t n = (uint32_t)objValues.size(); objValues.push_back(value); return n; }
-    uint32_t pushNativeMemberFunction(JsNativeMemberFunction f) { uint32_t n = (uint32_t)nativeMemberFunctions.size(); nativeMemberFunctions.push_back(f); return n; }
+    uint32_t pushNativeFunction(JsNativeFunction f) { uint32_t n = (uint32_t)nativeFunctions.size(); nativeFunctions.push_back(JsNativeFunctionObject(f)); return n; }
 
-    uint32_t pushDoubleValue(double value);
-    uint32_t pushStringValue(const SizedString &value);
+    JsValue pushDoubleValue(double value);
+    JsValue pushStringValue(const SizedString &value);
 
     uint32_t findDoubleValue(double value);
     uint32_t findStringValue(const SizedString &value);
@@ -62,7 +73,13 @@ public:
     VecJsStrings                stringValues;
 
     VecJsObjects                objValues;
-    VecJsNativeMemberFunction   nativeMemberFunctions;
+    VecJsNativeFunction         nativeFunctions;
+
+    IJsObject                   *prototypeString;
+    IJsObject                   *prototypeNumber;
+    IJsObject                   *prototypeBoolean;
+    IJsObject                   *prototypeSymbol;
+    IJsObject                   *prototypeRegex;
 
     VMScope                     *globalScope;
 
@@ -79,18 +96,20 @@ private:
 public:
     VMRuntime();
 
-    void init(JSVirtualMachine *vm, VMRuntimeCommon *rtCommon);
+    void init(JsVirtualMachine *vm, VMRuntimeCommon *rtCommon);
 
     void dump(BinaryOutputStream &stream);
 
     uint32_t pushObjValue(IJsObject *value) { uint32_t n = (uint32_t)objValues.size(); objValues.push_back(value); return n; }
     uint32_t pushDoubleValue(JsDouble &value) { uint32_t n = (uint32_t)doubleValues.size(); doubleValues.push_back(value); return n; }
     uint32_t pushResourcePool(ResourcePool *pool) { uint32_t n = (uint32_t)resourcePools.size(); resourcePools.push_back(pool); return n; }
-    uint32_t pushString(const JsString &str) { uint32_t n = (uint32_t)stringValues.size(); stringValues.push_back(str); return n; }
+    JsValue pushSymbolValue(JsSymbol &value) { uint32_t n = (uint32_t)symbolValues.size(); symbolValues.push_back(value); return JsValue(JDT_SYMBOL, n); }
+    JsValue pushString(const JsString &str) { uint32_t n = (uint32_t)stringValues.size(); stringValues.push_back(str); return JsValue(JDT_STRING, n); }
+    JsValue pushString(const SizedString &str);
 
-    JsNativeMemberFunction getNativeMemberFunction(uint32_t i) {
-        assert(i < rtCommon->nativeMemberFunctions.size());
-        return rtCommon->nativeMemberFunctions[i];
+    JsNativeFunction getNativeFunction(uint32_t i) {
+        assert(i < nativeFunctions.size());
+        return nativeFunctions[i].func;
     }
 
     double getDouble(const JsValue &val) {
@@ -108,6 +127,12 @@ public:
         }
     }
 
+    SizedString getSymbolName(const JsValue &val) {
+        assert(val.type == JDT_SYMBOL);
+        assert(val.value.index < symbolValues.size());
+        return SizedString(symbolValues[val.value.index].name);
+    }
+
     SizedString getStringInResourcePool(uint32_t index) {
         uint16_t poolIndex = getPoolIndexOfResource(index);
         uint16_t strIndex = getIndexOfResource(index);
@@ -120,13 +145,7 @@ public:
     SizedString getString(const JsValue &val) {
         assert(val.type == JDT_STRING);
         if (val.isInResourcePool) {
-            uint16_t poolIndex = getPoolIndexOfResource(val.value.index);
-            uint16_t strIndex = getIndexOfResource(val.value.index);
-
-            assert(poolIndex < resourcePools.size());
-            auto rp = resourcePools[poolIndex];
-            assert(strIndex < rp->strings.size());
-            return rp->strings[strIndex];
+            return getStringInResourcePool(val.value.index);
         } else {
             auto &js = stringValues[val.value.index];
             if (js.isJoinedString) {
@@ -142,7 +161,6 @@ public:
         if (val.isInResourcePool) {
             // TODO..
             return nullptr;
-            // return rp->strings[val.value.resourcePool.index];
         } else {
             return objValues[val.value.index];
         }
@@ -158,22 +176,35 @@ public:
         }
 
         index -= countCommonStrings;
-        auto s = pool->strings[index];
-        s.unused = 0;
-        return s;
+        return pool->strings[index];
     }
 
+    JsValue stringIdxToJsValue(uint16_t poolIndex, uint32_t index) {
+        if (index < countCommonStrings) {
+            return JsValue(JDT_STRING, index);
+        }
+
+        index -= countCommonStrings;
+        return makeJsValueOfStringInResourcePool(poolIndex, index);
+    }
+    
     void joinString(JsString &js);
     JsValue joinSmallString(const SizedString &sz1, const SizedString &sz2);
     JsValue addString(const JsValue &s1, const JsValue &s2);
     JsPoolString allocString(uint32_t size);
+
+    double toNumber(VMContext *ctx, const JsValue &v);
+    JsValue toString(VMContext *ctx, const JsValue &v);
+    SizedString toSizedString(VMContext *ctx, const JsValue &v, string &buf);
+
+    bool isEmptyString(const JsValue &v);
 
 protected:
     StringPool *newStringPool(uint32_t size);
 
 public:
     
-    JSVirtualMachine            *vm;
+    JsVirtualMachine            *vm;
     VMRuntimeCommon             *rtCommon;
 
     VMScope                     *globalScope;
@@ -187,8 +218,11 @@ public:
     uint32_t                    countCommonObjs;
 
     VecJsDoubles                doubleValues;
+    VecJsSymbols                symbolValues;
     VecJsStrings                stringValues;
     VecJsObjects                objValues;
+    VecJsNativeFunction         nativeFunctions;
+    VecJsNativeFunction         nativeFunctionsModified; // 为了提高 GC 的性能，被修改的函数会被加入到此
     VecResourcePools            resourcePools;
 
     uint32_t                    firstFreeDoubleIdx;

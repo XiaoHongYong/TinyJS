@@ -17,7 +17,7 @@ class VMFunctionFrame;
 class VMRuntimeCommon;
 class VMRuntime;
 class VMContext;
-class JSVirtualMachine;
+class JsVirtualMachine;
 class Arguments;
 
 
@@ -25,7 +25,6 @@ using VecVMScopes = std::vector<VMScope *>;
 using VecVMStackScopes = std::vector<VMScope *>;
 using VecVMStackFrames = std::vector<VMFunctionFrame *>;
 using StackJsValues = std::vector<JsValue>;
-using MapNameToJsValue = std::unordered_map<SizedString, JsValue, SizedStringHash, SizedStrCmpEqual>;
 
 void registerGlobalValue(VMContext *ctx, VMScope *globalScope, const char *name, const JsValue &value);
 void registerGlobalObject(VMContext *ctx, VMScope *globalScope, const char *name, IJsObject *obj);
@@ -47,13 +46,26 @@ public:
     ~Arguments();
 
     Arguments &operator = (const Arguments &other);
-    JsValue &operator[](uint32_t n) { assert(n < count); return data[n]; }
+    JsValue &operator[](uint32_t n) const { assert(n < count); return data[n]; }
 
     void copy(const Arguments &other);
 
     JsValue                     *data;
     uint32_t                    count;
     bool                        needFree;
+};
+
+class ArgumentsX : public Arguments {
+public:
+    ArgumentsX(const JsValue &one) {
+        data = args;
+        args[0] = one;
+        count = 1;
+        needFree = false;
+    }
+
+    JsValue                     args[1];
+    
 };
 
 /**
@@ -97,10 +109,12 @@ private:
 public:
     VMContext(VMRuntime *runtime) : runtime(runtime) {
         // stackFrames.push_back(&runtime->global);
+        vm = runtime->vm;
     }
 
     void throwException(ParseError err, cstr_t format, ...);
 
+    JsVirtualMachine            *vm;
     VMRuntime                   *runtime;
     StackJsValues               stack;
     VecVMStackFrames            stackFrames; // 当前的函数调用栈，用于记录函数的调用层次
@@ -110,16 +124,20 @@ public:
 };
 
 
-class JSVirtualMachine {
+class JsVirtualMachine {
 private:
-    JSVirtualMachine(const JSVirtualMachine &);
-    JSVirtualMachine &operator=(const JSVirtualMachine &);
+    JsVirtualMachine(const JsVirtualMachine &);
+    JsVirtualMachine &operator=(const JsVirtualMachine &);
 
 public:
-    JSVirtualMachine();
+    JsVirtualMachine();
 
-    void eval(cstr_t code, size_t len, VMContext *vmctx, VecVMStackScopes &stackScopes, const Arguments &args);
-    void callMember(VMContext *vmctx, const JsValue &obj, const char *memberName, const Arguments &args);
+    void eval(cstr_t code, size_t len, VMContext *ctx, VecVMStackScopes &stackScopes, const Arguments &args);
+    void callMember(VMContext *ctx, const JsValue &thiz, const char *memberName, const Arguments &args);
+    void callMember(VMContext *ctx, const JsValue &thiz, const JsValue &memberFunc, const Arguments &args);
+
+    JsValue getMemberDot(VMContext *ctx, const JsValue &thiz, const SizedString &prop);
+    void setMemberDot(VMContext *ctx, const JsValue &thiz, const SizedString &prop, const JsValue &value);
 
     void dump(cstr_t code, size_t len, BinaryOutputStream &stream);
     void dump(BinaryOutputStream &stream);

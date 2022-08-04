@@ -20,10 +20,21 @@ extern SizedString SS_FALSE;
 extern SizedString SS_THIS;
 extern SizedString SS_ARGUMENTS;
 extern SizedString SS_LENGTH;
+extern SizedString SS_TO_STRING;
 
 
 const int MAX_INT_TO_CONST_STR = 999;
 SizedString intToSizedString(uint32_t n);
 
+class NumberToSizedString : public SizedString {
+public:
+    NumberToSizedString(uint32_t n);
+
+    const SizedString &str() const { return *this; }
+    
+protected:
+    uint8_t             _buf[32];
+
+};
 
 #endif /* ConstStrings_hpp */

@@ -25,6 +25,19 @@
 
 
 VMRuntimeCommon::VMRuntimeCommon() {
+    prototypeString = nullptr;
+    prototypeNumber = nullptr;
+    prototypeBoolean = nullptr;
+    prototypeRegex = nullptr;
+    prototypeSymbol = nullptr;
+
+    JsValue tmp;
+    tmp = pushStringValue(SizedString("", 0)); assert(tmp.value.index == JS_STRING_IDX_EMPTY);
+    tmp = pushStringValue(SS_UNDEFINED); assert(tmp.value.index == JS_STRING_IDX_UNDEFINED);
+    tmp = pushStringValue(SS_NULL); assert(tmp.value.index == JS_STRING_IDX_NULL);
+    tmp = pushStringValue(SS_TRUE); assert(tmp.value.index == JS_STRING_IDX_TRUE);
+    tmp = pushStringValue(SS_FALSE); assert(tmp.value.index == JS_STRING_IDX_FALSE);
+
     auto resourcePool = new ResourcePool();
     Function *rootFunc = new Function(resourcePool, nullptr, 0);
     globalScope = new VMScope(rootFunc->scope);
@@ -34,7 +47,7 @@ VMRuntimeCommon::VMRuntimeCommon() {
 }
 
 void VMRuntimeCommon::dump(BinaryOutputStream &stream) {
-    stream.writeFormat("Count nativeMemberFunctions: %d\n", (int)nativeMemberFunctions.size());
+    stream.writeFormat("Count nativeFunctions: %d\n", (int)nativeFunctions.size());
 
     stream.write("Strings: [\n");
     for (uint32_t i = 0; i < stringValues.size(); i++) {
@@ -82,19 +95,19 @@ void VMRuntimeCommon::setGlobalObject(const char *strName, IJsObject *obj) {
     setGlobalValue(strName, JsValue(JDT_OBJECT, idx));
 }
 
-uint32_t VMRuntimeCommon::pushDoubleValue(double value) {
+JsValue VMRuntimeCommon::pushDoubleValue(double value) {
     auto it = mapDoubles.find(value);
     if (it == mapDoubles.end()) {
         uint32_t index = (uint32_t)doubleValues.size();
         mapDoubles[value] = index;
         doubleValues.push_back(JsDouble(value));
-        return index;
+        return JsValue(JDT_NUMBER, index);
     } else {
-        return (*it).second;
+        return JsValue(JDT_NUMBER, (*it).second);
     }
 }
 
-uint32_t VMRuntimeCommon::pushStringValue(const SizedString &value) {
+JsValue VMRuntimeCommon::pushStringValue(const SizedString &value) {
     auto it = mapStrings.find(value);
     if (it == mapStrings.end()) {
         uint32_t index = (uint32_t)stringValues.size();
@@ -103,9 +116,9 @@ uint32_t VMRuntimeCommon::pushStringValue(const SizedString &value) {
         s.value.poolString.value = value;
         s.value.poolString.poolIdx = POOL_STRING_IDX_INVALID;
         stringValues.push_back(s);
-        return index;
+        return JsValue(JDT_STRING, index);
     } else {
-        return (*it).second;
+        return JsValue(JDT_STRING, (*it).second);
     }
 }
 
@@ -143,7 +156,7 @@ VMRuntime::VMRuntime() {
     stringPools.push_back(nullptr);
 }
 
-void VMRuntime::init(JSVirtualMachine *vm, VMRuntimeCommon *rtCommon) {
+void VMRuntime::init(JsVirtualMachine *vm, VMRuntimeCommon *rtCommon) {
     this->vm = vm;
     this->rtCommon = rtCommon;
 
@@ -153,6 +166,7 @@ void VMRuntime::init(JSVirtualMachine *vm, VMRuntimeCommon *rtCommon) {
 
     doubleValues = rtCommon->doubleValues;
     stringValues = rtCommon->stringValues;
+    nativeFunctions = rtCommon->nativeFunctions;
 
     // 需要将 rtCommon 中的对象都复制一份.
     for (auto item : rtCommon->objValues) {
@@ -341,13 +355,17 @@ void VMRuntime::joinString(JsString &js) {
 }
 
 JsValue VMRuntime::joinSmallString(const SizedString &sz1, const SizedString &sz2) {
+    if (sz1.len + sz2.len == 0) {
+        return JsStringValueEmpty;
+    }
+
     JsPoolString js = allocString(sz1.len + sz2.len);
 
     auto p = (uint8_t *)js.value.data;
     memcpy(p, sz1.data, sz1.len); p += sz1.len;
     memcpy(p, sz2.data, sz2.len);
 
-    return JsValue(JDT_STRING, pushString(JsString(js)));
+    return pushString(JsString(js));
 }
 
 JsValue VMRuntime::addString(const JsValue &s1, const JsValue &s2) {
@@ -381,7 +399,7 @@ JsValue VMRuntime::addString(const JsValue &s1, const JsValue &s2) {
 
         js.nextStringIdx = s2.value.index;
         js.isNextStringIdxInResourcePool = s2.isInResourcePool;
-        return JsValue(JDT_STRING, pushString(JsString(js)));
+        return pushString(JsString(js));
     }
 
     if (!s1.isInResourcePool && js1.value.poolString.poolIdx != POOL_STRING_IDX_INVALID) {
@@ -397,7 +415,7 @@ JsValue VMRuntime::addString(const JsValue &s1, const JsValue &s2) {
             pool->alloc(ss2.len);
             JsPoolString poolStr2 = poolString;
             poolStr2.value.len += ss2.len;
-            return JsValue(JDT_STRING, pushString(JsString(poolStr2)));
+            return pushString(JsString(poolStr2));
         }
     }
 
@@ -410,7 +428,7 @@ JsValue VMRuntime::addString(const JsValue &s1, const JsValue &s2) {
 
         js.nextStringIdx = s2.value.index;
         js.isNextStringIdxInResourcePool = s2.isInResourcePool;
-        return JsValue(JDT_STRING, pushString(JsString(js)));
+        return pushString(JsString(js));
     } else {
         // 直接拼接
         return joinSmallString(ss1, ss2);
@@ -468,4 +486,178 @@ StringPool *VMRuntime::newStringPool(uint32_t size) {
     auto pool = new StringPool((uint16_t)stringPools.size(), size);
     stringPools.push_back(pool);
     return pool;
+}
+
+JsValue VMRuntime::pushString(const SizedString &str) {
+    if (str.len == 0) {
+        return JsStringValueEmpty;
+    }
+
+    JsPoolString js = allocString(str.len);
+    memcpy(js.value.data, str.data, str.len);
+
+    return pushString(JsString(js));
+}
+
+double VMRuntime::toNumber(VMContext *ctx, const JsValue &item) {
+    auto v = item;
+    if (item.type >= JDT_OBJECT) {
+        Arguments noArgs;
+        vm->callMember(ctx, v, "toString", noArgs);
+        if (ctx->error == PE_OK) {
+            v = ctx->stack.back();
+            ctx->stack.pop_back();
+        }
+    }
+
+    switch (v.type) {
+        case JDT_NOT_INITIALIZED:
+            ctx->throwException(PE_REFERECNE_ERROR, "Cannot access variable before initialization");
+            return 0;
+        case JDT_UNDEFINED:
+        case JDT_NULL:
+            return 0;
+        case JDT_INT32:
+        case JDT_BOOL:
+            return v.value.n32;
+        case JDT_CHAR:
+            if (v.value.n32 >= '0' && v.value.n32 <= '9') {
+                return v.value.n32 - '0';
+            }
+            return 0;
+        case JDT_STRING: {
+            auto s = getString(v);
+            s.trim();
+            double v;
+            auto p = parseNumber(s, v);
+            if (p != s.data + s.len) {
+                v = 0;
+            }
+            return v;
+        }
+        case JDT_NUMBER:
+            return getDouble(v);
+        case JDT_SYMBOL:
+            return 0;
+        default:
+            assert(0);
+            return 0;
+    }
+}
+
+JsValue VMRuntime::toString(VMContext *ctx, const JsValue &v) {
+    JsValue val = v;
+    if (val.type >= JDT_OBJECT) {
+        vm->callMember(ctx, v, "toString", Arguments());
+        val = ctx->stack.back();
+        ctx->stack.pop_back();
+    }
+
+    switch (val.type) {
+        case JDT_NOT_INITIALIZED:
+            ctx->throwException(PE_TYPE_ERROR, "Cannot access '?' before initialization");
+            break;
+        case JDT_UNDEFINED: return JsStringValueUndefined;
+        case JDT_NULL: return JsStringValueNull;
+        case JDT_BOOL: return val.value.n32 ? JsStringValueTrue : JsStringValueFalse;
+        case JDT_INT32: {
+            NumberToSizedString str(val.value.n32);
+            return pushString(str);
+        }
+        case JDT_NUMBER: {
+            char buf[64];
+            auto len = floatToString(getDouble(val), buf);
+            return pushString(SizedString(buf, len));
+        }
+        case JDT_CHAR: {
+            char buf[32];
+            buf[0] = val.value.n32;
+            return pushString(SizedString(buf, 1));
+        }
+        case JDT_STRING: {
+            return val;
+        }
+        case JDT_SYMBOL: {
+            auto index = val.value.n32;
+            assert(index < symbolValues.size());
+            CStrPrintf str("Symbol(%s)", symbolValues[index].name);
+            return pushString(SizedString(str.c_str(), str.size()));
+        }
+        default: {
+            ctx->throwException(PE_TYPE_ERROR, "Cannot convert object to primitive value");
+        }
+    }
+
+    return JsUndefinedValue;
+}
+
+SizedString VMRuntime::toSizedString(VMContext *ctx, const JsValue &v, string &buf) {
+    JsValue val = v;
+    if (val.type >= JDT_OBJECT) {
+        vm->callMember(ctx, v, "toString", Arguments());
+        val = ctx->stack.back();
+        ctx->stack.pop_back();
+    }
+
+    switch (val.type) {
+        case JDT_NOT_INITIALIZED:
+            ctx->throwException(PE_TYPE_ERROR, "Cannot access '?' before initialization");
+            break;
+        case JDT_UNDEFINED: return SS_UNDEFINED;
+        case JDT_NULL: return SS_NULL;
+        case JDT_BOOL: return val.value.n32 ? SS_TRUE : SS_FALSE;
+        case JDT_INT32: {
+            auto n = val.value.n32;
+            auto ss = intToSizedString(n);
+            if (ss.len == 0) {
+                buf.resize(32);
+                ss.len = (uint32_t)::itoa(n, (char *)buf.data());
+                ss.data = (uint8_t *)buf.data();
+            }
+
+            return ss;
+        }
+        case JDT_NUMBER: {
+            buf.resize(64);
+            auto len = floatToString(getDouble(val), buf.data());
+            return SizedString(buf.data(), len);
+        }
+        case JDT_CHAR: {
+            buf.push_back(val.value.n32);
+            return SizedString(buf.c_str(), 1);
+        }
+        case JDT_STRING: {
+            return getString(val);
+        }
+        case JDT_SYMBOL: {
+            auto index = val.value.n32;
+            assert(index < symbolValues.size());
+            CStrPrintf str("Symbol(%s)", symbolValues[index].name);
+            buf = str.c_str();
+            return SizedString(buf);
+        }
+        default: {
+            ctx->throwException(PE_TYPE_ERROR, "Cannot convert object to primitive value");
+        }
+    }
+
+    return SizedString();
+}
+
+bool VMRuntime::isEmptyString(const JsValue &v) {
+    assert(v.type == JDT_STRING);
+    if (v.value.index == JS_STRING_IDX_EMPTY) {
+        return true;
+    }
+
+    if (v.isInResourcePool) {
+        return getStringInResourcePool(v.value.index).len == 0;
+    }
+
+    auto js = stringValues[v.value.index];
+    if (js.isJoinedString) {
+        return js.value.joinedString.len > 0;
+    } else {
+        return js.value.poolString.value.len > 0;
+    }
 }

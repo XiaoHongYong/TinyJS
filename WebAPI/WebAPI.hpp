@@ -8,7 +8,7 @@
 #ifndef WebAPI_hpp
 #define WebAPI_hpp
 
-#include "../IJsObject.hpp"
+#include "../JsLibObject.hpp"
 
 
 void registerWebAPIs(VMRuntimeCommon *rt);

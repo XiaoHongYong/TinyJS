@@ -49,7 +49,7 @@ int main(int argc, const char * argv[]) {
 
     // cstr_t code = "var a = { b : 1 }; a.b = 2; console.log(a.b + 'hello' + a);";
     // cstr_t code = "var a = { b : 1 }; a.b = 'x: '; console.log(a.b + 'hello' + ', x');";
-    cstr_t code = "var a = String.fromCharCode(63, 64, 65, 66, 67.0, '67', '68.1', 'a', '69'); console.log(a, String.name, String.length);";
+    cstr_t code = "var a = String.fromCharCode(63, 64, 65, 66, 67.0, '67', '68.1', 'a', '69'); console.log(a.length, a, String.name, String.length, a.at(1), a.charAt(20), a.charAt(2));";
 
 //    JSParser paser(code, strlen(code));
 //
@@ -61,7 +61,7 @@ int main(int argc, const char * argv[]) {
 //    auto str = os.startNew();
 //    printf("%s", str.data);
 
-    JSVirtualMachine vm;
+    JsVirtualMachine vm;
 //    string errMessage;
 //    auto nativeFunc = vm.compile(nullptr, func, errMessage);
 //    auto ret = vm.eval(nativeFunc, vm.mainVmContext());

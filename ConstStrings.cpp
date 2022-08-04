@@ -24,6 +24,7 @@ SizedString SS_FALSE = makeCommonString("false");
 SizedString SS_THIS = makeCommonString("this");
 SizedString SS_ARGUMENTS = makeCommonString("arguments");
 SizedString SS_LENGTH = makeCommonString("length");
+SizedString SS_TO_STRING = makeCommonString("toString");
 
 const int INT_STR_POS_10 = 10;
 const int INT_STR_POS_100 = INT_STR_POS_10 + 2 * (100 - 10);
@@ -72,4 +73,16 @@ SizedString intToSizedString(uint32_t n) {
     } else {
         return SizedString(nullptr, 0, 0);
     }
+}
+
+NumberToSizedString::NumberToSizedString(uint32_t n) {
+    auto ss = intToSizedString(n);
+    if (ss.len == 0) {
+        ss.len = (uint32_t)::itoa(n, (char *)_buf);
+        ss.data = _buf;
+    }
+
+    len = ss.len;
+    data = ss.data;
+    unused = ss.unused;
 }

@@ -11,225 +11,582 @@
 
 static const SizedString __PROTO__ = makeSizedString("__proto__");
 
-JsObject::JsObject(const JsValue &prototype) : prototype(prototype) {
-    type = JDT_OBJECT;
-}
 
-JsValue JsObject::get(VMContext *ctx, const SizedString &prop) {
-    auto it = props.find(prop);
-    if (it != props.end()) {
-        return (*it).second;
+SizedString copyPropertyIfNeed(SizedString name) {
+    if (name.unused != COMMON_STRINGS) {
+        auto p = new uint8_t[name.len];
+        memcpy(p, name.data, name.len);
+        name.data = p;
     }
 
-    if (prototype.type > JDT_NULL) {
-        // 使用 prototype
-        switch (prototype.type) {
-            case JDT_NOT_INITIALIZED:
-            case JDT_UNDEFINED:
-            case JDT_NULL:
-                break;
-            case JDT_BOOL:
-                assert(0);
-                break;
-            case JDT_INT32:
-                assert(0);
-                break;
-            case JDT_NUMBER:
-                assert(0);
-                break;
-            case JDT_STRING:
-                assert(0);
-                break;
-            case JDT_REGEX:
-                assert(0);
-                break;
-            default: {
-                auto obj = ctx->runtime->getObject(prototype);
-                assert(obj);
-                return obj->get(ctx, prop);
-            }
+    return name;
+}
+
+bool IJsObject::getBool(VMContext *ctx, const JsValue &thiz, const JsValue &prop) {
+    auto value = get(ctx, thiz, prop);
+    switch (value.type) {
+        case JDT_NOT_INITIALIZED:
+        case JDT_UNDEFINED:
+        case JDT_NULL:
+            return false;
+        case JDT_BOOL:
+        case JDT_INT32:
+            return value.value.n32 != 0;
+        case JDT_NUMBER: {
+            auto f = ctx->runtime->getDouble(value);
+            return f != 0;
+        }
+        case JDT_CHAR:
+            return true;
+        case JDT_STRING:
+            return !ctx->runtime->isEmptyString(prop);
+        default:
+            return true;
+    }
+}
+
+void IJsObject::defineProperty(VMContext *ctx, const JsValue &propOrg, const JsProperty &descriptor, const JsValue &setter) {
+    JsValue prop = propOrg;
+    if (prop.type >= JDT_OBJECT) {
+        prop = ctx->runtime->toString(ctx, propOrg);
+    }
+
+    switch (prop.type) {
+        case JDT_NOT_INITIALIZED:
+            ctx->throwException(PE_TYPE_ERROR, "Cannot access '?' before initialization");
+            break;
+        case JDT_UNDEFINED: definePropertyByName(ctx, SS_UNDEFINED, descriptor, setter); break;
+        case JDT_NULL: definePropertyByName(ctx, SS_NULL, descriptor, setter); break;
+        case JDT_BOOL: definePropertyByName(ctx, prop.value.n32 ? SS_TRUE : SS_FALSE, descriptor, setter); break;
+        case JDT_INT32: definePropertyByIndex(ctx, prop.value.n32, descriptor, setter); break;
+        case JDT_NUMBER: {
+            char buf[64];
+            auto len = floatToString(ctx->runtime->getDouble(prop), buf);
+            definePropertyByName(ctx, SizedString(buf, len), descriptor, setter);
+            break;
+        }
+        case JDT_CHAR: {
+            char buf[32];
+            buf[0] = prop.value.n32;
+            definePropertyByName(ctx, SizedString(buf, 1), descriptor, setter);
+            break;
+        }
+        case JDT_STRING: {
+            auto name = ctx->runtime->getString(prop);
+            definePropertyByName(ctx, name, descriptor, setter);
+            break;
+        }
+        case JDT_SYMBOL: definePropertyBySymbol(ctx, prop.value.index, descriptor, setter); break;
+        default: {
+            ctx->throwException(PE_TYPE_ERROR, "Cannot convert object to primitive value");
+        }
+    }
+}
+
+bool IJsObject::getOwnPropertyDescriptor(VMContext *ctx, const JsValue &propOrg, JsProperty &descriptorOut, JsValue &setterOut) {
+    JsValue prop = propOrg;
+    if (prop.type >= JDT_OBJECT) {
+        prop = ctx->runtime->toString(ctx, propOrg);
+    }
+
+    descriptorOut = JsProperty(JsUndefinedValue);
+    setterOut = JsUndefinedValue;
+
+    switch (prop.type) {
+        case JDT_NOT_INITIALIZED:
+            ctx->throwException(PE_TYPE_ERROR, "Cannot access '?' before initialization");
+            break;
+        case JDT_UNDEFINED: return getOwnPropertyDescriptorByName(ctx, SS_UNDEFINED, descriptorOut, setterOut);
+        case JDT_NULL: return getOwnPropertyDescriptorByName(ctx, SS_NULL, descriptorOut, setterOut);
+        case JDT_BOOL: return getOwnPropertyDescriptorByName(ctx, prop.value.n32 ? SS_TRUE : SS_FALSE, descriptorOut, setterOut);
+        case JDT_INT32: return getOwnPropertyDescriptorByIndex(ctx, prop.value.n32, descriptorOut, setterOut);
+        case JDT_NUMBER: {
+            char buf[64];
+            auto len = floatToString(ctx->runtime->getDouble(prop), buf);
+            return getOwnPropertyDescriptorByName(ctx, SizedString(buf, len), descriptorOut, setterOut);
+        }
+        case JDT_CHAR: {
+            char buf[32];
+            buf[0] = prop.value.n32;
+            return getOwnPropertyDescriptorByName(ctx, SizedString(buf, 1), descriptorOut, setterOut);
+        }
+        case JDT_STRING: {
+            auto name = ctx->runtime->getString(prop);
+            return getOwnPropertyDescriptorByName(ctx, name, descriptorOut, setterOut);
+        }
+        case JDT_SYMBOL:
+            return getOwnPropertyDescriptorBySymbol(ctx, prop.value.index, descriptorOut, setterOut);
+        default: {
+            ctx->throwException(PE_TYPE_ERROR, "Cannot convert object to primitive value");
+        }
+    }
+
+    return false;
+}
+
+JsValue IJsObject::get(VMContext *ctx, const JsValue &thiz, const JsValue &propOrg) {
+    JsValue prop = propOrg;
+    if (prop.type >= JDT_OBJECT) {
+        prop = ctx->runtime->toString(ctx, propOrg);
+    }
+
+    switch (prop.type) {
+        case JDT_NOT_INITIALIZED:
+            ctx->throwException(PE_TYPE_ERROR, "Cannot access '?' before initialization");
+            break;
+        case JDT_UNDEFINED: return getByName(ctx, thiz, SS_UNDEFINED);
+        case JDT_NULL: return getByName(ctx, thiz, SS_NULL);
+        case JDT_BOOL: return getByName(ctx, thiz, prop.value.n32 ? SS_TRUE : SS_FALSE);
+        case JDT_INT32: return getByIndex(ctx, thiz, prop.value.n32);
+        case JDT_NUMBER: {
+            char buf[64];
+            auto len = floatToString(ctx->runtime->getDouble(prop), buf);
+            return getByName(ctx, thiz, SizedString(buf, len));
+        }
+        case JDT_CHAR: {
+            char buf[32];
+            buf[0] = prop.value.n32;
+            return getByName(ctx, thiz, SizedString(buf, 1));
+        }
+        case JDT_STRING: {
+            auto name = ctx->runtime->getString(prop);
+            return getByName(ctx, thiz, name);
+        }
+        case JDT_SYMBOL:
+            return getBySymbol(ctx, thiz, prop.value.index);
+        default: {
+            ctx->throwException(PE_TYPE_ERROR, "Cannot convert object to primitive value");
         }
     }
 
     return JsUndefinedValue;
 }
 
-void JsObject::set(VMContext *ctx, const SizedString &prop, const JsValue &value) {
-    props[prop] = value;
+void IJsObject::set(VMContext *ctx, const JsValue &thiz, const JsValue &propOrg, const JsValue &value) {
+    JsValue prop = propOrg;
+    if (prop.type >= JDT_OBJECT) {
+        prop = ctx->runtime->toString(ctx, propOrg);
+    }
 
-    if (prop.equal(SS_PROTOTYPE)) {
-        prototype = value;
+    switch (prop.type) {
+        case JDT_NOT_INITIALIZED:
+            ctx->throwException(PE_TYPE_ERROR, "Cannot access '?' before initialization");
+            return;
+        case JDT_UNDEFINED: setByName(ctx, thiz, SS_UNDEFINED, value); break;
+        case JDT_NULL: setByName(ctx, thiz, SS_NULL, value); break;
+        case JDT_BOOL: setByName(ctx, thiz, prop.value.n32 ? SS_TRUE : SS_FALSE, value); break;
+        case JDT_INT32: setByIndex(ctx, thiz, prop.value.n32, value); break;
+        case JDT_NUMBER: {
+            char buf[64];
+            auto len = floatToString(ctx->runtime->getDouble(prop), buf);
+            setByName(ctx, thiz, SizedString(buf, len), value);
+            break;
+        }
+        case JDT_CHAR: {
+            char buf[32];
+            buf[0] = prop.value.n32;
+            setByName(ctx, thiz, SizedString(buf, 1), value);
+            break;
+        }
+        case JDT_STRING: {
+            auto name = ctx->runtime->getString(prop);
+            setByName(ctx, thiz, name, value);
+            break;
+        }
+        case JDT_SYMBOL:
+            setBySymbol(ctx, thiz, prop.value.index, value);
+            break;
+        default: {
+            ctx->throwException(PE_TYPE_ERROR, "Cannot convert object to primitive value");
+            return;
+        }
     }
 }
 
-JsValue JsObject::get(VMContext *ctx, uint32_t index) {
-    if (index < MAX_INT_TO_CONST_STR) {
-        return get(ctx, intToSizedString(index));
+bool IJsObject::remove(VMContext *ctx, const JsValue &propOrg, const JsValue &value) {
+    JsValue prop = propOrg;
+    if (prop.type >= JDT_OBJECT) {
+        prop = ctx->runtime->toString(ctx, propOrg);
+    }
+
+    switch (prop.type) {
+        case JDT_NOT_INITIALIZED:
+            ctx->throwException(PE_TYPE_ERROR, "Cannot access '?' before initialization");
+            break;
+        case JDT_UNDEFINED: return removeByName(ctx, SS_UNDEFINED);
+        case JDT_NULL: return removeByName(ctx, SS_NULL);
+        case JDT_BOOL: return removeByName(ctx, prop.value.n32 ? SS_TRUE : SS_FALSE);
+        case JDT_INT32: return removeByIndex(ctx, prop.value.n32);
+        case JDT_NUMBER: {
+            char buf[64];
+            auto len = floatToString(ctx->runtime->getDouble(prop), buf);
+            return removeByName(ctx, SizedString(buf, len));
+            break;
+        }
+        case JDT_CHAR: {
+            char buf[32];
+            buf[0] = prop.value.n32;
+            return removeByName(ctx, SizedString(buf, 1));
+        }
+        case JDT_STRING: {
+            auto name = ctx->runtime->getString(prop);
+            return removeByName(ctx, name);
+        }
+        case JDT_SYMBOL:
+            return removeBySymbol(ctx, prop.value.index);
+        default: {
+            ctx->throwException(PE_TYPE_ERROR, "Cannot convert object to primitive value");
+            break;
+        }
+    }
+
+    return true;
+}
+
+JsObject::JsObject(const JsValue &prototype) : _prototype(prototype) {
+    type = JDT_OBJECT;
+    _symbolProps = nullptr;
+    _symbolSetters = nullptr;
+}
+
+JsObject::~JsObject() {
+    for (auto &item : _props) {
+        auto &key = item.first;
+        if (key.unused != COMMON_STRINGS) {
+            delete [] key.data;
+        }
+    }
+    _props.clear();
+
+    if (_setters) {
+        for (auto &item : *_setters) {
+            auto &key = item.first;
+            if (key.unused != COMMON_STRINGS) {
+                delete [] key.data;
+            }
+        }
+        _setters->clear();
+    }
+
+    if (_symbolProps) {
+        delete _symbolProps;
+    }
+
+    if (_symbolSetters) {
+        delete _symbolSetters;
+    }
+}
+
+void JsObject::definePropertyByName(VMContext *ctx, const SizedString &prop, const JsProperty &descriptor, const JsValue &setter) {
+    auto it = _props.find(prop);
+    if (it == _props.end()) {
+        _props[copyPropertyIfNeed(prop)] = descriptor;
     } else {
-        char buf[32];
-
-        SizedString indexStr;
-        indexStr.len = (uint32_t)itoa(index, buf);
-        indexStr.data = (uint8_t *)buf;
-        indexStr.unused = 0;
-        return get(ctx, indexStr);
-    }
-}
-
-void JsObject::set(VMContext *ctx, uint32_t index, const JsValue &value) {
-    if (index < MAX_INT_TO_CONST_STR) {
-        set(ctx, intToSizedString(index), value);
-    } else {
-        char buf[32];
-
-        SizedString indexStr;
-        indexStr.len = (uint32_t)itoa(index, buf);
-        indexStr.data = (uint8_t *)buf;
-        indexStr.unused = 0;
-        set(ctx, indexStr, value);
-    }
-}
-
-JsArguments::JsArguments() {
-    obj = nullptr;
-}
-
-JsArguments::~JsArguments() {
-    if (obj) {
-        delete obj;
-    }
-}
-
-JsValue JsArguments::get(VMContext *ctx, const SizedString &prop) {
-    bool successful = false;
-    auto n = prop.atoi(successful);
-    if (successful && n < args->count) {
-        return args->data[n];
+        (*it).second = descriptor;
     }
 
-    if (obj) {
-        return obj->get(ctx, prop);
-    } else {
-        return JsUndefinedValue;
-    }
-}
+    if (setter.type != JDT_UNDEFINED) {
+        if (setter.type <= JDT_REGEX) {
+            ctx->throwException(PE_TYPE_ERROR, "Setter must be a function: ");
+            return;
+        }
 
-void JsArguments::set(VMContext *ctx, const SizedString &prop, const JsValue &value) {
-    bool successful = false;
-    auto n = prop.atoi(successful);
-    if (successful && n < args->count) {
-        args->data[n] = value;
-    }
-
-    if (obj == nullptr) {
-        obj = new JsObject();
-        // 设置 length 属性
-        obj->set(ctx, SS_LENGTH, JsValue(JDT_INT32, args->count));
-    }
-
-    obj->set(ctx, prop, value);
-}
-
-JsValue JsArguments::get(VMContext *ctx, uint32_t index) {
-    if (index < args->count) {
-        return args->data[index];
-    } else {
-        if (obj) {
-            return obj->get(ctx, index);
+        if (_setters == nullptr) {
+            _setters = new MapNameToJsValue();
+        }
+        auto it = _setters->find(prop);
+        if (it == _setters->end()) {
+            _setters->at(copyPropertyIfNeed(prop)) = setter;
         } else {
-            return JsUndefinedValue;
+            (*it).second = setter;
         }
     }
 }
 
-void JsArguments::set(VMContext *ctx, uint32_t index, const JsValue &value) {
-    if (index < args->count) {
-        args->data[index] = value;
+void JsObject::definePropertyByIndex(VMContext *ctx, uint32_t index, const JsProperty &descriptor, const JsValue &setter) {
+    NumberToSizedString ss(index);
+    return definePropertyByName(ctx, ss, descriptor, setter);
+}
+
+void JsObject::definePropertyBySymbol(VMContext *ctx, uint32_t index, const JsProperty &descriptor, const JsValue &setter) {
+    if (!_symbolProps) {
+        _symbolProps = new MapSymbolToJsProperty;
+    }
+
+    auto it = _symbolProps->find(index);
+    if (it == _symbolProps->end()) {
+        (*_symbolProps)[index] = descriptor;
     } else {
-        if (obj == nullptr) {
-            obj = new JsObject();
-            // 设置 length 属性
-            obj->set(ctx, SS_LENGTH, JsValue(JDT_INT32, args->count));
+        (*it).second = descriptor;
+    }
+
+    if (setter.type > JDT_OBJECT) {
+        // 有 setter
+        if (!_symbolSetters) {
+            _symbolSetters = new MapSymbolToJsValue;
         }
 
-        obj->set(ctx, index, value);
+        auto it = _symbolSetters->find(index);
+        if (it == _symbolSetters->end()) {
+            (*_symbolSetters)[index] = setter;
+        } else {
+            (*it).second = setter;
+        }
     }
 }
 
-class JsLibFunctionLessCmp {
-public:
-    bool operator ()(const JsLibProperty &a, const JsLibProperty &b) {
-        return a.name.cmp(b.name) < 0;
+bool JsObject::getOwnPropertyDescriptorByName(VMContext *ctx, const SizedString &prop, JsProperty &descriptorOut, JsValue &setterOut) {
+    bool ret = false;
+    auto it = _props.find(prop);
+    if (it == _props.end()) {
+        descriptorOut = JsProperty(JsUndefinedValue);
+    } else {
+        descriptorOut = (*it).second;
+        ret = true;
     }
 
-};
-
-JsLibObject::JsLibObject(VMRuntimeCommon *rt, JsLibProperty *libProps, int countProps) : _libProps(libProps), _libPropsEnd(libProps + countProps) {
-    type = JDT_LIB_OBJECT;
-    _obj = nullptr;
-
-    for (auto p = _libProps; p != _libPropsEnd; p++) {
-        if (p->function) {
-            auto idx = rt->pushNativeMemberFunction(p->function);
-            p->value = JsValue(JDT_NATIVE_MEMBER_FUNCTION, idx);
-        } else if (p->strValue) {
-            auto idx = rt->pushStringValue(p->strValue);
-            p->value = JsValue(JDT_STRING, idx);
+    if (_setters) {
+        auto it = _setters->find(prop);
+        if (it == _setters->end()) {
+            setterOut = JsUndefinedValue;
+        } else {
+            setterOut = (*it).second;
+            ret = true;
         }
     }
 
-    std::sort(_libProps, _libPropsEnd, JsLibFunctionLessCmp());
+    return ret;
 }
 
-JsLibObject::JsLibObject(JsLibObject *from) {
-    type = JDT_LIB_OBJECT;
-
-    _obj = from->_obj;
-    _libProps = from->_libProps;
-    _libPropsEnd = from->_libPropsEnd;
+bool JsObject::getOwnPropertyDescriptorByIndex(VMContext *ctx, uint32_t index, JsProperty &descriptorOut, JsValue &setterOut) {
+    NumberToSizedString ss(index);
+    return getOwnPropertyDescriptorByName(ctx, ss, descriptorOut, setterOut);
 }
 
-JsValue JsLibObject::get(VMContext *ctx, const SizedString &prop) {
-    if (_obj) {
-        auto it = _obj->props.find(prop);
-        if (it != _obj->props.end()) {
-            // 优先返回设置的值
+bool JsObject::getOwnPropertyDescriptorBySymbol(VMContext *ctx, uint32_t index, JsProperty &descriptorOut, JsValue &setterOut) {
+    descriptorOut = JsProperty(JsUndefinedValue);
+    setterOut = JsUndefinedValue;
+
+    bool ret = false;
+    if (_symbolProps) {
+        auto it = _symbolProps->find(index);
+        if (it != _symbolProps->end()) {
+            descriptorOut = (*it).second;
+            ret = true;
+        }
+    }
+
+    if (_symbolSetters) {
+        auto it = _symbolSetters->find(index);
+        if (it != _symbolSetters->end()) {
+            setterOut = (*it).second;
+            ret = true;
+        }
+    }
+
+    return ret;
+}
+
+JsValue JsObject::getSetterByName(VMContext *ctx, const SizedString &prop) {
+    if (_setters) {
+        auto it = _setters->find(prop);
+        if (it != _setters->end()) {
             return (*it).second;
         }
     }
 
-    JsLibProperty key;
-    key.name = prop;
-
-    // 使用二分查找找到
-    auto first = std::lower_bound(_libProps, _libPropsEnd, key, JsLibFunctionLessCmp());
-    if (first != _libPropsEnd && first->name.equal(prop)) {
-        return first->value;
+    if (_prototype.type >= JDT_OBJECT) {
+        auto obj = ctx->runtime->getObject(_prototype);
+        assert(obj);
+        return obj->getSetterByName(ctx, prop);
     }
 
     return JsUndefinedValue;
 }
 
-void JsLibObject::set(VMContext *ctx, const SizedString &prop, const JsValue &value) {
-    if (!_obj) {
-        _obj = new JsObject();
-    }
-
-    _obj->set(ctx, prop, value);
+JsValue JsObject::getSetterByIndex(VMContext *ctx, uint32_t index) {
+    NumberToSizedString ss(index);
+    return getSetterByName(ctx, ss);
 }
 
-JsValue JsLibObject::get(VMContext *ctx, uint32_t index) {
-    if (_obj) {
-        _obj->get(ctx, index);
+JsValue JsObject::getSetterBySymbol(VMContext *ctx, uint32_t index) {
+    if (_symbolSetters) {
+        auto it = _symbolSetters->find(index);
+        if (it != _symbolSetters->end()) {
+            return (*it).second;
+        }
+    }
+
+    if (_prototype.type >= JDT_OBJECT) {
+        auto obj = ctx->runtime->getObject(_prototype);
+        assert(obj);
+        obj->getSetterBySymbol(ctx, index);
     }
 
     return JsUndefinedValue;
 }
 
-void JsLibObject::set(VMContext *ctx, uint32_t index, const JsValue &value) {
-    if (!_obj) {
-        _obj = new JsObject();
+JsValue JsObject::getByName(VMContext *ctx, const JsValue &thiz, const SizedString &prop) {
+    auto it = _props.find(prop);
+    if (it == _props.end()) {
+        if (_prototype.type >= JDT_OBJECT) {
+            auto obj = ctx->runtime->getObject(_prototype);
+            assert(obj);
+            return obj->getByName(ctx, thiz, prop);
+        }
+
+        return JsUndefinedValue;
+    } else {
+        auto &propValue = (*it).second;
+        if (propValue.isGetter) {
+            ctx->vm->callMember(ctx, thiz, propValue.value, Arguments());
+            auto ret = ctx->stack.back();
+            ctx->stack.pop_back();
+            return ret;
+        }
+
+        return propValue.value;
+    }
+}
+
+JsValue JsObject::getByIndex(VMContext *ctx, const JsValue &thiz, uint32_t index) {
+    NumberToSizedString ss(index);
+    return getByName(ctx, thiz, ss);
+}
+
+JsValue JsObject::getBySymbol(VMContext *ctx, const JsValue &thiz, uint32_t index) {
+    if (_symbolProps) {
+        auto it = _symbolProps->find(index);
+        if (it == _symbolProps->end()) {
+            if (_prototype.type >= JDT_OBJECT) {
+                auto obj = ctx->runtime->getObject(_prototype);
+                assert(obj);
+                return obj->getBySymbol(ctx, thiz, index);
+            }
+        } else {
+            auto &propValue = (*it).second;
+            if (propValue.isGetter) {
+                ctx->vm->callMember(ctx, thiz, propValue.value, Arguments());
+                auto ret = ctx->stack.back();
+                ctx->stack.pop_back();
+                return ret;
+            }
+
+            return propValue.value;
+        }
     }
 
-    _obj->set(ctx, index, value);
+    return JsUndefinedValue;
+}
+
+void JsObject::setByName(VMContext *ctx, const JsValue &thiz, const SizedString &prop, const JsValue &value) {
+    if (_setters) {
+        // 检查本地的 Setter
+        auto it = _setters->find(prop);
+        if (it != _setters->end()) {
+            auto &setter = (*it).second;
+            if (setter.type > JDT_OBJECT) {
+                // 调用 setter 函数
+                ArgumentsX args(value);
+                ctx->vm->callMember(ctx, thiz, setter, args);
+                return;
+            }
+        }
+    }
+
+    auto it = _props.find(prop);
+    if (it == _props.end()) {
+        if (_prototype.type >= JDT_OBJECT) {
+            // 查找 prototype 链
+            auto obj = ctx->runtime->getObject(_prototype);
+            assert(obj);
+            auto setter = obj->getSetterByName(ctx, prop);
+            if (setter.type > JDT_OBJECT) {
+                // 调用 setter 函数
+                ArgumentsX args(value);
+                ctx->vm->callMember(ctx, thiz, setter, args);
+                return;
+            }
+        }
+
+        _props[copyPropertyIfNeed(prop)] = value;
+    } else {
+        auto &propValue = (*it).second;
+        if (propValue.isWritable) {
+            propValue.value = value;
+        }
+    }
+}
+
+void JsObject::setByIndex(VMContext *ctx, const JsValue &thiz, uint32_t index, const JsValue &value) {
+    NumberToSizedString ss(index);
+    setByName(ctx, thiz, ss, value);
+}
+
+void JsObject::setBySymbol(VMContext *ctx, const JsValue &thiz, uint32_t index, const JsValue &value) {
+    if (_symbolSetters) {
+        auto it = _symbolSetters->find(index);
+        if (it != _symbolSetters->end()) {
+            // 有 setter 函数
+            ArgumentsX args(value);
+            ctx->vm->callMember(ctx, thiz, (*it).second, args);
+            return;
+        }
+    }
+
+    if (!_symbolProps) {
+        _symbolProps = new MapSymbolToJsProperty();
+    }
+
+    auto it = _symbolProps->find(index);
+    if (it == _symbolProps->end()) {
+        if (_prototype.type >= JDT_OBJECT) {
+            // 查找 prototype 链
+            auto obj = ctx->runtime->getObject(_prototype);
+            assert(obj);
+            auto setter = obj->getSetterBySymbol(ctx, index);
+            if (setter.type > JDT_OBJECT) {
+                // 调用 setter 函数
+                ArgumentsX args(value);
+                ctx->vm->callMember(ctx, thiz, setter, args);
+                return;
+            }
+        }
+
+        (*_symbolProps)[index] = JsProperty(value);
+    } else {
+        auto &propValue = (*it).second;
+        if (propValue.isWritable) {
+            propValue.value = value;
+        }
+    }
+}
+
+bool JsObject::removeByName(VMContext *ctx, const SizedString &prop) {
+    auto it = _props.find(prop);
+    if (it != _props.end()) {
+        auto &key = (*it).first;
+        if (key.unused != COMMON_STRINGS) {
+            delete [] key.data;
+        }
+        _props.erase(it);
+    }
+
+    return true;
+}
+
+bool JsObject::removeByIndex(VMContext *ctx, uint32_t index) {
+    NumberToSizedString ss(index);
+    return removeByName(ctx, ss);
+}
+
+bool JsObject::removeBySymbol(VMContext *ctx, uint32_t index) {
+    if (_symbolProps) {
+        auto it = _symbolProps->find(index);
+        if (it != _symbolProps->end()) {
+            _symbolProps->erase(it);
+        }
+    }
+
+    return true;
 }
