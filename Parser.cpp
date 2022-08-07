@@ -66,7 +66,7 @@ Function *JSParser::parse(Scope *parent, bool isExpr) {
 
     _readToken();
 
-    auto function = _enterFunction(_curToken);
+    auto function = _enterFunction(_curToken, true);
 
     if (isExpr) {
         _expectExpression(function->instructions, PRED_NONE);
@@ -81,6 +81,10 @@ Function *JSParser::parse(Scope *parent, bool isExpr) {
 
     // 先简单优化一下 scope 的层次, 在后面查找标识符的时候会快点
     _reduceScopeLevels(function);
+
+    // function 是代码片段，其中的变量和子函数并非真的在 function 函数内，
+    // 而是在父函数中，所以依照父函数的地址分配存储空间
+    _relocateIdentifierInParentFunction(function, parent->function);
 
     // 建立标识符的引用、作用域关系
     _buildIdentifierRefs();
@@ -602,7 +606,7 @@ void JSParser::_expectParameterDeclaration(uint16_t index, VarInitTree *parentVa
 
     switch (_curToken.type) {
         case TK_NAME:
-            _curFuncScope->addVarDeclaration(_curToken);
+            _curFuncScope->addArgumentDeclaration(_curToken, index);
             _readToken();
             break;
         case TK_OPEN_BRACKET: {
@@ -751,7 +755,7 @@ void JSParser::_expectExpression(InstructionOutputStream &instructions, Preceden
             _readToken();
             if (_curToken.type == TK_ARROW) {
                 // Arrow function
-                _enterFunction(name);
+                _enterFunction(name, false, true);
 
                 _curFuncScope->addArgumentDeclaration(name, 0);
 
@@ -1499,6 +1503,36 @@ void JSParser::_reduceScopeLevels(Function *function) {
     }
 }
 
+void JSParser::_relocateIdentifierInParentFunction(Function *codeBlock, Function *parent) {
+    // codeBlock 中的变量和子函数并非真的在 function 函数内，
+    // 而是在父函数中，所以依照父函数的地址分配存储空间
+
+    Token token;
+    memset(&token, 0, sizeof(token));
+
+    VarStorageType storageType = parent->scope->parent ? VST_FUNCTION_VAR : VST_GLOBAL_VAR;
+
+    // 分配变量地址
+    auto functionScope = parent->scope;
+    for (auto &item : codeBlock->scope->varDeclares) {
+        token.buf = item.first.data;
+        token.len = item.first.len;
+
+        if (!item.second->isScopeVar) {
+            // var 变量，分配变量地址
+            auto id = functionScope->addVarDeclaration(token);
+            item.second->varStorageType = id->varStorageType = storageType;
+            item.second->storageIndex = id->storageIndex = functionScope->countLocalVars++;
+            item.second->scopeDepth = id->scopeDepth;
+        }
+    }
+
+    // 分配函数地址
+    for (auto f : codeBlock->scope->functionDecls) {
+        assert(f->declare->varStorageType == VST_FUNCTION_VAR || f->declare->varStorageType == VST_GLOBAL_VAR);
+    }
+}
+
 void JSParser::_buildIdentifierRefs() {
     for (auto p = _headIdRefs; p; p = p->next) {
         p->scope->addVarReference(p);
@@ -1552,7 +1586,7 @@ void JSParser::_allocateIdentifierStorage(Scope *scope, int registerIndex) {
     if (scope->isAllocateFunctionVar()) {
         // 需要给函数分配变量地址
         for (auto f : scope->functionDecls) {
-            if (f->declare->varStorageType != VST_FUNCTION_VAR) {
+            if (f->declare->varStorageType == VST_NOT_SET) {
                 f->declare->varStorageType = VST_FUNCTION_VAR;
                 f->declare->storageIndex = functionScope->countLocalVars++;
             }
@@ -1561,7 +1595,7 @@ void JSParser::_allocateIdentifierStorage(Scope *scope, int registerIndex) {
         // 仅仅保留有地址的函数，用于执行时的初始化
         VecFunctions funcVars;
         for (auto f : scope->functionDecls) {
-            if (f->declare->varStorageType == VST_FUNCTION_VAR) {
+            if (f->declare->varStorageType != VST_NOT_SET) {
                 funcVars.push_back(f);
             }
         }
@@ -1625,15 +1659,15 @@ int JSParser::_getRawStringsIndex(const VecInts &indices) {
     return (int)_v2Ints.size() - 1;
 }
 
-Function *JSParser::_enterFunction(const Token &tokenStart, bool isArrowFunction) {
-    auto child = PoolNew(_resPool->pool, Function)(_resPool, _curScope, (int16_t)_curFunction->functions.size());
+Function *JSParser::_enterFunction(const Token &tokenStart, bool isCodeBlock, bool isArrowFunction) {
+    auto child = PoolNew(_resPool->pool, Function)(_resPool, _curScope, (int16_t)_curFunction->functions.size(), isCodeBlock, isArrowFunction);
 
     child->line = tokenStart.line;
     child->col = tokenStart.col;
     child->srcCode.data = tokenStart.buf;
 
-    if (!isArrowFunction) {
-        // Arrow Function 的 this, arguments 使用的是父函数的.
+    if (!isArrowFunction && !isCodeBlock) {
+        // Codeblock, Arrow Function 的 this, arguments 使用的是父函数的.
         // 添加 this, arguments 的声明
         Token name = tokenStart;
         name.buf = (uint8_t *)SS_THIS.data; name.len = SS_THIS.len;

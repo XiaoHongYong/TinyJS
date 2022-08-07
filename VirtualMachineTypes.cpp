@@ -24,6 +24,13 @@ static OpCodeDesc OP_CODE_DESCRIPTIONS[] = {
     OP_CODE_DEFINES
 };
 
+const char *opCodeToString(OpCode code) {
+    assert(code >= 0 && code < CountOf(OP_CODE_DESCRIPTIONS));
+    auto &item = OP_CODE_DESCRIPTIONS[code];
+    assert(item.code == code);
+    return item.name;
+}
+
 const char *jsDataTypeToString(JsDataType type) {
     const char *NAMES[] = {
         "JDT_NOT_INITIALIZED",

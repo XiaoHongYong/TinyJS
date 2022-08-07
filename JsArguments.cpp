@@ -8,7 +8,8 @@
 #include "JsArguments.hpp"
 
 
-JsArguments::JsArguments(Arguments *args) {
+JsArguments::JsArguments(VMScope *scope, Arguments *args) {
+    _scope = scope;
     _args = args;
     _argDescriptors = nullptr;
     _setters = nullptr;

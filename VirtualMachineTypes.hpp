@@ -26,7 +26,7 @@ class IJsObject;
     OP_ITEM(OP_JUMP_IF_UNDEFINED, "address:u32"), \
     OP_ITEM(OP_JUMP_IF_NOT_UNDEFINED, "address:u32"), \
     OP_ITEM(OP_PREPARE_RAW_STRING_TEMPLATE_CALL, "raw_string_idx:u16, count_exprs:u16"), \
-    OP_ITEM(OP_FUNCTION_CALL, "not_used"), \
+    OP_ITEM(OP_FUNCTION_CALL, "count_args:u16"), \
     OP_ITEM(OP_MEMBER_FUNCTION_CALL, "count_args:u16"), \
     OP_ITEM(OP_DIRECT_FUNCTION_CALL, "scope_depth:u8, function_idx:u16, count_args:u16"), \
     \
@@ -132,6 +132,8 @@ class IJsObject;
 enum OpCode {
     OP_CODE_DEFINES
 };
+
+const char *opCodeToString(OpCode code);
 
 enum JsDataType : uint8_t {
     JDT_NOT_INITIALIZED = 0,

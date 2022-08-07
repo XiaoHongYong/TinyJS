@@ -49,7 +49,8 @@ int main(int argc, const char * argv[]) {
 
     // cstr_t code = "var a = { b : 1 }; a.b = 2; console.log(a.b + 'hello' + a);";
     // cstr_t code = "var a = { b : 1 }; a.b = 'x: '; console.log(a.b + 'hello' + ', x');";
-    cstr_t code = "var a = String.fromCharCode(63, 64, 65, 66, 67.0, '67', '68.1', 'a', '69'); console.log(a.length, a, String.name, String.length, a.at(1), a.charAt(20), a.charAt(2));";
+    // cstr_t code = "var a = String.fromCharCode(63, 64, 65, 66, 67.0, '67', '68.1', 'a', '69'); console.log(a.length, a, String.name, String.length, a.at(1), a.charAt(20), a.charAt(2));";
+    cstr_t code = "function f(a) { console.log('hello:', a); } var g = f; g('x');";
 
 //    JSParser paser(code, strlen(code));
 //
@@ -73,6 +74,14 @@ int main(int argc, const char * argv[]) {
 
     auto runtime = vm.defaultRuntime();
     stackScopes.push_back(runtime->globalScope);
+    runtime->mainVmCtx->curFunctionScope = runtime->globalScope;
+
+    vm.eval(code, strlen(code), runtime->mainVmCtx, stackScopes, args);
+    if (runtime->mainVmCtx->error) {
+        printf("Got exception: %s\n", runtime->mainVmCtx->errorMessage.c_str());
+    }
+
+    code = "g('y');";
     vm.eval(code, strlen(code), runtime->mainVmCtx, stackScopes, args);
     if (runtime->mainVmCtx->error) {
         printf("Got exception: %s\n", runtime->mainVmCtx->errorMessage.c_str());

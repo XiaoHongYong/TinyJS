@@ -13,7 +13,7 @@
 
 class JsArguments : public IJsObject {
 public:
-    JsArguments(Arguments *args);
+    JsArguments(VMScope *scope, Arguments *args);
     ~JsArguments();
 
     virtual void definePropertyByName(VMContext *ctx, const SizedString &prop, const JsProperty &descriptor, const JsValue &setter) override;
@@ -44,6 +44,7 @@ protected:
     void _newObject();
 
 protected:
+    VMScope                     *_scope;
     Arguments                   *_args;
     VecJsProperties             *_argDescriptors;
     VecJsValues                 *_setters;

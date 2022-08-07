@@ -10,6 +10,7 @@
 #include "Parser.hpp"
 #include "IJsObject.hpp"
 #include "VMRuntime.hpp"
+#include "JsArguments.hpp"
 
 
 void registerGlobalValue(VMContext *ctx, VMScope *globalScope, const char *strName, const JsValue &value) {
@@ -237,48 +238,70 @@ void JsVirtualMachine::call(Function *function, VMContext *ctx, VecVMStackScopes
         function->generateByteCode();
     }
 
+    auto prevFunctionScope = ctx->curFunctionScope;
     auto runtime = ctx->runtime;
     auto resourcePool = function->resourcePool;
     auto &stack = ctx->stack;
-    auto functionScope = new VMScope(function->scope);
-    auto functionScopeDsc = functionScope->scopeDsc;
     auto bytecode = function->bytecode, endBytecode = bytecode + function->lenByteCode;
 
-    ctx->stackFrames.push_back(new VMFunctionFrame(functionScope, function));
+    VMScope *functionScope, *scopeLocal;
+    scopeLocal = new VMScope(function->scope);
+    ctx->stackFrames.push_back(new VMFunctionFrame(scopeLocal, function));
 
-    // 将函数根 scope 被引用到的函数添加到变量中
-    for (auto f : functionScopeDsc->functionDecls) {
+    if (function->isCodeBlock) {
+        assert(!stackScopes.empty());
+        functionScope = prevFunctionScope;
+        if (function->scope->countLocalVars > functionScope->vars.size()) {
+            functionScope->vars.resize(function->scope->countLocalVars);
+        }
+    } else {
+        functionScope = scopeLocal;
+        ctx->curFunctionScope = functionScope;
+        auto functionScopeDsc = function->scope;
+
+        scopeLocal = functionScope;
+        stackScopes.push_back(scopeLocal);
+
+        if (function->isArgumentsReferredByChild || functionScopeDsc->isArgumentsUsed) {
+            // 参数数组需要被复制
+            functionScope->args.copy(args);
+        } else {
+            functionScope->args = args;
+        }
+
+        if (!function->isArrowFunction) {
+            if (functionScopeDsc->isThisUsed) {
+                functionScope->vars[VAR_IDX_THIS] = thiz;
+            }
+
+            if (functionScopeDsc->isArgumentsUsed) {
+                auto idx = runtime->pushObjValue(new JsArguments(functionScope, &functionScope->args));
+                functionScope->vars[VAR_IDX_ARGUMENTS] = JsValue(JDT_OBJECT, idx);
+            }
+        }
+    }
+
+    // 将根 scope 被引用到的函数添加到变量中
+    for (auto f : function->scope->functionDecls) {
         auto index = runtime->pushObjValue(new JsObjectFunction(stackScopes, f));
         functionScope->vars[f->declare->storageIndex] = JsValue(JDT_FUNCTION, index);
     }
 
-    auto scopeLocal = functionScope;
     stackScopes.push_back(scopeLocal);
-
-    if (function->isArgumentsReferredByChild || functionScopeDsc->isArgumentsUsed) {
-        // 参数数组需要被复制
-        functionScope->args.copy(args);
-    } else {
-        functionScope->args = args;
-    }
-
-    if (functionScopeDsc->isThisUsed) {
-        functionScope->vars[VAR_IDX_THIS] = thiz;
-    }
-    if (functionScopeDsc->isArgumentsUsed) {
-        // TODO new arguments
-        // functionScope->vars[VAR_IDX_ARGUMENTS] = thiz;
-    }
 
     while (bytecode < endBytecode) {
         auto code = (OpCode)*bytecode++;
+#ifdef DEBUG
+        printf("%s\n", opCodeToString(code));
+#endif
         switch (code) {
             case OP_INVALID: {
                 assert(0);
                 break;
             }
             case OP_RETURN_VALUE: {
-                return;
+                bytecode = endBytecode;
+                break;
             }
             case OP_RETURN: {
                 assert(0);
@@ -318,15 +341,27 @@ void JsVirtualMachine::call(Function *function, VMContext *ctx, VecVMStackScopes
             }
             case OP_FUNCTION_CALL: {
                 uint16_t countArgs = readUInt16(bytecode);
-                JsValue func = stack.at(stack.size() - countArgs - 1);
+                size_t posFunc = stack.size() - countArgs - 1;
+                Arguments args(stack.data() + posFunc + 1, countArgs);
+                JsValue func = stack.at(posFunc);
                 switch (func.type) {
-                    case JDT_FUNCTION:
-
+                    case JDT_FUNCTION: {
+                        auto f = (JsObjectFunction *)runtime->getObject(func);
+                        call(f->function, ctx, f->stackScopes, runtime->globalThiz, args);
                         break;
-
+                    }
+                    case JDT_NATIVE_FUNCTION: {
+                        auto f = runtime->getNativeFunction(func.value.index);
+                        f(ctx, runtime->globalThiz, args);
+                        break;
+                    }
                     default:
+                        assert(0);
                         break;
                 }
+                auto ret = stack.back();
+                stack.resize(posFunc);
+                stack.push_back(ret);
                 break;
             }
             case OP_MEMBER_FUNCTION_CALL: {
@@ -419,7 +454,9 @@ void JsVirtualMachine::call(Function *function, VMContext *ctx, VecVMStackScopes
                 break;
             }
             case OP_PUSH_ID_LOCAL_ARGUMENT: {
-                assert(0);
+                auto idx = readUInt16(bytecode);
+                assert(idx < functionScope->args.count);
+                stack.push_back(functionScope->args[idx]);
                 break;
             }
             case OP_PUSH_ID_LOCAL_SCOPE: {
@@ -428,7 +465,12 @@ void JsVirtualMachine::call(Function *function, VMContext *ctx, VecVMStackScopes
                 break;
             }
             case OP_PUSH_ID_PARENT_ARGUMENT: {
-                assert(0);
+                auto scopeDepth = *bytecode++;
+                auto idx = readUInt16(bytecode);
+                assert(scopeDepth < stackScopes.size());
+                auto scope = stackScopes[scopeDepth];
+                assert(idx < scope->args.count);
+                stack.push_back(scope->vars[idx]);
                 break;
             }
             case OP_PUSH_ID_PARENT_SCOPE: {
@@ -568,7 +610,8 @@ void JsVirtualMachine::call(Function *function, VMContext *ctx, VecVMStackScopes
                 if (index.type >= JDT_OBJECT) {
                     callMember(ctx, obj, "toString", Arguments());
                     if (ctx->error != PE_OK) {
-                        return;
+                        bytecode = endBytecode;
+                        break;
                     }
                     index = stack.back();
                 }
@@ -870,6 +913,8 @@ void JsVirtualMachine::call(Function *function, VMContext *ctx, VecVMStackScopes
             }
         }
     }
+
+    ctx->curFunctionScope = prevFunctionScope;
 
     stackScopes.pop_back();
     ctx->stackFrames.pop_back();

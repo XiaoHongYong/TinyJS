@@ -115,6 +115,7 @@ public:
     void throwException(ParseError err, cstr_t format, ...);
 
     JsVirtualMachine            *vm;
+    VMScope                     *curFunctionScope;
     VMRuntime                   *runtime;
     StackJsValues               stack;
     VecVMStackFrames            stackFrames; // 当前的函数调用栈，用于记录函数的调用层次

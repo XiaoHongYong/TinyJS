@@ -54,6 +54,8 @@ public:
     // const 声明的，不能被修改
     uint8_t                 isConst : 1;
 
+    uint8_t                 isScopeVar : 1;
+
     // 是否为隐式声明的变量
     uint8_t                 isImplicitDeclaration : 1;
 
@@ -138,7 +140,7 @@ public:
 
 class Function {
 public:
-    Function(ResourcePool *resourcePool, Scope *parent, uint16_t index, bool isArrowFunction = false);
+    Function(ResourcePool *resourcePool, Scope *parent, uint16_t index, bool isCodeBlock = false, bool isArrowFunction = false);
 
     void generateByteCode();
     void addFunction(Function *f) {
@@ -166,6 +168,9 @@ public:
     IdentifierDeclare       *declare; // 变量声明
 
     uint16_t                index;
+
+    // 是 eval 的代码片段，不是 function
+    bool                    isCodeBlock;
 
     bool                    isStrictMode;
     

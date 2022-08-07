@@ -123,6 +123,7 @@ protected:
     void _ignoreExpression();
 
     void _reduceScopeLevels(Function *function);
+    void _relocateIdentifierInParentFunction(Function *codeBlock, Function *parent);
     void _buildIdentifierRefs();
     void _allocateIdentifierStorage(Scope *scope, int registerIndex);
 
@@ -132,7 +133,7 @@ protected:
 
     int _getRawStringsIndex(const VecInts &indices);
 
-    Function *_enterFunction(const Token &tokenStart, bool isArrowFunction = false);
+    Function *_enterFunction(const Token &tokenStart, bool isCodeBlock = false, bool isArrowFunction = false);
     void _leaveFunction();
     void _enterScope();
     void _leaveScope();

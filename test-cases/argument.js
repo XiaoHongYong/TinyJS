@@ -84,3 +84,10 @@ function f6(a, b) {
     console.log(arguments.length);
 }
 f6(1, 20);
+
+//// arguments 出现在 eval 中
+function f7(a, b) {
+    eval('console.log(arguments.length, arguments[0], arguments[1])');
+    eval('arguments[0] = 10; console.log(arguments[0], arguments[1])');
+}
+f7(1, 2);

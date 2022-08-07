@@ -109,6 +109,7 @@ IdentifierDeclare *Scope::addVarDeclaration(const Token &token, bool isConst, bo
     auto &pool = varDeclares.get_allocator().getPool();
     auto node = PoolNew(pool, IdentifierDeclare)(token, this);
     node->isConst = isConst;
+    node->isScopeVar = isScopeVar;
 
     if (isScopeVar) {
         node->varStorageType = VST_SCOPE_VAR;
@@ -126,6 +127,8 @@ IdentifierDeclare *Scope::addVarDeclaration(const Token &token, bool isConst, bo
 }
 
 void Scope::addArgumentDeclaration(const Token &token, int index) {
+    assert(isFunctionScope);
+
     auto &pool = varDeclares.get_allocator().getPool();
     auto node = PoolNew(pool, IdentifierDeclare)(token, this);
     node->isConst = false;
@@ -133,7 +136,7 @@ void Scope::addArgumentDeclaration(const Token &token, int index) {
     node->storageIndex = index;
 
     auto it = varDeclares.find(node->name);
-    if (it != varDeclares.end()) {
+    if (it == varDeclares.end()) {
         varDeclares[node->name] = node;
     }
 }
@@ -208,6 +211,7 @@ void Scope::addVarReference(IdentifierRef *id) {
 
 IdentifierDeclare::IdentifierDeclare(const SizedString &name, Scope *scope) : name(name), scope(scope) {
     isConst = 0;
+    isScopeVar = 0;
     isImplicitDeclaration = 0;
     isReferredByChild = 0;
     isReferred = 0;
@@ -224,6 +228,7 @@ void IdentifierDeclare::dump(BinaryOutputStream &stream) {
     stream.writeFormat("%.*s ", name.len, name.data);
 
     if (isConst) stream.writeFormat("isConst:1, ");
+    if (isScopeVar) stream.writeFormat("isScopeVar:1, ");
     if (isImplicitDeclaration) stream.writeFormat("isImplicitDeclaration:1, ");
     if (isReferredByChild) stream.writeFormat("isReferredByChild:1, ");
     if (isModified) stream.writeFormat("isModified:1, ");
@@ -244,7 +249,7 @@ IdentifierRef::IdentifierRef(const Token &token, Scope *scope) : scope(scope) {
     next = nullptr;
 }
 
-Function::Function(ResourcePool *resourcePool, Scope *parent, uint16_t index, bool isArrowFunction) : instructions(resourcePool), index(index), resourcePool(resourcePool) {
+Function::Function(ResourcePool *resourcePool, Scope *parent, uint16_t index, bool isCodeBlock, bool isArrowFunction) : instructions(resourcePool), index(index), resourcePool(resourcePool), isCodeBlock(isCodeBlock), isArrowFunction(isArrowFunction) {
     scope = PoolNew(resourcePool->pool, Scope)(this, parent);
     scope->isFunctionScope = true;
 
@@ -257,7 +262,6 @@ Function::Function(ResourcePool *resourcePool, Scope *parent, uint16_t index, bo
     isGenerator = false;
     isAsync = false;
     isMemberFunction = false;
-    this->isArrowFunction = isArrowFunction;
 
     line = 0;
     col = 0;

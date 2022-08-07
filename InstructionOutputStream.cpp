@@ -41,15 +41,24 @@ void InstructionIdentifierAddress::convertToByteCode(BinaryOutputStream &stream)
 void InstructionPushIdentifier::convertToByteCode(BinaryOutputStream &stream) {
     auto declare = idRef->declare;
     if (declare->varStorageType == VST_ARGUMENT) {
-        stream.writeUint8(OP_PUSH_ID_PARENT_ARGUMENT);
-        stream.writeUint8(declare->scopeDepth);
+        if (declare->scope->function == idRef->scope->function) {
+            stream.writeUint8(OP_PUSH_ID_LOCAL_ARGUMENT);
+        } else {
+            stream.writeUint8(OP_PUSH_ID_PARENT_ARGUMENT);
+            stream.writeUint8(declare->scopeDepth);
+            assert(declare->scope->isFunctionScope);
+        }
         stream.writeUint16(declare->storageIndex);
     } else if (declare->varStorageType == VST_SCOPE_VAR || declare->varStorageType == VST_FUNCTION_VAR) {
         if (idRef->scope == declare->scope) {
             stream.writeUint8(OP_PUSH_ID_LOCAL_SCOPE);
         } else {
-            stream.writeUint8(OP_PUSH_ID_PARENT_SCOPE);
-            stream.writeUint8(declare->scopeDepth);
+            if (declare->scopeDepth == 0) {
+                stream.writeUint8(OP_PUSH_ID_GLOBAL);
+            } else {
+                stream.writeUint8(OP_PUSH_ID_PARENT_SCOPE);
+                stream.writeUint8(declare->scopeDepth);
+            }
         }
         stream.writeUint16(declare->storageIndex);
     } else if (declare->varStorageType == VST_GLOBAL_VAR) {
@@ -76,15 +85,20 @@ void InstructionPushIdentifier::convertToByteCode(BinaryOutputStream &stream) {
 void InstructionFunctionCallPush::convertToByteCode(BinaryOutputStream &stream) {
     auto declare = functionName->declare;
     if (declare->varStorageType == VST_ARGUMENT) {
-        stream.writeUint8(OP_PUSH_ID_PARENT_ARGUMENT);
-        stream.writeUint8(declare->scopeDepth);
+        if (declare->scope->function == functionName->scope->function) {
+            stream.writeUint8(OP_PUSH_ID_LOCAL_ARGUMENT);
+        } else {
+            stream.writeUint8(OP_PUSH_ID_PARENT_ARGUMENT);
+            stream.writeUint8(declare->scopeDepth);
+            assert(declare->scope->isFunctionScope);
+        }
         stream.writeUint16(declare->storageIndex);
     } else if (!declare->isModified && declare->isFuncName) {
         // 调用的函数未被修改，并且是函数名，减少创建函数对象和压栈的操作.
         isDirectFunctionCall = true;
     } else {
         // stream.writeUint8(OP_PUSH_IDENTIFIER);
-        if (declare->scope->parent == nullptr) {
+        if (declare->scope->parent == nullptr || declare->varStorageType == VST_GLOBAL_VAR) {
             stream.writeUint8(OP_PUSH_ID_GLOBAL);
         } else if (functionName->scope == declare->scope) {
             stream.writeUint8(OP_PUSH_ID_LOCAL_SCOPE);
