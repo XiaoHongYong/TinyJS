@@ -22,9 +22,14 @@ extern SizedString SS_ARGUMENTS;
 extern SizedString SS_LENGTH;
 extern SizedString SS_TO_STRING;
 
+extern SizedString SS_ERROR;
+extern SizedString SS_MESSAGE;
+extern SizedString SS_STACK;
 
 const int MAX_INT_TO_CONST_STR = 999;
 SizedString intToSizedString(uint32_t n);
+
+SizedString makeCommonString(const char *str);
 
 class NumberToSizedString : public SizedString {
 public:

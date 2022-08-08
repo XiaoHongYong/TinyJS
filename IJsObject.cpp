@@ -24,25 +24,7 @@ SizedString copyPropertyIfNeed(SizedString name) {
 
 bool IJsObject::getBool(VMContext *ctx, const JsValue &thiz, const JsValue &prop) {
     auto value = get(ctx, thiz, prop);
-    switch (value.type) {
-        case JDT_NOT_INITIALIZED:
-        case JDT_UNDEFINED:
-        case JDT_NULL:
-            return false;
-        case JDT_BOOL:
-        case JDT_INT32:
-            return value.value.n32 != 0;
-        case JDT_NUMBER: {
-            auto f = ctx->runtime->getDouble(value);
-            return f != 0;
-        }
-        case JDT_CHAR:
-            return true;
-        case JDT_STRING:
-            return !ctx->runtime->isEmptyString(prop);
-        default:
-            return true;
-    }
+    return ctx->runtime->testTrue(value);
 }
 
 void IJsObject::defineProperty(VMContext *ctx, const JsValue &propOrg, const JsProperty &descriptor, const JsValue &setter) {

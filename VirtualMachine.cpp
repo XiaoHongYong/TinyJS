@@ -49,6 +49,11 @@ public:
 
 };
 
+uint32_t makeTryCatchPointFlags(Function *function, VMScope *scope) {
+    uint64_t n = (uint64_t)function ^ (uint64_t)scope;
+    return (n & 0xFFFFFFFF) ^ (n >> 32);
+}
+
 Arguments::Arguments(const Arguments &other) {
     if (other.needFree) {
         copy(other);
@@ -81,6 +86,15 @@ void Arguments::copy(const Arguments &other) {
     count = other.count;
 }
 
+VMContext::VMContext(VMRuntime *runtime) : runtime(runtime) {
+    vm = runtime->vm;;
+    curFunctionScope = nullptr;
+    isReturned = false;
+
+    errorInTry = PE_OK;
+    error = PE_OK;
+}
+
 void VMContext::throwException(ParseError err, cstr_t format, ...) {
     if (error != PE_OK) {
         return;
@@ -95,7 +109,31 @@ void VMContext::throwException(ParseError err, cstr_t format, ...) {
     strf.vprintf(format, args);
     va_end(args);
 
-    errorMessage = strf.c_str();
+    errorMessageString = strf.c_str();
+
+    // 将异常值添加到堆栈中
+    // TODO: 需要转换为 err 对应的异常类型
+    errorMessage = runtime->pushString(SizedString(errorMessageString.c_str(), errorMessageString.size()));
+    stack.push_back(errorMessage);
+
+    throwException(error, errorMessage);
+}
+
+void VMContext::throwException(ParseError err, JsValue errorMessage) {
+    this->error = err;
+    this->errorMessage = errorMessage;
+
+    if (isReturned) {
+        // 在 finally 中抛出异常，会清除 return 相关内容
+        isReturned = false;
+        retValue = JsUndefinedValue;
+    }
+
+    if (errorInTry != PE_OK) {
+        // 在 finally 中抛出异常，会清除上一次的异常内容
+        errorInTry = PE_OK;
+        errorMessageInTry = JsUndefinedValue;
+    }
 }
 
 
@@ -167,7 +205,7 @@ void JsVirtualMachine::callMember(VMContext *ctx, const JsValue &thiz, const JsV
     if (memberFunc.type == JDT_NATIVE_FUNCTION) {
         auto f = runtime->getNativeFunction(memberFunc.value.index);
         f(ctx, thiz, args);
-    } else if (memberFunc.type == JDT_NATIVE_FUNCTION) {
+    } else if (memberFunc.type == JDT_FUNCTION) {
         auto f = (JsObjectFunction *)runtime->getObject(memberFunc);
         call(f->function, ctx, f->stackScopes, thiz, args);
     } else {
@@ -292,19 +330,36 @@ void JsVirtualMachine::call(Function *function, VMContext *ctx, VecVMStackScopes
     while (bytecode < endBytecode) {
         auto code = (OpCode)*bytecode++;
 #ifdef DEBUG
-        printf("%s\n", opCodeToString(code));
+        printf("    %s\n", opCodeToString(code));
 #endif
         switch (code) {
             case OP_INVALID: {
                 assert(0);
                 break;
             }
+            case OP_RETURN:
+                stack.push_back(JsUndefinedValue);
+                // 不 break，继续执行 OP_RETURN 的逻辑
             case OP_RETURN_VALUE: {
+                ctx->retValue = stack.back();
+                ctx->isReturned = true;
                 bytecode = endBytecode;
-                break;
-            }
-            case OP_RETURN: {
-                assert(0);
+
+                // 检查是否在 try finally 中
+                auto &stackTryCatch = ctx->stackTryCatch;
+                if (!stackTryCatch.empty() && stackTryCatch.top().flags == makeTryCatchPointFlags(function, functionScope)) {
+                    stack.pop_back();
+                    do {
+                        // 当前函数有 try
+                        auto action = stackTryCatch.top();
+                        stackTryCatch.pop();
+                        if (action.addrFinally) {
+                            // 跳转到 finally
+                            bytecode = function->bytecode + action.addrFinally;
+                            break;
+                        }
+                    } while (!stackTryCatch.empty() && stackTryCatch.top().flags == makeTryCatchPointFlags(function, functionScope));
+                }
                 break;
             }
             case OP_DEBUGGER: {
@@ -312,27 +367,48 @@ void JsVirtualMachine::call(Function *function, VMContext *ctx, VecVMStackScopes
                 break;
             }
             case OP_THROW: {
-                assert(0);
+                ctx->throwException(PE_TYPE_ERROR, stack.back());
                 break;
             }
             case OP_JUMP: {
-                assert(0);
+                auto pos = readUInt32(bytecode);
+                bytecode = function->bytecode + pos;
                 break;
             }
             case OP_JUMP_IF_TRUE: {
-                assert(0);
+                auto pos = readUInt32(bytecode);
+                auto condition = stack.back();
+                if (runtime->testTrue(condition)) {
+                    bytecode = function->bytecode + pos;
+                }
+                stack.pop_back();
                 break;
             }
             case OP_JUMP_IF_FALSE: {
-                assert(0);
+                auto pos = readUInt32(bytecode);
+                auto condition = stack.back();
+                if (!runtime->testTrue(condition)) {
+                    bytecode = function->bytecode + pos;
+                }
+                stack.pop_back();
                 break;
             }
-            case OP_JUMP_IF_UNDEFINED: {
-                assert(0);
+            case OP_JUMP_IF_NULL_UNDEFINED: {
+                auto pos = readUInt32(bytecode);
+                auto condition = stack.back();
+                if (condition.type <= JDT_NULL) {
+                    bytecode = function->bytecode + pos;
+                }
+                stack.pop_back();
                 break;
             }
-            case OP_JUMP_IF_NOT_UNDEFINED: {
-                assert(0);
+            case OP_JUMP_IF_NOT_NULL_UNDEFINED: {
+                auto pos = readUInt32(bytecode);
+                auto condition = stack.back();
+                if (condition.type > JDT_NULL) {
+                    bytecode = function->bytecode + pos;
+                }
+                stack.pop_back();
                 break;
             }
             case OP_PREPARE_RAW_STRING_TEMPLATE_CALL: {
@@ -450,6 +526,7 @@ void JsVirtualMachine::call(Function *function, VMContext *ctx, VecVMStackScopes
             }
             case OP_PUSH_ID_GLOBAL: {
                 auto idx = readUInt16(bytecode);
+                assert(idx < runtime->globalScope->vars.size());
                 stack.push_back(runtime->globalScope->vars[idx]);
                 break;
             }
@@ -474,7 +551,12 @@ void JsVirtualMachine::call(Function *function, VMContext *ctx, VecVMStackScopes
                 break;
             }
             case OP_PUSH_ID_PARENT_SCOPE: {
-                assert(0);
+                auto scopeDepth = *bytecode++;
+                auto idx = readUInt16(bytecode);
+                assert(scopeDepth < stackScopes.size());
+                auto scope = stackScopes[scopeDepth];
+                assert(idx < scope->vars.size());
+                stack.push_back(scope->vars[idx]);
                 break;
             }
             case OP_PUSH_ID_GLOBAL_BY_NAME: {
@@ -573,12 +655,16 @@ void JsVirtualMachine::call(Function *function, VMContext *ctx, VecVMStackScopes
                 VMScope *scope;
                 switch (varStorageType) {
                     case VST_ARGUMENT:
+                        assert(scopeDepth < stackScopes.size());
                         scope = stackScopes[scopeDepth];
+                        assert(storageIndex < scope->args.count);
                         scope->args[storageIndex] = stack.back();
                         break;
                     case VST_SCOPE_VAR:
                     case VST_FUNCTION_VAR:
+                        assert(scopeDepth < stackScopes.size());
                         scope = stackScopes[scopeDepth];
+                        assert(storageIndex < scope->vars.size());
                         scope->vars[storageIndex] = stack.back();
                         break;
                     case VST_GLOBAL_VAR:
@@ -910,6 +996,90 @@ void JsVirtualMachine::call(Function *function, VMContext *ctx, VecVMStackScopes
             case OP_OBJ_SET_SETTER: {
                 assert(0);
                 break;
+            }
+            case OP_TRY_START: {
+                auto addrCatch = readUInt32(bytecode);
+                auto addrFinally = readUInt32(bytecode);
+                ctx->stackTryCatch.push(TryCatchPoint(makeTryCatchPointFlags(function, functionScope),
+                        (uint32_t)stackScopes.size(), (uint32_t)stack.size(), addrCatch, addrFinally));
+                break;
+            }
+            case OP_BEGIN_FINALLY_NORMAL: {
+                // 顺序执行到此，需要去掉 stackTryCatch 中添加的处理点
+                auto &stackTryCatch = ctx->stackTryCatch;
+                assert(!stackTryCatch.empty());
+                assert(stackTryCatch.top().flags == makeTryCatchPointFlags(function, functionScope));
+                assert(stackTryCatch.top().addrCatch == 0);
+                assert(stackTryCatch.top().addrFinally != 0);
+                stackTryCatch.pop();
+                break;
+            }
+            case OP_FINISH_FINALLY: {
+                if (ctx->isReturned) {
+                    // 检查是否执行了 return 指令
+                    auto &stackTryCatch = ctx->stackTryCatch;
+                    if (!stackTryCatch.empty() && stackTryCatch.top().flags == makeTryCatchPointFlags(function, functionScope)) {
+                        // 当前函数还有 try
+                        auto action = stackTryCatch.top();
+                        stackTryCatch.pop();
+                        if (action.addrFinally) {
+                            // 跳转到 finally
+                            bytecode = function->bytecode + action.addrFinally;
+                            break;
+                        }
+                    }
+
+                    bytecode = endBytecode;
+                    stack.push_back(ctx->retValue);
+                } else if (ctx->errorInTry != PE_OK) {
+                    // 恢复 try 中的异常标志
+                    ctx->error = ctx->errorInTry;
+                    ctx->errorMessage = ctx->errorMessageInTry;
+                    ctx->errorInTry = PE_OK;
+                    ctx->errorMessageInTry = JsUndefinedValue;
+                    stack.push_back(ctx->errorMessage);
+                }
+                break;
+            }
+        }
+
+        if (ctx->error != PE_OK) {
+            // got exception.
+            auto &stackTryCatch = ctx->stackTryCatch;
+            if (stackTryCatch.empty() || stackTryCatch.top().flags != makeTryCatchPointFlags(function, functionScope)) {
+                // 当前函数没有接收异常处理
+                break;
+            } else {
+                auto &action = stackTryCatch.top();
+
+                // 发生异常，恢复 stackScopes 和 stack
+                stackScopes.erase(stackScopes.begin() + action.scopeDepth, stackScopes.end());
+                stack.erase(stack.begin() + action.stackSize, stack.end());
+
+                if (action.addrCatch != 0) {
+                    // 跳转到 catch 的位置
+                    bytecode = function->bytecode + action.addrCatch;
+
+                    // 清除异常标志
+                    ctx->error = PE_OK;
+
+                    if (action.addrFinally == 0) {
+                        // 没有 finally
+                        stackTryCatch.pop();
+                    } else {
+                        // 表示 Catch 已经处理
+                        action.addrCatch = 0;
+                    }
+                } else {
+                    // 跳转到 finally 的位置
+                    ctx->errorInTry = ctx->error;
+                    ctx->errorMessageInTry = ctx->errorMessage;
+                    ctx->error = PE_OK;
+
+                    assert(action.addrFinally != 0);
+                    bytecode = function->bytecode + action.addrFinally;
+                    stackTryCatch.pop();
+                }
             }
         }
     }

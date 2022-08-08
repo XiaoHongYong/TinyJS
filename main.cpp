@@ -50,22 +50,11 @@ int main(int argc, const char * argv[]) {
     // cstr_t code = "var a = { b : 1 }; a.b = 2; console.log(a.b + 'hello' + a);";
     // cstr_t code = "var a = { b : 1 }; a.b = 'x: '; console.log(a.b + 'hello' + ', x');";
     // cstr_t code = "var a = String.fromCharCode(63, 64, 65, 66, 67.0, '67', '68.1', 'a', '69'); console.log(a.length, a, String.name, String.length, a.at(1), a.charAt(20), a.charAt(2));";
-    cstr_t code = "function f(a) { console.log('hello:', a); } var g = f; g('x');";
-
-//    JSParser paser(code, strlen(code));
-//
-//    auto func = paser.parse(false);
-//
-//    BinaryOutputStream os;
-//    //func->toString(os);
-//
-//    auto str = os.startNew();
-//    printf("%s", str.data);
+    // cstr_t code = "function f(a) { console.log('hello:', a); } var g = f; g('x');";
+    // cstr_t code = "function f() { try { try { throw 'e1'; } catch (e) { console.log('exception1:', e); throw 'e2'; } finally { console.log('f1'); } } catch (e) { console.log('exception2:', e); } finally { console.log('f2'); } } f();";
+    cstr_t code = "function f() { try { try { return 'e1'; } catch (e) { console.log('exception1:', e); throw 'e1'; } finally { console.log('f1'); } } finally { console.log('f2'); } } console.log(f());";
 
     JsVirtualMachine vm;
-//    string errMessage;
-//    auto nativeFunc = vm.compile(nullptr, func, errMessage);
-//    auto ret = vm.eval(nativeFunc, vm.mainVmContext());
 
     VecVMStackScopes stackScopes;
     Arguments args;
@@ -78,19 +67,14 @@ int main(int argc, const char * argv[]) {
 
     vm.eval(code, strlen(code), runtime->mainVmCtx, stackScopes, args);
     if (runtime->mainVmCtx->error) {
-        printf("Got exception: %s\n", runtime->mainVmCtx->errorMessage.c_str());
+        printf("Got exception: %s\n", runtime->mainVmCtx->errorMessageString.c_str());
     }
 
-    code = "g('y');";
-    vm.eval(code, strlen(code), runtime->mainVmCtx, stackScopes, args);
-    if (runtime->mainVmCtx->error) {
-        printf("Got exception: %s\n", runtime->mainVmCtx->errorMessage.c_str());
-    }
-//    vm.dump(stream);
-
-//    auto s = stream.startNew();
-//    printf("%s\n", code);
-//    printf("%.*s\n", (int)s.len, s.data);
+//    code = "g('y');";
+//    vm.eval(code, strlen(code), runtime->mainVmCtx, stackScopes, args);
+//    if (runtime->mainVmCtx->error) {
+//        printf("Got exception: %s\n", runtime->mainVmCtx->errorMessageString.c_str());
+//    }
 
     return 0;
 }

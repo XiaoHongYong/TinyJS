@@ -199,6 +199,8 @@ public:
 
     bool isEmptyString(const JsValue &v);
 
+    bool testTrue(const JsValue &v);
+
 protected:
     StringPool *newStringPool(uint32_t size);
 

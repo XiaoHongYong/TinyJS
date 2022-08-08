@@ -67,8 +67,9 @@ public:
 class InstructionAddressFuture : public InstructionBase {
 public:
     InstructionLabelFuture  *label;
+    bool                    mustExist;
 
-    InstructionAddressFuture(uint32_t offset) : InstructionBase(offset) { label = nullptr; }
+    InstructionAddressFuture(uint32_t offset, bool mustExist = true) : InstructionBase(offset), mustExist(mustExist) { label = nullptr; }
     virtual void convertToByteCode(BinaryOutputStream &stream) override;
 
 };
@@ -77,7 +78,7 @@ class InstructionEnterScope : public InstructionBase {
 public:
     Scope                   *scope;
 
-    InstructionEnterScope(uint32_t offset) : InstructionBase(offset) { scope = nullptr; }
+    InstructionEnterScope(Scope *scope, uint32_t offset) : InstructionBase(offset), scope(scope) { }
     virtual void convertToByteCode(BinaryOutputStream &stream) override;
 
 };
@@ -86,7 +87,7 @@ class InstructionLeaveScope : public InstructionBase {
 public:
     Scope                   *scope;
 
-    InstructionLeaveScope(uint32_t offset) : InstructionBase(offset) { scope = nullptr; }
+    InstructionLeaveScope(Scope *scope, uint32_t offset) : InstructionBase(offset), scope(scope) { }
     virtual void convertToByteCode(BinaryOutputStream &stream) override;
 
 };
@@ -149,8 +150,8 @@ public:
         addr->label = label;
     }
 
-    InstructionAddressFuture *writeAddressFuture() {
-        auto addr = PoolNew(_pool, InstructionAddressFuture)(_offset);
+    InstructionAddressFuture *writeAddressFuture(bool addrMustExist = true) {
+        auto addr = PoolNew(_pool, InstructionAddressFuture)(_offset, addrMustExist);
         _instructions.push_back(addr);
         return addr;
     }
@@ -181,8 +182,15 @@ public:
         _instructions.push_back(item);
     }
 
-    void enterScope(Scope *scope);
-    void leaveScope(Scope *scope);
+    void writeEnterScope(Scope *scope) {
+        auto item = PoolNew(_pool, InstructionEnterScope)(scope, _offset);
+        _instructions.push_back(item);
+    }
+
+    void writeLeaveScope(Scope *scope) {
+        auto item = PoolNew(_pool, InstructionLeaveScope)(scope, _offset);
+        _instructions.push_back(item);
+    }
 
     void writeOpCode(uint8_t opcode) {
         if (_last + 1 > _end) {

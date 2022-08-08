@@ -22,13 +22,27 @@ void InstructionAddress::convertToByteCode(BinaryOutputStream &stream) {
 }
 
 void InstructionAddressFuture::convertToByteCode(BinaryOutputStream &stream) {
-    label->address = (uint32_t *)stream.writeReserved(sizeof(uint32_t));
+    if (label) {
+        label->address = (uint32_t *)stream.writeReserved(sizeof(uint32_t));
+    } else if (mustExist) {
+        assert(0);
+    } else {
+        // 可选择不写入有效的地址
+        stream.writeUint32(0);
+    }
 }
 
 void InstructionEnterScope::convertToByteCode(BinaryOutputStream &stream) {
+    if (scope->countLocalVars > 0) {
+        stream.writeUint8(OP_ENTER_SCOPE);
+        stream.writeUint16(scope->index);
+    }
 }
 
 void InstructionLeaveScope::convertToByteCode(BinaryOutputStream &stream) {
+    if (scope->countLocalVars > 0) {
+        stream.writeUint8(OP_LEAVE_SCOPE);
+    }
 }
 
 void InstructionIdentifierAddress::convertToByteCode(BinaryOutputStream &stream) {

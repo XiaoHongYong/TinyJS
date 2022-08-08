@@ -23,8 +23,8 @@ class IJsObject;
     OP_ITEM(OP_JUMP, "address:u32"), \
     OP_ITEM(OP_JUMP_IF_TRUE, "address:u32"), \
     OP_ITEM(OP_JUMP_IF_FALSE, "address:u32"), \
-    OP_ITEM(OP_JUMP_IF_UNDEFINED, "address:u32"), \
-    OP_ITEM(OP_JUMP_IF_NOT_UNDEFINED, "address:u32"), \
+    OP_ITEM(OP_JUMP_IF_NULL_UNDEFINED, "address:u32"), \
+    OP_ITEM(OP_JUMP_IF_NOT_NULL_UNDEFINED, "address:u32"), \
     OP_ITEM(OP_PREPARE_RAW_STRING_TEMPLATE_CALL, "raw_string_idx:u16, count_exprs:u16"), \
     OP_ITEM(OP_FUNCTION_CALL, "count_args:u16"), \
     OP_ITEM(OP_MEMBER_FUNCTION_CALL, "count_args:u16"), \
@@ -122,6 +122,10 @@ class IJsObject;
     OP_ITEM(OP_OBJ_SPREAD_PROPERTY, ""), \
     OP_ITEM(OP_OBJ_SET_GETTER, "property_string_idx:u32"), \
     OP_ITEM(OP_OBJ_SET_SETTER, "property_string_idx:u32"), \
+    \
+    OP_ITEM(OP_TRY_START, "address_catch:u32, address_finally:u32"), \
+    OP_ITEM(OP_BEGIN_FINALLY_NORMAL, ""), \
+    OP_ITEM(OP_FINISH_FINALLY, ""), \
 
 
 #ifdef OP_ITEM

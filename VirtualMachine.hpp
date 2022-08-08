@@ -98,6 +98,19 @@ public:
 
 };
 
+struct TryCatchPoint {
+    uint32_t                    flags; // 用于判断是否为当前函数的异常
+    uint32_t                    scopeDepth; // 进入 try 时的 scopeDepth，当出现异常后，需要释放 scope.
+    uint32_t                    stackSize; // 进入 try 时的 scopeDepth，当出现异常后，需要释放 stack.
+    uint32_t                    addrCatch;
+    uint32_t                    addrFinally;
+
+    TryCatchPoint(uint32_t flags, uint32_t scopeDepth, uint32_t stackSize, uint32_t addrCatch, uint32_t addrFinally) : flags(flags), scopeDepth(scopeDepth), stackSize(stackSize), addrCatch(addrCatch), addrFinally(addrFinally) {
+    }
+};
+
+using StackTryCatchPoint = stack<TryCatchPoint>;
+
 /**
  * 运行时的函数调用上下文，包括了当前的调用堆栈等信息
  */
@@ -107,20 +120,28 @@ private:
     VMContext &operator=(const VMContext &);
 
 public:
-    VMContext(VMRuntime *runtime) : runtime(runtime) {
-        // stackFrames.push_back(&runtime->global);
-        vm = runtime->vm;
-    }
+    VMContext(VMRuntime *runtime);
 
     void throwException(ParseError err, cstr_t format, ...);
+    void throwException(ParseError err, JsValue errorMessage);
 
     JsVirtualMachine            *vm;
     VMScope                     *curFunctionScope;
     VMRuntime                   *runtime;
     StackJsValues               stack;
     VecVMStackFrames            stackFrames; // 当前的函数调用栈，用于记录函数的调用层次
+
+    StackTryCatchPoint          stackTryCatch;
+
+    bool                        isReturned;
+    JsValue                     retValue;
+
+    ParseError                  errorInTry;
+    JsValue                     errorMessageInTry;
+
+    JsValue                     errorMessage;
     ParseError                  error;
-    string                      errorMessage;
+    string                      errorMessageString;
 
 };
 

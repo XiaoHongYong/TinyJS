@@ -661,3 +661,25 @@ bool VMRuntime::isEmptyString(const JsValue &v) {
         return js.value.poolString.value.len > 0;
     }
 }
+
+bool VMRuntime::testTrue(const JsValue &value) {
+    switch (value.type) {
+        case JDT_NOT_INITIALIZED:
+        case JDT_UNDEFINED:
+        case JDT_NULL:
+            return false;
+        case JDT_BOOL:
+        case JDT_INT32:
+            return value.value.n32 != 0;
+        case JDT_NUMBER: {
+            auto f = getDouble(value);
+            return f != 0;
+        }
+        case JDT_CHAR:
+            return true;
+        case JDT_STRING:
+            return !isEmptyString(value);
+        default:
+            return true;
+    }
+}

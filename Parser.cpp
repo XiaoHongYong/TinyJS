@@ -258,6 +258,7 @@ void JSParser::_expectStatment() {
 void JSParser::_expectExpressionStmt() {
     _expectExpression(_curFunction->instructions, PRED_NONE, true);
     _expectSemiColon();
+    _curFunction->instructions.writeOpCode(OP_POP_STACK_TOP);
 }
 
 void JSParser::_expectLabelStmt() {
@@ -295,7 +296,68 @@ void JSParser::_expectSwitchStmt() {
 }
 
 void JSParser::_expectTryStmt() {
+    auto &instructions = _curFunction->instructions;
 
+    instructions.writeOpCode(OP_TRY_START);
+    auto addrCatch = instructions.writeAddressFuture(false);
+    auto addrFinally = instructions.writeAddressFuture(false);
+
+    _expectBlock();
+
+    bool bHasCatch = false, hasFinally = false;
+    if (_curToken.type == TK_CATCH) {
+        bHasCatch = true;
+        _readToken();
+
+        // 顺序从 try 执行的指令应该跳转到 catch 结束
+        instructions.writeOpCode(OP_JUMP);
+        auto addrCatchEnd = instructions.writeAddressFuture();
+
+        // 有异常发生时跳转到的地址
+        instructions.tagLabel(addrCatch);
+
+        _enterScope();
+        if (_curToken.type == TK_OPEN_PAREN) {
+            _readToken();
+
+            // 声明异常变量
+            if (_curToken.type != TK_NAME) {
+                _expectToken(TK_NAME);
+                return;
+            }
+            _curScope->addVarDeclaration(_curToken, false, true);
+
+            // 将异常赋值到此变量
+            _assignIdentifier(_curFunction, instructions, _curToken);
+            _readToken();
+
+            _expectToken(TK_CLOSE_PAREN);
+        }
+        _expectBlock();
+        _leaveScope();
+
+        instructions.tagLabel(addrCatchEnd);
+    }
+
+    if (_curToken.type == TK_FINALLY) {
+        _readToken();
+
+        hasFinally = true;
+
+        // 顺序执行会有 OP_FINALLY_JUMP
+        instructions.writeOpCode(OP_BEGIN_FINALLY_NORMAL);
+
+        // 有异常发生会从此开始执行
+        instructions.tagLabel(addrFinally);
+
+        _expectBlock();
+
+        instructions.writeOpCode(OP_FINISH_FINALLY);
+    }
+
+    if (!bHasCatch && !hasFinally) {
+        _parseError(PE_SYNTAX_ERROR, "Missing catch or finally after try");
+    }
 }
 
 /**
@@ -386,7 +448,7 @@ void JSParser::_expectVariableDeclaration(TokenType declareType, VarInitTree *pa
         child->setCallback([this, child, declaredToken, exprInstructions](Function *function, bool initExpr) {
             auto &instructions = function->instructions;
             if (initExpr) {
-                instructions.writeOpCode(OP_JUMP_IF_UNDEFINED);
+                instructions.writeOpCode(OP_JUMP_IF_NULL_UNDEFINED);
                 auto labelUseDefault = instructions.writeAddressFuture();
                 if (declaredToken.type == TK_NAME) {
                     _assignIdentifier(function, instructions, declaredToken);
@@ -641,7 +703,7 @@ void JSParser::_expectParameterDeclaration(uint16_t index, VarInitTree *parentVa
             instructions.writeOpCode(OP_PUSH_ID_LOCAL_ARGUMENT);
             instructions.writeUint16(index);
 
-            instructions.writeOpCode(OP_JUMP_IF_UNDEFINED);
+            instructions.writeOpCode(OP_JUMP_IF_NULL_UNDEFINED);
             auto labelSpreadParam = instructions.writeAddressFuture();
 
             // 参数为 undefined，使用缺省的参数
@@ -677,7 +739,7 @@ void JSParser::_expectParameterDeclaration(uint16_t index, VarInitTree *parentVa
                 instructions.writeOpCode(OP_PUSH_ID_LOCAL_ARGUMENT);
                 instructions.writeUint16(index);
 
-                instructions.writeOpCode(OP_JUMP_IF_NOT_UNDEFINED);
+                instructions.writeOpCode(OP_JUMP_IF_NOT_NULL_UNDEFINED);
                 auto end = instructions.writeAddressFuture();
 
                 // 参数入栈
@@ -1705,14 +1767,10 @@ void JSParser::_leaveFunction() {
 void JSParser::_enterScope() {
     _stackScopes.push_back(_curScope);
     _curScope = PoolNew(_resPool->pool, Scope)(_curFunction, _curScope);
+    _curFunction->instructions.writeEnterScope(_curScope);
 }
 
 void JSParser::_leaveScope() {
-    if (_curScope->varDeclares.size() > 0) {
-        // 释放局部变量
-        // instructions.writeOpCode(OP_FREE_STACK_VARS);
-        // instructions.writeUint16((uint16_t)scope->varDeclares.size());
-    }
-
+    _curFunction->instructions.writeLeaveScope(_curScope);
     _curScope = _stackScopes.back(); _stackScopes.pop_back();
 }
