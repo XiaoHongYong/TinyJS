@@ -9,7 +9,7 @@
 
 
 // https://developer.mozilla.org/zh-CN/docs/Web/JavaScript/Reference/Global_Objects/Symbol
-static void symbol(VMContext *ctx, const JsValue &thiz, const Arguments &args) {
+static void symbolConstructor(VMContext *ctx, const JsValue &thiz, const Arguments &args) {
     auto runtime = ctx->runtime;
     char *name = nullptr;
 
@@ -32,10 +32,33 @@ static void symbolFor(VMContext *ctx, const JsValue &thiz, const Arguments &args
 
 static JsLibProperty symbolFunctions[] = {
     { "for", symbolFor },
+    { "name", nullptr, "Symbol" },
+    { "length", nullptr, nullptr, JsValue(JDT_INT32, 1) },
+    { "prototype", nullptr, nullptr, JsValue(JDT_INT32, 1) },
+};
+
+void symbolPrototypeToString(VMContext *ctx, const JsValue &thiz, const Arguments &args) {
+    if (thiz.type != JDT_SYMBOL) {
+        ctx->throwException(PE_TYPE_ERROR, "Symbol.prototype.toString requires that 'this' be a Symbol");
+        return;
+    }
+
+    ctx->stack.push_back(JsUndefinedValue);
+}
+
+static JsLibProperty symbolPrototypeFunctions[] = {
+    { "toString", symbolPrototypeToString },
 };
 
 void registerSymbol(VMRuntimeCommon *rt) {
-    rt->setGlobalObject("Symbol",
-        new JsLibObject(rt, symbolFunctions, CountOf(symbolFunctions), symbol));
+    auto prototype = new JsLibObject(rt, symbolPrototypeFunctions, CountOf(symbolPrototypeFunctions));
+    rt->objPrototypeSymbol = prototype;
+    rt->prototypeSymbol = JsValue(JDT_OBJECT, rt->pushObjValue(prototype));
 
+    auto idxPrototype = CountOf(symbolFunctions) - 1;
+    assert(symbolFunctions[idxPrototype].name.equal("prototype"));
+    symbolFunctions[idxPrototype].value = rt->prototypeSymbol;
+
+    rt->setGlobalObject("Symbol",
+        new JsLibObject(rt, symbolFunctions, CountOf(symbolFunctions), symbolConstructor));
 }

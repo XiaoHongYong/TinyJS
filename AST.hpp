@@ -114,8 +114,10 @@ public:
     Scope                   *parent, *child, *sibling;
     VecFunctions            functions; // 此 scope 内的所有函数，包括函数表达式.
     VecFunctions            functionDecls;  // 仅仅包括声明的函数
+    VecFunctions            *functionArgs;  // 和参数同名的函数
     MapNameToIdentifiers    varDeclares;
     uint16_t                countLocalVars;
+    uint16_t                countArguments;
     uint16_t                index; // Scope 的索引编号
     int8_t                  depth;
     uint8_t                 hasWith : 1, hasEval : 1;
@@ -154,6 +156,7 @@ public:
 
     SizedString             name;
     SizedString             srcCode;
+    JsValue                 srcCodeValue;
     int                     line, col;
 
     uint8_t                 *bytecode;

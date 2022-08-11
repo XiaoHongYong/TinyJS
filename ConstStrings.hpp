@@ -11,7 +11,6 @@
 #include "../Utils/SizedString.h"
 
 
-extern SizedString SS_PROTOTYPE;
 extern SizedString SS_UNDEFINED;
 extern SizedString SS_NULL;
 extern SizedString SS_TRUE;
@@ -21,6 +20,11 @@ extern SizedString SS_THIS;
 extern SizedString SS_ARGUMENTS;
 extern SizedString SS_LENGTH;
 extern SizedString SS_TO_STRING;
+
+extern SizedString SS__PROTO__;
+extern SizedString SS_PROTOTYPE;
+
+extern SizedString SS_FUNCTION_NATIVE_CODE;
 
 extern SizedString SS_ERROR;
 extern SizedString SS_MESSAGE;

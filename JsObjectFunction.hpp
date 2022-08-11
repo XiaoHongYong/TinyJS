@@ -1,44 +1,20 @@
 //
-//  JsLibObject.hpp
+//  JsObjectFunction.hpp
 //  TinyJS
 //
-//  Created by henry_xiao on 2022/8/2.
+//  Created by henry_xiao on 2022/8/11.
 //
 
-#ifndef JsLibObject_hpp
-#define JsLibObject_hpp
+#ifndef JsObjectFunction_hpp
+#define JsObjectFunction_hpp
 
 #include "IJsObject.hpp"
 
 
-struct JsLibProperty {
-    SizedString                 name;
-    JsNativeFunction            function;
-    const char                  *strValue;
-    JsValue                     value;
-
-    JsNativeFunction            functionSet;
-    JsValue                     valueSetter;
-
-    bool                        isGetter;
-    bool                        isConfigurable;
-    bool                        isEnumerable;
-    bool                        isWritable;
-
-};
-
-/**
- * JsLibObject 用于提供统一封装 JavaScript 内置对象，其包含了：
- * - 对象的构造函数
- * - 对象提供的一些方法
- * - prototye 属性的值（另外一个 JsLibObject)
- * - __proto__ 缺省为 Object.prototype, 但是 Object.prototype.__proto__ 是 null
- */
-class JsLibObject : public IJsObject {
+class JsObjectFunction : public IJsObject {
 public:
-    JsLibObject(VMRuntimeCommon *rt, JsLibProperty *libProps, int countProps, JsNativeFunction function = nullptr);
-    JsLibObject(JsLibObject *from);
-    ~JsLibObject();
+    JsObjectFunction(const VecVMStackScopes &stackScopes, Function *function);
+    ~JsObjectFunction();
 
     virtual void definePropertyByName(VMContext *ctx, const SizedString &prop, const JsProperty &descriptor, const JsValue &setter) override;
     virtual void definePropertyByIndex(VMContext *ctx, uint32_t index, const JsProperty &descriptor, const JsValue &setter) override;
@@ -66,24 +42,20 @@ public:
 
     virtual IJsObject *clone() override;
 
-    void setAsObjectPrototype() { _isObjectPrototype = true; }
-    JsNativeFunction getFunction() const { return _function; }
+public:
+    VecVMStackScopes            stackScopes;
+
+    // 当前函数的代码
+    Function                    *function;
 
 protected:
     virtual void _newObject();
-    void _copyForModify();
 
-protected:
-    JsLibObject();
+    JsValue                     __proto__;
+    JsObject                    *_obj__Proto__;
 
-    JsNativeFunction            _function;
-    bool                        _modified;
-    bool                        _isObjectPrototype;
-    JsLibProperty               *_libProps, *_libPropsEnd;
     JsObject                    *_obj;
 
 };
 
-JsLibProperty makeJsLibPropertyGetter(const char *name, JsNativeFunction f);
-
-#endif /* JsLibObject_hpp */
+#endif /* JsObjectFunction_hpp */

@@ -40,6 +40,8 @@ public:
     virtual bool removeByIndex(VMContext *ctx, uint32_t index) override;
     virtual bool removeBySymbol(VMContext *ctx, uint32_t index) override;
 
+    virtual IJsObject *clone() override;
+
 protected:
     void _newObject();
 

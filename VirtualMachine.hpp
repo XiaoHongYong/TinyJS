@@ -40,18 +40,19 @@ enum VMMiscFlags {
 
 class Arguments {
 public:
-    Arguments() { data = nullptr; count = 0; needFree = false; }
+    Arguments() { data = nullptr; count = 0; capacity = 0; needFree = false; }
     Arguments(const Arguments &other);
-    Arguments(JsValue *args, uint32_t count) : data(args), count(count) { needFree = false; }
+    Arguments(JsValue *args, uint32_t count) : data(args), count(count), capacity(count) { needFree = false; }
     ~Arguments();
 
     Arguments &operator = (const Arguments &other);
-    JsValue &operator[](uint32_t n) const { assert(n < count); return data[n]; }
+    JsValue &operator[](uint32_t n) const { assert(n < capacity); return data[n]; }
 
-    void copy(const Arguments &other);
+    void copy(const Arguments &other, uint32_t minSize = 0);
 
     JsValue                     *data;
     uint32_t                    count;
+    uint32_t                    capacity;
     bool                        needFree;
 };
 
@@ -154,12 +155,17 @@ private:
 public:
     JsVirtualMachine();
 
+    void run(cstr_t code, size_t len, VMRuntime *runtime = nullptr);
+
     void eval(cstr_t code, size_t len, VMContext *ctx, VecVMStackScopes &stackScopes, const Arguments &args);
     void callMember(VMContext *ctx, const JsValue &thiz, const char *memberName, const Arguments &args);
     void callMember(VMContext *ctx, const JsValue &thiz, const JsValue &memberFunc, const Arguments &args);
 
     JsValue getMemberDot(VMContext *ctx, const JsValue &thiz, const SizedString &prop);
     void setMemberDot(VMContext *ctx, const JsValue &thiz, const SizedString &prop, const JsValue &value);
+
+    JsValue getMemberIndex(VMContext *ctx, const JsValue &thiz, const JsValue &prop);
+    void setMemberIndex(VMContext *ctx, const JsValue &thiz, const JsValue &prop, const JsValue &value);
 
     void dump(cstr_t code, size_t len, BinaryOutputStream &stream);
     void dump(BinaryOutputStream &stream);
@@ -178,6 +184,7 @@ protected:
 
 };
 
+inline uint8_t readUInt8(uint8_t *&bytecode) { return *bytecode++; }
 inline uint16_t readUInt16(uint8_t *&bytecode) { auto r = *(uint16_t *)bytecode; bytecode += 2; return r; }
 inline uint32_t readUInt32(uint8_t *&bytecode) { auto r = *(uint32_t *)bytecode; bytecode += 4; return r; }
 inline int32_t readInt32(uint8_t *&bytecode) { auto r = *(int32_t *)bytecode; bytecode += 4; return r; }

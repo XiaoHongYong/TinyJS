@@ -43,6 +43,7 @@ void writeIndent(BinaryOutputStream &stream, SizedString str, const SizedString 
 
 Scope::Scope(Function *function, Scope *parent) : function(function), parent(parent), varDeclares(function->resourcePool->pool) {
     child = sibling = nullptr;
+    functionArgs = nullptr;
     depth = 0;
     hasWith = false;
     hasEval = false;
@@ -51,6 +52,7 @@ Scope::Scope(Function *function, Scope *parent) : function(function), parent(par
     isArgumentsUsed = false;
 
     countLocalVars = 0;
+    countArguments = 0;
 
     index = (uint16_t)function->scopes.size();
     assert(function->scopes.size() < 0xFFFF);
@@ -106,38 +108,45 @@ void Scope::dump(BinaryOutputStream &stream) {
 }
 
 IdentifierDeclare *Scope::addVarDeclaration(const Token &token, bool isConst, bool isScopeVar) {
-    auto &pool = varDeclares.get_allocator().getPool();
-    auto node = PoolNew(pool, IdentifierDeclare)(token, this);
-    node->isConst = isConst;
-    node->isScopeVar = isScopeVar;
-
-    if (isScopeVar) {
-        node->varStorageType = VST_SCOPE_VAR;
-        node->storageIndex = countLocalVars++;
-    }
-
-    auto it = varDeclares.find(node->name);
+    auto it = varDeclares.find(tokenToSizedString(token));
     if (it == varDeclares.end()) {
-        varDeclares[node->name] = node;
-    } else {
-        node = (*it).second;
-    }
+        auto &pool = varDeclares.get_allocator().getPool();
+        auto node = PoolNew(pool, IdentifierDeclare)(token, this);
+        node->isConst = isConst;
+        node->isScopeVar = isScopeVar;
 
-    return node;
+        if (isScopeVar) {
+            node->varStorageType = VST_SCOPE_VAR;
+            node->storageIndex = countLocalVars++;
+        }
+
+        varDeclares[node->name] = node;
+        return node;
+    } else {
+        return (*it).second;
+    }
 }
 
 void Scope::addArgumentDeclaration(const Token &token, int index) {
     assert(isFunctionScope);
+    assert(index + 1 > countArguments);
 
-    auto &pool = varDeclares.get_allocator().getPool();
-    auto node = PoolNew(pool, IdentifierDeclare)(token, this);
-    node->isConst = false;
-    node->varStorageType = VST_ARGUMENT;
-    node->storageIndex = index;
+    countArguments = index + 1;
 
-    auto it = varDeclares.find(node->name);
+    auto it = varDeclares.find(tokenToSizedString(token));
     if (it == varDeclares.end()) {
+        auto &pool = varDeclares.get_allocator().getPool();
+        auto node = PoolNew(pool, IdentifierDeclare)(token, this);
+        node->isConst = false;
+        node->varStorageType = VST_ARGUMENT;
+        node->storageIndex = index;
+
         varDeclares[node->name] = node;
+    } else {
+        // 同名的参数会覆盖之前的声明
+        auto node = (*it).second;
+        assert(node->varStorageType == VST_ARGUMENT);
+        node->storageIndex = index;
     }
 }
 
@@ -159,7 +168,27 @@ void Scope::addImplicitVarDeclaration(IdentifierRef *id) {
 }
 
 void Scope::addFunctionDeclaration(const Token &name, Function *child) {
-    auto declare = function->scope->addVarDeclaration(name);
+    IdentifierDeclare *declare = nullptr;
+    auto functionScope = function->scope;
+    auto it = functionScope->varDeclares.find(tokenToSizedString(name));
+    if (it != functionScope->varDeclares.end()) {
+        declare = (*it).second;
+        if (declare->varStorageType == VST_ARGUMENT) {
+            // 声明的函数和参数同名
+            if (!functionScope->functionArgs) {
+                auto &pool = functionScope->varDeclares.get_allocator().getPool();
+                functionScope->functionArgs = PoolNew(pool, VecFunctions);
+            }
+            functionScope->functionArgs->push_back(child);
+        }
+    } else {
+        auto &pool = functionScope->varDeclares.get_allocator().getPool();
+        declare = PoolNew(pool, IdentifierDeclare)(name, this);
+        declare->isConst = false;
+        declare->isScopeVar = false;
+        varDeclares[declare->name] = declare;
+    }
+
     declare->isFuncName = true;
     declare->value.function = child;
     child->declare = declare;
@@ -269,6 +298,28 @@ Function::Function(ResourcePool *resourcePool, Scope *parent, uint16_t index, bo
 
 void Function::generateByteCode() {
     BinaryOutputStream stream;
+
+    // 提前将不常用的初始化过程转换为 bytecode，以提高 bytecode 执行的性能
+    if (!isCodeBlock) {
+        if (!isArrowFunction) {
+            if (scope->isThisUsed) {
+                stream.writeUint8(OP_PREPARE_VAR_THIS);
+            }
+
+            if (scope->isArgumentsUsed) {
+                stream.writeUint8(OP_PREPARE_VAR_ARGUMENTS);
+            }
+        }
+    }
+
+    if (!scope->functionDecls.empty()) {
+        stream.writeUint8(OP_INIT_FUNCTION_TO_VARS);
+    }
+
+    if (scope->functionArgs) {
+        stream.writeUint8(OP_INIT_FUNCTION_TO_ARGS);
+    }
+
     instructions.convertToByteCode(stream);
     auto data = stream.startNew();
     bytecode = resourcePool->pool.duplicate(data.data, data.len);

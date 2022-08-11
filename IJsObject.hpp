@@ -77,6 +77,8 @@ public:
     virtual bool removeByIndex(VMContext *ctx, uint32_t index) = 0;
     virtual bool removeBySymbol(VMContext *ctx, uint32_t index) = 0;
 
+    virtual IJsObject *clone() = 0;
+    
 public:
     JsDataType                  type;
     int8_t                      referIdx;
@@ -92,7 +94,7 @@ using MapSymbolToJsValue = std::unordered_map<uint32_t, JsValue>;
 
 class JsObject : public IJsObject {
 public:
-    JsObject(const JsValue &prototype = JsUndefinedValue);
+    JsObject(const JsValue &__proto__ = JsNotInitializedValue);
     virtual ~JsObject();
 
     virtual void definePropertyByName(VMContext *ctx, const SizedString &prop, const JsProperty &descriptor, const JsValue &setter) override;
@@ -119,10 +121,12 @@ public:
     virtual bool removeByIndex(VMContext *ctx, uint32_t index) override;
     virtual bool removeBySymbol(VMContext *ctx, uint32_t index) override;
 
+    virtual IJsObject *clone() override;
+
 protected:
     friend class JsLibObject;
 
-    JsValue                     _prototype;
+    JsValue                     __proto__;
 
     // MapNameToJsProperty 中的 SizedString 需要由 JsObject 自己管理内存.
     MapNameToJsProperty         _props;

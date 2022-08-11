@@ -21,6 +21,16 @@ void ucs2ToUtf8(uint16_t code, string &out) {
     }
 }
 
+static void stringConstructor(VMContext *ctx, const JsValue &thiz, const Arguments &args) {
+    auto runtime = ctx->runtime;
+
+    if (args.count > 0) {
+        ctx->stack.push_back(runtime->toString(ctx, args[0]));
+    } else {
+        ctx->stack.push_back(JsStringValueEmpty);
+    }
+}
+
 void stringFromCharCode(VMContext *ctx, const JsValue &thiz, const Arguments &args) {
     auto runtime = ctx->runtime;
 
@@ -156,13 +166,13 @@ static JsLibProperty stringPrototypeFunctions[] = {
 
 void registerString(VMRuntimeCommon *rt) {
     auto prototype = new JsLibObject(rt, stringPrototypeFunctions, CountOf(stringPrototypeFunctions));
-    rt->prototypeString = prototype;
+    rt->objPrototypeString = prototype;
+    rt->prototypeString = JsValue(JDT_OBJECT, rt->pushObjValue(prototype));
 
     auto idxPrototype = CountOf(stringFunctions) - 1;
     assert(stringFunctions[idxPrototype].name.equal("prototype"));
-    stringFunctions[idxPrototype].value = JsValue(JDT_OBJECT, rt->pushObjValue(prototype));
+    stringFunctions[idxPrototype].value = rt->prototypeString;
 
     rt->setGlobalObject("String",
-        new JsLibObject(rt, stringFunctions, CountOf(stringFunctions)));
-
+        new JsLibObject(rt, stringFunctions, CountOf(stringFunctions), stringConstructor));
 }

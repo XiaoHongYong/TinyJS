@@ -46,6 +46,8 @@ public:
     virtual bool removeByIndex(VMContext *ctx, uint32_t index) override;
     virtual bool removeBySymbol(VMContext *ctx, uint32_t index) override;
 
+    virtual IJsObject *clone() override;
+
     /**
      * 采用按 Block 存储所有的元素，平均每一个 Block 约 2 ** 14 = 16384 个元素
      * 整个数组采用 block 数组存储。查找位置时，先根据 index 使用二分查找到 block，再直接定位具体的元素

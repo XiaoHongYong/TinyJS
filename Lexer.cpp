@@ -695,6 +695,7 @@ void JSLexer::_skipMultilineComment() {
         }
 
         if (*_bufPos++ == '*' && *_bufPos == '/') {
+            _bufPos++;
             auto tmp = _prevTokenType;
             auto tmpNewLineBefore = _newLineBefore;
             _readToken();

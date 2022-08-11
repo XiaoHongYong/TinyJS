@@ -15,7 +15,6 @@ SizedString makeCommonString(const char *str) {
     return s;
 }
 
-SizedString SS_PROTOTYPE = makeCommonString("prototype");
 SizedString SS_UNDEFINED = makeCommonString("undefined");
 SizedString SS_NULL = makeCommonString("null");
 SizedString SS_TRUE = makeCommonString("true");
@@ -25,6 +24,11 @@ SizedString SS_THIS = makeCommonString("this");
 SizedString SS_ARGUMENTS = makeCommonString("arguments");
 SizedString SS_LENGTH = makeCommonString("length");
 SizedString SS_TO_STRING = makeCommonString("toString");
+
+SizedString SS__PROTO__ = makeCommonString("__proto__");
+SizedString SS_PROTOTYPE = makeCommonString("prototype");
+
+SizedString SS_FUNCTION_NATIVE_CODE = makeCommonString("function String() { [native code] }");
 
 SizedString SS_ERROR = makeCommonString("Error");
 SizedString SS_MESSAGE = makeCommonString("message");

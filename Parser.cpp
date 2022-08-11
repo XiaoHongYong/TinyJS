@@ -622,7 +622,7 @@ Function *JSParser::_expectFunction(InstructionOutputStream &instructions, Funct
 
     if (type != FT_DECLARATION) {
         instructions.writeOpCode(OP_PUSH_FUNCTION_EXPR);
-        instructions.writeUint8(_curFunction->scope->depth);
+        instructions.writeUint8(_curFuncScope->depth);
         instructions.writeUint16(child->index);
     }
 
@@ -817,22 +817,24 @@ void JSParser::_expectExpression(InstructionOutputStream &instructions, Preceden
             _readToken();
             if (_curToken.type == TK_ARROW) {
                 // Arrow function
-                _enterFunction(name, false, true);
+                _readToken();
+
+                auto childFunction = _enterFunction(name, false, true);
 
                 _curFuncScope->addArgumentDeclaration(name, 0);
 
                 if (_curToken.type == TK_OPEN_BRACE) {
                     _expectBlock();
                 } else {
-                    _expectExpression(instructions, PRED_NONE, false);
-                    instructions.writeOpCode(OP_RETURN_VALUE);
+                    _expectExpression(childFunction->instructions, PRED_NONE, false);
+                    childFunction->instructions.writeOpCode(OP_RETURN_VALUE);
                 }
 
-                instructions.writeOpCode(OP_PUSH_FUNCTION_EXPR);
-                instructions.writeUint8(_curFunction->scope->parent->function->scope->depth);
-                instructions.writeUint16((uint16_t)_curFunction->index);
-
                 _leaveFunction();
+
+                instructions.writeOpCode(OP_PUSH_FUNCTION_EXPR);
+                instructions.writeUint8(_curFuncScope->depth);
+                instructions.writeUint16((uint16_t)childFunction->index);
             } else {
                 identifier = _newIdentifierRef(name, _curFunction);
                 prevOp = OP_PUSH_IDENTIFIER;
@@ -929,12 +931,12 @@ void JSParser::_expectExpression(InstructionOutputStream &instructions, Preceden
         switch (_curToken.type) {
             case TK_OPEN_BRACKET:
                 // Member index expression
+                writePrevInstruction(prevOp, prevStringIdx, identifier, instructions);
+                prevOp = OP_PUSH_MEMBER_INDEX;
+
                 _readToken();
                 _expectExpression(instructions, PRED_NONE, true);
                 _expectToken(TK_CLOSE_BRACKET);
-
-                writePrevInstruction(prevOp, prevStringIdx, identifier, instructions);
-                prevOp = OP_PUSH_MEMBER_INDEX;
                 break;
 
             case TK_OPTIONAL_DOT: {
@@ -1617,6 +1619,8 @@ void JSParser::_allocateIdentifierStorage(Scope *scope, int registerIndex) {
                 } else if (declare->name.equal(SS_ARGUMENTS)) {
                     declare->scope->isArgumentsUsed = true;
                 }
+            } else if (declare->varStorageType == VST_ARGUMENT && declare->isFuncName) {
+                
             }
             continue;
         }

@@ -36,7 +36,7 @@ static string getStack(VMContext *ctx) {
 }
 
 // https://developer.mozilla.org/zh-CN/docs/Web/JavaScript/Reference/Global_Objects/Error
-static void error(VMContext *ctx, const JsValue &thiz, const Arguments &args) {
+static void errorConstructor(VMContext *ctx, const JsValue &thiz, const Arguments &args) {
     auto runtime = ctx->runtime;
 
     auto message = JsUndefinedValue;
@@ -53,6 +53,12 @@ static void error(VMContext *ctx, const JsValue &thiz, const Arguments &args) {
     ctx->stack.push_back(err);
 }
 
+static JsLibProperty errorFunctions[] = {
+    { "name", nullptr, "Error" },
+    { "length", nullptr, nullptr, JsValue(JDT_INT32, 1) },
+    { "prototype", nullptr, nullptr, JsValue(JDT_INT32, 1) },
+};
+
 static void errorToString(VMContext *ctx, const JsValue &thiz, const Arguments &args) {
     auto msg = ctx->vm->getMemberDot(ctx, thiz, SS_MESSAGE);
     if (msg.type == JDT_UNDEFINED) {
@@ -62,14 +68,18 @@ static void errorToString(VMContext *ctx, const JsValue &thiz, const Arguments &
     }
 }
 
-static JsLibProperty errorProtoFunctions[] = {
+static JsLibProperty errorPrototypeFunctions[] = {
     { "toString", errorToString },
 };
 
 void registerErrorAPIs(VMRuntimeCommon *rt) {
-    __errorToStringPrefix = rt->pushStringValue(SS_ERR_STRING_PREFIX);
+    auto prototype = new JsLibObject(rt, errorPrototypeFunctions, CountOf(errorPrototypeFunctions));
+    __errorPrototype = JsValue(JDT_OBJECT, rt->pushObjValue(prototype));
 
-    auto errorPrototypeObj = new JsLibObject(rt, errorProtoFunctions, CountOf(errorProtoFunctions));
-    __errorPrototype = JsValue(JDT_LIB_OBJECT, rt->pushObjValue(errorPrototypeObj));
-    rt->setGlobalValue("Error", JsValue(JDT_NATIVE_FUNCTION, rt->pushNativeFunction(error)));
+    auto idxPrototype = CountOf(errorFunctions) - 1;
+    assert(errorFunctions[idxPrototype].name.equal("prototype"));
+    errorFunctions[idxPrototype].value = __errorPrototype;
+
+    rt->setGlobalObject("Error",
+        new JsLibObject(rt, errorFunctions, CountOf(errorFunctions), errorConstructor));
 }

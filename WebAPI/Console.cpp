@@ -11,6 +11,8 @@
 
 void consoleLog(VMContext *ctx, const JsValue &thiz, const Arguments &args) {
     auto runtime = ctx->runtime;
+    string out;
+    char buf[64];
 
     for (uint32_t i = 0; i < args.count; i++) {
         auto v = args.data[i];
@@ -25,45 +27,51 @@ void consoleLog(VMContext *ctx, const JsValue &thiz, const Arguments &args) {
             }
         }
 
+        if (!out.empty()) {
+            out.append(" ");
+        }
+
         switch (v.type) {
             case JDT_NOT_INITIALIZED:
                 ctx->throwException(PE_REFERECNE_ERROR, "Cannot access variable before initialization");
                 break;
             case JDT_UNDEFINED:
-                printf("undefined ");
+                out.append("undefined");
                 break;
             case JDT_NULL:
-                printf("null ");
+                out.append("null");
                 break;
             case JDT_INT32:
-                printf("%d ", v.value.n32);
+                sprintf(buf, "%d", v.value.n32);
+                out.append(buf);
                 break;
             case JDT_BOOL:
-                printf("%s ", v.value.n32 ? "true" : "false");
+                out.append(v.value.n32 ? "true" : "false");
                 break;
             case JDT_NUMBER:
-                printf("%lf ", runtime->getDouble(v));
+                sprintf(buf, "%lf", runtime->getDouble(v));
+                out.append(buf);
                 break;
             case JDT_CHAR:
-                printf("%c ", v.value.n32);
+                out.append(1, (char)v.value.n32);
                 break;
             case JDT_STRING: {
                 auto s = runtime->getString(v);
-                printf("%.*s ", (int)s.len, s.data);
+                out.append((const char *)s.data, s.len);
                 break;
             }
             case JDT_SYMBOL: {
                 auto s = runtime->getSymbolName(v);
-                printf("%.*s ", (int)s.len, s.data);
+                out.append((const char *)s.data, s.len);
                 break;
             }
             default:
-                printf("[Object] ");
+                out.append("[Object]");
                 break;
         }
     }
 
-    printf("\n");
+    runtime->console->log(SizedString(out));
 }
 
 void consoleTrace(VMContext *ctx, const JsValue &thiz, const Arguments &args) {

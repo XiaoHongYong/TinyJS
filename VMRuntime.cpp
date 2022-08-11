@@ -24,12 +24,34 @@
 #define MID_STRING_POOL_SIZE    (1024 * 128)
 
 
+class StdIOConsole : public IConsole {
+public:
+    virtual void log(const SizedString &message) override {
+        printf("%.*s\n", message.len, message.data);
+    }
+    
+    virtual void info(const SizedString &message) override {
+        printf("[info] %.*s\n", message.len, message.data);
+    }
+    
+    virtual void warn(const SizedString &message) override {
+        printf("[warn] %.*s\n", message.len, message.data);
+    }
+    
+    virtual void error(const SizedString &message) override {
+        printf("[error] %.*s\n", message.len, message.data);
+    }
+
+};
+
 VMRuntimeCommon::VMRuntimeCommon() {
     prototypeString = nullptr;
     prototypeNumber = nullptr;
     prototypeBoolean = nullptr;
     prototypeRegex = nullptr;
     prototypeSymbol = nullptr;
+    prototypeObject = nullptr;
+    prototypeFunction = nullptr;
 
     JsValue tmp;
     tmp = pushStringValue(SizedString("", 0)); assert(tmp.value.index == JS_STRING_IDX_EMPTY);
@@ -37,6 +59,16 @@ VMRuntimeCommon::VMRuntimeCommon() {
     tmp = pushStringValue(SS_NULL); assert(tmp.value.index == JS_STRING_IDX_NULL);
     tmp = pushStringValue(SS_TRUE); assert(tmp.value.index == JS_STRING_IDX_TRUE);
     tmp = pushStringValue(SS_FALSE); assert(tmp.value.index == JS_STRING_IDX_FALSE);
+
+    tmp = pushStringValue(SS_THIS); assert(tmp.value.index == SS_STRING_IDX_THIS);
+    tmp = pushStringValue(SS_ARGUMENTS); assert(tmp.value.index == SS_STRING_IDX_ARGUMENTS);
+    tmp = pushStringValue(SS_LENGTH); assert(tmp.value.index == SS_STRING_IDX_LENGTH);
+    tmp = pushStringValue(SS_TO_STRING); assert(tmp.value.index == SS_STRING_IDX_TO_STRING);
+
+    tmp = pushStringValue(SS__PROTO__); assert(tmp.value.index == SS_STRING_IDX__PROTO__);
+    tmp = pushStringValue(SS_PROTOTYPE); assert(tmp.value.index == SS_STRING_IDX_PROTOTYPE);
+
+    tmp = pushStringValue(SS_FUNCTION_NATIVE_CODE); assert(tmp.value.index == SS_STRING_IDX_FUNCTION_NATIVE_CODE);
 
     auto resourcePool = new ResourcePool();
     Function *rootFunc = new Function(resourcePool, nullptr, 0);
@@ -143,6 +175,7 @@ uint32_t VMRuntimeCommon::findStringValue(const SizedString &value) {
 VMRuntime::VMRuntime() {
     vm = nullptr;
     rtCommon = nullptr;
+    console = nullptr;
     globalScope = nullptr;
 
     countCommonDobules = 0;
@@ -159,6 +192,7 @@ VMRuntime::VMRuntime() {
 void VMRuntime::init(JsVirtualMachine *vm, VMRuntimeCommon *rtCommon) {
     this->vm = vm;
     this->rtCommon = rtCommon;
+    console = new StdIOConsole();
 
     countCommonDobules = (int)rtCommon->doubleValues.size();
     countCommonStrings = (int)rtCommon->stringValues.size();
@@ -170,12 +204,7 @@ void VMRuntime::init(JsVirtualMachine *vm, VMRuntimeCommon *rtCommon) {
 
     // 需要将 rtCommon 中的对象都复制一份.
     for (auto item : rtCommon->objValues) {
-        assert(item->type == JDT_LIB_OBJECT);
-        if (item->type == JDT_LIB_OBJECT) {
-            objValues.push_back(new JsLibObject((JsLibObject *)item));
-        } else {
-            objValues.push_back(item);
-        }
+        objValues.push_back(item->clone());
     }
     globalScope = rtCommon->globalScope;
     firstFreeDoubleIdx = 0;
@@ -194,6 +223,21 @@ void VMRuntime::init(JsVirtualMachine *vm, VMRuntimeCommon *rtCommon) {
         smallStringPools.append(pool);
     }
 
+    objPrototypeString = rtCommon->objPrototypeString->clone();
+    objPrototypeNumber = rtCommon->objPrototypeNumber->clone();
+    objPrototypeBoolean = rtCommon->objPrototypeBoolean->clone();
+    objPrototypeSymbol = rtCommon->objPrototypeSymbol->clone();
+    objPrototypeRegex = rtCommon->objPrototypeRegex->clone();
+    objPrototypeObject = rtCommon->objPrototypeObject->clone();
+    objPrototypeFunction = rtCommon->objPrototypeFunction->clone();
+
+    prototypeString = rtCommon->prototypeString;
+    prototypeNumber = rtCommon->prototypeNumber;
+    prototypeBoolean = rtCommon->prototypeBoolean;
+    prototypeSymbol = rtCommon->prototypeSymbol;
+    prototypeRegex = rtCommon->prototypeRegex;
+    prototypeObject = rtCommon->prototypeObject;
+    prototypeFunction = rtCommon->prototypeFunction;
 }
 
 void VMRuntime::dump(BinaryOutputStream &stream) {
@@ -513,7 +557,7 @@ double VMRuntime::toNumber(VMContext *ctx, const JsValue &item) {
     switch (v.type) {
         case JDT_NOT_INITIALIZED:
             ctx->throwException(PE_REFERECNE_ERROR, "Cannot access variable before initialization");
-            return 0;
+            return NAN;
         case JDT_UNDEFINED:
         case JDT_NULL:
             return 0;
@@ -524,24 +568,24 @@ double VMRuntime::toNumber(VMContext *ctx, const JsValue &item) {
             if (v.value.n32 >= '0' && v.value.n32 <= '9') {
                 return v.value.n32 - '0';
             }
-            return 0;
+            return NAN;
         case JDT_STRING: {
             auto s = getString(v);
             s.trim();
             double v;
             auto p = parseNumber(s, v);
             if (p != s.data + s.len) {
-                v = 0;
+                v = NAN;
             }
             return v;
         }
         case JDT_NUMBER:
             return getDouble(v);
         case JDT_SYMBOL:
-            return 0;
+            ctx->throwException(PE_TYPE_ERROR, "Cannot convert a Symbol value to a number");
+            return NAN;
         default:
-            assert(0);
-            return 0;
+            return NAN;
     }
 }
 

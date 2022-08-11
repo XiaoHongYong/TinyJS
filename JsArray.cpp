@@ -53,6 +53,10 @@ JsArray::~JsArray() {
         delete b;
     }
     _blocks.clear();
+
+    if (_obj) {
+        delete _obj;
+    }
 }
 
 void JsArray::definePropertyByName(VMContext *ctx, const SizedString &prop, const JsProperty &descriptor, const JsValue &setter) {
@@ -333,6 +337,12 @@ bool JsArray::removeBySymbol(VMContext *ctx, uint32_t index) {
     }
 
     return true;
+}
+
+IJsObject *JsArray::clone() {
+    assert(0 && "NOT supported.");
+
+    return nullptr;
 }
 
 void JsArray::_newObject() {

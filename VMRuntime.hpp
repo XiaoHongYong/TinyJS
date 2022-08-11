@@ -36,6 +36,15 @@ struct JsNativeFunctionObject {
 
 using VecJsNativeFunction = std::vector<JsNativeFunctionObject>;
 
+class IConsole {
+public:
+    virtual void log(const SizedString &message) = 0;
+    virtual void info(const SizedString &message) = 0;
+    virtual void warn(const SizedString &message) = 0;
+    virtual void error(const SizedString &message) = 0;
+
+};
+
 /**
  * 在系统初始化阶段用来存储缺省使用的字符串、double、functions 等资源，这些资源不参与后期的资源释放统计
  */
@@ -75,11 +84,21 @@ public:
     VecJsObjects                objValues;
     VecJsNativeFunction         nativeFunctions;
 
-    IJsObject                   *prototypeString;
-    IJsObject                   *prototypeNumber;
-    IJsObject                   *prototypeBoolean;
-    IJsObject                   *prototypeSymbol;
-    IJsObject                   *prototypeRegex;
+    IJsObject                   *objPrototypeString;
+    IJsObject                   *objPrototypeNumber;
+    IJsObject                   *objPrototypeBoolean;
+    IJsObject                   *objPrototypeSymbol;
+    IJsObject                   *objPrototypeRegex;
+    IJsObject                   *objPrototypeObject;
+    IJsObject                   *objPrototypeFunction;
+
+    JsValue                     prototypeString;
+    JsValue                     prototypeNumber;
+    JsValue                     prototypeBoolean;
+    JsValue                     prototypeSymbol;
+    JsValue                     prototypeRegex;
+    JsValue                     prototypeObject;
+    JsValue                     prototypeFunction;
 
     VMScope                     *globalScope;
 
@@ -98,10 +117,12 @@ public:
 
     void init(JsVirtualMachine *vm, VMRuntimeCommon *rtCommon);
 
+    void setConsole(IConsole *console) { this->console = console; }
+
     void dump(BinaryOutputStream &stream);
 
     uint32_t pushObjValue(IJsObject *value) { uint32_t n = (uint32_t)objValues.size(); objValues.push_back(value); return n; }
-    uint32_t pushDoubleValue(JsDouble &value) { uint32_t n = (uint32_t)doubleValues.size(); doubleValues.push_back(value); return n; }
+    JsValue pushDoubleValue(double value) { uint32_t n = (uint32_t)doubleValues.size(); doubleValues.push_back(JsDouble(value)); return JsValue(JDT_NUMBER, n); }
     uint32_t pushResourcePool(ResourcePool *pool) { uint32_t n = (uint32_t)resourcePools.size(); resourcePools.push_back(pool); return n; }
     JsValue pushSymbolValue(JsSymbol &value) { uint32_t n = (uint32_t)symbolValues.size(); symbolValues.push_back(value); return JsValue(JDT_SYMBOL, n); }
     JsValue pushString(const JsString &str) { uint32_t n = (uint32_t)stringValues.size(); stringValues.push_back(str); return JsValue(JDT_STRING, n); }
@@ -204,11 +225,14 @@ public:
 protected:
     StringPool *newStringPool(uint32_t size);
 
-public:
-    
-    JsVirtualMachine            *vm;
+protected:
     VMRuntimeCommon             *rtCommon;
 
+public:
+    JsVirtualMachine            *vm;
+
+    IConsole                    *console;
+    
     VMScope                     *globalScope;
     JsValue                     globalThiz;
 
@@ -234,6 +258,22 @@ public:
     StringPoolList              smallStringPools;
     StringPoolList              midStringPools;
     StringPoolList              largeStringPools;
+
+    IJsObject                   *objPrototypeString;
+    IJsObject                   *objPrototypeNumber;
+    IJsObject                   *objPrototypeBoolean;
+    IJsObject                   *objPrototypeSymbol;
+    IJsObject                   *objPrototypeRegex;
+    IJsObject                   *objPrototypeObject;
+    IJsObject                   *objPrototypeFunction;
+
+    JsValue                     prototypeString;
+    JsValue                     prototypeNumber;
+    JsValue                     prototypeBoolean;
+    JsValue                     prototypeSymbol;
+    JsValue                     prototypeRegex;
+    JsValue                     prototypeObject;
+    JsValue                     prototypeFunction;
 
 };
 

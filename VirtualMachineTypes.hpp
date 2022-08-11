@@ -16,6 +16,11 @@ class IJsObject;
 
 #define OP_CODE_DEFINES \
     OP_ITEM(OP_INVALID, "not_used"), \
+    OP_ITEM(OP_PREPARE_VAR_THIS, ""), \
+    OP_ITEM(OP_PREPARE_VAR_ARGUMENTS, ""), \
+    OP_ITEM(OP_INIT_FUNCTION_TO_VARS, ""), \
+    OP_ITEM(OP_INIT_FUNCTION_TO_ARGS, ""), \
+    \
     OP_ITEM(OP_RETURN_VALUE, ""), \
     OP_ITEM(OP_RETURN, ""), \
     OP_ITEM(OP_DEBUGGER, ""), \
@@ -49,7 +54,7 @@ class IJsObject;
     OP_ITEM(OP_PUSH_COMMON_STRING, "string_idx:u16"), /*系统常用的 string，不会涉及资源回收*/\
     OP_ITEM(OP_PUSH_INT32, "int_number:i32"), \
     OP_ITEM(OP_PUSH_DOUBLE, "value_idx:u32"), \
-    OP_ITEM(OP_PUSH_FUNCTION_EXPR, "scope_depth:u8, function_idx:u32"), \
+    OP_ITEM(OP_PUSH_FUNCTION_EXPR, "scope_depth:u8, function_idx:u16"), \
     \
     OP_ITEM(OP_PUSH_MEMBER_INDEX, ""), \
     OP_ITEM(OP_PUSH_MEMBER_INDEX_INT, "index:u32"), \
@@ -268,17 +273,37 @@ enum JsValueStringIndex {
     JS_STRING_IDX_NULL,
     JS_STRING_IDX_TRUE,
     JS_STRING_IDX_FALSE,
+
+    SS_STRING_IDX_THIS,
+    SS_STRING_IDX_ARGUMENTS,
+    SS_STRING_IDX_LENGTH,
+    SS_STRING_IDX_TO_STRING,
+
+    SS_STRING_IDX__PROTO__,
+    SS_STRING_IDX_PROTOTYPE,
+
+    SS_STRING_IDX_FUNCTION_NATIVE_CODE,
 };
 
 const JsValue JsNotInitializedValue = JsValue();
 const JsValue JsNullValue = JsValue(JDT_NULL, 0);
 const JsValue JsUndefinedValue = JsValue(JDT_UNDEFINED, 0);
+
 const JsValue JsStringValueEmpty = JsValue(JDT_STRING, JS_STRING_IDX_EMPTY);
 const JsValue JsStringValueUndefined = JsValue(JDT_STRING, JS_STRING_IDX_UNDEFINED);
 const JsValue JsStringValueNull = JsValue(JDT_STRING, JS_STRING_IDX_NULL);
 const JsValue JsStringValueTrue = JsValue(JDT_STRING, JS_STRING_IDX_TRUE);
 const JsValue JsStringValueFalse = JsValue(JDT_STRING, JS_STRING_IDX_FALSE);
 
+const JsValue JsStringValueThis = JsValue(JDT_STRING, SS_STRING_IDX_THIS);
+const JsValue JsStringValueArguments = JsValue(JDT_STRING, SS_STRING_IDX_ARGUMENTS);
+const JsValue JsStringValueLength = JsValue(JDT_STRING, SS_STRING_IDX_LENGTH);
+const JsValue JsStringValueToString = JsValue(JDT_STRING, SS_STRING_IDX_TO_STRING);
+
+const JsValue JsStringValue__proto__ = JsValue(JDT_STRING, SS_STRING_IDX__PROTO__);
+const JsValue JsStringValuePrototype = JsValue(JDT_STRING, SS_STRING_IDX_PROTOTYPE);
+
+const JsValue JsStringValueFunctionNativeCode = JsValue(JDT_STRING, SS_STRING_IDX_FUNCTION_NATIVE_CODE);
 
 using VecJsValues = std::vector<JsValue>;
 using VecJsDoubles = std::vector<JsDouble>;

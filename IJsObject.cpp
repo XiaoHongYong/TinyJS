@@ -225,7 +225,7 @@ bool IJsObject::remove(VMContext *ctx, const JsValue &propOrg, const JsValue &va
     return true;
 }
 
-JsObject::JsObject(const JsValue &prototype) : _prototype(prototype) {
+JsObject::JsObject(const JsValue &__proto__) : __proto__(__proto__) {
     type = JDT_OBJECT;
     _symbolProps = nullptr;
     _symbolSetters = nullptr;
@@ -377,8 +377,8 @@ JsValue JsObject::getSetterByName(VMContext *ctx, const SizedString &prop) {
         }
     }
 
-    if (_prototype.type >= JDT_OBJECT) {
-        auto obj = ctx->runtime->getObject(_prototype);
+    if (__proto__.type >= JDT_OBJECT) {
+        auto obj = ctx->runtime->getObject(__proto__);
         assert(obj);
         return obj->getSetterByName(ctx, prop);
     }
@@ -399,8 +399,8 @@ JsValue JsObject::getSetterBySymbol(VMContext *ctx, uint32_t index) {
         }
     }
 
-    if (_prototype.type >= JDT_OBJECT) {
-        auto obj = ctx->runtime->getObject(_prototype);
+    if (__proto__.type >= JDT_OBJECT) {
+        auto obj = ctx->runtime->getObject(__proto__);
         assert(obj);
         obj->getSetterBySymbol(ctx, index);
     }
@@ -411,8 +411,11 @@ JsValue JsObject::getSetterBySymbol(VMContext *ctx, uint32_t index) {
 JsValue JsObject::getByName(VMContext *ctx, const JsValue &thiz, const SizedString &prop) {
     auto it = _props.find(prop);
     if (it == _props.end()) {
-        if (_prototype.type >= JDT_OBJECT) {
-            auto obj = ctx->runtime->getObject(_prototype);
+        if (__proto__.type == JDT_NOT_INITIALIZED) {
+            // 缺省的 Object.prototype
+            return ctx->runtime->objPrototypeObject->getByName(ctx, thiz, prop);
+        } else if (__proto__.type >= JDT_OBJECT) {
+            auto obj = ctx->runtime->getObject(__proto__);
             assert(obj);
             return obj->getByName(ctx, thiz, prop);
         }
@@ -440,8 +443,8 @@ JsValue JsObject::getBySymbol(VMContext *ctx, const JsValue &thiz, uint32_t inde
     if (_symbolProps) {
         auto it = _symbolProps->find(index);
         if (it == _symbolProps->end()) {
-            if (_prototype.type >= JDT_OBJECT) {
-                auto obj = ctx->runtime->getObject(_prototype);
+            if (__proto__.type >= JDT_OBJECT) {
+                auto obj = ctx->runtime->getObject(__proto__);
                 assert(obj);
                 return obj->getBySymbol(ctx, thiz, index);
             }
@@ -478,9 +481,9 @@ void JsObject::setByName(VMContext *ctx, const JsValue &thiz, const SizedString 
 
     auto it = _props.find(prop);
     if (it == _props.end()) {
-        if (_prototype.type >= JDT_OBJECT) {
+        if (__proto__.type >= JDT_OBJECT) {
             // 查找 prototype 链
-            auto obj = ctx->runtime->getObject(_prototype);
+            auto obj = ctx->runtime->getObject(__proto__);
             assert(obj);
             auto setter = obj->getSetterByName(ctx, prop);
             if (setter.type > JDT_OBJECT) {
@@ -522,9 +525,9 @@ void JsObject::setBySymbol(VMContext *ctx, const JsValue &thiz, uint32_t index, 
 
     auto it = _symbolProps->find(index);
     if (it == _symbolProps->end()) {
-        if (_prototype.type >= JDT_OBJECT) {
+        if (__proto__.type >= JDT_OBJECT) {
             // 查找 prototype 链
-            auto obj = ctx->runtime->getObject(_prototype);
+            auto obj = ctx->runtime->getObject(__proto__);
             assert(obj);
             auto setter = obj->getSetterBySymbol(ctx, index);
             if (setter.type > JDT_OBJECT) {
@@ -571,4 +574,15 @@ bool JsObject::removeBySymbol(VMContext *ctx, uint32_t index) {
     }
 
     return true;
+}
+
+IJsObject *JsObject::clone() {
+    auto obj = new JsObject(__proto__);
+
+    obj->_props = _props;
+    if (_setters) { obj->_setters = new MapNameToJsValue; *obj->_setters = *_setters; }
+    if (_symbolProps) { obj->_symbolProps = new MapSymbolToJsProperty; *obj->_symbolProps = *_symbolProps; }
+    if (_symbolSetters) { obj->_symbolSetters = new MapSymbolToJsValue; *obj->_symbolSetters = *_symbolSetters; }
+
+    return obj;
 }

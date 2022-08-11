@@ -248,6 +248,12 @@ bool JsArguments::removeBySymbol(VMContext *ctx, uint32_t index) {
     return true;
 }
 
+IJsObject *JsArguments::clone() {
+    assert(0 && "NOT supported.");
+
+    return nullptr;
+}
+
 void JsArguments::_newObject() {
     assert(_obj == nullptr);
     _obj = new JsObject();

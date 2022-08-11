@@ -56,6 +56,10 @@ JsLibObject::~JsLibObject() {
     if (_modified) {
         delete [] _libProps;
     }
+
+    if (_obj) {
+        delete _obj;
+    }
 }
 
 void JsLibObject::definePropertyByName(VMContext *ctx, const SizedString &prop, const JsProperty &descriptor, const JsValue &setter) {
@@ -248,15 +252,22 @@ bool JsLibObject::removeByIndex(VMContext *ctx, uint32_t index) {
 
 bool JsLibObject::removeBySymbol(VMContext *ctx, uint32_t index) {
     if (_obj) {
-        _obj->removeBySymbol(ctx, index);
+        return _obj->removeBySymbol(ctx, index);
     }
 
     return true;
 }
 
+IJsObject *JsLibObject::clone() {
+    auto obj = new JsLibObject(this);
+    return obj;
+}
+
 void JsLibObject::_newObject() {
     assert(_obj == nullptr);
-    _obj = new JsObject();
+
+    // 如果是 Object.prototype, 避免循环调用到 __proto__ 的 get 函数中.
+    _obj = new JsObject(_isObjectPrototype ? JsNullValue : JsNotInitializedValue);
 }
 
 void JsLibObject::_copyForModify() {
