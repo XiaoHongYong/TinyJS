@@ -16,21 +16,25 @@ class StringStreamConsole : public IConsole {
 public:
     virtual void log(const SizedString &message) override {
         stream.write(message);
+        stream.writeUint8('\n');
     }
 
     virtual void info(const SizedString &message) override {
         stream.write("[info] ");
         stream.write(message);
+        stream.writeUint8('\n');
     }
     
     virtual void warn(const SizedString &message) override {
         stream.write("[warn] ");
         stream.write(message);
+        stream.writeUint8('\n');
     }
     
     virtual void error(const SizedString &message) override {
         stream.write("[error] ");
         stream.write(message);
+        stream.writeUint8('\n');
     }
 
     SizedString getOutput() { return stream.toSizedString(); }
@@ -134,6 +138,7 @@ TEST(RunJavaScript, outputCheck) {
             printf("   Current:  %.*s\n", (int)60, removeNewLine(output).c_str());
             printf("   Expected: %.*s\n", (int)60, removeNewLine(outputExpected).c_str());
             ASSERT_TRUE(compareTextIgnoreSpace(outputExpected.c_str(), output.c_str()));
+            printf("   Passed.\n");
         }
     }
 }

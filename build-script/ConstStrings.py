@@ -70,7 +70,7 @@ def write_file(fn, content):
     with open(fn, 'wb') as fp:
         fp.write(content)
 
-def build(fn_header, fn_cpp):
+def build():
     EXTERN_SS_XXS = []
     SS_XXS = []
     enum_JsValueStringIndices = []
@@ -88,6 +88,10 @@ def build(fn_header, fn_cpp):
 
     this_py_file = os.path.basename(__file__)
 
+    work_dir = os.path.abspath(os.path.dirname(__file__))
+    fn_header = os.path.join(work_dir, '../generated/ConstStrings.hpp')
+    fn_cpp = os.path.join(work_dir, '../generated/ConstStrings.cpp')
+
     write_file(fn_header, HEADER_TEMPLATE.format(this_py_file,
         '\n'.join(EXTERN_SS_XXS),
         '\n'.join(enum_JsValueStringIndices),
@@ -98,7 +102,4 @@ def build(fn_header, fn_cpp):
         '\n'.join(pushConstStringValues)))
 
 if __name__ == '__main__':
-    work_dir = os.path.abspath(os.path.dirname(__file__))
-
-    build(os.path.join(work_dir, '../ConstStrings.hpp'),
-        os.path.join(work_dir, '../ConstStrings.cpp'))
+    build()

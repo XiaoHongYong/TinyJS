@@ -41,6 +41,7 @@ class IJsObject;
     OP_ITEM(OP_POP_STACK_TOP, ""), \
     OP_ITEM(OP_PUSH_STACK_TOP, ""), \
     \
+    OP_ITEM(OP_PUSH_UNDFINED, ""), \
     OP_ITEM(OP_PUSH_IDENTIFIER, "not_used"), \
     OP_ITEM(OP_PUSH_ID_LOCAL_SCOPE, "var_idx:u16"), \
     OP_ITEM(OP_PUSH_ID_LOCAL_ARGUMENT, "argument_idx:u16"), \
@@ -127,6 +128,10 @@ class IJsObject;
     OP_ITEM(OP_OBJ_SPREAD_PROPERTY, ""), \
     OP_ITEM(OP_OBJ_SET_GETTER, "property_string_idx:u32"), \
     OP_ITEM(OP_OBJ_SET_SETTER, "property_string_idx:u32"), \
+    OP_ITEM(OP_ARRAY_CREATE, ""), \
+    OP_ITEM(OP_ARRAY_SPREAD_VALUE, ""), \
+    OP_ITEM(OP_ARRAY_PUSH_VALUE, ""), \
+    OP_ITEM(OP_ARRAY_PUSH_UNDEFINED_VALUE, ""), \
     \
     OP_ITEM(OP_TRY_START, "address_catch:u32, address_finally:u32"), \
     OP_ITEM(OP_BEGIN_FINALLY_NORMAL, ""), \
@@ -271,6 +276,7 @@ static_assert(sizeof(JsString) == 24, "JsPoolString should be 24 bytes long.");
 const JsValue JsNotInitializedValue = JsValue();
 const JsValue JsNullValue = JsValue(JDT_NULL, 0);
 const JsValue JsUndefinedValue = JsValue(JDT_UNDEFINED, 0);
+const JsValue JsNaNValue = JsValue(JDT_NUMBER, 0);
 
 using VecJsValues = std::vector<JsValue>;
 using VecJsDoubles = std::vector<JsDouble>;

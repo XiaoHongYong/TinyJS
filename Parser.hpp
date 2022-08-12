@@ -108,6 +108,7 @@ protected:
     void _expectArrowFunction(InstructionOutputStream &instructions);
     void _expectParenExpression(InstructionOutputStream &instructions);
     void _expectObjectLiteralExpression(InstructionOutputStream &instructions);
+    void _expectArrayLiteralExpression(InstructionOutputStream &instructions);
 
     IdentifierRef *_newIdentifierRef(const Token &token, Function *function);
 

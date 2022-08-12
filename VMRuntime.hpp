@@ -103,6 +103,9 @@ public:
 
     VMScope                     *globalScope;
 
+    // 全局变量的前 countImmutableGlobalVars 是不能被修改的
+    uint32_t                    countImmutableGlobalVars;
+    
 };
 
 /**
@@ -223,6 +226,8 @@ public:
 
     bool testTrue(const JsValue &v);
 
+    void extendObject(const JsValue &dst, const JsValue &src);
+    
 protected:
     StringPool *newStringPool(uint32_t size);
 
@@ -236,6 +241,9 @@ public:
     
     VMScope                     *globalScope;
     JsValue                     globalThiz;
+
+    // 全局变量的前 countImmutableGlobalVars 是不能被修改的
+    uint32_t                    countImmutableGlobalVars;
 
     // 主函数的调用上下文
     VMContext                   *mainVmCtx;

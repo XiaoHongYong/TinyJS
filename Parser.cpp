@@ -552,7 +552,7 @@ void JSParser::_assignIdentifier(Function *function, InstructionOutputStream &in
         _parseError(PE_SYNTAX_ERROR, "Unexpected token 'this'");
         return;
     }
-    
+
     auto identifier = _newIdentifierRef(name, function);
     identifier->isModified = true;
     instructions.writeOpCode(OP_ASSIGN_IDENTIFIER);
@@ -863,7 +863,7 @@ void JSParser::_expectExpression(InstructionOutputStream &instructions, Preceden
             _expectObjectLiteralExpression(instructions);
             break;
         case TK_OPEN_BRACKET:
-            // arrayLiteralExpression(stream);
+            _expectArrayLiteralExpression(instructions);
             break;
         case TK_OPEN_PAREN:
             if (_isArrowFunction()) {
@@ -1458,10 +1458,42 @@ void JSParser::_expectObjectLiteralExpression(InstructionOutputStream &instructi
     _expectToken(TK_CLOSE_BRACE);
 }
 
+void JSParser::_expectArrayLiteralExpression(InstructionOutputStream &instructions) {
+    _expectToken(TK_OPEN_BRACKET);
+    bool first = true;
+
+    instructions.writeOpCode(OP_ARRAY_CREATE);
+    while (_error == PE_OK && _curToken.type != TK_CLOSE_BRACKET) {
+        if (first) {
+            first = false;
+        } else {
+            _expectToken(TK_COMMA);
+        }
+        if (_curToken.type == TK_CLOSE_BRACKET) {
+            break;
+        }
+
+        auto type = _curToken.type;
+        if (type == TK_ELLIPSIS) {
+            _readToken();
+            _expectExpression(instructions, PRED_NONE);
+            instructions.writeOpCode(OP_ARRAY_SPREAD_VALUE);
+        } else if (type == TK_COMMA) {
+            _readToken();
+            instructions.writeOpCode(OP_ARRAY_PUSH_UNDEFINED_VALUE);
+        } else {
+            _expectExpression(instructions, PRED_NONE);
+            instructions.writeOpCode(OP_ARRAY_PUSH_VALUE);
+        }
+    }
+
+    _expectToken(TK_CLOSE_BRACKET);
+}
+
 IdentifierRef *JSParser::_newIdentifierRef(const Token &token, Function *function) {
     auto ret = PoolNew(_resPool->pool, IdentifierRef)(token, _curScope);
-    ret->next = _headIdRefs;
     ret->isUsedNotAsFunctionCall = true;
+    ret->next = _headIdRefs;
     _headIdRefs = ret;
     return ret;
 }

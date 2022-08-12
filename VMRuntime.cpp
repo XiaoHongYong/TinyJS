@@ -53,11 +53,23 @@ VMRuntimeCommon::VMRuntimeCommon() {
     prototypeObject = nullptr;
     prototypeFunction = nullptr;
 
+    countImmutableGlobalVars = 0;
+    
     addConstStrings(this);
+
+    auto idx = pushDoubleValue(NAN);
+    assert(idx.value.index == JsNaNValue.value.index);
 
     auto resourcePool = new ResourcePool();
     Function *rootFunc = new Function(resourcePool, nullptr, 0);
     globalScope = new VMScope(rootFunc->scope);
+
+    // 添加不能被修改的全局变量
+    setGlobalValue("undefined", JsUndefinedValue);
+    countImmutableGlobalVars++; assert(countImmutableGlobalVars == globalScope->vars.size());
+
+    setGlobalValue("NaN", JsNaNValue);
+    countImmutableGlobalVars++; assert(countImmutableGlobalVars == globalScope->vars.size());
 
     registerBuiltIns(this);
     registerWebAPIs(this);
@@ -109,7 +121,7 @@ void VMRuntimeCommon::setGlobalValue(const char *strName, const JsValue &value) 
 
 void VMRuntimeCommon::setGlobalObject(const char *strName, IJsObject *obj) {
     auto idx = pushObjValue(obj);
-    setGlobalValue(strName, JsValue(JDT_OBJECT, idx));
+    setGlobalValue(strName, JsValue(obj->type, idx));
 }
 
 JsValue VMRuntimeCommon::pushDoubleValue(double value) {
@@ -192,6 +204,8 @@ void VMRuntime::init(JsVirtualMachine *vm, VMRuntimeCommon *rtCommon) {
         objValues.push_back(item->clone());
     }
     globalScope = rtCommon->globalScope;
+    countImmutableGlobalVars = rtCommon->countImmutableGlobalVars;
+
     firstFreeDoubleIdx = 0;
     firstFreeObjIdx = 0;
 
@@ -711,4 +725,9 @@ bool VMRuntime::testTrue(const JsValue &value) {
         default:
             return true;
     }
+}
+
+void VMRuntime::extendObject(const JsValue &dst, const JsValue &src) {
+    auto objDst = getObject(dst);
+    auto objSrc = getObject(src);
 }

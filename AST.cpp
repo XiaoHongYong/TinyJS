@@ -6,6 +6,7 @@
 //
 
 #include "AST.hpp"
+#include "generated/ConstStrings.hpp"
 
 
 const char *varStorageTypeToString(VarStorageType type) {
@@ -108,7 +109,13 @@ void Scope::dump(BinaryOutputStream &stream) {
 }
 
 IdentifierDeclare *Scope::addVarDeclaration(const Token &token, bool isConst, bool isScopeVar) {
-    auto it = varDeclares.find(tokenToSizedString(token));
+    auto nameStr = tokenToSizedString(token);
+    if (nameStr.equal(SS_UNDEFINED)) {
+        // undefined 作为变量名是无效过的（仍然是 undefined），但是可以作为参数名和函数名.
+        return nullptr;
+    }
+
+    auto it = varDeclares.find(nameStr);
     if (it == varDeclares.end()) {
         auto &pool = varDeclares.get_allocator().getPool();
         auto node = PoolNew(pool, IdentifierDeclare)(token, this);

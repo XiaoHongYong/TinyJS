@@ -227,6 +227,7 @@ bool IJsObject::remove(VMContext *ctx, const JsValue &propOrg, const JsValue &va
 
 JsObject::JsObject(const JsValue &__proto__) : __proto__(__proto__) {
     type = JDT_OBJECT;
+    _setters = nullptr;
     _symbolProps = nullptr;
     _symbolSetters = nullptr;
 }

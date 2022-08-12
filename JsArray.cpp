@@ -345,6 +345,10 @@ IJsObject *JsArray::clone() {
     return nullptr;
 }
 
+void JsArray::push(VMContext *ctx, const JsValue &value) {
+    setByIndex(ctx, JsNullValue, _length, value);
+}
+
 void JsArray::_newObject() {
     assert(_obj == nullptr);
     _obj = new JsObject();

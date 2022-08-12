@@ -1,4 +1,4 @@
-/* NOT_SUPPORTED，这种情况在正常情况几乎不会存在，顾不解决
+/* NOT_SUPPORTED，这种情况在正常情况几乎不会存在，故不解决
 
 //// 函数名和参数相同
 function f1(a) {

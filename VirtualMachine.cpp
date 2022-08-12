@@ -13,6 +13,7 @@
 #include "JsArguments.hpp"
 #include "JsLibObject.hpp"
 #include "JsObjectFunction.hpp"
+#include "JsArray.hpp"
 
 
 void registerGlobalValue(VMContext *ctx, VMScope *globalScope, const char *strName, const JsValue &value) {
@@ -359,6 +360,10 @@ void JsVirtualMachine::call(Function *function, VMContext *ctx, VecVMStackScopes
         function->generateByteCode();
     }
 
+#ifdef DEBUG
+        printf("    > Call function: %d, %.*s\n", function->index, (int)function->name.len, function->name.data);
+#endif
+
     auto prevFunctionScope = ctx->curFunctionScope;
     auto runtime = ctx->runtime;
     auto resourcePool = function->resourcePool;
@@ -526,6 +531,15 @@ void JsVirtualMachine::call(Function *function, VMContext *ctx, VecVMStackScopes
                         f(ctx, runtime->globalThiz, args);
                         break;
                     }
+                    case JDT_LIB_OBJECT: {
+                        auto f = (JsLibObject *)runtime->getObject(func);
+                        if (f->getFunction()) {
+                            f->getFunction()(ctx, runtime->globalThiz, args);
+                        } else {
+                            ctx->throwException(PE_TYPE_ERROR, "? is not a function.");
+                        }
+                        break;
+                    }
                     default:
                         assert(0);
                         break;
@@ -615,6 +629,10 @@ void JsVirtualMachine::call(Function *function, VMContext *ctx, VecVMStackScopes
                 assert(0);
                 break;
             }
+            case OP_PUSH_UNDFINED: {
+                stack.push_back(JsUndefinedValue);
+                break;
+            }
             case OP_PUSH_IDENTIFIER: {
                 assert(0);
                 break;
@@ -627,7 +645,7 @@ void JsVirtualMachine::call(Function *function, VMContext *ctx, VecVMStackScopes
             }
             case OP_PUSH_ID_LOCAL_ARGUMENT: {
                 auto idx = readUInt16(bytecode);
-                assert(idx < functionScope->args.count);
+                assert(idx < functionScope->args.capacity);
                 stack.push_back(functionScope->args[idx]);
                 break;
             }
@@ -641,7 +659,7 @@ void JsVirtualMachine::call(Function *function, VMContext *ctx, VecVMStackScopes
                 auto idx = readUInt16(bytecode);
                 assert(scopeDepth < stackScopes.size());
                 auto scope = stackScopes[scopeDepth];
-                assert(idx < scope->args.count);
+                assert(idx < scope->args.capacity);
                 stack.push_back(scope->vars[idx]);
                 break;
             }
@@ -779,7 +797,7 @@ void JsVirtualMachine::call(Function *function, VMContext *ctx, VecVMStackScopes
                     case VST_ARGUMENT:
                         assert(scopeDepth < stackScopes.size());
                         scope = stackScopes[scopeDepth];
-                        assert(storageIndex < scope->args.count);
+                        assert(storageIndex < scope->args.capacity);
                         scope->args[storageIndex] = stack.back();
                         break;
                     case VST_SCOPE_VAR:
@@ -790,7 +808,9 @@ void JsVirtualMachine::call(Function *function, VMContext *ctx, VecVMStackScopes
                         scope->vars[storageIndex] = stack.back();
                         break;
                     case VST_GLOBAL_VAR:
-                        runtime->globalScope->vars[storageIndex] = stack.back();
+                        if (storageIndex >= runtime->countImmutableGlobalVars) {
+                            runtime->globalScope->vars[storageIndex] = stack.back();
+                        }
                         break;
                     default:
                         assert(0);
@@ -800,12 +820,11 @@ void JsVirtualMachine::call(Function *function, VMContext *ctx, VecVMStackScopes
             }
             case OP_ASSIGN_LOCAL_ARGUMENT: {
                 auto idx = readUInt16(bytecode);
-                assert(idx < functionScope->args.count);
+                assert(idx < functionScope->args.capacity);
                 functionScope->args[idx] = stack.back();
                 break;
             }
             case OP_ASSIGN_MEMBER_INDEX: {
-                assert(0);
                 auto pos = stack.size() - 3;
                 auto value = stack.back();
                 auto index = stack[pos + 1];
@@ -1130,6 +1149,30 @@ void JsVirtualMachine::call(Function *function, VMContext *ctx, VecVMStackScopes
             }
             case OP_OBJ_SET_SETTER: {
                 assert(0);
+                break;
+            }
+            case OP_ARRAY_CREATE: {
+                auto idx = runtime->pushObjValue(new JsArray());
+                stack.push_back(JsValue(JDT_ARRAY, idx));
+                break;
+            }
+            case OP_ARRAY_SPREAD_VALUE: {
+                auto item = stack.back(); stack.pop_back();
+                auto arr = stack.back();
+                runtime->extendObject(arr, item);
+                break;
+            }
+            case OP_ARRAY_PUSH_VALUE: {
+                auto item = stack.back(); stack.pop_back();
+                auto arr = stack.back();
+                auto obj = (JsArray *)runtime->getObject(arr);
+                obj->push(ctx, item);
+                break;
+            }
+            case OP_ARRAY_PUSH_UNDEFINED_VALUE: {
+                auto arr = stack.back();
+                auto obj = (JsArray *)runtime->getObject(arr);
+                obj->push(ctx, JsUndefinedValue);
                 break;
             }
             case OP_TRY_START: {
