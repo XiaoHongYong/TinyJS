@@ -1,11 +1,11 @@
 //
-//  ConstStrings.cpp
+//  CommonString.cpp
 //  TinyJS
 //
 //  Created by henry_xiao on 2022/7/23.
 //
 
-#include "ConstStrings.hpp"
+#include "CommonString.hpp"
 #include "VirtualMachine.hpp"
 
 
@@ -14,25 +14,6 @@ SizedString makeCommonString(const char *str) {
     s.unused = COMMON_STRINGS;
     return s;
 }
-
-SizedString SS_UNDEFINED = makeCommonString("undefined");
-SizedString SS_NULL = makeCommonString("null");
-SizedString SS_TRUE = makeCommonString("true");
-SizedString SS_FALSE = makeCommonString("false");
-
-SizedString SS_THIS = makeCommonString("this");
-SizedString SS_ARGUMENTS = makeCommonString("arguments");
-SizedString SS_LENGTH = makeCommonString("length");
-SizedString SS_TO_STRING = makeCommonString("toString");
-
-SizedString SS__PROTO__ = makeCommonString("__proto__");
-SizedString SS_PROTOTYPE = makeCommonString("prototype");
-
-SizedString SS_FUNCTION_NATIVE_CODE = makeCommonString("function String() { [native code] }");
-
-SizedString SS_ERROR = makeCommonString("Error");
-SizedString SS_MESSAGE = makeCommonString("message");
-SizedString SS_STACK = makeCommonString("stack");
 
 const int INT_STR_POS_10 = 10;
 const int INT_STR_POS_100 = INT_STR_POS_10 + 2 * (100 - 10);

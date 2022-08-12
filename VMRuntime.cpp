@@ -53,22 +53,7 @@ VMRuntimeCommon::VMRuntimeCommon() {
     prototypeObject = nullptr;
     prototypeFunction = nullptr;
 
-    JsValue tmp;
-    tmp = pushStringValue(SizedString("", 0)); assert(tmp.value.index == JS_STRING_IDX_EMPTY);
-    tmp = pushStringValue(SS_UNDEFINED); assert(tmp.value.index == JS_STRING_IDX_UNDEFINED);
-    tmp = pushStringValue(SS_NULL); assert(tmp.value.index == JS_STRING_IDX_NULL);
-    tmp = pushStringValue(SS_TRUE); assert(tmp.value.index == JS_STRING_IDX_TRUE);
-    tmp = pushStringValue(SS_FALSE); assert(tmp.value.index == JS_STRING_IDX_FALSE);
-
-    tmp = pushStringValue(SS_THIS); assert(tmp.value.index == SS_STRING_IDX_THIS);
-    tmp = pushStringValue(SS_ARGUMENTS); assert(tmp.value.index == SS_STRING_IDX_ARGUMENTS);
-    tmp = pushStringValue(SS_LENGTH); assert(tmp.value.index == SS_STRING_IDX_LENGTH);
-    tmp = pushStringValue(SS_TO_STRING); assert(tmp.value.index == SS_STRING_IDX_TO_STRING);
-
-    tmp = pushStringValue(SS__PROTO__); assert(tmp.value.index == SS_STRING_IDX__PROTO__);
-    tmp = pushStringValue(SS_PROTOTYPE); assert(tmp.value.index == SS_STRING_IDX_PROTOTYPE);
-
-    tmp = pushStringValue(SS_FUNCTION_NATIVE_CODE); assert(tmp.value.index == SS_STRING_IDX_FUNCTION_NATIVE_CODE);
+    addConstStrings(this);
 
     auto resourcePool = new ResourcePool();
     Function *rootFunc = new Function(resourcePool, nullptr, 0);

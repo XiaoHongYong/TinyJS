@@ -11,6 +11,7 @@
 #include <unordered_map>
 #include <stack>
 #include "AST.hpp"
+#include "CommonString.hpp"
 #include "ConstStrings.hpp"
 #include "StringPool.hpp"
 
