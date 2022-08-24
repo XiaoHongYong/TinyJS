@@ -24,13 +24,20 @@ static void _eval(VMContext *ctx, const JsValue &thiz, const Arguments &args) {
 
     auto v = args[0];
     if (v.type == JDT_STRING) {
+        VecVMStackScopes stackScopesGlobal;
+
         auto code = runtime->getString(v);
-        // ctx->vm->eval(code.data, code.len, ctx, , args);
-        ctx->stack.push_back(JsUndefinedValue);
+        auto stackScopes = ctx->stackScopesForNativeFunctionCall;
+        if (stackScopes == nullptr) {
+            stackScopesGlobal.push_back(runtime->globalScope);
+            stackScopes = &stackScopesGlobal;
+        }
+
+        ctx->vm->eval((cstr_t)code.data, code.len, ctx, *stackScopes, args);
     } else if (v.type == JDT_CHAR) {
-        ctx->stack.push_back(JsUndefinedValue);
+        ctx->retValue = JsUndefinedValue;
     } else {
-        ctx->stack.push_back(v);
+        ctx->retValue = v;
     }
 }
 

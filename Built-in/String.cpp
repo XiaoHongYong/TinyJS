@@ -25,9 +25,9 @@ static void stringConstructor(VMContext *ctx, const JsValue &thiz, const Argumen
     auto runtime = ctx->runtime;
 
     if (args.count > 0) {
-        ctx->stack.push_back(runtime->toString(ctx, args[0]));
+        ctx->retValue = runtime->toString(ctx, args[0]);
     } else {
-        ctx->stack.push_back(JsStringValueEmpty);
+        ctx->retValue = JsStringValueEmpty;
     }
 }
 
@@ -51,10 +51,11 @@ void stringFromCharCode(VMContext *ctx, const JsValue &thiz, const Arguments &ar
 
     auto poolStr = runtime->allocString((uint32_t)str.size());
     memcpy(poolStr.value.data, str.c_str(), str.size());
-    ctx->stack.push_back(runtime->pushString(JsString(poolStr)));
+    ctx->retValue = runtime->pushString(JsString(poolStr));
 }
 
 void stringFromCodePoint(VMContext *ctx, const JsValue &thiz, const Arguments &args) {
+    ctx->retValue = JsUndefinedValue;
 }
 
 static JsLibProperty stringFunctions[] = {
@@ -90,15 +91,15 @@ void stringPrototypeAt(VMContext *ctx, const JsValue &thiz, const Arguments &arg
     if (index < 0) {
         index = str.len + index;
         if (index < 0) {
-            ctx->stack.push_back(JsUndefinedValue);
+            ctx->retValue = JsUndefinedValue;
             return;
         }
     }
 
     if (index < str.len) {
-        ctx->stack.push_back(JsValue(JDT_CHAR, str.data[index]));
+        ctx->retValue = JsValue(JDT_CHAR, str.data[index]);
     } else {
-        ctx->stack.push_back(JsUndefinedValue);
+        ctx->retValue = JsUndefinedValue;
     }
 }
 
@@ -124,11 +125,11 @@ void stringPrototypeCharAt(VMContext *ctx, const JsValue &thiz, const Arguments 
     }
 
     if (index < 0 || index >= str.len) {
-        ctx->stack.push_back(JsStringValueEmpty);
+        ctx->retValue = JsStringValueEmpty;
         return;
     }
 
-    ctx->stack.push_back(JsValue(JDT_CHAR, str.data[index]));
+    ctx->retValue = JsValue(JDT_CHAR, str.data[index]);
 }
 
 void stringPrototypeLength(VMContext *ctx, const JsValue &thiz, const Arguments &args) {
@@ -155,7 +156,7 @@ void stringPrototypeLength(VMContext *ctx, const JsValue &thiz, const Arguments 
         }
     }
 
-    ctx->stack.push_back(JsValue(JDT_INT32, len));
+    ctx->retValue = JsValue(JDT_INT32, len);
 }
 
 static JsLibProperty stringPrototypeFunctions[] = {

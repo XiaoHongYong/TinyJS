@@ -67,7 +67,7 @@ bool compareTextIgnoreSpace(const char *left, const char *right) {
     }
 
     if (*left != *right) {
-        printf("NOT EQUAL, at:\nLeft(%d): %.30s\nRight(%d): %.30s\n", (int)(left - orgLeft), left, (int)(right - orgRight), right);
+        printf("NOT EQUAL, at:\nCurrent(%d):  %.30s\nExpected(%d): %.30s\n", (int)(left - orgLeft), left, (int)(right - orgRight), right);
     }
 
     return *left == *right;
@@ -89,23 +89,25 @@ bool runJavascript(const string &code, string &output) {
     return true;
 }
 
-bool splitTestCodeAndOutput(string text, string &codeOut, string &outputOut) {
+void splitTestCodeAndOutput(string text, VecStrings &vCodeOut, VecStrings &vOutputOut) {
     while (true) {
         string left, right;
         if (strSplit(text.c_str(), "/* OUTPUT", left, right)) {
-            codeOut.append(left);
+            vCodeOut.push_back(left);
             if (!strSplit(right.c_str(), "*/", left, right)) {
                 throw "Invalid output format";
             }
-            outputOut.append(left);
+            vOutputOut.push_back(left);
             text = right;
         } else {
-            codeOut.append(text);
+            trimStr(text);
+            if (!text.empty()) {
+                printf("NO OUTPUT is specified: %s\n", text.c_str());
+            }
+            assert(text.empty());
             break;
         }
     }
-
-    return !outputOut.empty();
 }
 
 string removeNewLine(const string &str) {
@@ -127,18 +129,33 @@ TEST(RunJavaScript, outputCheck) {
 
     while (finder.findNext()) {
         string fn = path + finder.getCurName();
+        // fn = path + "try.js";
+        const int TEST_START = 0;
         if (endsWith(fn.c_str(), ".js") && !startsWith(fn.c_str(), ".")) {
             printf("== Run Js: %s\n", fn.c_str());
 
-            string text, code, outputExpected, output;
+            string text;
             readFile(fn.c_str(), text);
-            ASSERT_TRUE(splitTestCodeAndOutput(text, code, outputExpected));
-            runJavascript(code.c_str(), output);
 
-            printf("   Current:  %.*s\n", (int)60, removeNewLine(output).c_str());
-            printf("   Expected: %.*s\n", (int)60, removeNewLine(outputExpected).c_str());
-            ASSERT_TRUE(compareTextIgnoreSpace(outputExpected.c_str(), output.c_str()));
-            printf("   Passed.\n");
+            VecStrings vCodes, vOutputs;
+            splitTestCodeAndOutput(text, vCodes, vOutputs);
+            assert(!vCodes.empty());
+            assert(vCodes.size() == vOutputs.size());
+
+            for (size_t i = TEST_START; i < vCodes.size(); i++) {
+                string &code = vCodes[i], &outputExpected = vOutputs[i], output;
+
+                runJavascript(code.c_str(), output);
+
+                printf("   Code(%d): %.*s\n", (int)i, (int)70, removeNewLine(code).c_str());
+                printf("   Current:   %.*s\n", (int)60, removeNewLine(output).c_str());
+                printf("   Expected: %.*s\n", (int)60, removeNewLine(outputExpected).c_str());
+                ASSERT_TRUE(compareTextIgnoreSpace(output.c_str(), outputExpected.c_str()));
+                printf("   Part: %d Passed\n", (int)i);
+            }
+
+            printf("   Run Js: %s\n", fn.c_str());
+            printf("   Passed\n");
         }
     }
 }

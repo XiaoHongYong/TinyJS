@@ -13,9 +13,9 @@ static void objectConstructor(VMContext *ctx, const JsValue &thiz, const Argumen
 
     if (args.count == 0) {
         auto idx = runtime->pushObjValue(new JsObject());
-        ctx->stack.push_back(JsValue(JDT_OBJECT, idx));
+        ctx->retValue = JsValue(JDT_OBJECT, idx);
     } else {
-        ctx->stack.push_back(args[0]);
+        ctx->retValue = args[0];
     }
 }
 
@@ -51,6 +51,8 @@ void objectDefineProperty(VMContext *ctx, const JsValue &thiz, const Arguments &
 
     auto pObj = runtime->getObject(obj);
     pObj->defineProperty(ctx, prop, propDescriptor, descriptorObj->get(ctx, thiz, "set"));
+
+    ctx->retValue = JsUndefinedValue;
 }
 
 static JsLibProperty objectFunctions[] = {
@@ -103,7 +105,7 @@ void objectPrototypeToString(VMContext *ctx, const JsValue &thiz, const Argument
             break;
     }
 
-    ctx->stack.push_back(value);
+    ctx->retValue = value;
 }
 
 static JsLibProperty objectPrototypeFunctions[] = {

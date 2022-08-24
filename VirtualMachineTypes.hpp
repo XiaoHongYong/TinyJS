@@ -30,6 +30,7 @@ class IJsObject;
     OP_ITEM(OP_JUMP_IF_FALSE, "address:u32"), \
     OP_ITEM(OP_JUMP_IF_NULL_UNDEFINED, "address:u32"), \
     OP_ITEM(OP_JUMP_IF_NOT_NULL_UNDEFINED, "address:u32"), \
+    OP_ITEM(OP_JUMP_IF_NOT_NULL_UNDEFINED_KEEP_VALID, "address:u32"), \
     OP_ITEM(OP_PREPARE_RAW_STRING_TEMPLATE_CALL, "raw_string_idx:u16, count_exprs:u16"), \
     OP_ITEM(OP_FUNCTION_CALL, "count_args:u16"), \
     OP_ITEM(OP_MEMBER_FUNCTION_CALL, "count_args:u16"), \
@@ -106,6 +107,7 @@ class IJsObject;
     OP_ITEM(OP_SHIFT, ""), \
     OP_ITEM(OP_UNARY, ""), \
     OP_ITEM(OP_POST_FIX, ""), \
+    OP_ITEM(OP_PREFIX_NEGATE, ""), \
     \
     OP_ITEM(OP_LOGICAL_NOT, ""), \
     OP_ITEM(OP_BIT_NOT, ""), \
@@ -133,7 +135,22 @@ class IJsObject;
     OP_ITEM(OP_ARRAY_PUSH_VALUE, ""), \
     OP_ITEM(OP_ARRAY_PUSH_UNDEFINED_VALUE, ""), \
     \
+    /* 将数据赋值给 Array */\
+    OP_ITEM(OP_ARRAY_ASSING_CREATE, ""), \
+    OP_ITEM(OP_ARRAY_ASSIGN_REST_VALUE, ""), \
+    OP_ITEM(OP_ARRAY_ASSIGN_PUSH_VALUE, ""), \
+    OP_ITEM(OP_ARRAY_ASSIGN_PUSH_UNDEFINED_VALUE, ""), \
+    \
+    OP_ITEM(OP_ITERATOR_CREATE, ""), \
+    OP_ITEM(OP_ITERATOR_NEXT_KEY, ""), \
+    OP_ITEM(OP_ITERATOR_NEXT_VALUE, ""), \
+    OP_ITEM(OP_ITERATOR_NEXT_KEY_VALUE, ""), \
+    \
+    OP_ITEM(OP_SPREAD_ARGS, ""), \
+    OP_ITEM(OP_REST_PARAMETER, "index:u16"), \
+    \
     OP_ITEM(OP_TRY_START, "address_catch:u32, address_finally:u32"), \
+    OP_ITEM(OP_PUSH_EXCEPTION, ""), \
     OP_ITEM(OP_BEGIN_FINALLY_NORMAL, ""), \
     OP_ITEM(OP_FINISH_FINALLY, ""), \
 

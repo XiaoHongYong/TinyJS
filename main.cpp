@@ -62,18 +62,23 @@ int main(int argc, const char * argv[]) {
     BinaryOutputStream stream;
 
     auto runtime = vm.defaultRuntime();
+    auto ctx = runtime->mainVmCtx;
     stackScopes.push_back(runtime->globalScope);
-    runtime->mainVmCtx->curFunctionScope = runtime->globalScope;
+    ctx->curFunctionScope = runtime->globalScope;
 
-    vm.eval(code, strlen(code), runtime->mainVmCtx, stackScopes, args);
-    if (runtime->mainVmCtx->error) {
-        printf("Got exception: %s\n", runtime->mainVmCtx->errorMessageString.c_str());
+    vm.eval(code, strlen(code), ctx, stackScopes, args);
+    if (ctx->error) {
+        string buf;
+        SizedString err = runtime->toSizedString(ctx, ctx->errorMessage, buf);
+        printf("Got exception: %.*s\n", int(err.len), err.data);
     }
 
 //    code = "g('y');";
 //    vm.eval(code, strlen(code), runtime->mainVmCtx, stackScopes, args);
 //    if (runtime->mainVmCtx->error) {
-//        printf("Got exception: %s\n", runtime->mainVmCtx->errorMessageString.c_str());
+//        string buf;
+//        SizedString err = runtime->toSizedString(ctx, ctx->errorMessage, buf);
+//        printf("Got exception: %.*s\n", int(err.len), err.data);
 //    }
 
     return 0;

@@ -9,10 +9,9 @@
 #define Parser_hpp
 
 
-#include "AST.hpp"
 #include <functional>
 #include <unordered_map>
-#include "InstructionOutputStream.hpp"
+#include "Expression.hpp"
 
 
 class VMRuntimeCommon;
@@ -39,28 +38,6 @@ enum Precedence {
 };
 
 
-class VarInitTree {
-public:
-    using Callback = std::function<bool (Function *function, bool)>;
-
-    VarInitTree() { needPopStackTop = false; }
-    ~VarInitTree();
-
-    VarInitTree *newChild();
-    void setCallback(const Callback &f) { callback = f; }
-    void setNeedPopStackTop() { needPopStackTop = true; }
-
-    void generateInitCode(Function *function, bool initExpr);
-
-protected:
-    // 展开Array 和 Object 之后，需要弹出栈顶的数据
-    bool                            needPopStackTop;
-
-    Callback                        callback;
-    list<VarInitTree *>             children;
-
-};
-
 /**
  * JSParser 负责解析 JavaScript 代码为线性语法树结构.
  */
@@ -71,46 +48,48 @@ public:
     Function *parse(Scope *parent, bool isExpr);
 
 protected:
-    enum FunctionType {
-        FT_DECLARATION,
-        FT_EXPRESSION,
-        FT_MEMBER_FUNCTION,
-        FT_GETTER,
-        FT_SETTER,
+    enum FunctionFlags : uint32_t {
+        FT_EXPRESSION               = 1,
+        FT_MEMBER_FUNCTION          = 1 << 1,
+        FT_GETTER                   = 1 << 2,
+        FT_SETTER                   = 1 << 3,
+        FT_ASYNC                    = 1 << 4,
+        FT_GENERATOR                = 1 << 5,
     };
 
     //
     // 语法解析相关的内部 API
     //
-    void _expectStatment();
-    void _expectExpressionStmt();
-    void _expectLabelStmt();
-    void _expectBlock();
-    void _expectBreakContinue(TokenType type);
-    void _expectForStatment();
-    void _expectSwitchStmt();
-    void _expectTryStmt();
-    int _expectArgumentsList(InstructionOutputStream &instructions);
-    void _expectVariableDeclarationList(TokenType declareType);
-    void _expectVariableDeclaration(TokenType declareType, VarInitTree *parentVarInitTree);
-    void _expectArrayAssignable(TokenType declareType, VarInitTree *parentVarInitTree);
-    void _expectObjectAssignable(TokenType declareType, VarInitTree *parentVarInitTree);
+    IJsNode *_expectStatment();
+    IJsNode *_expectExpressionStmt();
+    IJsNode *_expectLabelStmt();
+    IJsNode *_expectBlock();
+    IJsNode *_expectBreakContinue(TokenType type);
+    IJsNode *_expectForStatment();
+    IJsNode *_tryForInStatment();
+    IJsNode *_expectSwitchStmt();
+    IJsNode *_expectTryStmt();
+    void _expectArgumentsList(VecJsNodes &args);
+    JsNodeVarDeclarationList *_expectVariableDeclarationList(TokenType declareType, bool initFromStackTop = false);
+    IJsNode *_expectVariableDeclaration(TokenType declareType, bool initFromStackTop = false);
+    IJsNode *_expectArrayAssignable(TokenType declareType);
+    IJsNode *_expectObjectAssignable(TokenType declareType);
 
-    void _assignParameter(Function *function, InstructionOutputStream &instructions, int index);
-    void _assignIdentifier(Function *function, InstructionOutputStream &instructions, const Token &name);
+    IJsNode *_expectFunctionDeclaration();
+    IJsNode *_expectFunctionExpression(uint32_t functionFlags, bool ignoreFirstToken = true);
+    IJsNode *_expectClassDeclaration(bool isClassExpr = false);
+    JsNodeParameters *_expectFormalParameters();
+    IJsNode *_expectParameterDeclaration(uint16_t index);
+    IJsNode *_expectExpression(Precedence pred = PRED_NONE, bool enableIn = true);
+    IJsNode *_expectMultipleExpression(bool enableIn = true);
+    IJsNode *_expectObjectLiteralExpression();
+    IJsNode *_expectArrayLiteralExpression();
+    IJsNode *_expectParenExpression();
+    IJsNode *_expectParenCondition();
+    IJsNode *_expectRawTemplateCall(IJsNode *func);
+    IJsNode *_expectArrowFunction(IJsNode *parenExpr);
 
-    Function *_expectFunction(InstructionOutputStream &instructions, FunctionType type, bool ignoreFirstToken = true);
-    int _expectFormalParameters();
-    void _expectParameterDeclaration(uint16_t index, VarInitTree *parentVarInitTree);
-    void _expectExpression(InstructionOutputStream &instructions, Precedence pred = PRED_NONE, bool enableComma = false, bool enableIn = true);
-    void _expectParenCondition();
-    int _expectRawTemplateCall(InstructionOutputStream &instructions, VecInts &indices);
-    void _expectArrowFunction(InstructionOutputStream &instructions);
-    void _expectParenExpression(InstructionOutputStream &instructions);
-    void _expectObjectLiteralExpression(InstructionOutputStream &instructions);
-    void _expectArrayLiteralExpression(InstructionOutputStream &instructions);
-
-    IdentifierRef *_newIdentifierRef(const Token &token, Function *function);
+    JsExprIdentifier *_newExprIdentifier(const Token &token);
 
     void _expectToken(TokenType expected);
     void _expectSemiColon();
@@ -120,12 +99,9 @@ protected:
         return _curToken.newLineBefore || _curToken.type == TK_EOF || _curToken.type == TK_CLOSE_BRACE;
     }
 
-    bool _isArrowFunction();
-    void _ignoreExpression();
-
     void _reduceScopeLevels(Function *function);
     void _relocateIdentifierInParentFunction(Function *codeBlock, Function *parent);
-    void _buildIdentifierRefs();
+    void _buildExprIdentifiers();
     void _allocateIdentifierStorage(Scope *scope, int registerIndex);
 
     int _getStringIndex(const SizedString &str);
@@ -139,6 +115,9 @@ protected:
     void _enterScope();
     void _leaveScope();
 
+    // 检查 {x=y} 这样的不合乎语法的表达式
+    void checkExpressionObjects();
+    
 protected:
     using MapStringToIdx = std::unordered_map<SizedString, int, SizedStringHash, SizedStrCmpEqual>;
     using MapDoubleToIdx = std::unordered_map<double, int>;
@@ -146,7 +125,11 @@ protected:
     VMRuntimeCommon             *_runtimeCommon;
     uint32_t                    _nextStringIdx, _nextDoubleIdx;
 
-    IdentifierRef               *_headIdRefs;
+    // 保存了被引用到的 Identifier 实例，声明的不能添加到此列表中
+    JsExprIdentifier            *_headIdRefs;
+
+    vector<JsExprObject *>        _checkingExprObjs;
+    
     MapStringToIdx              _strings;
     MapDoubleToIdx              _doubles;
     std::vector<VecInts>        _v2Ints;

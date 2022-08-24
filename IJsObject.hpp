@@ -32,6 +32,14 @@ using DequeJsProperties = std::deque<JsProperty>;
 using VecJsProperties = std::vector<JsProperty>;
 using DequeJsValue = std::deque<JsValue>;
 
+class IJsIterator {
+public:
+    virtual bool nextKey(JsValue &keyOut) = 0;
+    virtual bool nextValue(JsValue &valueOut) = 0;
+    virtual bool next(JsValue &nameOut, JsValue &valueOut) = 0;
+
+};
+
 /**
  * 可在 JavaScript 中使用的 Object 接口
  */
@@ -78,6 +86,9 @@ public:
     virtual bool removeBySymbol(VMContext *ctx, uint32_t index) = 0;
 
     virtual IJsObject *clone() = 0;
+
+    virtual JsValue getIterator(VMContext *ctx);
+    // virtual IJsIterator *getIteratorObject() = 0;
     
 public:
     JsDataType                  type;
@@ -86,6 +97,7 @@ public:
 
 };
 
+// 使用 unordered_map 可以同时使用 erase 和 iterator：不会 crash，但是不保证能够完全遍历所有的 key.
 using MapNameToJsProperty = std::unordered_map<SizedString, JsProperty, SizedStringHash, SizedStrCmpEqual>;
 using MapSymbolToJsProperty = std::unordered_map<uint32_t, JsProperty>;
 

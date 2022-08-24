@@ -20,8 +20,7 @@ void consoleLog(VMContext *ctx, const JsValue &thiz, const Arguments &args) {
             Arguments noArgs;
             runtime->vm->callMember(ctx, v, "toString", noArgs);
             if (ctx->error == PE_OK) {
-                v = ctx->stack.back();
-                ctx->stack.pop_back();
+                v = ctx->retValue;
             } else {
                 return;
             }
@@ -72,6 +71,7 @@ void consoleLog(VMContext *ctx, const JsValue &thiz, const Arguments &args) {
     }
 
     runtime->console->log(SizedString(out));
+    ctx->retValue = JsUndefinedValue;
 }
 
 void consoleTrace(VMContext *ctx, const JsValue &thiz, const Arguments &args) {
@@ -84,6 +84,8 @@ void consoleTrace(VMContext *ctx, const JsValue &thiz, const Arguments &args) {
             printf("(anonymous)    %d:%d\n", f->line, f->col);
         }
     }
+
+    ctx->retValue = JsUndefinedValue;
 }
 
 static JsLibProperty consoleFunctions[] = {

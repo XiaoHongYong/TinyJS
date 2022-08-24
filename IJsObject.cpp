@@ -225,6 +225,12 @@ bool IJsObject::remove(VMContext *ctx, const JsValue &propOrg, const JsValue &va
     return true;
 }
 
+JsValue IJsObject::getIterator(VMContext *ctx) {
+    return JsUndefinedValue;
+//    auto obj = getIteratorObject();
+//    return JsValue(JDT_OBJECT, ctx->runtime->pushObjValue(obj));
+}
+
 JsObject::JsObject(const JsValue &__proto__) : __proto__(__proto__) {
     type = JDT_OBJECT;
     _setters = nullptr;
@@ -426,9 +432,7 @@ JsValue JsObject::getByName(VMContext *ctx, const JsValue &thiz, const SizedStri
         auto &propValue = (*it).second;
         if (propValue.isGetter) {
             ctx->vm->callMember(ctx, thiz, propValue.value, Arguments());
-            auto ret = ctx->stack.back();
-            ctx->stack.pop_back();
-            return ret;
+            return ctx->retValue;
         }
 
         return propValue.value;
@@ -453,9 +457,7 @@ JsValue JsObject::getBySymbol(VMContext *ctx, const JsValue &thiz, uint32_t inde
             auto &propValue = (*it).second;
             if (propValue.isGetter) {
                 ctx->vm->callMember(ctx, thiz, propValue.value, Arguments());
-                auto ret = ctx->stack.back();
-                ctx->stack.pop_back();
-                return ret;
+                return ctx->retValue;
             }
 
             return propValue.value;

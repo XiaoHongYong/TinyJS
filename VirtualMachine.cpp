@@ -22,7 +22,6 @@ void registerGlobalValue(VMContext *ctx, VMScope *globalScope, const char *strNa
 
     auto id = PoolNew(scopeDsc->function->resourcePool->pool, IdentifierDeclare)(name, scopeDsc);
     id->storageIndex = scopeDsc->countLocalVars++;
-    id->scopeDepth = scopeDsc->depth;
     id->varStorageType = VST_GLOBAL_VAR;
     id->isReferredByChild = true;
 
@@ -84,8 +83,9 @@ void Arguments::copy(const Arguments &other, uint32_t minSize) {
 
 VMContext::VMContext(VMRuntime *runtime) : runtime(runtime) {
     vm = runtime->vm;;
+    stackScopesForNativeFunctionCall = nullptr;
     curFunctionScope = nullptr;
-    isReturned = false;
+    isReturnedForTry = false;
 
     errorInTry = PE_OK;
     error = PE_OK;
@@ -96,33 +96,28 @@ void VMContext::throwException(ParseError err, cstr_t format, ...) {
         return;
     }
 
-    error = err;
-    CStrPrintf strf;
-
     va_list        args;
 
     va_start(args, format);
-    strf.vprintf(format, args);
+    auto message = stringPrintf(format, args);
     va_end(args);
 
-    errorMessageString = strf.c_str();
+    message.insert(0, parseErrorToString(err));
 
     // 将异常值添加到堆栈中
     // TODO: 需要转换为 err 对应的异常类型
-    errorMessage = runtime->pushString(SizedString(errorMessageString.c_str(), errorMessageString.size()));
-    stack.push_back(errorMessage);
+    errorMessage = runtime->pushString(SizedString(message.c_str(), message.size()));
 
-    throwException(error, errorMessage);
+    throwException(err, errorMessage);
 }
 
 void VMContext::throwException(ParseError err, JsValue errorMessage) {
     this->error = err;
     this->errorMessage = errorMessage;
 
-    if (isReturned) {
+    if (isReturnedForTry) {
         // 在 finally 中抛出异常，会清除 return 相关内容
-        isReturned = false;
-        retValue = JsUndefinedValue;
+        isReturnedForTry = false;
     }
 
     if (errorInTry != PE_OK) {
@@ -173,18 +168,26 @@ void JsVirtualMachine::eval(cstr_t code, size_t len, VMContext *vmctx, VecVMStac
 
     JSParser parser(_runtimeCommon, resPool, code, len);
 
-    auto func = parser.parse(stackScopes.back()->scopeDsc, false);
-    if (parser.error() != PE_OK) {
-        printf("Parse error: %s\n", parser.errorMessage().c_str());
+    Function *func = nullptr;
+    try {
+        func = parser.parse(stackScopes.back()->scopeDsc, false);
+    } catch (ParseException &e) {
+        vmctx->throwException(e.error, e.message.c_str());
         return;
     }
 
     {
         BinaryOutputStream stream;
         func->dump(stream);
-        auto s = stream.startNew();
+        auto s = stream.sizedStringStartNew();
         printf("%s\n", code);
         printf("%.*s\n", (int)s.len, s.data);
+    }
+
+    // 检查全局变量的空间
+    auto globalScope = runtime->globalScope;
+    if (globalScope->vars.size() < globalScope->scopeDsc->varDeclares.size()) {
+        globalScope->vars.resize(globalScope->scopeDsc->varDeclares.size(), JsNotInitializedValue);
     }
     
     VecVMStackFrames stackFrames;
@@ -207,19 +210,20 @@ void JsVirtualMachine::dump(BinaryOutputStream &stream) {
     BinaryOutputStream os;
     _runtime->dump(os);
     stream.write("== VMRuntime ==\n");
-    writeIndent(stream, os.startNew(), makeSizedString("  "));
+    writeIndent(stream, os.sizedStringStartNew(), makeSizedString("  "));
 }
 
 void JsVirtualMachine::callMember(VMContext *ctx, const JsValue &thiz, const char *memberName, const Arguments &args) {
     auto member = getMemberDot(ctx, thiz, memberName);
 
-    return callMember(ctx, thiz, member, args);
+    callMember(ctx, thiz, member, args);
 }
 
 void JsVirtualMachine::callMember(VMContext *ctx, const JsValue &thiz, const JsValue &memberFunc, const Arguments &args) {
     auto runtime = ctx->runtime;
     if (memberFunc.type == JDT_NATIVE_FUNCTION) {
         auto f = runtime->getNativeFunction(memberFunc.value.index);
+        ctx->stackScopesForNativeFunctionCall = nullptr;
         f(ctx, thiz, args);
     } else if (memberFunc.type == JDT_LIB_OBJECT) {
         auto obj = (JsLibObject *)runtime->getObject(memberFunc);
@@ -260,6 +264,10 @@ JsValue JsVirtualMachine::getMemberDot(VMContext *ctx, const JsValue &thiz, cons
             return _runtimeCommon->objPrototypeString->getByName(ctx, thiz, prop);
         case JDT_SYMBOL:
             return _runtimeCommon->objPrototypeSymbol->getByName(ctx, thiz, prop);
+        case JDT_FUNCTION:
+            return _runtimeCommon->objPrototypeFunction->getByName(ctx, thiz, prop);
+        case JDT_ARRAY:
+            return _runtimeCommon->objPrototypeArray->getByName(ctx, thiz, prop);
         default: {
             auto jsthiz = ctx->runtime->getObject(thiz);
             return jsthiz->getByName(ctx, thiz, prop);
@@ -369,6 +377,7 @@ void JsVirtualMachine::call(Function *function, VMContext *ctx, VecVMStackScopes
     auto resourcePool = function->resourcePool;
     auto &stack = ctx->stack;
     auto bytecode = function->bytecode, endBytecode = bytecode + function->lenByteCode;
+    auto retValue = JsUndefinedValue;
 
     VMScope *functionScope, *scopeLocal;
     scopeLocal = new VMScope(function->scope);
@@ -386,7 +395,6 @@ void JsVirtualMachine::call(Function *function, VMContext *ctx, VecVMStackScopes
         auto functionScopeDsc = function->scope;
 
         scopeLocal = functionScope;
-        // stackScopes.push_back(scopeLocal);
 
         if (functionScopeDsc->countArguments > args.count) {
             // 传入的参数小于声明的参数数量，需要分配额外的空间给变量
@@ -438,17 +446,18 @@ void JsVirtualMachine::call(Function *function, VMContext *ctx, VecVMStackScopes
                 break;
             }
             case OP_RETURN:
-                stack.push_back(JsUndefinedValue);
-                // 不 break，继续执行 OP_RETURN 的逻辑
             case OP_RETURN_VALUE: {
-                ctx->retValue = stack.back();
-                ctx->isReturned = true;
+                if (code == OP_RETURN_VALUE) {
+                    retValue = stack.back();
+                    stack.pop_back();
+                } else {
+                    retValue = JsUndefinedValue;
+                }
                 bytecode = endBytecode;
 
                 // 检查是否在 try finally 中
                 auto &stackTryCatch = ctx->stackTryCatch;
                 if (!stackTryCatch.empty() && stackTryCatch.top().flags == makeTryCatchPointFlags(function, functionScope)) {
-                    stack.pop_back();
                     do {
                         // 当前函数有 try
                         auto action = stackTryCatch.top();
@@ -456,6 +465,7 @@ void JsVirtualMachine::call(Function *function, VMContext *ctx, VecVMStackScopes
                         if (action.addrFinally) {
                             // 跳转到 finally
                             bytecode = function->bytecode + action.addrFinally;
+                            ctx->isReturnedForTry = true;
                             break;
                         }
                     } while (!stackTryCatch.empty() && stackTryCatch.top().flags == makeTryCatchPointFlags(function, functionScope));
@@ -468,6 +478,7 @@ void JsVirtualMachine::call(Function *function, VMContext *ctx, VecVMStackScopes
             }
             case OP_THROW: {
                 ctx->throwException(PE_TYPE_ERROR, stack.back());
+                stack.pop_back();
                 break;
             }
             case OP_JUMP: {
@@ -511,6 +522,17 @@ void JsVirtualMachine::call(Function *function, VMContext *ctx, VecVMStackScopes
                 stack.pop_back();
                 break;
             }
+            case OP_JUMP_IF_NOT_NULL_UNDEFINED_KEEP_VALID: {
+                auto pos = readUInt32(bytecode);
+                auto condition = stack.back();
+                if (condition.type > JDT_NULL) {
+                    bytecode = function->bytecode + pos;
+                } else {
+                    // condition 为 null/undefined，删除栈顶值
+                    stack.pop_back();
+                }
+                break;
+            }
             case OP_PREPARE_RAW_STRING_TEMPLATE_CALL: {
                 assert(0);
                 break;
@@ -528,12 +550,14 @@ void JsVirtualMachine::call(Function *function, VMContext *ctx, VecVMStackScopes
                     }
                     case JDT_NATIVE_FUNCTION: {
                         auto f = runtime->getNativeFunction(func.value.index);
+                        ctx->stackScopesForNativeFunctionCall = &stackScopes;
                         f(ctx, runtime->globalThiz, args);
                         break;
                     }
                     case JDT_LIB_OBJECT: {
                         auto f = (JsLibObject *)runtime->getObject(func);
                         if (f->getFunction()) {
+                            ctx->stackScopesForNativeFunctionCall = &stackScopes;
                             f->getFunction()(ctx, runtime->globalThiz, args);
                         } else {
                             ctx->throwException(PE_TYPE_ERROR, "? is not a function.");
@@ -544,9 +568,8 @@ void JsVirtualMachine::call(Function *function, VMContext *ctx, VecVMStackScopes
                         assert(0);
                         break;
                 }
-                auto ret = stack.back();
                 stack.resize(posFunc);
-                stack.push_back(ret);
+                stack.push_back(ctx->retValue);
                 break;
             }
             case OP_MEMBER_FUNCTION_CALL: {
@@ -563,6 +586,7 @@ void JsVirtualMachine::call(Function *function, VMContext *ctx, VecVMStackScopes
                     }
                     case JDT_NATIVE_FUNCTION: {
                         auto f = runtime->getNativeFunction(func.value.index);
+                        ctx->stackScopesForNativeFunctionCall = &stackScopes;
                         f(ctx, thiz, args);
                         break;
                     }
@@ -570,16 +594,16 @@ void JsVirtualMachine::call(Function *function, VMContext *ctx, VecVMStackScopes
                         assert(0);
                         break;
                 }
-                auto ret = stack.back();
                 stack.resize(posThiz);
-                stack.push_back(ret);
+                stack.push_back(ctx->retValue);
                 break;
             }
             case OP_DIRECT_FUNCTION_CALL: {
                 auto depth = *bytecode++;
                 auto index = readUInt16(bytecode);
                 auto countArgs = readUInt16(bytecode);
-                Arguments args(stack.data() + stack.size() - countArgs, countArgs);
+                size_t posArgs = stack.size() - countArgs;
+                Arguments args(stack.data() + posArgs, countArgs);
 
                 if (depth + 1 == stackScopes.size()) {
                     // 当前函数的子函数
@@ -593,6 +617,8 @@ void JsVirtualMachine::call(Function *function, VMContext *ctx, VecVMStackScopes
                     targetStackScopes.insert(targetStackScopes.begin(), stackScopes.begin(), stackScopes.begin() + depth + 1);
                     call(targFunction, ctx, targetStackScopes, runtime->globalThiz, args);
                 }
+                stack.resize(posArgs);
+                stack.push_back(ctx->retValue);
                 break;
             }
             case OP_ENTER_SCOPE: {
@@ -639,8 +665,16 @@ void JsVirtualMachine::call(Function *function, VMContext *ctx, VecVMStackScopes
             }
             case OP_PUSH_ID_GLOBAL: {
                 auto idx = readUInt16(bytecode);
-                assert(idx < runtime->globalScope->vars.size());
-                stack.push_back(runtime->globalScope->vars[idx]);
+                auto globalScope = runtime->globalScope;
+                assert(idx < globalScope->vars.size());
+                auto v = globalScope->vars[idx];
+                if (v.type == JDT_NOT_INITIALIZED) {
+                    auto declare = globalScope->scopeDsc->getVarDeclarationByIndex(idx);
+                    assert(declare);
+                    ctx->throwException(PE_REFERECNE_ERROR, "%.*s is not defined", (int)declare->name.len, declare->name.data);
+                    break;
+                }
+                stack.push_back(v);
                 break;
             }
             case OP_PUSH_ID_LOCAL_ARGUMENT: {
@@ -842,7 +876,7 @@ void JsVirtualMachine::call(Function *function, VMContext *ctx, VecVMStackScopes
                         bytecode = endBytecode;
                         break;
                     }
-                    index = stack.back();
+                    index = ctx->retValue;
                 }
 
                 auto pobj = runtime->getObject(obj);
@@ -1038,6 +1072,10 @@ void JsVirtualMachine::call(Function *function, VMContext *ctx, VecVMStackScopes
                 assert(0);
                 break;
             }
+            case OP_PREFIX_NEGATE: {
+                assert(0);
+                break;
+            }
             case OP_LOGICAL_NOT: {
                 assert(0);
                 break;
@@ -1165,14 +1203,60 @@ void JsVirtualMachine::call(Function *function, VMContext *ctx, VecVMStackScopes
             case OP_ARRAY_PUSH_VALUE: {
                 auto item = stack.back(); stack.pop_back();
                 auto arr = stack.back();
-                auto obj = (JsArray *)runtime->getObject(arr);
-                obj->push(ctx, item);
+                assert(arr.type == JDT_ARRAY);
+                auto a = (JsArray *)runtime->getObject(arr);
+                a->push(ctx, item);
                 break;
             }
             case OP_ARRAY_PUSH_UNDEFINED_VALUE: {
                 auto arr = stack.back();
-                auto obj = (JsArray *)runtime->getObject(arr);
-                obj->push(ctx, JsUndefinedValue);
+                assert(arr.type == JDT_ARRAY);
+                auto a = (JsArray *)runtime->getObject(arr);
+                a->push(ctx, JsUndefinedValue);
+                break;
+            }
+            case OP_ARRAY_ASSING_CREATE: {
+                assert(0);
+                break;
+            }
+            case OP_ARRAY_ASSIGN_REST_VALUE: {
+                assert(0);
+                break;
+            }
+            case OP_ARRAY_ASSIGN_PUSH_VALUE: {
+                assert(0);
+                break;
+            }
+            case OP_ARRAY_ASSIGN_PUSH_UNDEFINED_VALUE: {
+                assert(0);
+                break;
+            }
+            case OP_ITERATOR_CREATE: {
+                assert(0);
+                break;
+            }
+            case OP_ITERATOR_NEXT_KEY: {
+                assert(0);
+                break;
+            }
+            case OP_ITERATOR_NEXT_VALUE: {
+                assert(0);
+                break;
+            }
+            case OP_ITERATOR_NEXT_KEY_VALUE: {
+                assert(0);
+                break;
+            }
+            case OP_SPREAD_ARGS: {
+                assert(0);
+                break;
+            }
+            case OP_REST_PARAMETER: {
+                assert(0);
+                break;
+            }
+            case OP_PUSH_EXCEPTION: {
+                stack.push_back(ctx->errorMessage);
                 break;
             }
             case OP_TRY_START: {
@@ -1193,7 +1277,7 @@ void JsVirtualMachine::call(Function *function, VMContext *ctx, VecVMStackScopes
                 break;
             }
             case OP_FINISH_FINALLY: {
-                if (ctx->isReturned) {
+                if (ctx->isReturnedForTry) {
                     // 检查是否执行了 return 指令
                     auto &stackTryCatch = ctx->stackTryCatch;
                     if (!stackTryCatch.empty() && stackTryCatch.top().flags == makeTryCatchPointFlags(function, functionScope)) {
@@ -1207,8 +1291,9 @@ void JsVirtualMachine::call(Function *function, VMContext *ctx, VecVMStackScopes
                         }
                     }
 
+                    // 没有 try finally 了
                     bytecode = endBytecode;
-                    stack.push_back(ctx->retValue);
+                    ctx->isReturnedForTry = false;
                 } else if (ctx->errorInTry != PE_OK) {
                     // 恢复 try 中的异常标志
                     ctx->error = ctx->errorInTry;
@@ -1222,7 +1307,11 @@ void JsVirtualMachine::call(Function *function, VMContext *ctx, VecVMStackScopes
         }
 
         if (ctx->error != PE_OK) {
-            // got exception.
+            // 有异常发生
+
+            // 异常会清除 return 相关内容
+            retValue = JsUndefinedValue;
+
             auto &stackTryCatch = ctx->stackTryCatch;
             if (stackTryCatch.empty() || stackTryCatch.top().flags != makeTryCatchPointFlags(function, functionScope)) {
                 // 当前函数没有接收异常处理
@@ -1263,6 +1352,7 @@ void JsVirtualMachine::call(Function *function, VMContext *ctx, VecVMStackScopes
     }
 
     ctx->curFunctionScope = prevFunctionScope;
+    ctx->retValue = retValue;
 
     stackScopes.pop_back();
     ctx->stackFrames.pop_back();

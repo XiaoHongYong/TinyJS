@@ -51,6 +51,7 @@ VMRuntimeCommon::VMRuntimeCommon() {
     prototypeRegex = nullptr;
     prototypeSymbol = nullptr;
     prototypeObject = nullptr;
+    prototypeArray = nullptr;
     prototypeFunction = nullptr;
 
     countImmutableGlobalVars = 0;
@@ -108,7 +109,6 @@ void VMRuntimeCommon::setGlobalValue(const char *strName, const JsValue &value) 
 
     auto id = PoolNew(scopeDsc->function->resourcePool->pool, IdentifierDeclare)(name, scopeDsc);
     id->storageIndex = scopeDsc->countLocalVars++;
-    id->scopeDepth = scopeDsc->depth;
     id->varStorageType = VST_GLOBAL_VAR;
     id->isReferredByChild = true;
 
@@ -175,6 +175,15 @@ VMRuntime::VMRuntime() {
     console = nullptr;
     globalScope = nullptr;
 
+    prototypeString = nullptr;
+    prototypeNumber = nullptr;
+    prototypeBoolean = nullptr;
+    prototypeRegex = nullptr;
+    prototypeSymbol = nullptr;
+    prototypeObject = nullptr;
+    prototypeArray = nullptr;
+    prototypeFunction = nullptr;
+
     countCommonDobules = 0;
     countCommonStrings = 0;
     countCommonObjs = 0;
@@ -228,6 +237,7 @@ void VMRuntime::init(JsVirtualMachine *vm, VMRuntimeCommon *rtCommon) {
     objPrototypeSymbol = rtCommon->objPrototypeSymbol->clone();
     objPrototypeRegex = rtCommon->objPrototypeRegex->clone();
     objPrototypeObject = rtCommon->objPrototypeObject->clone();
+    objPrototypeArray = rtCommon->objPrototypeArray->clone();
     objPrototypeFunction = rtCommon->objPrototypeFunction->clone();
 
     prototypeString = rtCommon->prototypeString;
@@ -236,6 +246,7 @@ void VMRuntime::init(JsVirtualMachine *vm, VMRuntimeCommon *rtCommon) {
     prototypeSymbol = rtCommon->prototypeSymbol;
     prototypeRegex = rtCommon->prototypeRegex;
     prototypeObject = rtCommon->prototypeObject;
+    prototypeArray = rtCommon->prototypeArray;
     prototypeFunction = rtCommon->prototypeFunction;
 }
 
@@ -244,7 +255,7 @@ void VMRuntime::dump(BinaryOutputStream &stream) {
 
     stream.write("== Common VMRuntime ==\n");
     rtCommon->dump(os);
-    writeIndent(stream, os.startNew(), makeSizedString("  "));
+    writeIndent(stream, os.sizedStringStartNew(), makeSizedString("  "));
 
     for (auto rp : resourcePools) {
         rp->dump(stream);
@@ -547,10 +558,7 @@ double VMRuntime::toNumber(VMContext *ctx, const JsValue &item) {
     if (item.type >= JDT_OBJECT) {
         Arguments noArgs;
         vm->callMember(ctx, v, "toString", noArgs);
-        if (ctx->error == PE_OK) {
-            v = ctx->stack.back();
-            ctx->stack.pop_back();
-        }
+        v = ctx->retValue;
     }
 
     switch (v.type) {
@@ -592,8 +600,7 @@ JsValue VMRuntime::toString(VMContext *ctx, const JsValue &v) {
     JsValue val = v;
     if (val.type >= JDT_OBJECT) {
         vm->callMember(ctx, v, "toString", Arguments());
-        val = ctx->stack.back();
-        ctx->stack.pop_back();
+        val = ctx->retValue;
     }
 
     switch (val.type) {
@@ -638,8 +645,7 @@ SizedString VMRuntime::toSizedString(VMContext *ctx, const JsValue &v, string &b
     JsValue val = v;
     if (val.type >= JDT_OBJECT) {
         vm->callMember(ctx, v, "toString", Arguments());
-        val = ctx->stack.back();
-        ctx->stack.pop_back();
+        val = ctx->retValue;
     }
 
     switch (val.type) {

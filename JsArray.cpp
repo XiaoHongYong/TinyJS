@@ -202,9 +202,7 @@ JsValue JsArray::getByIndex(VMContext *ctx, const JsValue &thiz, uint32_t index)
     auto &propValue = block->items[index];
     if (propValue.isGetter) {
         ctx->vm->callMember(ctx, thiz, propValue.value, Arguments());
-        auto ret = ctx->stack.back();
-        ctx->stack.pop_back();
-        return ret;
+        return ctx->retValue;
     }
 
     return propValue.value;
@@ -347,6 +345,61 @@ IJsObject *JsArray::clone() {
 
 void JsArray::push(VMContext *ctx, const JsValue &value) {
     setByIndex(ctx, JsNullValue, _length, value);
+}
+
+void JsArray::push(VMContext *ctx, const JsValue *first, uint32_t count) {
+    for (int i = 0; i < count; i++) {
+        setByIndex(ctx, JsNullValue, _length, first[i]);
+    }
+}
+
+static set<uint32_t> toStringCallStack;
+
+void JsArray::toString(VMContext *ctx, const JsValue &thiz, BinaryOutputStream &stream) {
+    uint32_t lastIdx = 0;
+    string buf;
+    bool empty = true;
+
+    auto it = toStringCallStack.find(thiz.value.index);
+    if (it != toStringCallStack.end()) {
+        return;
+    }
+    toStringCallStack.insert(thiz.value.index);
+
+    for (auto b : _blocks) {
+        for (auto i = lastIdx; i < b->index; i++) {
+            if (empty) {
+                empty = false;
+            } else {
+                stream.writeUint8(',');
+            }
+        }
+
+        for (auto &item : b->items) {
+            auto v = item.value;
+            if (item.isGetter) {
+                ctx->vm->callMember(ctx, thiz, item.value, Arguments());
+                v = ctx->retValue;
+            }
+
+            SizedString s;
+            if (v.type == JDT_ARRAY) {
+                auto arr = (JsArray *)ctx->runtime->getObject(v);
+                arr->toString(ctx, v, stream);
+            } else {
+                s = ctx->runtime->toSizedString(ctx, v, buf);
+            }
+
+            if (empty) {
+                empty = false;
+            } else {
+                stream.writeUint8(',');
+            }
+            stream.write(s.data, s.len);
+        }
+    }
+
+    toStringCallStack.erase(thiz.value.index);
 }
 
 void JsArray::_newObject() {

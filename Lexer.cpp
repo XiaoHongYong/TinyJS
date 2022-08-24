@@ -143,12 +143,15 @@ bool isIdentifierStart(uint8_t code) {
     return (code >= 'a' && code <= 'z') || (code >= 'A' && code <= 'Z') || code == '_' || code == '$' || code >= 0xaa;
 }
 
+//
+// !!! KEYWORDS 必须按照从小到大的顺序排序，因为后面会使用二分查找来搜索.
+//
 cstr_t KEYWORDS[] = { "break", "case", "catch", "const", "continue", "debugger", "default",
-    "delete", "do", "else", "false", "finally", "for", "function", "if", "in", "instanceof", "new",
+    "delete", "do", "else", "false", "finally", "for", "function", "if", "in", "instanceof", "let", "new",
     "null", "return", "switch", "throw", "true", "try", "typeof", "var", "void", "while", "with" };
 
 TokenType KEYWORDS_TYPE[] = { TK_BREAK, TK_CASE, TK_CATCH, TK_CONST, TK_CONTINUE, TK_DEBUGGER, TK_DEFAULT,
-    TK_DELETE, TK_DO, TK_ELSE, TK_FALSE, TK_FINALLY, TK_FOR, TK_FUNCTION, TK_IF, TK_IN, TK_INSTANCEOF, TK_NEW,
+    TK_DELETE, TK_DO, TK_ELSE, TK_FALSE, TK_FINALLY, TK_FOR, TK_FUNCTION, TK_IF, TK_IN, TK_INSTANCEOF, TK_LET, TK_NEW,
     TK_NULL, TK_RETURN, TK_SWITCH, TK_THROW, TK_TRUE, TK_TRY, TK_TYPEOF, TK_VAR, TK_VOID, TK_WHILE, TK_WITH };
 
 struct KeywordCompareLess {
@@ -167,9 +170,36 @@ struct KeywordCompareLess {
     }
 };
 
-JSLexer::JSLexer(ResourcePool *resPool, const char *buf, size_t len) : _resPool(resPool) {
-    _error = PE_OK;
+static cstr_t PARSE_ERROR_NAMES[] = {
+    "PE_OK",
+    "SyntaxError: ",
+    "TypeError: ",
+    "RangeError: ",
+    "ReferenceError: ",
+};
 
+cstr_t parseErrorToString(ParseError err) {
+    assert(err >= 0 && err < CountOf(PARSE_ERROR_NAMES));
+
+    return PARSE_ERROR_NAMES[err];
+}
+
+ParseException::ParseException(ParseError err, cstr_t format, ...) {
+    error = err;
+    CStrPrintf strf;
+
+    va_list        args;
+
+    va_start(args, format);
+    strf.vprintf(format, args);
+    va_end(args);
+
+    assert(err > 0 && err < CountOf(PARSE_ERROR_NAMES));
+    message = PARSE_ERROR_NAMES[err];
+    message.append(strf.c_str());
+}
+
+JSLexer::JSLexer(ResourcePool *resPool, const char *buf, size_t len) : _resPool(resPool), _pool(resPool->pool) {
     _fileName = nullptr;
     _buf = (uint8_t *)buf;
     _bufEnd = _buf + len;
@@ -193,6 +223,11 @@ void JSLexer::_readToken() {
         return;
     }
 
+    if (_bufPos >= _bufEnd) {
+        _curToken.type = TK_EOF;
+        return;
+    }
+
     uint8_t code = *_bufPos++;
     _newLineBefore = false;
     while (_bufPos < _bufEnd && (code == 32 || (9 <= code && code <= 13) || (code > 0x80 && _isUncs2WhiteSpace(code)))) {
@@ -211,11 +246,6 @@ void JSLexer::_readToken() {
     _curToken.buf = _bufPos - 1;
     _curToken.line = _line;
     _curToken.col = _col;
-
-    if (_bufPos >= _bufEnd) {
-        _curToken.type = TK_EOF;
-        return;
-    }
 
     switch (code) {
         case '"':
@@ -514,7 +544,7 @@ void JSLexer::_readToken() {
             }
 
             if (_curToken.type == TK_ERR) {
-                _parseError(PE_TEMPLATE_STRING_NOT_CLOSED, "Template string is NOT closed.");
+                _parseError(PE_SYNTAX_ERROR, "Template string is NOT closed.");
             }
             break;
         case '~':
@@ -547,7 +577,11 @@ void JSLexer::_readToken() {
             } else if (code >= '0' && code <= '9') {
                 _readNumber();
             } else {
-                _parseError(PE_UNEXPECTED_CHAR,  "Unexpected char: %d(%c)", code, code);
+                if (_bufPos >= _bufEnd) {
+                    _curToken.type = TK_EOF;
+                    return;
+                }
+                _parseError(PE_SYNTAX_ERROR,  "Invalid or unexpected token: %d(%c)", code, code);
             }
             break;
     }
@@ -578,7 +612,7 @@ void JSLexer::_readString(uint8_t quote) {
     do {
         c = *_bufPos++;
         if (c == '\n') { // \n
-            _parseError(PE_UNENCLOSED_STRING, "Unenclosed string.");
+            _parseError(PE_SYNTAX_ERROR, "Invalid or unexpected token");
             return;
         } if (c == '\\') {  // '\\'
             // Escape next char.
@@ -604,7 +638,7 @@ void JSLexer::_readNumber() {
     _curToken.type = TK_NUMBER;
 
     if (isIdentifierStart(*_bufPos))
-        _parseError(PE_UNEXPECTED_NUMBER_ENDING, "unexpected number ending.");
+        _parseError(PE_SYNTAX_ERROR, "unexpected number ending.");
 }
 
 void JSLexer::_readRegexp() {
@@ -614,7 +648,7 @@ void JSLexer::_readRegexp() {
     do {
         ch = *_bufPos++;
         if (!ch || ch == '\n') {
-            _parseError(PE_UNENCLOSED_REGEX, "Unenclosed regular expression.");
+            _parseError(PE_SYNTAX_ERROR, "Invalid regular expression: missing /");
             return;
         }
         if (ch == '[') {
@@ -668,7 +702,7 @@ void JSLexer::_readInTemplateMid() {
         }
     }
 
-    _parseError(PE_TEMPLATE_STRING_NOT_CLOSED, "Unexpected template string ending.");
+    _parseError(PE_SYNTAX_ERROR, "Unexpected template string ending.");
 }
 
 void JSLexer::_skipLineComment() {
@@ -728,11 +762,6 @@ SizedString JSLexer::_escapeString(const SizedString &str) {
 }
 
 void JSLexer::_parseError(ParseError err, cstr_t format, ...) {
-    if (_error != PE_OK) {
-        return;
-    }
-
-    _error = err;
     CStrPrintf strf;
 
     va_list        args;
@@ -741,5 +770,5 @@ void JSLexer::_parseError(ParseError err, cstr_t format, ...) {
     strf.vprintf(format, args);
     va_end(args);
 
-    _errorMessage = strf.c_str();
+    throw ParseException(err, "%s", strf.c_str());
 }

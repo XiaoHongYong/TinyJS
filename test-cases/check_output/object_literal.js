@@ -70,3 +70,38 @@ function f3() {
     }
 }
 f3();
+
+function f4() {
+    var obj = {
+        1: 1,
+        "abc": 1,
+    };
+
+    var { 1: a, ...b } = obj;
+    x = { 1: a, ...b } = obj;
+
+    var { 1: a, ...b, 2: c } = obj;
+
+    [a, [b, c, d]=[]] = [3, [4, 5, 6]];
+
+    // 有异常抛出：SyntaxError: Invalid destructuring assignment target
+    var [1] = obj;
+
+    // 有异常抛出：SyntaxError: Invalid destructuring assignment target
+    y = { 1: a, get a() {} } = obj;
+
+    // 有异常抛出: SyntaxError: Invalid shorthand property initializer
+    b = [a, { x=y }];
+
+    // 有异常抛出: SyntaxError: Invalid destructuring assignment target
+    [a, ...[b, c, d]=[]] = [3, 4, 5, 6]
+
+    // 有异常抛出: SyntaxError: `...` must be followed by an assignable reference in assignment contexts
+    x = {1: a, ...b={}} = {1:1, 2:3}
+
+    var x = { x: y=1 };
+
+    console.log(a, b);
+}
+f4();
+

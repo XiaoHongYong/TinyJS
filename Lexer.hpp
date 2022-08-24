@@ -25,13 +25,13 @@ enum TokenType : uint8_t {
     TK_STATIC,
     TK_YIELD,
     TK_ASYNC,
-    TK_AWAIT,
     TK_IMPLEMENTS,
     TK_PACKAGE,
 
     // 之前的关键字可以作为变量名
     _TK_END_VAR_KEYWORD,
 
+    TK_AWAIT,
     TK_CLASS,
     TK_BREAK,
     TK_CONTINUE,
@@ -117,17 +117,20 @@ enum ParseError {
     PE_TYPE_ERROR,
     PE_RANGE_ERROR,
     PE_REFERECNE_ERROR,
-    PE_UNEXPECTED_TOKEN,
-    PE_EXPECTED_SEMI_COLON,
-    PE_TEMPLATE_STRING_NOT_CLOSED,
-    PE_UNEXPECTED_CHAR,
-    PE_UNENCLOSED_STRING,
-    PE_UNEXPECTED_NUMBER_ENDING,
-    PE_UNENCLOSED_REGEX,
-    PE_ILLEGAL_NEW_LINE_AFTER_THROW,
-    PE_INVALID_LEFT_HAND_EXPR,
-    PE_REST_PARAM_MUST_BE_LAST_ONE,
-    PE_UNEXPECTED_END_OF_INPUT,
+};
+
+cstr_t parseErrorToString(ParseError err);
+
+/**
+ * 在代码解析阶段可抛出异常，不能在执行 bytecode 阶段抛出异常.
+ */
+class ParseException : public std::exception {
+public:
+    ParseException(ParseError err, cstr_t format, ...);
+
+    ParseError              error;
+    string                  message;
+    
 };
 
 struct Token {
@@ -168,9 +171,6 @@ class JSLexer {
 public:
     JSLexer(ResourcePool *resPool, const char *buf, size_t len);
 
-    ParseError error() const { return _error; }
-    const string &errorMessage() const { return _errorMessage; }
-    
 protected:
     void _readToken();
     void _peekToken();
@@ -187,14 +187,15 @@ protected:
     void _skipLineComment();
     void _skipMultilineComment();
 
+    void _allowRegexp() { _prevTokenType = TK_EOF; }
+    
     SizedString _escapeString(const SizedString &str);
 
     void _parseError(ParseError err, cstr_t format, ...);
 
 protected:
     ResourcePool            *_resPool;
-    string                  _errorMessage;
-    ParseError              _error;
+    AllocatorPool           &_pool;
 
     Token                   _curToken, _nextToken;
 

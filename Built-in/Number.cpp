@@ -10,18 +10,18 @@
 
 void numberConstructor(VMContext *ctx, const JsValue &thiz, const Arguments &args) {
     if (args.count == 0) {
-        ctx->stack.push_back(JsValue(JDT_INT32, 0));
+        ctx->retValue = JsValue(JDT_INT32, 0);
     } else {
         auto v = args[0];
         if (v.type == JDT_NUMBER || v.type == JDT_INT32) {
-            ctx->stack.push_back(v);
+            ctx->retValue = v;
         } else {
             auto runtime = ctx->runtime;
             auto n = runtime->toNumber(ctx, v);
             if (n == (int32_t)n) {
-                ctx->stack.push_back(JsValue(JDT_INT32, n));
+                ctx->retValue = JsValue(JDT_INT32, n);
             } else {
-                ctx->stack.push_back(runtime->pushDoubleValue(n));
+                ctx->retValue = runtime->pushDoubleValue(n);
             }
         }
     }
@@ -29,6 +29,7 @@ void numberConstructor(VMContext *ctx, const JsValue &thiz, const Arguments &arg
 
 
 void numberIsNaN(VMContext *ctx, const JsValue &thiz, const Arguments &args) {
+    ctx->retValue = JsUndefinedValue;
 }
 
 static JsLibProperty numberFunctions[] = {
@@ -60,13 +61,12 @@ void numberPrototypeToString(VMContext *ctx, const JsValue &thiz, const Argument
     size_t size;
     if (thiz.type == JDT_INT32) {
         size = itoa(thiz.value.n32, buf, radix);
-        ctx->stack.push_back(runtime->pushString(SizedString(buf, size)));
     } else {
         auto v = runtime->getDouble(thiz);
         size = floatToString(v, buf, radix);
     }
 
-    ctx->stack.push_back(runtime->pushString(SizedString(buf, size)));
+    ctx->retValue = runtime->pushString(SizedString(buf, size));
 }
 
 static JsLibProperty numberPrototypeFunctions[] = {

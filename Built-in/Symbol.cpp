@@ -23,11 +23,12 @@ static void symbolConstructor(VMContext *ctx, const JsValue &thiz, const Argumen
 
     JsSymbol symbol(name);
 
-    ctx->stack.push_back(runtime->pushSymbolValue(symbol));
+    ctx->retValue = runtime->pushSymbolValue(symbol);
 }
 
 static void symbolFor(VMContext *ctx, const JsValue &thiz, const Arguments &args) {
     assert(0);
+    ctx->retValue = JsUndefinedValue;
 }
 
 static JsLibProperty symbolFunctions[] = {
@@ -43,7 +44,7 @@ void symbolPrototypeToString(VMContext *ctx, const JsValue &thiz, const Argument
         return;
     }
 
-    ctx->stack.push_back(JsUndefinedValue);
+    ctx->retValue = JsUndefinedValue;
 }
 
 static JsLibProperty symbolPrototypeFunctions[] = {

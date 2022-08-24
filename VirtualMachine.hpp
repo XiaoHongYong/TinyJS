@@ -129,20 +129,23 @@ public:
     JsVirtualMachine            *vm;
     VMScope                     *curFunctionScope;
     VMRuntime                   *runtime;
+
+    // 调用 native function 时需要传递的参数
+    VecVMStackScopes            *stackScopesForNativeFunctionCall;
+
     StackJsValues               stack;
     VecVMStackFrames            stackFrames; // 当前的函数调用栈，用于记录函数的调用层次
 
     StackTryCatchPoint          stackTryCatch;
 
-    bool                        isReturned;
-    JsValue                     retValue;
+    bool                        isReturnedForTry; // 如果 return 在 try 中，并且有 fainaly 会设置此标志
+    JsValue                     retValue; // 函数的返回值
 
     ParseError                  errorInTry;
     JsValue                     errorMessageInTry;
 
     JsValue                     errorMessage;
     ParseError                  error;
-    string                      errorMessageString;
 
 };
 

@@ -138,17 +138,26 @@ bool JsLibObject::getOwnPropertyDescriptorBySymbol(VMContext *ctx, uint32_t inde
 }
 
 JsValue JsLibObject::getSetterByName(VMContext *ctx, const SizedString &prop) {
-    assert(0);
+    if (_obj) {
+        return _obj->getSetterByName(ctx, prop);
+    }
+
     return JsUndefinedValue;
 }
 
 JsValue JsLibObject::getSetterByIndex(VMContext *ctx, uint32_t index) {
-    assert(0);
+    if (_obj) {
+        return _obj->getSetterByIndex(ctx, index);
+    }
+
     return JsUndefinedValue;
 }
 
 JsValue JsLibObject::getSetterBySymbol(VMContext *ctx, uint32_t index) {
-    assert(0);
+    if (_obj) {
+        return _obj->getSetterBySymbol(ctx, index);
+    }
+
     return JsUndefinedValue;
 }
 
@@ -162,9 +171,7 @@ JsValue JsLibObject::getByName(VMContext *ctx, const JsValue &thiz, const SizedS
             } else {
                 ctx->vm->callMember(ctx, thiz, first->value, Arguments());
             }
-            auto value = ctx->stack.back();
-            ctx->stack.pop_back();
-            return value;
+            return ctx->retValue;
         }
 
         return first->value;

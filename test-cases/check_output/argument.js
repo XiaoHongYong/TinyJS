@@ -121,7 +121,7 @@ f6(1, 20);
 1 20 20 1
 1 2 2 1
 3 4 xx
-{}
+[object Object]
 set as undefined undefined
 xy
 */
@@ -153,7 +153,7 @@ f8(1);
 */
 
 
-//// 参数个数不足的情况，修改 b，并不能修改到 arguments[1]
+//// 同名的参数，第二个参数会覆盖第一个参数
 function f9(a, a) {
     console.log(a);
     console.log(arguments.length, arguments[0], arguments[1]);

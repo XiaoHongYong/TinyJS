@@ -160,9 +160,7 @@ JsValue JsArguments::getByIndex(VMContext *ctx, const JsValue &thiz, uint32_t in
         auto &propValue = _argDescriptors->at(index);
         if (propValue.isGetter) {
             ctx->vm->callMember(ctx, thiz, propValue.value, Arguments());
-            auto ret = ctx->stack.back();
-            ctx->stack.pop_back();
-            return ret;
+            return ctx->retValue;
         }
     }
 

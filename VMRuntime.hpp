@@ -91,6 +91,7 @@ public:
     IJsObject                   *objPrototypeSymbol;
     IJsObject                   *objPrototypeRegex;
     IJsObject                   *objPrototypeObject;
+    IJsObject                   *objPrototypeArray;
     IJsObject                   *objPrototypeFunction;
 
     JsValue                     prototypeString;
@@ -99,6 +100,7 @@ public:
     JsValue                     prototypeSymbol;
     JsValue                     prototypeRegex;
     JsValue                     prototypeObject;
+    JsValue                     prototypeArray;
     JsValue                     prototypeFunction;
 
     VMScope                     *globalScope;
@@ -126,6 +128,7 @@ public:
     void dump(BinaryOutputStream &stream);
 
     uint32_t pushObjValue(IJsObject *value) { uint32_t n = (uint32_t)objValues.size(); objValues.push_back(value); return n; }
+    JsValue pushObjValue(JsDataType type, IJsObject *value) { uint32_t n = (uint32_t)objValues.size(); objValues.push_back(value); return JsValue(type, n); }
     JsValue pushDoubleValue(double value) { uint32_t n = (uint32_t)doubleValues.size(); doubleValues.push_back(JsDouble(value)); return JsValue(JDT_NUMBER, n); }
     uint32_t pushResourcePool(ResourcePool *pool) { uint32_t n = (uint32_t)resourcePools.size(); resourcePools.push_back(pool); return n; }
     JsValue pushSymbolValue(JsSymbol &value) { uint32_t n = (uint32_t)symbolValues.size(); symbolValues.push_back(value); return JsValue(JDT_SYMBOL, n); }
@@ -274,6 +277,7 @@ public:
     IJsObject                   *objPrototypeSymbol;
     IJsObject                   *objPrototypeRegex;
     IJsObject                   *objPrototypeObject;
+    IJsObject                   *objPrototypeArray;
     IJsObject                   *objPrototypeFunction;
 
     JsValue                     prototypeString;
@@ -282,6 +286,7 @@ public:
     JsValue                     prototypeSymbol;
     JsValue                     prototypeRegex;
     JsValue                     prototypeObject;
+    JsValue                     prototypeArray;
     JsValue                     prototypeFunction;
 
 };

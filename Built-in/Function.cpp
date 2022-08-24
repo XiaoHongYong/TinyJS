@@ -37,6 +37,7 @@ static void functionConstructor(VMContext *ctx, const JsValue &thiz, const Argum
     stackScopes.push_back(runtime->globalScope);
     ctx->curFunctionScope = runtime->globalScope;
 
+    // eval 会将返回值存放于 retValue 中
     runtime->vm->eval(functionStr.c_str(), functionStr.size(), ctx, stackScopes, Arguments());
 }
 
@@ -59,15 +60,15 @@ void functionPrototypeToString(VMContext *ctx, const JsValue &thiz, const Argume
             resourcePool->strings.push_back(function->srcCode);
             function->srcCodeValue = makeJsValueOfStringInResourcePool(resourcePool->index, idx);
         }
-        ctx->stack.push_back(function->srcCodeValue);
+        ctx->retValue = function->srcCodeValue;
         return;
     } else if (thiz.type == JDT_NATIVE_FUNCTION) {
-        ctx->stack.push_back(JsStringValueFunctionNativeCode);
+        ctx->retValue = JsStringValueFunctionNativeCode;
         return;
     } else if (thiz.type == JDT_LIB_OBJECT) {
         auto obj = (JsLibObject *)runtime->getObject(thiz);
         if (obj->getFunction()) {
-            ctx->stack.push_back(JsStringValueFunctionNativeCode);
+            ctx->retValue = JsStringValueFunctionNativeCode;
             return;
         }
     }

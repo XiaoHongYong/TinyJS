@@ -14,7 +14,7 @@ void booleanConstructor(VMContext *ctx, const JsValue &thiz, const Arguments &ar
         value = ctx->runtime->testTrue(args[0]);
     }
 
-    ctx->stack.push_back(JsValue(JDT_BOOL, value));
+    ctx->retValue = JsValue(JDT_BOOL, value);
 }
 
 static JsLibProperty booleanFunctions[] = {
@@ -30,7 +30,7 @@ void booleanPrototypeToString(VMContext *ctx, const JsValue &thiz, const Argumen
         return;
     }
 
-    ctx->stack.push_back(thiz.value.n32 ? JsStringValueTrue : JsStringValueFalse);
+    ctx->retValue = thiz.value.n32 ? JsStringValueTrue : JsStringValueFalse;
 }
 
 static JsLibProperty booleanPrototypeFunctions[] = {

@@ -41,7 +41,11 @@ static void errorConstructor(VMContext *ctx, const JsValue &thiz, const Argument
 
     auto message = JsUndefinedValue;
     if (args.count > 0) {
-        message = runtime->toString(ctx, args[0]);
+        string buf;
+        auto str = runtime->toSizedString(ctx, args[0], buf);
+        string str2 = "Error: ";
+        str2.append((cstr_t)str.data, str.len);
+        message = runtime->pushString(str2);
     }
 
     auto errObj = new JsObject(__errorPrototype);
@@ -50,7 +54,7 @@ static void errorConstructor(VMContext *ctx, const JsValue &thiz, const Argument
     errObj->setByName(ctx, err, SS_MESSAGE, message);
     errObj->setByName(ctx, err, SS_STACK, runtime->pushString(SizedString(getStack(ctx))));
 
-    ctx->stack.push_back(err);
+    ctx->retValue = err;
 }
 
 static JsLibProperty errorFunctions[] = {
@@ -62,9 +66,9 @@ static JsLibProperty errorFunctions[] = {
 static void errorToString(VMContext *ctx, const JsValue &thiz, const Arguments &args) {
     auto msg = ctx->vm->getMemberDot(ctx, thiz, SS_MESSAGE);
     if (msg.type == JDT_UNDEFINED) {
-        ctx->stack.push_back(ctx->runtime->pushString(SS_ERROR));
+        ctx->retValue = ctx->runtime->pushString(SS_ERROR);
     } else {
-        ctx->stack.push_back(ctx->runtime->addString(__errorToStringPrefix, msg));
+        ctx->retValue = ctx->runtime->addString(__errorToStringPrefix, msg);
     }
 }
 

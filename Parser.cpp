@@ -9,30 +9,14 @@
 #include "VirtualMachine.hpp"
 
 
-VarInitTree::~VarInitTree() {
-    for (auto item : children) {
-        delete item;
-    }
-}
+static SizedString NAME_ASYNC("async");
+static SizedString NAME_TARGET("target");
+static SizedString NAME_OF("of");
+static SizedString NAME_EVAL("eval");
 
-VarInitTree *VarInitTree::newChild() {
-    auto child = new VarInitTree();
-    children.push_back(child);
-    return child;
-}
 
-void VarInitTree::generateInitCode(Function *function, bool initExpr) {
-    if (callback) {
-        initExpr = callback(function, initExpr);
-    }
-
-    for (auto child : children) {
-        child->callback(function, initExpr);
-    }
-
-    if (needPopStackTop) {
-        function->instructions.writeOpCode(OP_POP_STACK_TOP);
-    }
+inline bool isTokenNameEqual(const Token &token, SizedString &name) {
+    return token.type == TK_NAME && tokenToSizedString(token).equal(name);
 }
 
 JSParser::JSParser(VMRuntimeCommon *rtc, ResourcePool *resPool, const char *buf, size_t len) : JSLexer(resPool, buf, len) {
@@ -69,13 +53,14 @@ Function *JSParser::parse(Scope *parent, bool isExpr) {
     auto function = _enterFunction(_curToken, true);
 
     if (isExpr) {
-        _expectExpression(function->instructions, PRED_NONE);
-        function->instructions.writeOpCode(OP_RETURN_VALUE);
+        function->astNodes.push_back(PoolNew(_pool, JsStmtReturnValue)(_expectMultipleExpression()));
     } else {
-        while (_curToken.type != TK_EOF && _error == PE_OK) {
-            _expectStatment();
+        while (_curToken.type != TK_EOF) {
+            function->astNodes.push_back(_expectStatment());
         }
     }
+
+    checkExpressionObjects();
 
     _leaveFunction();
 
@@ -87,7 +72,7 @@ Function *JSParser::parse(Scope *parent, bool isExpr) {
     _relocateIdentifierInParentFunction(function, parent->function);
 
     // 建立标识符的引用、作用域关系
-    _buildIdentifierRefs();
+    _buildExprIdentifiers();
 
     // 分析标识符地址
     _allocateIdentifierStorage(function->scope, 0);
@@ -95,8 +80,9 @@ Function *JSParser::parse(Scope *parent, bool isExpr) {
     return function;
 }
 
-void JSParser::_expectStatment() {
-    auto &instructions = _curFunction->instructions;
+IJsNode *JSParser::_expectStatment() {
+    checkExpressionObjects();
+
     switch (_curToken.type) {
         case TK_STRING: {
             _peekToken();
@@ -109,307 +95,369 @@ void JSParser::_expectStatment() {
                 }
                 _readToken();
                 _expectSemiColon();
-            } else {
-                _expectExpressionStmt();
+                return PoolNew(_pool, JsStmtEmpty)();
             }
-            break;
+            return _expectExpressionStmt();
         }
         case TK_NAME: {
             _peekToken();
             if (_nextToken.type == TK_COLON) {
-                _expectLabelStmt();
-            } else {
-                _expectExpressionStmt();
+                return _expectLabelStmt();
             }
-            break;
+            return _expectExpressionStmt();
         }
         case TK_OPEN_BRACE:
-            _expectBlock();
-            break;
+            return _expectBlock();
         case TK_SEMI_COLON:
             // Empty Statement
             _readToken();
-            break;
+            return PoolNew(_pool, JsStmtEmpty);
 
         case TK_BREAK:
             _readToken();
-            _expectBreakContinue(TK_BREAK);
-            break;
+            return _expectBreakContinue(TK_BREAK);
 
         case TK_CONTINUE:
             _readToken();
-            _expectBreakContinue(TK_CONTINUE);
-            break;
+            return _expectBreakContinue(TK_CONTINUE);
 
         case TK_DEBUGGER: {
             _readToken();
             _expectSemiColon();
-            instructions.writeOpCode(OP_DEBUGGER);
-            break;
+            return PoolNew(_pool, JsStmtDebugger)();
         }
 
         case TK_DO: {
             _readToken();
-            auto begin = instructions.tagLabel();
-            _expectStatment();
-
+            auto stmt = _expectStatment();
             _expectToken(TK_WHILE);
-            _expectParenCondition();
-            instructions.writeOpCode(OP_JUMP_IF_TRUE);
-            instructions.writeAddress(begin);
+            auto cond = _expectParenCondition();
             _expectSemiColon();
-            break;
+            return PoolNew(_pool, JsStmtDoWhile)(cond, stmt);
         }
         case TK_WHILE: {
             _readToken();
-            auto begin = instructions.tagLabel();
-
-            _expectParenCondition();
-            instructions.writeOpCode(OP_JUMP_IF_FALSE);
-            auto addrFalse = instructions.writeAddressFuture();
-
-            _expectStatment();
-            instructions.writeOpCode(OP_JUMP);
-            instructions.writeAddress(begin);
-            instructions.tagLabel(addrFalse);
-            break;
+            auto cond = _expectParenCondition();
+            auto stmt = _expectStatment();
+            return PoolNew(_pool, JsStmtWhile)(cond, stmt);
         }
         case TK_FOR:
             _readToken();
-            _expectForStatment();
-            break;
+            return _expectForStatment();
 
         case TK_FUNCTION: {
-            _expectFunction(instructions, FT_DECLARATION);
-            break;
+            return _expectFunctionDeclaration();
         }
 
         case TK_IF: {
-            _expectParenCondition();
-            instructions.writeOpCode(OP_JUMP_IF_FALSE);
-            auto endAddr = instructions.writeAddressFuture();
-            _expectStatment();
-            instructions.tagLabel(endAddr);
-            break;
+            _readToken();
+            auto cond = _expectParenCondition();
+            auto stmtTrue = _expectStatment();
+            if (_curToken.type == TK_ELSE) {
+                _readToken();
+                auto stmtFalse = _expectStatment();
+                return PoolNew(_pool, JsStmtIf)(cond, stmtTrue, stmtFalse);
+            } else {
+                return PoolNew(_pool, JsStmtIf)(cond, stmtTrue, nullptr);
+            }
         }
 
         case TK_RETURN: {
             _readToken();
             if (_curToken.type == TK_SEMI_COLON) {
                 _readToken();
-                instructions.writeOpCode(OP_RETURN);
             } else if (_canInsertSemicolon()) {
-                instructions.writeOpCode(OP_RETURN);
             } else {
-                _expectExpression(instructions, PRED_NONE, true);
-                instructions.writeOpCode(OP_RETURN_VALUE);
+                auto expr = _expectMultipleExpression();
                 _expectSemiColon();
+                return PoolNew(_pool, JsStmtReturnValue)(expr);
             }
-            break;
+            return PoolNew(_pool, JsStmtReturn)();
         }
 
         case TK_SWITCH:
             _readToken();
-            _expectSwitchStmt();
-            break;
+            return _expectSwitchStmt();
 
         case TK_THROW: {
             _readToken();
             if (_curToken.newLineBefore) {
-                _parseError(PE_ILLEGAL_NEW_LINE_AFTER_THROW, "Illegal newline after throw");
+                _parseError(PE_SYNTAX_ERROR, "Illegal newline after throw");
             }
-            _expectExpression(instructions, PRED_NONE, true);
+            auto expr = _expectMultipleExpression();
             _expectSemiColon();
-            instructions.writeOpCode(OP_THROW);
-            break;
+            return PoolNew(_pool, JsStmtThrow)(expr);
         }
 
         case TK_TRY:
             _readToken();
-            _expectTryStmt();
-            break;
+            return _expectTryStmt();
 
+        case TK_LET: {
+            _peekToken();
+            if (_nextToken.type != TK_NAME && _nextToken.type != TK_OPEN_BRACKET && _nextToken.type != TK_OPEN_BRACE) {
+                // let 作为变量名处理
+                _curToken.type = TK_NAME;
+                return _expectStatment();
+            }
+            // 接着执行，不 break
+        }
         case TK_VAR:
-        case TK_LET:
         case TK_CONST: {
             auto declareType = _curToken.type;
             _readToken();
-            _expectVariableDeclarationList(declareType);
+            auto node = _expectVariableDeclarationList(declareType);
             _expectSemiColon();
-            break;
+            return node;
         }
 
         case TK_WITH: {
             _readToken();
-            _expectParenCondition();
+            auto expr = _expectParenCondition();
             _enterScope();
             _curScope->hasWith = true;
-            _expectStatment();
+            auto stmt = PoolNew(_pool, JsStmtWith)(expr, _expectStatment(), _curScope);
             _leaveScope();
-            break;
+            return stmt;
         }
 
         default:
-            _expectExpressionStmt();
-            break;
+            return _expectExpressionStmt();
     }
 }
 
-void JSParser::_expectExpressionStmt() {
-    _expectExpression(_curFunction->instructions, PRED_NONE, true);
+IJsNode *JSParser::_expectExpressionStmt() {
+    auto expr = _expectMultipleExpression();
     _expectSemiColon();
-    _curFunction->instructions.writeOpCode(OP_POP_STACK_TOP);
+
+    return PoolNew(_pool, JsStmtExpr)(expr);
 }
 
-void JSParser::_expectLabelStmt() {
-
+IJsNode *JSParser::_expectLabelStmt() {
+    assert(0);
+    return nullptr;
 }
 
-void JSParser::_expectBlock() {
+IJsNode *JSParser::_expectBlock() {
     _enterScope();
 
     _expectToken(TK_OPEN_BRACE);
 
-    while (_curToken.type != TK_CLOSE_BRACE && _error == PE_OK) {
+    auto stms = PoolNew(_pool, JsStmtBlock)(_curScope);
+
+    while (_curToken.type != TK_CLOSE_BRACE) {
         if (_curToken.type == TK_EOF) {
-            _parseError(PE_UNEXPECTED_END_OF_INPUT, "Unexpected end of input");
+            _parseError(PE_SYNTAX_ERROR, "Unexpected end of input");
             break;
         }
 
-        _expectStatment();
+        stms->push(_expectStatment());
     }
     _readToken();
 
     _leaveScope();
+
+    return stms;
 }
 
-void JSParser::_expectBreakContinue(TokenType type) {
-
+IJsNode *JSParser::_expectBreakContinue(TokenType type) {
+    assert(0);
+    return nullptr;
 }
 
-void JSParser::_expectForStatment() {
+IJsNode *JSParser::_tryForInStatment() {
+    auto type = _curToken.type;
+    bool isIn = false;
+    IJsNode *var = nullptr, *varOrg = nullptr;
+    size_t countVars = 1;
 
-}
-
-void JSParser::_expectSwitchStmt() {
-
-}
-
-void JSParser::_expectTryStmt() {
-    auto &instructions = _curFunction->instructions;
-
-    instructions.writeOpCode(OP_TRY_START);
-    auto addrCatch = instructions.writeAddressFuture(false);
-    auto addrFinally = instructions.writeAddressFuture(false);
-
-    _expectBlock();
-
-    bool bHasCatch = false, hasFinally = false;
-    if (_curToken.type == TK_CATCH) {
-        bHasCatch = true;
+    if (type == TK_VAR || type == TK_LET || type == TK_CONST) {
+        // for (var
         _readToken();
 
-        // 顺序从 try 执行的指令应该跳转到 catch 结束
-        instructions.writeOpCode(OP_JUMP);
-        auto addrCatchEnd = instructions.writeAddressFuture();
+        auto node =_expectVariableDeclarationList(type, true);
+        assert(node->type == NT_VAR_DECLARTION_LIST);
+        countVars = node->count();
+        var = node->nodes[0];
 
-        // 有异常发生时跳转到的地址
-        instructions.tagLabel(addrCatch);
+        varOrg = node;
+    } else {
+        varOrg = _expectMultipleExpression(false);
+        if (varOrg->type == NT_COMMA_EXPRESSION) {
+            auto node = (JsCommaExprs *)varOrg;
+            countVars = node->count();
+            var = node->nodes[0];
+        } else {
+            // 单个 expression
+            var = varOrg;
+        }
+    }
+
+    if (_curToken.type != TK_IN && !isTokenNameEqual(_curToken, NAME_OF)) {
+        return varOrg;
+    }
+    isIn = _curToken.type == TK_IN;
+
+    // for in/of
+    if (countVars > 1) {
+        _parseError(PE_SYNTAX_ERROR, "Invalid left-hand side in for-in loop: Must have a single binding");
+    }
+
+    if (var->type == NT_ASSIGN) {
+        _parseError(PE_SYNTAX_ERROR, "for-of loop variable declaration may not have an initializer");
+    }
+
+    var->setBeingAssigned();
+
+    auto obj = _expectExpression(PRED_NONE, true);
+    _expectToken(TK_CLOSE_PAREN);
+
+    _allowRegexp();
+    auto stmt = _expectStatment();
+
+    return PoolNew(_pool, JsStmtForIn)(var, obj, stmt, isIn, _curScope);
+}
+
+IJsNode *JSParser::_expectForStatment() {
+    // TODO: support await
+
+    _enterScope();
+
+    IJsNode *init = nullptr, *cond = nullptr, *finalExpr = nullptr;
+
+    _expectToken(TK_OPEN_PAREN);
+    if (_curToken.type != TK_SEMI_COLON) {
+        init = _tryForInStatment();
+        if (init->type == NT_FOR_IN) {
+            _leaveScope();
+            return init;
+        }
+    }
+
+    // for (a;b;c)
+    _expectToken(TK_SEMI_COLON);
+
+    // 退出条件
+    if (_curToken.type != TK_SEMI_COLON) {
+        cond = _expectMultipleExpression();
+    }
+    _expectToken(TK_SEMI_COLON);
+
+    if (_curToken.type != TK_CLOSE_PAREN) {
+        finalExpr = _expectMultipleExpression();
+    }
+    _expectToken(TK_CLOSE_PAREN);
+
+    _allowRegexp();
+    auto stmt = _expectStatment();
+
+    stmt = PoolNew(_pool, JsStmtFor)(init, cond, finalExpr, stmt, _curScope);
+    _leaveScope();
+
+    return stmt;
+}
+
+IJsNode *JSParser::_expectSwitchStmt() {
+    assert(0);
+    return nullptr;
+}
+
+IJsNode *JSParser::_expectTryStmt() {
+    IJsNode *stmtTry = nullptr, *exprCatch = nullptr, *stmtCatch = nullptr, *stmtFinal = nullptr;
+    Scope *scopeCatch = nullptr;
+
+    stmtTry = _expectBlock();
+
+    if (_curToken.type == TK_CATCH) {
+        _readToken();
 
         _enterScope();
         if (_curToken.type == TK_OPEN_PAREN) {
             _readToken();
 
-            // 声明异常变量
-            if (_curToken.type != TK_NAME) {
-                _expectToken(TK_NAME);
-                return;
-            }
-            _curScope->addVarDeclaration(_curToken, false, true);
+            scopeCatch = _curScope;
 
-            // 将异常赋值到此变量
-            _assignIdentifier(_curFunction, instructions, _curToken);
-            _readToken();
+            // 声明异常变量
+            exprCatch = _expectVariableDeclaration(TK_LET, true);
+            exprCatch->setBeingAssigned();
 
             _expectToken(TK_CLOSE_PAREN);
         }
-        _expectBlock();
+        stmtCatch = _expectBlock();
         _leaveScope();
-
-        instructions.tagLabel(addrCatchEnd);
     }
 
     if (_curToken.type == TK_FINALLY) {
         _readToken();
 
-        hasFinally = true;
-
-        // 顺序执行会有 OP_FINALLY_JUMP
-        instructions.writeOpCode(OP_BEGIN_FINALLY_NORMAL);
-
-        // 有异常发生会从此开始执行
-        instructions.tagLabel(addrFinally);
-
-        _expectBlock();
-
-        instructions.writeOpCode(OP_FINISH_FINALLY);
+        stmtFinal = _expectBlock();
     }
 
-    if (!bHasCatch && !hasFinally) {
+    if (!stmtCatch && !stmtFinal) {
         _parseError(PE_SYNTAX_ERROR, "Missing catch or finally after try");
     }
+
+    return PoolNew(_pool, JsStmtTry)(stmtTry, exprCatch, stmtCatch, scopeCatch, stmtFinal);
 }
 
 /**
  * 匹配参数列表，返回参数的个数.
  */
-int JSParser::_expectArgumentsList(InstructionOutputStream &instructions) {
+void JSParser::_expectArgumentsList(VecJsNodes &args) {
     _readToken();
 
     int count = 0;
-    while (_curToken.type != TK_CLOSE_PAREN && _error == PE_OK) {
+    while (_curToken.type != TK_CLOSE_PAREN) {
         if (count != 0) {
             _expectToken(TK_COMMA);
             if (_curToken.type == TK_CLOSE_PAREN)
                 break;
         }
 
-        if (_curToken.type == TK_ELLIPSIS) {
+        bool spreadArgs = _curToken.type == TK_ELLIPSIS;
+        if (spreadArgs) {
             _readToken();
         }
 
-        _expectExpression(instructions);
+        auto e = _expectExpression();
+        if (spreadArgs) {
+            // TODO: spread args 会影响 stack 的 count.
+            e = PoolNew(_pool, JsNodeSpreadArgument)(e);
+        }
+        args.push_back(e);
         count++;
     }
 
     _expectToken(TK_CLOSE_PAREN);
-
-    return count;
 }
 
-void JSParser::_expectVariableDeclarationList(TokenType declareType) {
-    VarInitTree varInitTree;
+/**
+ * @initFromStackTop 用于表示，在生成代码时，是否需要从栈顶赋值给变量.
+ *   var [a, b]; // initFromStackTop 为 false
+ *   var [a, b] = []; // initFromStackTop 为 true
+ */
+JsNodeVarDeclarationList *JSParser::_expectVariableDeclarationList(TokenType declareType, bool initFromStackTop) {
+    auto expr = PoolNew(_pool, JsNodeVarDeclarationList);
 
-    while (_error == PE_OK) {
-        _expectVariableDeclaration(declareType, &varInitTree);
-        if (_curToken.type != TK_COMMA || _error != PE_OK) {
+    while (true) {
+        auto node = _expectVariableDeclaration(declareType, initFromStackTop);
+        expr->push(node);
+        if (_curToken.type != TK_COMMA) {
             break;
         }
         _readToken();
     }
 
-    varInitTree.generateInitCode(_curFunction, nullptr);
+    expr->setBeingAssigned();
+
+    return expr;
 }
 
 /**
  * 解析变量声明
- * @varInitStack VarInitStack 变量的声明初始化指令回调函数。在解析阶段，需要先解析语法树，
- *      但是生成变量初始化代码时，需要从外层（后）往那初始化（前），所以通过 varInitStack
- *      来根据情况生成初始化的代码。
  */
-void JSParser::_expectVariableDeclaration(TokenType declareType, VarInitTree *parentVarInitTree) {
-    auto declaredToken = _curToken;
-    auto child = parentVarInitTree->newChild();
+IJsNode *JSParser::_expectVariableDeclaration(TokenType declareType, bool initFromStackTop) {
+    IJsNode *left = nullptr, *right = nullptr;
 
     switch (_curToken.type) {
         case TK_NAME:
@@ -418,17 +466,17 @@ void JSParser::_expectVariableDeclaration(TokenType declareType, VarInitTree *pa
             } else {
                 _curScope->addVarDeclaration(_curToken, declareType == TK_CONST);
             }
+            left = _newExprIdentifier(_curToken);
             _readToken();
             break;
         case TK_OPEN_BRACKET: {
             _readToken();
-            _expectArrayAssignable(declareType, child);
-            _expectToken(TK_CLOSE_BRACKET);
+            left = _expectArrayAssignable(declareType);
             break;
         }
         case TK_OPEN_BRACE: {
             _readToken();
-            // _expectObjectAssignable(declareType, child);
+            left = _expectObjectAssignable(declareType);
             _expectToken(TK_CLOSE_BRACE);
             break;
         }
@@ -437,71 +485,39 @@ void JSParser::_expectVariableDeclaration(TokenType declareType, VarInitTree *pa
             break;
     }
 
+    bool hasInitExpr = false;
     if (_curToken.type == TK_ASSIGN) {
         _readToken();
 
-        InstructionOutputStream *exprInstructions = _resPool->allocInstructionOutputStream();
+        hasInitExpr = true;
+        right = _expectExpression(PRED_NONE, false);
+    }
 
-        // 将表达式的指令保存起来
-        _expectExpression(*exprInstructions, PRED_NONE, false);
+    if (declareType == TK_CONST && !(initFromStackTop || hasInitExpr)) {
+        _parseError(PE_SYNTAX_ERROR, "Missing initializer in const declaration");
+    }
 
-        child->setCallback([this, child, declaredToken, exprInstructions](Function *function, bool initExpr) {
-            auto &instructions = function->instructions;
-            if (initExpr) {
-                instructions.writeOpCode(OP_JUMP_IF_NULL_UNDEFINED);
-                auto labelUseDefault = instructions.writeAddressFuture();
-                if (declaredToken.type == TK_NAME) {
-                    _assignIdentifier(function, instructions, declaredToken);
-                }
-                instructions.writeOpCode(OP_JUMP);
-                auto end = instructions.writeAddressFuture();
-
-                instructions.tagLabel(labelUseDefault);
-
-                // 插入缺省值表达式的执行代码.
-                instructions.writeBranch(exprInstructions);
-                if (declaredToken.type == TK_NAME) {
-                    _assignIdentifier(function, instructions, declaredToken);
-                } else {
-                    child->setNeedPopStackTop();
-                }
-
-                instructions.tagLabel(end);
-            } else {
-                // 插入缺省值表达式的执行代码.
-                instructions.writeBranch(exprInstructions);
-                if (declaredToken.type == TK_NAME) {
-                    _assignIdentifier(function, instructions, declaredToken);
-                } else {
-                    child->setNeedPopStackTop();
-                }
-            }
-
-            return true;
-        });
+    if (initFromStackTop) {
+        return PoolNew(_pool, JsExprAssignWithStackTop)(left, right);
     } else {
-        if (declareType == TK_CONST) {
-            _parseError(PE_SYNTAX_ERROR, "Missing initializer in const declaration");
-            return;
-        }
-
-        child->setCallback([this, child, declaredToken](Function *function, bool initExpr) {
-            if (initExpr) {
-                if (declaredToken.type == TK_NAME) {
-                    _assignIdentifier(function, function->instructions, declaredToken);
-                } else {
-                    child->setNeedPopStackTop();
-                }
+        if (right != nullptr) {
+            return PoolNew(_pool, JsExprAssign)(left, right, true);
+        } else {
+            if (left->type == NT_IDENTIFIER) {
+                // JsExprIdentifier 并未被赋值，引用，需要从 _headIdRefs 中删除
+                assert(_headIdRefs == left);
+                _headIdRefs = ((JsExprIdentifier *)left)->next;
             }
-
-            return initExpr;
-        });
+            return left;
+        }
     }
 }
 
-void JSParser::_expectArrayAssignable(TokenType declareType, VarInitTree *parentVarInitTree) {
+IJsNode *JSParser::_expectArrayAssignable(TokenType declareType) {
+    auto arr = PoolNew(_pool, JsExprArray)();
+
     int index = 0;
-    while (_error == PE_OK) {
+    while (true) {
         if (_curToken.type == TK_COMMA) {
             // 可以有多个 ',' 连着
             _readToken();
@@ -511,29 +527,25 @@ void JSParser::_expectArrayAssignable(TokenType declareType, VarInitTree *parent
         if (_curToken.type == TK_CLOSE_BRACKET) {
             // 提前结束
             _readToken();
+            break;
         }
 
-        VarInitTree *child = parentVarInitTree->newChild();
-        child->setCallback([this, index](Function *function, bool initExpr) {
-            if (initExpr) {
-                // 从 initExpr 获取第 index 个元素
-                function->instructions.writeOpCode(OP_PUSH_STACK_TOP); // Duplicate stack top
-                function->instructions.writeOpCode(OP_PUSH_MEMBER_INDEX_INT);
-                function->instructions.writeUint32(index);
-            }
-
-            return initExpr;
-        });
-
-        _expectVariableDeclaration(declareType, child);
+        // 声明的变量 initFromStackTop 一定为 true. 因为 ArrayAssignable 在语法上要求必须有初始化值.
+        arr->push(_expectVariableDeclaration(declareType, true));
 
         index++;
     }
+
+    return arr;
+}
+
+IJsNode *JSParser::_expectObjectAssignable(TokenType declareType) {
+    return nullptr;
 }
 
 void JSParser::_expectToken(TokenType expected) {
     if (_curToken.type != expected) {
-        _parseError(PE_UNEXPECTED_TOKEN, "Unexpected token: %d, expected: %d.", _curToken.type, expected);
+        _parseError(PE_SYNTAX_ERROR, "Unexpected token: %d, expected: %d.", _curToken.type, expected);
     } else {
         _readToken();
     }
@@ -543,74 +555,95 @@ void JSParser::_expectSemiColon() {
     if (_curToken.type == TK_SEMI_COLON) {
         _readToken();
     } else if (!_canInsertSemicolon()) {
-        _parseError(PE_EXPECTED_SEMI_COLON, "SemiColon is expected, unexpected token: %d", _curToken.type);
+        _parseError(PE_SYNTAX_ERROR, "SemiColon is expected, unexpected token: %d", _curToken.type);
     }
 }
 
-void JSParser::_assignIdentifier(Function *function, InstructionOutputStream &instructions, const Token &name) {
-    if (tokenToSizedString(name).equal(SS_THIS)) {
-        _parseError(PE_SYNTAX_ERROR, "Unexpected token 'this'");
-        return;
-    }
-
-    auto identifier = _newIdentifierRef(name, function);
-    identifier->isModified = true;
-    instructions.writeOpCode(OP_ASSIGN_IDENTIFIER);
-    instructions.writeIdentifierAddress(identifier);
-}
-
-void JSParser::_assignParameter(Function *function, InstructionOutputStream &instructions, int index) {
-    instructions.writeOpCode(OP_ASSIGN_LOCAL_ARGUMENT);
-    instructions.writeUint16((uint16_t)index);
-}
-
-Function *JSParser::_expectFunction(InstructionOutputStream &instructions, FunctionType type, bool ignoreFirstToken) {
+IJsNode *JSParser::_expectFunctionDeclaration() {
     auto parentScope = _curScope;
+    auto child = _enterFunction(_curToken);
+
+    _readToken();
+
+    if (_curToken.type == TK_MUL) {
+        _readToken();
+        child->isGenerator = true;
+    }
+
+    if (_curToken.type != TK_NAME) {
+        _expectToken(TK_NAME);
+    }
+
+    child->name = tokenToSizedString(_curToken);
+    parentScope->addFunctionDeclaration(_curToken, child);
+    _readToken();
+
+    child->params = _expectFormalParameters();
+
+    // function body
+    _expectToken(TK_OPEN_BRACE);
+    while (_curToken.type != TK_CLOSE_BRACE) {
+        if (_curToken.type == TK_EOF) {
+            _parseError(PE_SYNTAX_ERROR, "Unexpected end of input");
+            break;
+        }
+
+        child->astNodes.push_back(_expectStatment());
+    }
+    _readToken();
+
+    _leaveFunction();
+
+    return child;
+}
+
+IJsNode *JSParser::_expectFunctionExpression(uint32_t functionFlags, bool ignoreFirstToken) {
     auto child = _enterFunction(_curToken);
 
     if (ignoreFirstToken) {
         _readToken();
     }
 
-    if (type != FT_GETTER && type != FT_SETTER && _curToken.type == TK_MUL) {
-        _readToken();
+    if (functionFlags & FT_ASYNC) {
+        child->isAsync = true;
+    }
+
+    if (functionFlags & FT_GENERATOR) {
         child->isGenerator = true;
     }
 
-    if (type == FT_DECLARATION || type == FT_EXPRESSION) {
-        if (_curToken.type == TK_NAME) {
-            child->name = tokenToSizedString(_curToken);
-            if (type == FT_DECLARATION) {
-                parentScope->addFunctionDeclaration(_curToken, child);
-            } else if (type == FT_EXPRESSION) {
-                // TODO: 函数表达式的名字在函数的作用域内
-                // child->addVarDeclaration(_curToken);
-            }
-            _readToken();
-        } else if (type == FT_DECLARATION) {
-            _expectToken(TK_NAME);
-            return child;
-        }
+    if ((functionFlags & (FT_GETTER | FT_SETTER)) && _curToken.type == TK_MUL) {
+        _readToken();
+        assert(!child->isGenerator);
+        child->isGenerator = true;
     }
 
-    if (type == FT_MEMBER_FUNCTION) {
+    if ((functionFlags & FT_EXPRESSION) && _curToken.type == TK_NAME) {
+        child->name = tokenToSizedString(_curToken);
+        // TODO: 函数表达式的名字在函数的作用域内
+        // child->addVarDeclaration(_curToken);
+        _readToken();
+    }
+
+    if (functionFlags & FT_MEMBER_FUNCTION) {
         child->isMemberFunction = true;
     }
 
-    int count = _expectFormalParameters();
-    if (type == FT_GETTER && count > 0) {
+    child->params = _expectFormalParameters();
+    auto count = child->params ? child->params->count() : 0;
+    if ((functionFlags & FT_GETTER) && count > 0) {
         _parseError(PE_SYNTAX_ERROR, "Getter must not have any formal parameters.");
         return child;
-    } else if (type == FT_GETTER && count != 1) {
+    } else if ((functionFlags & FT_SETTER) && count != 1) {
         _parseError(PE_SYNTAX_ERROR, "Setter must have exactly one formal parameter.");
         return child;
     }
 
     // function body
     _expectToken(TK_OPEN_BRACE);
-    while (_curToken.type != TK_CLOSE_BRACE && _error == PE_OK) {
+    while (_curToken.type != TK_CLOSE_BRACE) {
         if (_curToken.type == TK_EOF) {
-            _parseError(PE_UNEXPECTED_END_OF_INPUT, "Unexpected end of input");
+            _parseError(PE_SYNTAX_ERROR, "Unexpected end of input");
             break;
         }
 
@@ -620,24 +653,20 @@ Function *JSParser::_expectFunction(InstructionOutputStream &instructions, Funct
 
     _leaveFunction();
 
-    if (type != FT_DECLARATION) {
-        instructions.writeOpCode(OP_PUSH_FUNCTION_EXPR);
-        instructions.writeUint8(_curFuncScope->depth);
-        instructions.writeUint16(child->index);
-    }
-
-    return child;
+    return PoolNew(_pool, JsFunctionExpr)(child);
 }
 
-int JSParser::_expectFormalParameters() {
+IJsNode *JSParser::_expectClassDeclaration(bool isClassExpr) {
+    assert(0);
+    return nullptr;
+}
+
+JsNodeParameters *JSParser::_expectFormalParameters() {
     _expectToken(TK_OPEN_PAREN);
 
-    VarInitTree varInitTree;
-
-    varInitTree.generateInitCode(_curFunction, nullptr);
-
+    auto params = PoolNew(_pool, JsNodeParameters)();
     int index = 0;
-    while (_curToken.type != TK_CLOSE_PAREN && _error == PE_OK) {
+    while (_curToken.type != TK_CLOSE_PAREN) {
         if (index > 0)
             _expectToken(TK_COMMA);
 
@@ -646,40 +675,43 @@ int JSParser::_expectFormalParameters() {
             _readToken();
             _expectToken(TK_NAME);
 
-            _curFuncScope->addArgumentDeclaration(_curToken, index);
+            params->push(PoolNew(_pool, JsNodeRestParameter)(_newExprIdentifier(_curToken), index));
+
+            _curFuncScope->addVarDeclaration(_curToken);
             _readToken();
             if (_curToken.type != TK_CLOSE_PAREN) {
-                _parseError(PE_REST_PARAM_MUST_BE_LAST_ONE, "SyntaxError: Rest parameter must be last formal parameter");
+                _parseError(PE_SYNTAX_ERROR, "SyntaxError: Rest parameter must be last formal parameter");
             }
             break;
         } else {
-            _expectParameterDeclaration(index, &varInitTree);
+            params->push(_expectParameterDeclaration(index));
         }
         index++;
     }
 
+    params->setBeingAssigned();
+
     _expectToken(TK_CLOSE_PAREN);
-    return index;
+    return params;
 }
 
-void JSParser::_expectParameterDeclaration(uint16_t index, VarInitTree *parentVarInitTree) {
-    auto declaredToken = _curToken;
-    auto child = parentVarInitTree->newChild();
+IJsNode *JSParser::_expectParameterDeclaration(uint16_t index) {
+    IJsNode *left = nullptr;
 
     switch (_curToken.type) {
         case TK_NAME:
             _curFuncScope->addArgumentDeclaration(_curToken, index);
+            left = _newExprIdentifier(_curToken);
             _readToken();
             break;
         case TK_OPEN_BRACKET: {
             _readToken();
-            _expectArrayAssignable(TK_VAR, child);
-            _expectToken(TK_CLOSE_BRACKET);
+            left = _expectArrayAssignable(TK_VAR);
             break;
         }
         case TK_OPEN_BRACE: {
             _readToken();
-            // _expectObjectAssignable(declareType, child);
+            left = _expectObjectAssignable(TK_VAR);
             _expectToken(TK_CLOSE_BRACE);
             break;
         }
@@ -691,126 +723,31 @@ void JSParser::_expectParameterDeclaration(uint16_t index, VarInitTree *parentVa
     if (_curToken.type == TK_ASSIGN) {
         _readToken();
 
-        InstructionOutputStream *exprInstructions = _resPool->allocInstructionOutputStream();
-
         // 将表达式的指令保存起来
-        _expectExpression(*exprInstructions, PRED_NONE, false);
-
-        child->setCallback([this, child, declaredToken, index, exprInstructions](Function *function, bool initExpr) {
-            auto &instructions = function->instructions;
-
-            // 参数入栈
-            instructions.writeOpCode(OP_PUSH_ID_LOCAL_ARGUMENT);
-            instructions.writeUint16(index);
-
-            instructions.writeOpCode(OP_JUMP_IF_NULL_UNDEFINED);
-            auto labelSpreadParam = instructions.writeAddressFuture();
-
-            // 参数为 undefined，使用缺省的参数
-            // 插入缺省值表达式的执行代码.
-            instructions.writeBranch(exprInstructions);
-            if (declaredToken.type == TK_NAME) {
-                _assignParameter(function, instructions, index);
-            }
-
-            instructions.writeOpCode(OP_JUMP);
-            auto end = instructions.writeAddressFuture();
-
-            instructions.tagLabel(labelSpreadParam);
-            if (declaredToken.type != TK_NAME) {
-                // 将参数入栈，以便展开
-                instructions.writeOpCode(OP_PUSH_ID_LOCAL_ARGUMENT);
-                instructions.writeUint16(index);
-            } else {
-                child->setNeedPopStackTop();
-            }
-
-            instructions.tagLabel(end);
-
-            return true;
-        });
-    } else {
-        if (declaredToken.type != TK_NAME) {
-            // 参数展开
-            child->setCallback([this, child, declaredToken, index](Function *function, bool initExpr) {
-                auto &instructions = function->instructions;
-
-                // 参数入栈
-                instructions.writeOpCode(OP_PUSH_ID_LOCAL_ARGUMENT);
-                instructions.writeUint16(index);
-
-                instructions.writeOpCode(OP_JUMP_IF_NOT_NULL_UNDEFINED);
-                auto end = instructions.writeAddressFuture();
-
-                // 参数入栈
-                instructions.writeOpCode(OP_PUSH_ID_LOCAL_ARGUMENT);
-                instructions.writeUint16(index);
-
-                instructions.tagLabel(end);
-
-                child->setNeedPopStackTop();
-
-                return true;
-            });
-        }
-    }
-}
-
-enum UnaryPrefixStatus {
-    UPS_NONE,
-    UPS_INCREAMENT,
-    UPS_DECREAMENT,
-};
-
-void writePrevInstruction(OpCode &prevOp, uint32_t &prevStringIdx,
-        IdentifierRef *identifier, InstructionOutputStream &instructions) {
-    if (prevOp == OP_PUSH_IDENTIFIER) {
-        instructions.writePushIdentifier(identifier);
-    } else if (prevOp == OP_PUSH_MEMBER_INDEX) {
-        instructions.writeOpCode(OP_PUSH_MEMBER_INDEX);
-    } else if (prevOp == OP_PUSH_MEMBER_DOT || prevOp == OP_PUSH_MEMBER_DOT_OPTIONAL) {
-        instructions.writeOpCode(prevOp);
-        instructions.writeUint32(prevStringIdx);
-    } else {
-        assert(prevOp == OP_INVALID);
-    }
-}
-
-OpCode writePrevInstructionFunctionCall(OpCode &prevOp, uint32_t &prevStringIdx,
-        IdentifierRef *identifier, InstructionOutputStream &instructions) {
-    if (prevOp == OP_PUSH_MEMBER_INDEX) {
-        instructions.writeOpCode(OP_PUSH_THIS_MEMBER_INDEX);
-    } else if (prevOp == OP_PUSH_MEMBER_DOT) {
-        instructions.writeOpCode(OP_PUSH_THIS_MEMBER_DOT);
-        instructions.writeUint32(prevStringIdx);
-    } else if (prevOp == OP_PUSH_MEMBER_DOT_OPTIONAL) {
-        instructions.writeOpCode(OP_PUSH_THIS_MEMBER_DOT_OPTIONAL);
-        instructions.writeUint32(prevStringIdx);
-    } else {
-        assert(prevOp == OP_PUSH_IDENTIFIER);
-        instructions.writePushIdentifier(identifier);
-        return OP_FUNCTION_CALL;
-    }
-
-    return OP_MEMBER_FUNCTION_CALL;
-}
-
-void JSParser::_expectExpression(InstructionOutputStream &instructions, Precedence pred, bool enableComma, bool enableIn) {
-    OpCode prevOp = OP_INVALID;
-    uint32_t prevStringIdx = 0;
-    UnaryPrefixStatus upsStatus = UPS_NONE;
-    IdentifierRef *identifier = nullptr;
-
-    if (_curToken.type == TK_UNARY_PREFIX) {
-        // !, ~
-        if (_curToken.buf[0] == '+') {
-            upsStatus = UPS_INCREAMENT;
+        auto defaultVal = _expectExpression();
+        if (left->type != NT_IDENTIFIER) {
+            auto expr = PoolNew(_pool, JsExprAssignWithStackTop)(left, defaultVal);
+            return PoolNew(_pool, JsNodeAssignWithParameter)(expr, index);
         } else {
-            upsStatus = UPS_DECREAMENT;
+            return PoolNew(_pool, JsNodeUseDefaultParameter)(left, defaultVal, index);
         }
-        _readToken();
+    } else {
+        if (left->type == NT_IDENTIFIER) {
+            // JsExprIdentifier 并未被赋值，引用，需要从 _headIdRefs 中删除
+            assert(_headIdRefs == left);
+            _headIdRefs = ((JsExprIdentifier *)left)->next;
+            return left;
+        } else {
+            // array, object 需要扩展参数
+            return PoolNew(_pool, JsNodeAssignWithParameter)(left, index);
+        }
     }
+}
 
+IJsNode *JSParser::_expectExpression(Precedence pred, bool enableIn) {
+    IJsNode *expr = nullptr;
+
+    // 先匹配基本的表达式
     switch (_curToken.type) {
         case TK_NAME: {
             auto name = _curToken;
@@ -820,102 +757,96 @@ void JSParser::_expectExpression(InstructionOutputStream &instructions, Preceden
                 _readToken();
 
                 auto childFunction = _enterFunction(name, false, true);
-
                 _curFuncScope->addArgumentDeclaration(name, 0);
 
                 if (_curToken.type == TK_OPEN_BRACE) {
-                    _expectBlock();
+                    childFunction->astNodes.push_back(_expectBlock());
                 } else {
-                    _expectExpression(childFunction->instructions, PRED_NONE, false);
-                    childFunction->instructions.writeOpCode(OP_RETURN_VALUE);
+                    childFunction->astNodes.push_back(PoolNew(_pool, JsStmtReturnValue)(_expectExpression()));
                 }
-
                 _leaveFunction();
 
-                instructions.writeOpCode(OP_PUSH_FUNCTION_EXPR);
-                instructions.writeUint8(_curFuncScope->depth);
-                instructions.writeUint16((uint16_t)childFunction->index);
+                expr = PoolNew(_pool, JsFunctionExpr)(childFunction);
             } else {
-                identifier = _newIdentifierRef(name, _curFunction);
-                prevOp = OP_PUSH_IDENTIFIER;
+                expr = _newExprIdentifier(name);
             }
-            break;
-        }
-        case TK_TEMPLATE_NO_SUBSTITUTION:
-        case TK_STRING:
-            instructions.writeOpCode(OP_PUSH_STRING);
-            instructions.writeUint32(_getStringIndex(_curToken));
-            _readToken();
-            break;
-        case TK_NUMBER: {
-            int32_t n = (int32_t)_curToken.number;
-            if (_curToken.number == n) {
-                instructions.writeOpCode(OP_PUSH_INT32);
-                instructions.writeUint32(_curToken.number);
-            } else {
-                instructions.writeOpCode(OP_PUSH_DOUBLE);
-                instructions.writeUint32(_getDoubleIndex(_curToken.number));
-            }
-            _readToken();
             break;
         }
         case TK_OPEN_BRACE:
-            _expectObjectLiteralExpression(instructions);
+            expr = _expectObjectLiteralExpression();
             break;
         case TK_OPEN_BRACKET:
-            _expectArrayLiteralExpression(instructions);
+            expr = _expectArrayLiteralExpression();
             break;
         case TK_OPEN_PAREN:
-            if (_isArrowFunction()) {
-                _expectArrowFunction(instructions);
-            } else {
-                _expectParenExpression(instructions);
+            expr = _expectParenExpression();
+            if (_curToken.type == TK_ARROW) {
+                expr = _expectArrowFunction(expr);
             }
             break;
-        case TK_FUNCTION: {
-            _expectFunction(instructions, FT_EXPRESSION);
+        case TK_TEMPLATE_NO_SUBSTITUTION:
+        case TK_STRING: {
+            expr = PoolNew(_pool, JsExprString)(_getStringIndex(_curToken));
+            _readToken();
             break;
         }
+        case TK_NUMBER: {
+            int32_t n = (int32_t)_curToken.number;
+            if (_curToken.number == n) {
+                expr = PoolNew(_pool, JsExprInt32)(n);
+            } else {
+                expr = PoolNew(_pool, JsExprNumber)(_getDoubleIndex(_curToken.number));
+            }
+            _readToken();
+            break;
+        }
+        case TK_FUNCTION:
+            expr = _expectFunctionExpression(FT_EXPRESSION);
+            break;
         case TK_CLASS:
-            // classDeclaration(stream, true);
+            _expectClassDeclaration(true);
             break;
         case TK_NEW: {
             _readToken();
             if (_curToken.type == TK_DOT) {
                 _readToken();
-                if (_curToken.type == TK_NAME && tokenToSizedString(_curToken).equal("target")) {
-                    instructions.writeOpCode(OP_NEW_TARGET);
+                if (isTokenNameEqual(_curToken, NAME_TARGET)) {
+                    expr = PoolNew(_pool, JsExprNewTarget);
                 } else {
-                    _parseError(PE_UNEXPECTED_TOKEN, "Unexpected token.");
+                    _parseError(PE_SYNTAX_ERROR, "Unexpected token.");
                 }
                 break;
             }
 
-            _expectExpression(instructions, PRED_LEFT_HAND_EXPR, false);
-
-            int countArgs = 0;
+            auto exprNew = PoolNew(_pool, JsExprNew)(_expectExpression(PRED_LEFT_HAND_EXPR));
             if (_curToken.type == TK_OPEN_PAREN) {
-                countArgs = _expectArgumentsList(instructions);
+                _expectArgumentsList(exprNew->args);
             }
-
-            instructions.writeOpCode(OP_NEW);
-            instructions.writeUint16((uint16_t)countArgs);
+            expr = exprNew;
             break;
         }
         case TK_UNARY_PREFIX: {
             // !, ~
             auto opcode = _curToken.opr;
             _readToken();
-            _expectExpression(instructions, PRED_UNARY_PREFIX, true);
-
-            instructions.writeUint8(opcode);
+            expr = PoolNew(_pool, JsExprUnaryPrefix)(_expectExpression(PRED_UNARY_PREFIX, false), opcode);
             break;
         }
-        case TK_POSTFIX:
-        case TK_ADD: {
+        case TK_POSTFIX: {
+            // ++, --
+            bool increase = _curToken.buf[0] == '+';
             _readToken();
-            _expectExpression(instructions, PRED_UNARY_PREFIX, true);
-            instructions.writeOpCode(OP_INCREMENT_ID_POST);
+            expr = PoolNew(_pool, JsExprPrefixXCrease)(_expectExpression(PRED_UNARY_PREFIX, false), increase);
+            break;
+        }
+        case TK_ADD: {
+            // +, -
+            bool isNegative = _curToken.buf[0] == '-';
+            _readToken();
+            expr = _expectExpression(PRED_UNARY_PREFIX, false);
+            if (isNegative) {
+                expr = PoolNew(_pool, JsExprUnaryPrefix)(expr, OP_PREFIX_NEGATE);
+            }
             break;
         }
         case TK_TEMPLATE_HEAD:
@@ -926,28 +857,23 @@ void JSParser::_expectExpression(InstructionOutputStream &instructions, Preceden
             break;
     }
 
+    // 匹配 member dot, member index, function call
     bool tryNext = true;
-    while (tryNext && _error == PE_OK) {
+    while (tryNext) {
         switch (_curToken.type) {
-            case TK_OPEN_BRACKET:
+            case TK_OPEN_BRACKET: {
                 // Member index expression
-                writePrevInstruction(prevOp, prevStringIdx, identifier, instructions);
-                prevOp = OP_PUSH_MEMBER_INDEX;
-
                 _readToken();
-                _expectExpression(instructions, PRED_NONE, true);
+                expr = PoolNew(_pool, JsExprMemberIndex)(expr, _expectMultipleExpression());
                 _expectToken(TK_CLOSE_BRACKET);
                 break;
-
+            }
             case TK_OPTIONAL_DOT: {
                // Optional member dot expression
                _readToken();
                if (_curToken.type == TK_NAME || isKeyword(_curToken.type)) {
-                   int stringIdx = _getStringIndex(_curToken);
-
-                   writePrevInstruction(prevOp, prevStringIdx, identifier, instructions);
-                   prevOp = OP_PUSH_MEMBER_DOT_OPTIONAL;
-                   prevStringIdx = stringIdx;
+                   expr = PoolNew(_pool, JsExprMemberDot)(expr, _getStringIndex(_curToken), true);
+                   _readToken();
                } else {
                    _expectToken(TK_NAME);
                }
@@ -957,12 +883,8 @@ void JSParser::_expectExpression(InstructionOutputStream &instructions, Preceden
                 // Member dot expression
                 _readToken();
                 if (_curToken.type == TK_NAME || isKeyword(_curToken.type)) {
-                    int stringIdx = _getStringIndex(_curToken);
+                    expr = PoolNew(_pool, JsExprMemberDot)(expr, _getStringIndex(_curToken));
                     _readToken();
-
-                    writePrevInstruction(prevOp, prevStringIdx, identifier, instructions);
-                    prevOp = OP_PUSH_MEMBER_DOT;
-                    prevStringIdx = stringIdx;
                 } else {
                     _expectToken(TK_NAME);
                 }
@@ -971,356 +893,237 @@ void JSParser::_expectExpression(InstructionOutputStream &instructions, Preceden
             case TK_OPEN_PAREN: {
                 // Arguments expression
                 if (pred >= PRED_POSTFIX) {
-                    writePrevInstruction(prevOp, prevStringIdx, identifier, instructions);
-                    return;
+                    return expr;
                 }
 
-                if (prevOp == OP_PUSH_IDENTIFIER) {
-                    // 函数调用
-                    identifier->isUsedNotAsFunctionCall = false;
-                    auto push = instructions.writeFunctionCallPush(identifier);
-                    int countArgs = _expectArgumentsList(instructions);
-                    instructions.writeFunctionCall(push);
-                    instructions.writeUint16((uint16_t)countArgs);
-                } else {
-                    auto op = writePrevInstructionFunctionCall(prevOp, prevStringIdx, identifier, instructions);
-
-                    int countArgs = _expectArgumentsList(instructions);
-
-                    instructions.writeOpCode(op);
-                    instructions.writeUint16((uint16_t)countArgs);
+                if (expr->type == NT_IDENTIFIER && ((JsExprIdentifier *)expr)->name.equal(NAME_EVAL)) {
+                    _curScope->setHasEval();
                 }
 
-                prevOp = OP_INVALID;
+                auto funcCall = PoolNew(_pool, JsExprFunctionCall)(expr);
+                _expectArgumentsList(funcCall->args);
+                expr = funcCall;
                 break;
             }
             case TK_TEMPLATE_NO_SUBSTITUTION: {
                 if (pred >= PRED_POSTFIX) {
-                    writePrevInstruction(prevOp, prevStringIdx, identifier, instructions);
-                    return;
+                    return expr;
                 }
 
-                auto op = writePrevInstructionFunctionCall(prevOp, prevStringIdx, identifier, instructions);
-
-                instructions.writeOpCode(OP_PREPARE_RAW_STRING_TEMPLATE_CALL);
                 VecInts indices;
                 indices.push_back(_getStringIndex(_curToken));
                 indices.push_back(_getStringIndex(_escapeString(tokenToSizedString(_curToken))));
-                instructions.writeUint16(_getRawStringsIndex(indices));
-                instructions.writeUint16(0); // Count of expr values.
 
-                instructions.writeOpCode(op);
-
-                prevOp = OP_INVALID;
+                expr = PoolNew(_pool, JsExprTemplateFunctionCall)(expr, _getRawStringsIndex(indices));
                 break;
             }
             case TK_TEMPLATE_HEAD: {
                 if (pred >= PRED_POSTFIX) {
-                    writePrevInstruction(prevOp, prevStringIdx, identifier, instructions);
-                    return;
+                    return expr;
                 }
 
-                auto op = writePrevInstructionFunctionCall(prevOp, prevStringIdx, identifier, instructions);
-
-                VecInts indices;
-                int countValues = _expectRawTemplateCall(instructions, indices);
-
-                instructions.writeOpCode(OP_PREPARE_RAW_STRING_TEMPLATE_CALL);
-                instructions.writeUint16(_getRawStringsIndex(indices));
-                instructions.writeUint16(countValues); // Count of expr values.
-
-                instructions.writeOpCode(op);
-
-                prevOp = OP_INVALID;
+                expr = _expectRawTemplateCall(expr);
                 break;
             }
             default:
                 tryNext = false;
                 break;
-        }
-    }
-
-    if (_curToken.type == TK_POSTFIX) {
-        // Postfix expression
-        if (pred >= PRED_POSTFIX) {
-            writePrevInstruction(prevOp, prevStringIdx, identifier, instructions);
-            return;
-        }
-
-        if (prevOp == OP_PUSH_IDENTIFIER) {
-            if (_curToken.buf[0] == '+') {
-                instructions.writeOpCode(OP_INCREMENT_ID_POST);
-            } else {
-                instructions.writeOpCode(OP_DECREMENT_ID_POST);
-            }
-            assert(identifier);
-            instructions.writeIdentifierAddress(identifier);
-        } else if (prevOp == OP_PUSH_MEMBER_INDEX) {
-            if (_curToken.buf[0] == '+') {
-                instructions.writeOpCode(OP_INCREMENT_MEMBER_INDEX_POST);
-            } else {
-                instructions.writeOpCode(OP_DECREMENT_MEMBER_INDEX_POST);
-            }
-        } else if (prevOp == OP_PUSH_MEMBER_DOT || prevOp == OP_PUSH_MEMBER_DOT_OPTIONAL) {
-            if (_curToken.buf[0] == '+') {
-                instructions.writeOpCode(OP_INCREMENT_MEMBER_DOT_POST);
-            } else {
-                instructions.writeOpCode(OP_DECREMENT_MEMBER_DOT_POST);
-            }
-            instructions.writeUint32(prevStringIdx);
-        } else {
-            assert(prevOp == OP_INVALID);
-        }
-
-        _readToken();
-    }
-
-    if (upsStatus != UPS_NONE) {
-        // Now handle prefix expression
-        if (prevOp == OP_INVALID) {
-            _parseError(PE_INVALID_LEFT_HAND_EXPR, "Invalid left-hand side expression in prefix operation");
-            return;
-        }
-
-        if (prevOp == OP_PUSH_IDENTIFIER) {
-            if (upsStatus == UPS_INCREAMENT) {
-                instructions.writeOpCode(OP_INCREMENT_ID_PRE);
-            } else {
-                instructions.writeOpCode(OP_DECREMENT_ID_PRE);
-            }
-            assert(identifier);
-            instructions.writeIdentifierAddress(identifier);
-        } else if (prevOp == OP_PUSH_MEMBER_INDEX) {
-            if (upsStatus == UPS_INCREAMENT) {
-                instructions.writeOpCode(OP_INCREMENT_MEMBER_INDEX_PRE);
-            } else {
-                instructions.writeOpCode(OP_DECREMENT_MEMBER_INDEX_PRE);
-            }
-        } else if (prevOp == OP_PUSH_MEMBER_DOT || prevOp == OP_PUSH_MEMBER_DOT_OPTIONAL) {
-            if (upsStatus == UPS_INCREAMENT) {
-                instructions.writeOpCode(OP_INCREMENT_MEMBER_DOT_PRE);
-            } else {
-                instructions.writeOpCode(OP_DECREMENT_MEMBER_DOT_PRE);
-            }
-            instructions.writeUint32(prevStringIdx);
-        } else {
-            assert(prevOp == OP_INVALID);
         }
     }
 
     switch (_curToken.type) {
-        case TK_ASSIGN: {
-            if (pred > PRED_ASSIGNMENT) {
-                writePrevInstruction(prevOp, prevStringIdx, identifier, instructions);
-                return;
+        case TK_POSTFIX: {
+            // Postfix expression
+            if (pred >= PRED_POSTFIX) {
+                return expr;
             }
 
-            if (prevOp == OP_INVALID || upsStatus != UPS_NONE) {
-                _parseError(PE_INVALID_LEFT_HAND_EXPR, "Invalid left-hand side in assignment");
-                return;
+            expr = PoolNew(_pool, JsExprPostfix)(expr, _curToken.buf[0] == '+');
+            _readToken();
+            break;
+        }
+        case TK_ASSIGN: {
+            if (pred > PRED_ASSIGNMENT) {
+                return expr;
             }
 
             _readToken();
-            _expectExpression(instructions, PRED_ASSIGNMENT, false);
-
-            if (prevOp == OP_PUSH_IDENTIFIER) {
-                instructions.writeOpCode(OP_ASSIGN_IDENTIFIER);
-                assert(identifier);
-                instructions.writeIdentifierAddress(identifier);
-            } else if (prevOp == OP_PUSH_MEMBER_INDEX) {
-                instructions.writeOpCode(OP_ASSIGN_MEMBER_INDEX);
-            } else if (prevOp == OP_PUSH_MEMBER_DOT || prevOp == OP_PUSH_MEMBER_DOT_OPTIONAL) {
-                instructions.writeOpCode(OP_ASSIGN_MEMBER_DOT);
-                instructions.writeUint32(prevStringIdx);
-            } else {
-                assert(prevOp == OP_INVALID);
-            }
+            expr = PoolNew(_pool, JsExprAssign)(expr, _expectExpression(PRED_ASSIGNMENT));
             break;
         }
         case TK_ASSIGN_X: {
             if (pred > PRED_ASSIGNMENT) {
-                writePrevInstruction(prevOp, prevStringIdx, identifier, instructions);
-                return;
-            }
-
-            if (prevOp == OP_INVALID || upsStatus != UPS_NONE) {
-                _parseError(PE_INVALID_LEFT_HAND_EXPR, "Invalid left-hand side in assignment");
-                return;
+                return expr;
             }
 
             auto opr = _curToken.opr;
-
-            // 将 left += right 转换为 left = left + right
-            // push left
-            writePrevInstruction(prevOp, prevStringIdx, identifier, instructions);
-
             _readToken();
-            _expectExpression(instructions, PRED_ASSIGNMENT, false);
-
-            // binary operator
-            instructions.writeUint8(opr);
-
-            // assign
-            if (prevOp == OP_PUSH_IDENTIFIER) {
-                instructions.writeOpCode(OP_ASSIGN_IDENTIFIER);
-                assert(identifier);
-                instructions.writeIdentifierAddress(identifier);
-            } else if (prevOp == OP_PUSH_MEMBER_INDEX) {
-                instructions.writeOpCode(OP_ASSIGN_MEMBER_INDEX);
-            } else if (prevOp == OP_PUSH_MEMBER_DOT || prevOp == OP_PUSH_MEMBER_DOT_OPTIONAL) {
-                instructions.writeOpCode(OP_ASSIGN_MEMBER_DOT);
-            } else {
-                assert(prevOp == OP_INVALID);
-            }
+            expr = PoolNew(_pool, JsExprAssignX)(expr, _expectExpression(PRED_ASSIGNMENT), opr);
             break;
         }
         default:
-            writePrevInstruction(prevOp, prevStringIdx, identifier, instructions);
             break;
     }
 
-    tryNext = true;
-    while (tryNext && _error == PE_OK) {
+    while (true) {
         switch (_curToken.type) {
             case TK_CONDITIONAL: {
                 if (pred >= PRED_ADD)
-                    return;
-                _expectExpression(instructions, PRED_NONE, false);
+                    return expr;
+                _readToken();
+                auto exprTrue = _expectExpression();
                 _expectToken(TK_COLON);
-                _expectExpression(instructions, PRED_NONE, false);
-                instructions.writeOpCode(OP_CONDITIONAL);
+                auto exprFalse = _expectExpression();
+                expr = PoolNew(_pool, JsExprConditional)(expr, exprTrue, exprFalse);
                 break;
             }
             case TK_NULLISH: {
                 if (pred >= PRED_NULLISH)
-                    return;
-                _expectExpression(instructions, PRED_NULLISH, false);
-                instructions.writeOpCode(OP_NULLISH);
+                    return expr;
+                _readToken();
+                expr = PoolNew(_pool, JsExprNullish)(expr, _expectExpression(PRED_NULLISH));
                 break;
             }
             case TK_LOGICAL_OR: {
                 if (pred >= PRED_LOGICAL_OR)
-                    return;
-                _expectExpression(instructions, PRED_LOGICAL_OR, false);
-                instructions.writeOpCode(OP_LOGICAL_OR);
+                    return expr;
+                _readToken();
+                expr = PoolNew(_pool, JsExprLogicalOr)(expr, _expectExpression(PRED_LOGICAL_OR));
                 break;
             }
             case TK_LOGICAL_AND: {
                 if (pred >= PRED_LOGICAL_AND)
-                    return;
-                _expectExpression(instructions, PRED_LOGICAL_AND, false);
-                instructions.writeOpCode(OP_LOGICAL_AND);
+                    return expr;
+                _readToken();
+                expr = PoolNew(_pool, JsExprLogicalAnd)(expr, _expectExpression(PRED_LOGICAL_AND));
                 break;
             }
             case TK_BIT_OR: {
                 if (pred >= PRED_BIT_OR)
-                    return;
-                _expectExpression(instructions, PRED_BIT_OR, false);
-                instructions.writeOpCode(OP_BIT_OR);
+                    return expr;
+                _readToken();
+                expr = PoolNew(_pool, JsExprBinaryOp)(expr, _expectExpression(PRED_BIT_OR), OP_BIT_OR);
                 break;
             }
             case TK_BIT_XOR: {
                 if (pred >= PRED_BIT_XOR)
-                    return;
-                _expectExpression(instructions, PRED_BIT_XOR, false);
-                instructions.writeOpCode(OP_BIT_XOR);
+                    return expr;
+                _readToken();
+                expr = PoolNew(_pool, JsExprBinaryOp)(expr, _expectExpression(PRED_BIT_XOR), OP_BIT_XOR);
                 break;
             }
             case TK_BIT_AND: {
                 if (pred >= PRED_BIT_AND)
-                    return;
-                _expectExpression(instructions, PRED_BIT_AND, false);
-                instructions.writeOpCode(OP_BIT_AND);
+                    return expr;
+                _readToken();
+                expr = PoolNew(_pool, JsExprBinaryOp)(expr, _expectExpression(PRED_BIT_AND), OP_BIT_AND);
                 break;
             }
             case TK_EQUALITY: {
                 if (pred >= PRED_EQUALITY)
-                    return;
+                    return expr;
                 auto opcode = _curToken.opr;
-                _expectExpression(instructions, PRED_EQUALITY, false);
-                instructions.writeUint8(opcode);
+                _readToken();
+                expr = PoolNew(_pool, JsExprBinaryOp)(expr, _expectExpression(PRED_EQUALITY), opcode);
                 break;
             }
             case TK_RATIONAL: {
                 if (pred >= PRED_RATIONAL)
-                    return;
+                    return expr;
                 auto opcode = _curToken.opr;
-                _expectExpression(instructions, PRED_RATIONAL, false);
-                instructions.writeUint8(opcode);
+                _readToken();
+                expr = PoolNew(_pool, JsExprBinaryOp)(expr, _expectExpression(PRED_RATIONAL), opcode);
                 break;
             }
             case TK_IN:
                 if (pred >= PRED_RATIONAL || !enableIn)
-                    return;
-                _expectExpression(instructions, PRED_RATIONAL, false);
-                instructions.writeOpCode(OP_IN);
+                    return expr;
+                _readToken();
+                expr = PoolNew(_pool, JsExprBinaryOp)(expr, _expectExpression(PRED_RATIONAL), OP_IN);
                 break;
 
             case TK_INSTANCEOF:
                 if (pred >= PRED_RATIONAL || !enableIn)
-                    return;
-                _expectExpression(instructions, PRED_RATIONAL, false);
-                instructions.writeOpCode(OP_INSTANCE_OF);
+                    return expr;
+                _readToken();
+                expr = PoolNew(_pool, JsExprBinaryOp)(expr, _expectExpression(PRED_RATIONAL), OP_INSTANCE_OF);
                 break;
 
             case TK_SHIFT: {
                 if (pred >= PRED_SHIFT)
-                    return;
+                    return expr;
                 auto opcode = _curToken.opr;
-                _expectExpression(instructions, PRED_SHIFT, false);
-                instructions.writeUint8(opcode);
+                _readToken();
+                expr = PoolNew(_pool, JsExprBinaryOp)(expr, _expectExpression(PRED_SHIFT), opcode);
                 break;
             }
             case TK_ADD: {
                 if (pred >= PRED_ADD)
-                    return;
+                    return expr;
                 auto opcode = _curToken.opr;
                 _readToken();
-                _expectExpression(instructions, PRED_ADD, false);
-                instructions.writeUint8(opcode);
+                expr = PoolNew(_pool, JsExprBinaryOp)(expr, _expectExpression(PRED_ADD), opcode);
                 break;
             }
             case TK_MUL: {
                 if (pred >= PRED_MUL)
-                    return;
+                    return expr;
                 auto opcode = _curToken.opr;
-                _expectExpression(instructions, PRED_MUL, false);
-                instructions.writeUint8(opcode);
+                _readToken();
+                expr = PoolNew(_pool, JsExprBinaryOp)(expr, _expectExpression(PRED_MUL), opcode);
                 break;
             }
             case TK_EXP: {
                 if (pred >= PRED_EXP)
-                    return;
-                _expectExpression(instructions, PRED_EXP, false);
-                instructions.writeOpCode(OP_EXP);
+                    return expr;
+                _readToken();
+                expr = PoolNew(_pool, JsExprBinaryOp)(expr, _expectExpression(PRED_EXP), OP_EXP);
                 break;
             }
-                //                    TK_UNARY,
-
-
             default:
-                tryNext = false;
-                break;
+                return expr;
         }
     }
+}
 
-    while (enableComma && _curToken.type == TK_COMMA && _error == PE_OK) {
-        _readToken();
-        _expectExpression(instructions, PRED_NONE, false);
+IJsNode *JSParser::_expectMultipleExpression(bool enableIn) {
+    auto e = _expectExpression(PRED_NONE, enableIn);
+    if (_curToken.type != TK_COMMA) {
+        return e;
     }
+
+    auto expr = PoolNew(_pool, JsCommaExprs)();
+    expr->push(e);
+
+    do {
+        _readToken();
+        expr->push(_expectExpression(PRED_NONE, enableIn));
+    } while (_curToken.type == TK_COMMA);
+
+    return expr;
 }
 
-void JSParser::_expectParenCondition() {
+IJsNode *JSParser::_expectParenCondition() {
+    _expectToken(TK_OPEN_PAREN);
+
+    auto expr = _expectMultipleExpression();
+
+    _expectToken(TK_CLOSE_PAREN);
+
+    return expr;
 }
 
-int JSParser::_expectRawTemplateCall(InstructionOutputStream &instructions, VecInts &indices) {
+IJsNode *JSParser::_expectRawTemplateCall(IJsNode *func) {
+    VecInts indices;
+
     indices.push_back(_getStringIndex(_curToken));
     indices.push_back(_getStringIndex(_escapeString(tokenToSizedString(_curToken))));
 
-    int count = 0;
-    while (_error == PE_OK) {
-        _expectExpression(instructions, PRED_NONE, true);
-        count++;
+    auto rawStringIdx = _getRawStringsIndex(indices);
+    auto expr = PoolNew(_pool, JsExprTemplateFunctionCall)(func, rawStringIdx);
+
+    while (true) {
+        expr->args.push_back(_expectMultipleExpression());
 
         if (_curToken.type != TK_CLOSE_BRACE) {
             _expectToken(TK_CLOSE_BRACE);
@@ -1339,23 +1142,28 @@ int JSParser::_expectRawTemplateCall(InstructionOutputStream &instructions, VecI
         _expectToken(TK_TEMPLATE_MIDDLE);
     }
 
-    return count;
+    _v2Ints[rawStringIdx] = indices;
+
+    return expr;
 }
 
-void JSParser::_expectArrowFunction(InstructionOutputStream &instructions) {
-
+IJsNode *JSParser::_expectArrowFunction(IJsNode *parenExpr) {
+    assert(0);
+    return nullptr;
 }
 
-void JSParser::_expectParenExpression(InstructionOutputStream &instructions) {
-
+IJsNode *JSParser::_expectParenExpression() {
+    assert(0);
+    return nullptr;
 }
 
-void JSParser::_expectObjectLiteralExpression(InstructionOutputStream &instructions) {
+IJsNode *JSParser::_expectObjectLiteralExpression() {
     _expectToken(TK_OPEN_BRACE);
     bool first = true;
 
-    instructions.writeOpCode(OP_OBJ_CREATE);
-    while (_error == PE_OK && _curToken.type != TK_CLOSE_BRACE) {
+    auto obj = PoolNew(_pool, JsExprObject)();
+
+    while (_curToken.type != TK_CLOSE_BRACE) {
         if (first) {
             first = false;
         } else {
@@ -1369,70 +1177,77 @@ void JSParser::_expectObjectLiteralExpression(InstructionOutputStream &instructi
         auto name = _curToken;
         _peekToken();
 
-        if (_curToken == "async" && _nextToken.type == TK_NAME) {
+        if (isTokenNameEqual(_curToken, NAME_ASYNC)) {
             // async function
             _readToken();
             auto nameIdx = _getStringIndex(_curToken);
-            auto child = _expectFunction(instructions, FT_MEMBER_FUNCTION);
-            child->isAsync = true;
-            instructions.writeOpCode(OP_OBJ_SET_PROPERTY);
-            instructions.writeUint32(nameIdx);
+            auto expr = _expectFunctionExpression(FT_MEMBER_FUNCTION | FT_ASYNC);
+
+            obj->push(PoolNew(_pool, JsObjectProperty)(nameIdx, expr));
         } else if (type == TK_NAME && (_nextToken.type != TK_COLON && _nextToken.type != TK_OPEN_PAREN) && (name == "get" || name == "set")) {
             // getter, setter
             if (!canTokenBeMemberName(_nextToken.type)) {
                 _parseError(PE_SYNTAX_ERROR, "Unexpected token: %.*s", _curToken.len, _curToken.buf);
-                return;
+                return nullptr;
             }
+
             auto nameIdx = _getStringIndex(_nextToken);
             _readToken();
+
             if (name == "get") {
-                _expectFunction(instructions, FT_GETTER);
-                instructions.writeOpCode(OP_OBJ_SET_GETTER);
+                auto expr = _expectFunctionExpression(FT_GETTER);
+                obj->push(PoolNew(_pool, JsObjectPropertyGetter)(nameIdx, expr));
             } else {
-                _expectFunction(instructions, FT_SETTER);
-                instructions.writeOpCode(OP_OBJ_SET_SETTER);
+                auto expr = _expectFunctionExpression(FT_SETTER);
+                obj->push(PoolNew(_pool, JsObjectPropertySetter)(nameIdx, expr));
             }
-            instructions.writeUint32(nameIdx);
         } else if (type == TK_NAME && (_nextToken.type == TK_COMMA || _nextToken.type == TK_CLOSE_BRACE)) {
             // name,
-            auto id = _newIdentifierRef(_curToken, _curFunction);
-            instructions.writePushIdentifier(id);
-            instructions.writeOpCode(OP_OBJ_SET_PROPERTY);
-            instructions.writeUint32(_getStringIndex(id->name));
+            auto nameIdx = _getStringIndex(_curToken);
+            auto expr = _newExprIdentifier(_curToken);
+            _readToken();
+
+            if (_curToken.type == TK_ASSIGN) {
+                // { x=y } 这种形式
+                auto value = _expectExpression();
+                obj->push(PoolNew(_pool, JsObjectPropertyShortInit)(nameIdx, expr, value));
+            } else {
+                obj->push(PoolNew(_pool, JsObjectProperty)(nameIdx, expr));
+            }
+
+            _readToken();
         } else if (type == TK_ELLIPSIS) {
             // ...expr
             _readToken();
-            _expectExpression(instructions, PRED_NONE);
-            instructions.writeOpCode(OP_OBJ_SPREAD_PROPERTY);
+            auto expr = _expectExpression();
+            obj->push(PoolNew(_pool, JsObjectPropertySpread)(expr));
         } else if (type == TK_MUL) {
             // * generator function
-            Function *child = nullptr;
             _readToken();
             if (_curToken.type == TK_OPEN_BRACKET) {
                 // [ expr ]
                 _readToken();
-                _expectExpression(instructions, PRED_NONE, true);
+                auto name = _expectMultipleExpression();
                 _expectToken(TK_CLOSE_BRACKET);
-                child = _expectFunction(instructions, FT_MEMBER_FUNCTION);
-                instructions.writeOpCode(OP_OBJ_SET_COMPUTED_PROPERTY);
+                auto value = _expectFunctionExpression(FT_MEMBER_FUNCTION | FT_GENERATOR);
+                obj->push(PoolNew(_pool, JsObjectPropertyComputed)(name, value));
             } else {
                 auto nameIdx = _getStringIndex(_curToken);
-                child = _expectFunction(instructions, FT_MEMBER_FUNCTION);
-                instructions.writeOpCode(OP_OBJ_SET_PROPERTY);
-                instructions.writeUint32(nameIdx);
+                auto expr = _expectFunctionExpression(FT_MEMBER_FUNCTION | FT_GENERATOR);
+                obj->push(PoolNew(_pool, JsObjectProperty)(nameIdx, expr));
             }
-            child->isGenerator = true;
         } else {
+            IJsNode *name = nullptr, *value = nullptr;
             int nameIdx = -1;
             if (type == TK_OPEN_BRACKET) {
                 // [ expr ]
                 _readToken();
-                _expectExpression(instructions, PRED_NONE, true);
+                name = _expectMultipleExpression();
                 _expectToken(TK_CLOSE_BRACKET);
             } else {
                 if (!canTokenBeMemberName(type)) {
                     _parseError(PE_SYNTAX_ERROR, "Unexpected token: %.*s", _curToken.len, _curToken.buf);
-                    return;
+                    return nullptr;
                 }
                 nameIdx = _getStringIndex(_curToken);
                 _readToken();
@@ -1440,30 +1255,35 @@ void JSParser::_expectObjectLiteralExpression(InstructionOutputStream &instructi
 
             if (_curToken.type == TK_OPEN_PAREN) {
                 // 函数
-                _expectFunction(instructions, FT_MEMBER_FUNCTION, false);
+                value = _expectFunctionExpression(FT_MEMBER_FUNCTION, false);
             } else {
                 _expectToken(TK_COLON);
-                _expectExpression(instructions, PRED_NONE);
+                value = _expectExpression();
             }
 
-            if (nameIdx == -1) {
-                instructions.writeOpCode(OP_OBJ_SET_COMPUTED_PROPERTY);
+            if (name) {
+                obj->push(PoolNew(_pool, JsObjectPropertyComputed)(name, value));
             } else {
-                instructions.writeOpCode(OP_OBJ_SET_PROPERTY);
-                instructions.writeUint32(nameIdx);
+                obj->push(PoolNew(_pool, JsObjectProperty)(nameIdx, value));
             }
         }
     }
 
     _expectToken(TK_CLOSE_BRACE);
+
+    _checkingExprObjs.push_back(obj);
+
+    return obj;
 }
 
-void JSParser::_expectArrayLiteralExpression(InstructionOutputStream &instructions) {
+IJsNode *JSParser::_expectArrayLiteralExpression() {
     _expectToken(TK_OPEN_BRACKET);
-    bool first = true;
 
-    instructions.writeOpCode(OP_ARRAY_CREATE);
-    while (_error == PE_OK && _curToken.type != TK_CLOSE_BRACKET) {
+    bool first = true;
+    auto *arr = PoolNew(_pool, JsExprArray);
+    int index = 0;
+
+    while (_curToken.type != TK_CLOSE_BRACKET) {
         if (first) {
             first = false;
         } else {
@@ -1476,92 +1296,32 @@ void JSParser::_expectArrayLiteralExpression(InstructionOutputStream &instructio
         auto type = _curToken.type;
         if (type == TK_ELLIPSIS) {
             _readToken();
-            _expectExpression(instructions, PRED_NONE);
-            instructions.writeOpCode(OP_ARRAY_SPREAD_VALUE);
+            arr->push(PoolNew(_pool, JsExprArrayItemSpread)(_expectExpression()));
         } else if (type == TK_COMMA) {
             _readToken();
-            instructions.writeOpCode(OP_ARRAY_PUSH_UNDEFINED_VALUE);
+            arr->push(PoolNew(_pool, JsExprArrayItemEmpty));
         } else {
-            _expectExpression(instructions, PRED_NONE);
-            instructions.writeOpCode(OP_ARRAY_PUSH_VALUE);
+            arr->push(PoolNew(_pool, JsExprArrayItem)(_expectExpression()));
         }
+        index++;
     }
 
     _expectToken(TK_CLOSE_BRACKET);
+
+    return arr;
 }
 
-IdentifierRef *JSParser::_newIdentifierRef(const Token &token, Function *function) {
-    auto ret = PoolNew(_resPool->pool, IdentifierRef)(token, _curScope);
+JsExprIdentifier *JSParser::_newExprIdentifier(const Token &token) {
+    auto ret = PoolNew(_resPool->pool, JsExprIdentifier)(token, _curScope);
     ret->isUsedNotAsFunctionCall = true;
     ret->next = _headIdRefs;
     _headIdRefs = ret;
     return ret;
 }
 
-/**
- * 预测接下来括号中的内容，以及之后的是否为 Arrow function
- */
-bool JSParser::_isArrowFunction() {
-    auto bk_bufPos = _bufPos;
-    auto bk_line = _line, bk_col = _col;
-    auto bk_newLineBefore = _newLineBefore;
-    auto bk_prevTokenType = _prevTokenType;
-    auto bk_curToken = _curToken;
-
-    bool isArrowFunction = true;
-
-    _readToken();
-    bool first = true;
-    while (_curToken.type != TK_CLOSE_PAREN && _error == PE_OK) {
-        if (first)
-            first = false;
-        else
-            _expectToken(TK_COMMA);
-
-        if (_curToken.type == TK_NAME || canKeywordBeVarName(_curToken.type)) {
-            _readToken();
-
-            if (_curToken.type == TK_ASSIGN) {
-                // 忽略 '=' 后的内容.
-                _readToken();
-                _ignoreExpression();
-            }
-        } else {
-            isArrowFunction = false;
-            break;
-        }
-    }
-
-    if (isArrowFunction) {
-        _readToken();
-        isArrowFunction = _curToken.type == TK_ARROW;
-    }
-
-    _bufPos = bk_bufPos;
-    _line = bk_line;
-    _col = bk_col;
-    _newLineBefore = bk_newLineBefore;
-    _prevTokenType = bk_prevTokenType;
-    _curToken = bk_curToken;
-
-    return isArrowFunction;
-}
-
-void JSParser::_ignoreExpression() {
-    int matches = 0;
-    while (_curToken.type != TK_COMMA && matches == 0 && _error == PE_OK) {
-        _readToken();
-        if (_curToken.type == TK_OPEN_PAREN || _curToken.type == TK_OPEN_BRACKET ||
-            _curToken.type == TK_OPEN_BRACE || _curToken.type == TK_TEMPLATE_HEAD || _curToken.type == TK_TEMPLATE_MIDDLE) {
-            matches++;
-        } else if (_curToken.type == TK_CLOSE_PAREN || _curToken.type == TK_CLOSE_BRACE || _curToken.type == TK_CLOSE_BRACKET) {
-            matches--;
-        }
-    }
-}
-
 void _reduceScopeLevels(Scope *scope, Scope *validParent) {
     scope->parent = validParent;
+    scope->depth = validParent->depth + 1;
 
     if (scope->sibling) {
         _reduceScopeLevels(scope->sibling, validParent);
@@ -1574,7 +1334,7 @@ void _reduceScopeLevels(Scope *scope, Scope *validParent) {
     }
 
     if (scope->child) {
-        if (!scope->varDeclares.empty()) {
+        if (!scope->varDeclares.empty() || scope->isFunctionScope) {
             validParent = scope;
         }
 
@@ -1592,10 +1352,6 @@ void JSParser::_reduceScopeLevels(Function *function) {
         auto child = function->scope->child;
         function->scope->child = nullptr;
         ::_reduceScopeLevels(child, function->scope);
-    }
-
-    for (auto f : function->functions) {
-        _reduceScopeLevels(f);
     }
 }
 
@@ -1619,7 +1375,7 @@ void JSParser::_relocateIdentifierInParentFunction(Function *codeBlock, Function
             auto id = functionScope->addVarDeclaration(token);
             item.second->varStorageType = id->varStorageType = storageType;
             item.second->storageIndex = id->storageIndex = functionScope->countLocalVars++;
-            item.second->scopeDepth = id->scopeDepth;
+            item.second->scope = id->scope;
         }
     }
 
@@ -1629,7 +1385,7 @@ void JSParser::_relocateIdentifierInParentFunction(Function *codeBlock, Function
     }
 }
 
-void JSParser::_buildIdentifierRefs() {
+void JSParser::_buildExprIdentifiers() {
     for (auto p = _headIdRefs; p; p = p->next) {
         p->scope->addVarReference(p);
     }
@@ -1652,7 +1408,7 @@ void JSParser::_allocateIdentifierStorage(Scope *scope, int registerIndex) {
                     declare->scope->isArgumentsUsed = true;
                 }
             } else if (declare->varStorageType == VST_ARGUMENT && declare->isFuncName) {
-                
+
             }
             continue;
         }
@@ -1792,8 +1548,6 @@ Function *JSParser::_enterFunction(const Token &tokenStart, bool isCodeBlock, bo
 void JSParser::_leaveFunction() {
     _curFunction->srcCode.len = uint32_t(_curToken.buf - _curFunction->srcCode.data);
 
-    _curFunction->instructions.finish();
-
     _curFunction = _stackFunctions.back(); _stackFunctions.pop_back();
 
     _curFuncScope = _stackScopes.back(); _stackScopes.pop_back();
@@ -1803,10 +1557,21 @@ void JSParser::_leaveFunction() {
 void JSParser::_enterScope() {
     _stackScopes.push_back(_curScope);
     _curScope = PoolNew(_resPool->pool, Scope)(_curFunction, _curScope);
-    _curFunction->instructions.writeEnterScope(_curScope);
+    // writer.writeEnterScope(_curScope);
 }
 
 void JSParser::_leaveScope() {
-    _curFunction->instructions.writeLeaveScope(_curScope);
+    // writer.writeLeaveScope(_curScope);
     _curScope = _stackScopes.back(); _stackScopes.pop_back();
+}
+
+void JSParser::checkExpressionObjects() {
+    if (!_checkingExprObjs.empty()) {
+        for (auto item : _checkingExprObjs) {
+            item->checkCanBeExpression();
+        }
+
+        // 检查过的都删除
+        _checkingExprObjs.clear();
+    }
 }

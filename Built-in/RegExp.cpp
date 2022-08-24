@@ -9,6 +9,7 @@
 
 
 void regExpConstructor(VMContext *ctx, const JsValue &thiz, const Arguments &args) {
+    ctx->retValue = JsUndefinedValue;
 }
 
 static JsLibProperty regExpFunctions[] = {
@@ -24,7 +25,7 @@ void regExpPrototypeToString(VMContext *ctx, const JsValue &thiz, const Argument
         return;
     }
 
-    ctx->stack.push_back(JsUndefinedValue);
+    ctx->retValue = JsUndefinedValue;
 }
 
 static JsLibProperty regExpPrototypeFunctions[] = {

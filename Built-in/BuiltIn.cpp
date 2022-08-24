@@ -24,6 +24,7 @@ void registerNumber(VMRuntimeCommon *rt);
 void registerRegExp(VMRuntimeCommon *rt);
 void registerString(VMRuntimeCommon *rt);
 void registerObject(VMRuntimeCommon *rt);
+void registerArray(VMRuntimeCommon *rt);
 void registerSymbol(VMRuntimeCommon *rt);
 void registerObjFunction(VMRuntimeCommon *rt);
 void registerErrorAPIs(VMRuntimeCommon *rt);
@@ -36,6 +37,7 @@ void registerBuiltIns(VMRuntimeCommon *rt) {
     registerRegExp(rt);
     registerString(rt);
     registerObject(rt);
+    registerArray(rt);
     registerSymbol(rt);
     registerObjFunction(rt);
     registerErrorAPIs(rt);

@@ -7,6 +7,7 @@
 
 #include "AST.hpp"
 #include "generated/ConstStrings.hpp"
+#include "Expression.hpp"
 
 
 const char *varStorageTypeToString(VarStorageType type) {
@@ -80,7 +81,7 @@ void Scope::dump(BinaryOutputStream &stream) {
     stream.write("Variables: \n");
     for (auto &item : varDeclares) {
         item.second->dump(os);
-        writeIndent(stream, os.startNew(), makeSizedString("  "));
+        writeIndent(stream, os.sizedStringStartNew(), makeSizedString("  "));
     }
     stream.write("\n");
 
@@ -100,7 +101,7 @@ void Scope::dump(BinaryOutputStream &stream) {
         // Dump 同一函数的 child
         stream.write("Child scope:\n");
         child->dump(os);
-        writeIndent(stream, os.startNew(), makeSizedString("  "));
+        writeIndent(stream, os.sizedStringStartNew(), makeSizedString("  "));
     }
 
     if (sibling) {
@@ -160,7 +161,7 @@ void Scope::addArgumentDeclaration(const Token &token, int index) {
 /**
  * 添加隐含的未声明的全局变量
  */
-void Scope::addImplicitVarDeclaration(IdentifierRef *id) {
+void Scope::addImplicitVarDeclaration(JsExprIdentifier *id) {
     assert(parent == nullptr);
 
     auto &pool = varDeclares.get_allocator().getPool();
@@ -203,7 +204,17 @@ void Scope::addFunctionDeclaration(const Token &name, Function *child) {
     functionDecls.push_back(child);
 }
 
-void Scope::addVarReference(IdentifierRef *id) {
+IdentifierDeclare *Scope::getVarDeclarationByIndex(int index) {
+    for (auto &item : varDeclares) {
+        if (item.second->storageIndex == index) {
+            return item.second;
+        }
+    }
+
+    return nullptr;
+}
+
+void Scope::addVarReference(JsExprIdentifier *id) {
     auto it = varDeclares.find(id->name);
     if (it == varDeclares.end()) {
         // 找不到
@@ -230,9 +241,6 @@ void Scope::addVarReference(IdentifierRef *id) {
         if (id->isModified) {
             if (declare->isConst) {
                 // TODO: 报告错误
-            } else if (declare->isFuncName) {
-                // 被修改的函数名，此函数需要在进入 scope 时，创建函数对象.
-                
             }
             declare->isModified |= true;
         }
@@ -256,7 +264,6 @@ IdentifierDeclare::IdentifierDeclare(const SizedString &name, Scope *scope) : na
     isUsedNotAsFunctionCall = 0;
 
     varStorageType = VST_NOT_SET;
-    scopeDepth = scope->depth;
     storageIndex = 0;
 }
 
@@ -272,23 +279,15 @@ void IdentifierDeclare::dump(BinaryOutputStream &stream) {
     if (isReferredByChild) stream.writeFormat("isReferredByChild:1, ");
 
     stream.writeFormat("VarStorageType:%s, ScopeDepth:%d, storageIndex:%d\n",
-                       varStorageTypeToString(varStorageType), scopeDepth, storageIndex);
+                       varStorageTypeToString(varStorageType), scope->depth, storageIndex);
     // JsValue                 constValue; // 当 isConst 为 true 时
 }
 
-IdentifierRef::IdentifierRef(const Token &token, Scope *scope) : scope(scope) {
-    name = tokenToSizedString(token);
-
-    isModified = false;
-    isUsedNotAsFunctionCall = false;
-    declare = nullptr;
-    next = nullptr;
-}
-
-Function::Function(ResourcePool *resourcePool, Scope *parent, uint16_t index, bool isCodeBlock, bool isArrowFunction) : instructions(resourcePool), index(index), resourcePool(resourcePool), isCodeBlock(isCodeBlock), isArrowFunction(isArrowFunction) {
+Function::Function(ResourcePool *resourcePool, Scope *parent, uint16_t index, bool isCodeBlock, bool isArrowFunction) : IJsNode(NT_FUNCTION), index(index), resourcePool(resourcePool), isCodeBlock(isCodeBlock), isArrowFunction(isArrowFunction) {
     scope = PoolNew(resourcePool->pool, Scope)(this, parent);
     scope->isFunctionScope = true;
 
+    params = nullptr;
     bytecode = nullptr;
     lenByteCode = 0;
     declare = nullptr;
@@ -304,7 +303,7 @@ Function::Function(ResourcePool *resourcePool, Scope *parent, uint16_t index, bo
 }
 
 void Function::generateByteCode() {
-    BinaryOutputStream stream;
+    ByteCodeStream stream;
 
     // 提前将不常用的初始化过程转换为 bytecode，以提高 bytecode 执行的性能
     if (!isCodeBlock) {
@@ -319,6 +318,10 @@ void Function::generateByteCode() {
         }
     }
 
+    if (params) {
+        params->convertToByteCode(stream);
+    }
+    
     if (!scope->functionDecls.empty()) {
         stream.writeUint8(OP_INIT_FUNCTION_TO_VARS);
     }
@@ -327,8 +330,10 @@ void Function::generateByteCode() {
         stream.writeUint8(OP_INIT_FUNCTION_TO_ARGS);
     }
 
-    instructions.convertToByteCode(stream);
-    auto data = stream.startNew();
+    for (auto item : astNodes) {
+        item->convertToByteCode(stream);
+    }
+    auto data = stream.sizedStringStartNew();
     bytecode = resourcePool->pool.duplicate(data.data, data.len);
     lenByteCode = (int)data.len;
 }
@@ -358,10 +363,9 @@ void Function::dump(BinaryOutputStream &stream) {
     if (isMemberFunction) stream.writeFormat("IsMemberFunction: %d\n", isMemberFunction);
 
     if (declare) {
-        stream.writeFormat("ID Declare: %s, %d, %d\n", varStorageTypeToString(declare->varStorageType), declare->scopeDepth, declare->storageIndex);
+        stream.writeFormat("ID Declare: %s, %d, %d\n", varStorageTypeToString(declare->varStorageType), declare->scope->depth, declare->storageIndex);
     }
-    
-    // stream.writeFormat("Instructions count: %d\n", instructions._instructions.size());
+
     stream.writeFormat("Scope count: %d\n", scopes.size());
     stream.writeFormat("Children functions count: %d\n", functions.size());
 
@@ -371,19 +375,18 @@ void Function::dump(BinaryOutputStream &stream) {
     stream.write("Children scopes:\n");
     BinaryOutputStream os;
     scope->dump(os);
-    writeIndent(stream, os.startNew(), makeSizedString("  "));
+    writeIndent(stream, os.sizedStringStartNew(), makeSizedString("  "));
 
     stream.write("\nChildren functions:\n");
     for (auto f : functions) {
         f->dump(os);
 
         stream.writeFormat("  ------- Child function: %d, %llx -------\n", f->index, f);
-        writeIndent(stream, os.startNew(), makeSizedString("  "));
+        writeIndent(stream, os.sizedStringStartNew(), makeSizedString("  "));
     }
 }
 
 ResourcePool::ResourcePool() {
-    _streamBuf = nullptr;
     index = 0;
     referIdx = 0;
 }
@@ -406,37 +409,4 @@ void ResourcePool::dump(BinaryOutputStream &stream) {
         stream.writeFormat("    %llf,\n", d);
     }
     stream.write("  ]\n");
-}
-
-StreamBuffer *ResourcePool::allocStreamBuffer() {
-    if (_streamBuf) {
-        auto p = _streamBuf;
-        _streamBuf = _streamBuf->next;
-        p->next = nullptr;
-        return p;
-    } else {
-        return newStreamBuffer();
-    }
-}
-
-void ResourcePool::freeStreamBuffer(StreamBuffer *buf) {
-    assert(buf->next == nullptr);
-    buf->next = _streamBuf;
-    _streamBuf = buf;
-}
-
-InstructionOutputStream *ResourcePool::allocInstructionOutputStream() {
-    auto stream = PoolNew(pool, InstructionOutputStream)(this);
-    return stream;
-}
-
-StreamBuffer *ResourcePool::newStreamBuffer() {
-    const int BUFF_SIZE = 1024 * 4;
-
-    auto buf = (StreamBuffer *)pool.allocate(BUFF_SIZE);
-    buf->next = nullptr;
-    buf->end = (uint8_t *)buf + BUFF_SIZE;
-    buf->pos = buf->last = (uint8_t *)buf + sizeof(StreamBuffer);
-
-    return buf;
 }
