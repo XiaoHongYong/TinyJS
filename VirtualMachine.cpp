@@ -33,9 +33,7 @@ void registerGlobalValue(VMContext *ctx, VMScope *globalScope, const char *strNa
 }
 
 void registerGlobalObject(VMContext *ctx, VMScope *globalScope, const char *strName, IJsObject *obj) {
-    auto idx = ctx->runtime->pushObjValue(obj);
-
-    registerGlobalValue(ctx, globalScope, strName, JsValue(JDT_OBJECT, idx));
+    registerGlobalValue(ctx, globalScope, strName, ctx->runtime->pushObjValue(JDT_OBJECT, obj));
 }
 
 uint32_t makeTryCatchPointFlags(Function *function, VMScope *scope) {
@@ -244,6 +242,7 @@ void JsVirtualMachine::callMember(VMContext *ctx, const JsValue &thiz, const JsV
 }
 
 JsValue JsVirtualMachine::getMemberDot(VMContext *ctx, const JsValue &thiz, const SizedString &prop) {
+    auto runtime = ctx->runtime;
     switch (thiz.type) {
         case JDT_NOT_INITIALIZED:
             ctx->throwException(PE_REFERECNE_ERROR, "Cannot access '?' before initialization");
@@ -254,22 +253,18 @@ JsValue JsVirtualMachine::getMemberDot(VMContext *ctx, const JsValue &thiz, cons
         case JDT_NULL:
             ctx->throwException(PE_TYPE_ERROR, "Cannot read properties of null (reading '%.*s')", (int)prop.len, prop.data);
         case JDT_BOOL:
-            return _runtimeCommon->objPrototypeBoolean->getByName(ctx, thiz, prop);
+            return runtime->objPrototypeBoolean->getByName(ctx, thiz, prop);
         case JDT_INT32:
-            return _runtimeCommon->objPrototypeNumber->getByName(ctx, thiz, prop);
+            return runtime->objPrototypeNumber->getByName(ctx, thiz, prop);
         case JDT_NUMBER:
-            return _runtimeCommon->objPrototypeNumber->getByName(ctx, thiz, prop);
+            return runtime->objPrototypeNumber->getByName(ctx, thiz, prop);
         case JDT_CHAR:
         case JDT_STRING:
-            return _runtimeCommon->objPrototypeString->getByName(ctx, thiz, prop);
+            return runtime->objPrototypeString->getByName(ctx, thiz, prop);
         case JDT_SYMBOL:
-            return _runtimeCommon->objPrototypeSymbol->getByName(ctx, thiz, prop);
-        case JDT_FUNCTION:
-            return _runtimeCommon->objPrototypeFunction->getByName(ctx, thiz, prop);
-        case JDT_ARRAY:
-            return _runtimeCommon->objPrototypeArray->getByName(ctx, thiz, prop);
+            return runtime->objPrototypeSymbol->getByName(ctx, thiz, prop);
         default: {
-            auto jsthiz = ctx->runtime->getObject(thiz);
+            auto jsthiz = runtime->getObject(thiz);
             return jsthiz->getByName(ctx, thiz, prop);
         }
     }
@@ -278,6 +273,7 @@ JsValue JsVirtualMachine::getMemberDot(VMContext *ctx, const JsValue &thiz, cons
 }
 
 void JsVirtualMachine::setMemberDot(VMContext *ctx, const JsValue &thiz, const SizedString &prop, const JsValue &value) {
+    auto runtime = ctx->runtime;
     switch (thiz.type) {
         case JDT_NOT_INITIALIZED:
             ctx->throwException(PE_REFERECNE_ERROR, "Cannot access '?' before initialization");
@@ -289,14 +285,16 @@ void JsVirtualMachine::setMemberDot(VMContext *ctx, const JsValue &thiz, const S
             ctx->throwException(PE_TYPE_ERROR, "Cannot set properties of null (setting '%.*s')", (int)prop.len, prop.data);
             break;
         case JDT_BOOL:
+            return runtime->objPrototypeBoolean->setByName(ctx, thiz, prop, value);
         case JDT_INT32:
+            return runtime->objPrototypeNumber->setByName(ctx, thiz, prop, value);
         case JDT_NUMBER:
+            return runtime->objPrototypeNumber->setByName(ctx, thiz, prop, value);
         case JDT_CHAR:
         case JDT_STRING:
-        case JDT_SYMBOL: {
-            // Primitive types' member cannot be set.
-            break;
-        }
+            return runtime->objPrototypeString->setByName(ctx, thiz, prop, value);
+        case JDT_SYMBOL:
+            return runtime->objPrototypeSymbol->setByName(ctx, thiz, prop, value);
         default: {
             auto jsthiz = ctx->runtime->getObject(thiz);
             jsthiz->setByName(ctx, thiz, prop, value);
@@ -306,6 +304,7 @@ void JsVirtualMachine::setMemberDot(VMContext *ctx, const JsValue &thiz, const S
 }
 
 JsValue JsVirtualMachine::getMemberIndex(VMContext *ctx, const JsValue &thiz, const JsValue &prop) {
+    auto runtime = ctx->runtime;
     switch (thiz.type) {
         case JDT_NOT_INITIALIZED:
             ctx->throwException(PE_REFERECNE_ERROR, "Cannot access '?' before initialization");
@@ -316,18 +315,18 @@ JsValue JsVirtualMachine::getMemberIndex(VMContext *ctx, const JsValue &thiz, co
         case JDT_NULL:
             ctx->throwException(PE_TYPE_ERROR, "Cannot read properties of null");
         case JDT_BOOL:
-            return _runtimeCommon->objPrototypeBoolean->get(ctx, thiz, prop);
+            return runtime->objPrototypeBoolean->get(ctx, thiz, prop);
         case JDT_INT32:
-            return _runtimeCommon->objPrototypeNumber->get(ctx, thiz, prop);
+            return runtime->objPrototypeNumber->get(ctx, thiz, prop);
         case JDT_NUMBER:
-            return _runtimeCommon->objPrototypeNumber->get(ctx, thiz, prop);
+            return runtime->objPrototypeNumber->get(ctx, thiz, prop);
         case JDT_CHAR:
         case JDT_STRING:
-            return _runtimeCommon->objPrototypeString->get(ctx, thiz, prop);
+            return runtime->objPrototypeString->get(ctx, thiz, prop);
         case JDT_SYMBOL:
-            return _runtimeCommon->objPrototypeSymbol->get(ctx, thiz, prop);
+            return runtime->objPrototypeSymbol->get(ctx, thiz, prop);
         default: {
-            auto jsthiz = ctx->runtime->getObject(thiz);
+            auto jsthiz = runtime->getObject(thiz);
             return jsthiz->get(ctx, thiz, prop);
         }
     }
@@ -425,23 +424,20 @@ void JsVirtualMachine::call(Function *function, VMContext *ctx, VecVMStackScopes
                 functionScope->vars[VAR_IDX_THIS] = thiz;
                 break;
             case OP_PREPARE_VAR_ARGUMENTS: {
-                auto idx = runtime->pushObjValue(new JsArguments(functionScope, &functionScope->args));
-                functionScope->vars[VAR_IDX_ARGUMENTS] = JsValue(JDT_OBJECT, idx);
+                functionScope->vars[VAR_IDX_ARGUMENTS] = runtime->pushObjValue(JDT_OBJECT, new JsArguments(functionScope, &functionScope->args));
                 break;
             }
             case OP_INIT_FUNCTION_TO_VARS: {
                 // 将根 scope 被引用到的函数添加到变量中
                 for (auto f : function->scope->functionDecls) {
-                    auto index = runtime->pushObjValue(new JsObjectFunction(stackScopes, f));
-                    functionScope->vars[f->declare->storageIndex] = JsValue(JDT_FUNCTION, index);
+                    functionScope->vars[f->declare->storageIndex] = runtime->pushObjValue(JDT_FUNCTION, new JsObjectFunction(stackScopes, f));
                 }
                 break;
             }
             case OP_INIT_FUNCTION_TO_ARGS: {
                 // 将根 scope 被引用到的函数添加到参数中
                 for (auto f : *function->scope->functionArgs) {
-                    auto index = runtime->pushObjValue(new JsObjectFunction(stackScopes, f));
-                    functionScope->args[f->declare->storageIndex] = JsValue(JDT_FUNCTION, index);
+                    functionScope->args[f->declare->storageIndex] = runtime->pushObjValue(JDT_FUNCTION, new JsObjectFunction(stackScopes, f));
                 }
                 break;
             }
@@ -630,8 +626,7 @@ void JsVirtualMachine::call(Function *function, VMContext *ctx, VecVMStackScopes
                 // 将当前 scope 的 functionDecls 添加到 functionScope 中
                 auto &childFuncs = childScope->functionDecls;
                 for (auto f : childFuncs) {
-                    auto index = runtime->pushObjValue(new JsObjectFunction(stackScopes, f));
-                    functionScope->vars[f->declare->storageIndex] = JsValue(JDT_FUNCTION, index);
+                    functionScope->vars[f->declare->storageIndex] = runtime->pushObjValue(JDT_FUNCTION, new JsObjectFunction(stackScopes, f));
                 }
 
                 if (childScope->hasWith || childScope->hasEval) {
@@ -748,10 +743,9 @@ void JsVirtualMachine::call(Function *function, VMContext *ctx, VecVMStackScopes
                 auto funcIdx = readUInt16(bytecode);
                 assert(scopeIdx < stackScopes.size());
                 auto scope = stackScopes[scopeIdx];
-                assert(funcIdx < scope->scopeDsc->functions.size());
-
-                auto index = runtime->pushObjValue(new JsObjectFunction(stackScopes, scope->scopeDsc->functions[funcIdx]));
-                stack.push_back(JsValue(JDT_FUNCTION, index));
+                assert(funcIdx < scope->scopeDsc->function->functions.size());
+                auto v = runtime->pushObjValue(JDT_FUNCTION, new JsObjectFunction(stackScopes, scope->scopeDsc->function->functions[funcIdx]));
+                stack.push_back(v);
                 break;
             }
             case OP_PUSH_MEMBER_INDEX: {
@@ -1134,8 +1128,7 @@ void JsVirtualMachine::call(Function *function, VMContext *ctx, VecVMStackScopes
                         }
 
                         auto prototype = obj->getByName(ctx, func, SS_PROTOTYPE);
-                        auto thizIdx = runtime->pushObjValue(new JsObject(prototype));
-                        auto thizVal = JsValue(JDT_OBJECT, thizIdx);
+                        auto thizVal = runtime->pushObjValue(JDT_OBJECT, new JsObject(prototype));
                         call(obj->function, ctx, obj->stackScopes, thizVal, args);
                         stack.resize(posStack);
                         stack.push_back(thizVal);
@@ -1151,47 +1144,61 @@ void JsVirtualMachine::call(Function *function, VMContext *ctx, VecVMStackScopes
                 break;
             }
             case OP_OBJ_CREATE: {
-                auto idx = runtime->pushObjValue(new JsObject());
-                stack.push_back(JsValue(JDT_OBJECT, idx));
+                stack.push_back(runtime->pushObjValue(JDT_OBJECT, new JsObject()));
                 break;
             }
             case OP_OBJ_SET_PROPERTY: {
                 auto nameIdx = readUInt32(bytecode);
-                auto value = stack.back();
-                auto &obj = stack[stack.size() - 2];
-                assert(obj.type >= JDT_OBJECT);
-                if (obj.type < JDT_OBJECT) {
-                    // Primitive 类型都不能设置属性
-                    stack.pop_back();
-                    break;
-                }
+                auto value = stack.back(); stack.pop_back();
+                auto obj = stack.back();
+                assert(obj.type == JDT_OBJECT);
                 auto pobj = runtime->getObject(obj);
-
                 auto name = runtime->getStringByIdx(nameIdx, resourcePool);
                 pobj->setByName(ctx, obj, name, value);
-
-                stack.pop_back();
                 break;
             }
             case OP_OBJ_SET_COMPUTED_PROPERTY: {
-                assert(0);
+                auto value = stack.back(); stack.pop_back();
+                auto name = stack.back(); stack.pop_back();
+                auto obj = stack.back();
+                assert(obj.type == JDT_OBJECT);
+                auto pobj = (JsObject *)runtime->getObject(obj);
+                pobj->set(ctx, obj, name, value);
                 break;
             }
             case OP_OBJ_SPREAD_PROPERTY: {
-                assert(0);
+                auto src = stack.back(); stack.pop_back();
+                auto obj = stack.back();
+                assert(obj.type == JDT_OBJECT);
+                runtime->extendObject(obj, src);
                 break;
             }
             case OP_OBJ_SET_GETTER: {
-                assert(0);
+                auto idx = readUInt32(bytecode);
+                auto value = stack.back(); stack.pop_back();
+                auto obj = stack.back();
+                assert(obj.type == JDT_OBJECT);
+                auto pobj = (JsObject *)runtime->getObject(obj);
+                auto name = runtime->getStringByIdx(idx, resourcePool);
+                JsProperty descriptor;
+                descriptor.isGetter = true;
+                descriptor.value = value;
+                pobj->definePropertyByName(ctx, name, descriptor, JsUndefinedValue);
                 break;
             }
             case OP_OBJ_SET_SETTER: {
-                assert(0);
+                auto idx = readUInt32(bytecode);
+                auto value = stack.back(); stack.pop_back();
+                auto obj = stack.back();
+                assert(obj.type == JDT_OBJECT);
+                auto pobj = (JsObject *)runtime->getObject(obj);
+                auto name = runtime->getStringByIdx(idx, resourcePool);
+                JsProperty descriptor;
+                pobj->definePropertyByName(ctx, name, descriptor, value);
                 break;
             }
             case OP_ARRAY_CREATE: {
-                auto idx = runtime->pushObjValue(new JsArray());
-                stack.push_back(JsValue(JDT_ARRAY, idx));
+                stack.push_back(runtime->pushObjValue(JDT_ARRAY, new JsArray()));
                 break;
             }
             case OP_ARRAY_SPREAD_VALUE: {

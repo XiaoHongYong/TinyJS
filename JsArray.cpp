@@ -177,7 +177,7 @@ JsValue JsArray::getByName(VMContext *ctx, const JsValue &thiz, const SizedStrin
         return _obj->getByName(ctx, thiz, prop);
     }
 
-    return JsUndefinedValue;
+    return ctx->runtime->objPrototypeArray->getByName(ctx, thiz, prop);
 }
 
 JsValue JsArray::getByIndex(VMContext *ctx, const JsValue &thiz, uint32_t index) {

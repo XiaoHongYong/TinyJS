@@ -45,14 +45,14 @@ public:
 };
 
 VMRuntimeCommon::VMRuntimeCommon() {
-    prototypeString = nullptr;
-    prototypeNumber = nullptr;
-    prototypeBoolean = nullptr;
-    prototypeRegex = nullptr;
-    prototypeSymbol = nullptr;
-    prototypeObject = nullptr;
-    prototypeArray = nullptr;
-    prototypeFunction = nullptr;
+    objPrototypeString = nullptr;
+    objPrototypeNumber = nullptr;
+    objPrototypeBoolean = nullptr;
+    objPrototypeSymbol = nullptr;
+    objPrototypeRegex = nullptr;
+    objPrototypeObject = nullptr;
+    objPrototypeArray = nullptr;
+    objPrototypeFunction = nullptr;
 
     countImmutableGlobalVars = 0;
     
@@ -120,8 +120,14 @@ void VMRuntimeCommon::setGlobalValue(const char *strName, const JsValue &value) 
 }
 
 void VMRuntimeCommon::setGlobalObject(const char *strName, IJsObject *obj) {
-    auto idx = pushObjValue(obj);
-    setGlobalValue(strName, JsValue(obj->type, idx));
+    setGlobalValue(strName, pushObjValue(obj->type, obj));
+}
+
+JsValue VMRuntimeCommon::pushObjValue(JsDataType type, IJsObject *value) {
+    auto jsv = JsValue(type, (uint32_t)objValues.size());
+    value->self = jsv;
+    objValues.push_back(value);
+    return jsv;
 }
 
 JsValue VMRuntimeCommon::pushDoubleValue(double value) {
@@ -231,15 +237,6 @@ void VMRuntime::init(JsVirtualMachine *vm, VMRuntimeCommon *rtCommon) {
         smallStringPools.append(pool);
     }
 
-    objPrototypeString = rtCommon->objPrototypeString->clone();
-    objPrototypeNumber = rtCommon->objPrototypeNumber->clone();
-    objPrototypeBoolean = rtCommon->objPrototypeBoolean->clone();
-    objPrototypeSymbol = rtCommon->objPrototypeSymbol->clone();
-    objPrototypeRegex = rtCommon->objPrototypeRegex->clone();
-    objPrototypeObject = rtCommon->objPrototypeObject->clone();
-    objPrototypeArray = rtCommon->objPrototypeArray->clone();
-    objPrototypeFunction = rtCommon->objPrototypeFunction->clone();
-
     prototypeString = rtCommon->prototypeString;
     prototypeNumber = rtCommon->prototypeNumber;
     prototypeBoolean = rtCommon->prototypeBoolean;
@@ -248,6 +245,15 @@ void VMRuntime::init(JsVirtualMachine *vm, VMRuntimeCommon *rtCommon) {
     prototypeObject = rtCommon->prototypeObject;
     prototypeArray = rtCommon->prototypeArray;
     prototypeFunction = rtCommon->prototypeFunction;
+
+    objPrototypeString = objValues[prototypeString.value.index];
+    objPrototypeNumber = objValues[prototypeNumber.value.index];
+    objPrototypeBoolean = objValues[prototypeBoolean.value.index];
+    objPrototypeSymbol = objValues[prototypeSymbol.value.index];
+    objPrototypeRegex = objValues[prototypeRegex.value.index];
+    objPrototypeObject = objValues[prototypeObject.value.index];
+    objPrototypeArray = objValues[prototypeArray.value.index];
+    objPrototypeFunction = objValues[prototypeFunction.value.index];
 }
 
 void VMRuntime::dump(BinaryOutputStream &stream) {
@@ -540,6 +546,13 @@ StringPool *VMRuntime::newStringPool(uint32_t size) {
     auto pool = new StringPool((uint16_t)stringPools.size(), size);
     stringPools.push_back(pool);
     return pool;
+}
+
+JsValue VMRuntime::pushObjValue(JsDataType type, IJsObject *value) {
+    auto jsv = JsValue(type, (uint32_t)objValues.size());
+    value->self = jsv;
+    objValues.push_back(value);
+    return jsv;
 }
 
 JsValue VMRuntime::pushString(const SizedString &str) {

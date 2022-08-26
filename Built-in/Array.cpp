@@ -13,8 +13,7 @@ static void arrayConstructor(VMContext *ctx, const JsValue &thiz, const Argument
     auto runtime = ctx->runtime;
 
     if (args.count == 0) {
-        auto idx = runtime->pushObjValue(new JsArray());
-        ctx->retValue = JsValue(JDT_ARRAY, idx);
+        ctx->retValue = runtime->pushObjValue(JDT_ARRAY, new JsArray());
         return;
     } else if (args.count == 1 && (args[0].type == JDT_INT32 || args[0].type == JDT_NUMBER)) {
         auto len = args[0];
@@ -70,7 +69,7 @@ void registerArray(VMRuntimeCommon *rt) {
     auto prototype = new JsLibObject(rt, arrayPrototypeFunctions, CountOf(arrayPrototypeFunctions));
 
     rt->objPrototypeArray = prototype;
-    rt->prototypeArray = JsValue(JDT_OBJECT, rt->pushObjValue(prototype));
+    rt->prototypeArray = rt->pushObjValue(JDT_LIB_OBJECT, prototype);
     
     auto idxPrototype = CountOf(arrayFunctions) - 1;
     assert(arrayFunctions[idxPrototype].name.equal("prototype"));

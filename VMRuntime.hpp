@@ -62,7 +62,7 @@ public:
     void setGlobalValue(const char *name, const JsValue &value);
     void setGlobalObject(const char *name, IJsObject *obj);
 
-    uint32_t pushObjValue(IJsObject *value) { uint32_t n = (uint32_t)objValues.size(); objValues.push_back(value); return n; }
+    JsValue pushObjValue(JsDataType type, IJsObject *value);
     uint32_t pushNativeFunction(JsNativeFunction f) { uint32_t n = (uint32_t)nativeFunctions.size(); nativeFunctions.push_back(JsNativeFunctionObject(f)); return n; }
 
     JsValue pushDoubleValue(double value);
@@ -127,8 +127,7 @@ public:
 
     void dump(BinaryOutputStream &stream);
 
-    uint32_t pushObjValue(IJsObject *value) { uint32_t n = (uint32_t)objValues.size(); objValues.push_back(value); return n; }
-    JsValue pushObjValue(JsDataType type, IJsObject *value) { uint32_t n = (uint32_t)objValues.size(); objValues.push_back(value); return JsValue(type, n); }
+    JsValue pushObjValue(JsDataType type, IJsObject *value);
     JsValue pushDoubleValue(double value) { uint32_t n = (uint32_t)doubleValues.size(); doubleValues.push_back(JsDouble(value)); return JsValue(JDT_NUMBER, n); }
     uint32_t pushResourcePool(ResourcePool *pool) { uint32_t n = (uint32_t)resourcePools.size(); resourcePools.push_back(pool); return n; }
     JsValue pushSymbolValue(JsSymbol &value) { uint32_t n = (uint32_t)symbolValues.size(); symbolValues.push_back(value); return JsValue(JDT_SYMBOL, n); }

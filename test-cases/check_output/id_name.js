@@ -6,3 +6,8 @@ function f(a) {
 }
 
 f(2);
+/* OUTPUT
+2
+1
+1
+*/

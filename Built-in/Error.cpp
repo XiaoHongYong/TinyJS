@@ -49,7 +49,7 @@ static void errorConstructor(VMContext *ctx, const JsValue &thiz, const Argument
     }
 
     auto errObj = new JsObject(__errorPrototype);
-    auto err = JsValue(JDT_LIB_OBJECT, runtime->pushObjValue(errObj));
+    auto err = runtime->pushObjValue(JDT_LIB_OBJECT, errObj);
 
     errObj->setByName(ctx, err, SS_MESSAGE, message);
     errObj->setByName(ctx, err, SS_STACK, runtime->pushString(SizedString(getStack(ctx))));
@@ -78,7 +78,7 @@ static JsLibProperty errorPrototypeFunctions[] = {
 
 void registerErrorAPIs(VMRuntimeCommon *rt) {
     auto prototype = new JsLibObject(rt, errorPrototypeFunctions, CountOf(errorPrototypeFunctions));
-    __errorPrototype = JsValue(JDT_OBJECT, rt->pushObjValue(prototype));
+    __errorPrototype = rt->pushObjValue(JDT_LIB_OBJECT, prototype);
 
     auto idxPrototype = CountOf(errorFunctions) - 1;
     assert(errorFunctions[idxPrototype].name.equal("prototype"));

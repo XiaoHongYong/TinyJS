@@ -46,6 +46,7 @@ void addConstStrings(VMRuntimeCommon *rtc) {{
 '''
 
 CONST_STRINGS = [
+    # name_prefix, value
     [ 'Empty', '' ],
     [ 'Undefined', 'undefined' ],
     [ 'Null', 'null' ],
@@ -61,11 +62,26 @@ CONST_STRINGS = [
     [ 'Error', 'Error' ],
     [ 'message', 'message' ],
     [ 'stack', 'stack' ],
+    [ "Configurable", "configurable" ],
+    [ "Enumerable", "enumerable" ],
+    [ "Writable", "writable" ],
+    [ "Value", "value" ],
+    [ "Get", "get" ],
+    [ "Set", "set" ],
+    [ 'Name', 'name' ],
+    [ 'Caller', 'caller' ],
+    [ 'Constructor', 'constructor' ],
+    # [ '', '' ],
 ]
 
-def write_file(fn, content):
+def write_file_cmp(fn, content):
     fn = os.path.abspath(fn)
     print('Write {}, length: {}'.format(fn, len(content)))
+
+    with open(fn, 'rb') as fp:
+        if content == fp.read():
+            print('No changes of file: {}, ignore wrtting'.format(fn))
+            return
 
     with open(fn, 'wb') as fp:
         fp.write(content)
@@ -76,9 +92,14 @@ def build():
     enum_JsValueStringIndices = []
     jsStringValues = []
     pushConstStringValues = []
+    names = set()
 
     for name, value in CONST_STRINGS:
         upper_name = name.upper()
+        if upper_name in names:
+            raise Exception('{} exists already in const string: CONST_STRINGS'.format(name))
+        names.add(upper_name)
+
         EXTERN_SS_XXS.append('extern SizedString SS_{};'.format(upper_name));
         SS_XXS.append('SizedString SS_{} = makeCommonString("{}");'.format(upper_name, value));
         enum_JsValueStringIndices.append('    JS_STRING_IDX_{},'.format(upper_name));
@@ -92,12 +113,12 @@ def build():
     fn_header = os.path.join(work_dir, '../generated/ConstStrings.hpp')
     fn_cpp = os.path.join(work_dir, '../generated/ConstStrings.cpp')
 
-    write_file(fn_header, HEADER_TEMPLATE.format(this_py_file,
+    write_file_cmp(fn_header, HEADER_TEMPLATE.format(this_py_file,
         '\n'.join(EXTERN_SS_XXS),
         '\n'.join(enum_JsValueStringIndices),
         '\n'.join(jsStringValues)))
 
-    write_file(fn_cpp, CPP_TEMPLATE.format(this_py_file,
+    write_file_cmp(fn_cpp, CPP_TEMPLATE.format(this_py_file,
         '\n'.join(SS_XXS),
         '\n'.join(pushConstStringValues)))
 

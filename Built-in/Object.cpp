@@ -12,8 +12,7 @@ static void objectConstructor(VMContext *ctx, const JsValue &thiz, const Argumen
     auto runtime = ctx->runtime;
 
     if (args.count == 0) {
-        auto idx = runtime->pushObjValue(new JsObject());
-        ctx->retValue = JsValue(JDT_OBJECT, idx);
+        ctx->retValue = runtime->pushObjValue(JDT_LIB_OBJECT, new JsObject());
     } else {
         ctx->retValue = args[0];
     }
@@ -39,18 +38,20 @@ void objectDefineProperty(VMContext *ctx, const JsValue &thiz, const Arguments &
 
     auto descriptorObj = runtime->getObject(descriptor);
     JsProperty propDescriptor;
-    propDescriptor.isConfigurable = descriptorObj->getBool(ctx, thiz, "configurable");
-    propDescriptor.isEnumerable = descriptorObj->getBool(ctx, thiz, "enumerable");
-    propDescriptor.isWritable = descriptorObj->getBool(ctx, thiz, "writable");
+    propDescriptor.isConfigurable = descriptorObj->getBool(ctx, descriptor, SS_CONFIGURABLE);
+    propDescriptor.isEnumerable = descriptorObj->getBool(ctx, descriptor, SS_ENUMERABLE);
+    propDescriptor.isWritable = descriptorObj->getBool(ctx, descriptor, SS_WRITABLE);
 
-    auto getter = descriptorObj->get(ctx, thiz, "get");
+    auto getter = descriptorObj->getByName(ctx, descriptor, SS_GET);
     if (getter.type > JDT_OBJECT) {
         propDescriptor.isGetter = true;
         propDescriptor.value = getter;
+    } else {
+        propDescriptor.value = descriptorObj->getByName(ctx, descriptor, SS_VALUE);
     }
 
     auto pObj = runtime->getObject(obj);
-    pObj->defineProperty(ctx, prop, propDescriptor, descriptorObj->get(ctx, thiz, "set"));
+    pObj->defineProperty(ctx, prop, propDescriptor, descriptorObj->getByName(ctx, thiz, SS_SET));
 
     ctx->retValue = JsUndefinedValue;
 }
@@ -116,7 +117,7 @@ void registerObject(VMRuntimeCommon *rt) {
     auto prototype = new JsLibObject(rt, objectPrototypeFunctions, CountOf(objectPrototypeFunctions));
     prototype->setAsObjectPrototype();
     rt->objPrototypeObject = prototype;
-    rt->prototypeObject = JsValue(JDT_OBJECT, rt->pushObjValue(prototype));
+    rt->prototypeObject = rt->pushObjValue(JDT_LIB_OBJECT, prototype);
 
     rt->setGlobalObject("Object",
         new JsLibObject(rt, objectFunctions, CountOf(objectFunctions), objectConstructor));

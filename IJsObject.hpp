@@ -52,6 +52,7 @@ public:
     }
     virtual ~IJsObject() {}
 
+    bool getBool(VMContext *ctx, const JsValue &thiz, const SizedString &name);
     bool getBool(VMContext *ctx, const JsValue &thiz, const JsValue &prop);
 
     void defineProperty(VMContext *ctx, const JsValue &prop, const JsProperty &descriptor, const JsValue &setter = JsUndefinedValue);
@@ -94,6 +95,9 @@ public:
     JsDataType                  type;
     int8_t                      referIdx;
     uint32_t                    nextFreeIdx;
+
+    // self 是 "this" 放在 runtime->objValues 后对应的 JsValue.
+    JsValue                     self;
 
 };
 

@@ -9,9 +9,6 @@
 #include <algorithm>
 
 
-static const SizedString __PROTO__ = makeSizedString("__proto__");
-
-
 SizedString copyPropertyIfNeed(SizedString name) {
     if (name.unused != COMMON_STRINGS) {
         auto p = new uint8_t[name.len];
@@ -20,6 +17,11 @@ SizedString copyPropertyIfNeed(SizedString name) {
     }
 
     return name;
+}
+
+bool IJsObject::getBool(VMContext *ctx, const JsValue &thiz, const SizedString &name) {
+    auto value = getByName(ctx, thiz, name);
+    return ctx->runtime->testTrue(value);
 }
 
 bool IJsObject::getBool(VMContext *ctx, const JsValue &thiz, const JsValue &prop) {
@@ -228,7 +230,7 @@ bool IJsObject::remove(VMContext *ctx, const JsValue &propOrg, const JsValue &va
 JsValue IJsObject::getIterator(VMContext *ctx) {
     return JsUndefinedValue;
 //    auto obj = getIteratorObject();
-//    return JsValue(JDT_OBJECT, ctx->runtime->pushObjValue(obj));
+//    return ctx->runtime->pushObjValue(obj);
 }
 
 JsObject::JsObject(const JsValue &__proto__) : __proto__(__proto__) {
@@ -276,7 +278,9 @@ void JsObject::definePropertyByName(VMContext *ctx, const SizedString &prop, con
 
     if (setter.type != JDT_UNDEFINED) {
         if (setter.type <= JDT_REGEX) {
-            ctx->throwException(PE_TYPE_ERROR, "Setter must be a function: ");
+            string buf;
+            auto s = ctx->runtime->toSizedString(ctx, setter, buf);
+            ctx->throwException(PE_TYPE_ERROR, "Setter must be a function: %.*s", (int)s.len, s.data);
             return;
         }
 
@@ -285,7 +289,7 @@ void JsObject::definePropertyByName(VMContext *ctx, const SizedString &prop, con
         }
         auto it = _setters->find(prop);
         if (it == _setters->end()) {
-            _setters->at(copyPropertyIfNeed(prop)) = setter;
+            (*_setters)[copyPropertyIfNeed(prop)] = setter;
         } else {
             (*it).second = setter;
         }
@@ -416,6 +420,15 @@ JsValue JsObject::getSetterBySymbol(VMContext *ctx, uint32_t index) {
 }
 
 JsValue JsObject::getByName(VMContext *ctx, const JsValue &thiz, const SizedString &prop) {
+    if (prop.equal(SS___PROTO__)) {
+        if (__proto__.type == JDT_NOT_INITIALIZED) {
+            // 缺省的 Object.prototype
+            return ctx->runtime->prototypeObject;
+        } else {
+            return __proto__;
+        }
+    }
+
     auto it = _props.find(prop);
     if (it == _props.end()) {
         if (__proto__.type == JDT_NOT_INITIALIZED) {
@@ -468,6 +481,11 @@ JsValue JsObject::getBySymbol(VMContext *ctx, const JsValue &thiz, uint32_t inde
 }
 
 void JsObject::setByName(VMContext *ctx, const JsValue &thiz, const SizedString &prop, const JsValue &value) {
+    if (prop.equal(SS___PROTO__)) {
+        __proto__ = value;
+        return;
+    }
+
     if (_setters) {
         // 检查本地的 Setter
         auto it = _setters->find(prop);

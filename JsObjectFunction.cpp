@@ -11,6 +11,7 @@
 JsObjectFunction::JsObjectFunction(const VecVMStackScopes &stackScopes, Function *function) : stackScopes(stackScopes), function(function) {
     type = JDT_FUNCTION;
     __proto__ = JsNotInitializedValue;
+    _prototype = JsNotInitializedValue;
     _obj__Proto__ = nullptr;
     _obj = nullptr;
 }
@@ -85,6 +86,24 @@ JsValue JsObjectFunction::getSetterBySymbol(VMContext *ctx, uint32_t index) {
 }
 
 JsValue JsObjectFunction::getByName(VMContext *ctx, const JsValue &thiz, const SizedString &prop) {
+    if (prop.equal(SS_PROTOTYPE)) {
+        if (_prototype.type == JDT_NOT_INITIALIZED) {
+            // 为了节省内存分配，延迟初始化 _prototype 属性
+            auto proto = new JsObject();
+            _prototype = ctx->runtime->pushObjValue(JDT_OBJECT, proto);
+            proto->setByName(ctx, _prototype, SS_CONSTRUCTOR, self);
+        }
+        return _prototype;
+    } else if (prop.equal(SS_NAME)) {
+        return ctx->runtime->pushString(function->name);
+    } else if (prop.equal(SS_LENGTH)) {
+        return JsValue(JDT_INT32, 0);
+    } else if (prop.equal(SS_CALLER)) {
+        return JsNullValue;
+    } else if (prop.equal(SS_ARGUMENTS)) {
+        return JsNullValue;
+    }
+
     if (_obj) {
         return _obj->getByName(ctx, thiz, prop);
     }
@@ -118,6 +137,22 @@ JsValue JsObjectFunction::getBySymbol(VMContext *ctx, const JsValue &thiz, uint3
 }
 
 void JsObjectFunction::setByName(VMContext *ctx, const JsValue &thiz, const SizedString &prop, const JsValue &value) {
+    // function 的这些属性是不能被修改的.
+    if (prop.equal(SS_PROTOTYPE)) {
+        _prototype = value;
+        return;
+    } else if (prop.equal(SS_NAME)) {
+        return;
+    } else if (prop.equal(SS_LENGTH)) {
+        return;
+    } else if (prop.equal(SS_LENGTH)) {
+        return;
+    } else if (prop.equal(SS_CALLER)) {
+        return;
+    } else if (prop.equal(SS_ARGUMENTS)) {
+        return;
+    }
+
     if (!_obj) {
         _newObject();
     }

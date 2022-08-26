@@ -76,7 +76,7 @@ static JsLibProperty numberPrototypeFunctions[] = {
 void registerNumber(VMRuntimeCommon *rt) {
     auto prototype = new JsLibObject(rt, numberPrototypeFunctions, CountOf(numberPrototypeFunctions));
     rt->objPrototypeNumber = prototype;
-    rt->prototypeNumber = JsValue(JDT_OBJECT, rt->pushObjValue(prototype));
+    rt->prototypeNumber = rt->pushObjValue(JDT_LIB_OBJECT, prototype);
 
     auto idxPrototype = CountOf(numberFunctions) - 1;
     assert(numberFunctions[idxPrototype].name.equal("prototype"));

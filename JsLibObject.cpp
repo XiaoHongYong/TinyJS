@@ -201,6 +201,21 @@ JsValue JsLibObject::getBySymbol(VMContext *ctx, const JsValue &thiz, uint32_t i
 }
 
 void JsLibObject::setByName(VMContext *ctx, const JsValue &thiz, const SizedString &prop, const JsValue &value) {
+    if (thiz.type < JDT_OBJECT) {
+        // Primitive types 不能被修改，但是其 setter 函数会被调用
+        if (_obj) {
+            auto setter = _obj->getSetterByName(ctx, prop);
+            if (setter.type > JDT_OBJECT) {
+                // 调用 setter 函数
+                ArgumentsX args(value);
+                ctx->vm->callMember(ctx, thiz, setter, args);
+                return;
+            }
+        }
+
+        return;
+    }
+
     auto first = std::lower_bound(_libProps, _libPropsEnd, prop, JsLibFunctionLessCmp());
     if (first != _libPropsEnd && first->name.equal(prop)) {
         _copyForModify();

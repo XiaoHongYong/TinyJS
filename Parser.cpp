@@ -647,7 +647,7 @@ IJsNode *JSParser::_expectFunctionExpression(uint32_t functionFlags, bool ignore
             break;
         }
 
-        _expectStatment();
+        child->astNodes.push_back(_expectStatment());
     }
     _readToken();
 

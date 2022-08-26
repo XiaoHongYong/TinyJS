@@ -168,7 +168,7 @@ static JsLibProperty stringPrototypeFunctions[] = {
 void registerString(VMRuntimeCommon *rt) {
     auto prototype = new JsLibObject(rt, stringPrototypeFunctions, CountOf(stringPrototypeFunctions));
     rt->objPrototypeString = prototype;
-    rt->prototypeString = JsValue(JDT_OBJECT, rt->pushObjValue(prototype));
+    rt->prototypeString = rt->pushObjValue(JDT_LIB_OBJECT, prototype);
 
     auto idxPrototype = CountOf(stringFunctions) - 1;
     assert(stringFunctions[idxPrototype].name.equal("prototype"));

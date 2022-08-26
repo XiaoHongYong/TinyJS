@@ -1,11 +1,14 @@
-function f1() {
+// 测试 defineProperty， setter, getter
+function f1(p) {
     var obj = { x : 1, y : 2 };
-    Object.defineProperty(obj, 'x', {
-        get: function() {
-            console.log('get');
-        },
-        set: 1
-    });
+    if (p) {
+        Object.defineProperty(obj, 'x', {
+            get: function() {
+                console.log('get');
+            },
+            set: 1
+        });
+    }
 
     Object.defineProperty(obj, 'y', {
         value: function (a) {
@@ -15,7 +18,14 @@ function f1() {
 
     console.log(obj.x, obj.y);
 }
-f1();
+f1(0);
+f1(1);
+/* OUTPUT
+1 function (a) {
+    console.log('y', a);
+}
+[error] Uncaught TypeError: Setter must be a function: 1
+*/
 
 //// 
 function f2() {
@@ -37,9 +47,27 @@ function f2() {
 
     console.log(a.x);
     a.x = 3;
-    console.log(a.x);
+    console.log(a.y);
 }
 f2();
+/* OUTPUT
+get
+undefined
+set 3
+function (a) {
+    console.log('y', a);
+}
+*/
+
+function f21() {
+    function g() { this.a = 1; }
+
+    console.log(g.prototype.__proto__);
+}
+f21();
+/* OUTPUT
+[object Object]
+*/
 
 function f3() {
     function g() { this.a = 1; this.x = 5; }
@@ -64,6 +92,12 @@ function f3() {
     console.log(obj.x, obj.y);
 }
 f3();
+/* OUTPUT
+set x via prototype:  5
+set x via prototype:  2
+set y via prototype:  3
+x y
+*/
 
 //// 本身有属性，会优先修改本身的，再往 prototype 链上查找
 function f31() {
@@ -92,6 +126,10 @@ function f31() {
     console.log(obj.x, obj.y);
 }
 f31();
+/* OUTPUT
+set y via prototype:  3
+2 y
+*/
 
 
 function f4() {
@@ -137,6 +175,14 @@ function f4() {
     console.log(a.y);
 }
 f4();
+/* OUTPUT
+get x
+x z
+get x
+x
+set y 2
+undefined
+*/
 
 function f5() {
     var a = {
@@ -177,6 +223,8 @@ function f5() {
     console.log(a.y, a.z);
 }
 f5();
+/* OUTPUT
+*/
 
 
 //// 测试 Array 的 Object.defineProperty
@@ -204,6 +252,8 @@ function f6() {
     a.y = 3;
 }
 f6();
+/* OUTPUT
+*/
 
 //// 测试 Arguments 的 Object.defineProperty
 function f61(a, b, c) {
@@ -228,6 +278,8 @@ function f61(a, b, c) {
     arguments.y = 3;
 }
 f61(1, 2, 3);
+/* OUTPUT
+*/
 
 
 //// 测试 entries
@@ -252,4 +304,6 @@ function f7() {
     console.log(Object.entries(a));
 }
 f7();
+/* OUTPUT
+*/
 

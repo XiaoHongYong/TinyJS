@@ -51,6 +51,7 @@ public:
 protected:
     virtual void _newObject();
 
+    JsValue                     _prototype;
     JsValue                     __proto__;
     JsObject                    *_obj__Proto__;
 
