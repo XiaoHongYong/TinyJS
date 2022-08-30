@@ -9,14 +9,58 @@
 #include "../VirtualMachineTypes.hpp"
 
 
+using SetUInts = set<uint32_t>;
+
+void dumpObject(VMContext *ctx, const JsValue &obj,string &out, SetUInts &historyObjs) {
+    assert(obj.type >= JDT_OBJECT);
+
+    // 避免同一个 object 被多次输出
+    if (historyObjs.find(obj.value.index) != historyObjs.end()) {
+        out.append("{...}");
+        return;
+    }
+    historyObjs.insert(obj.value.index);
+
+    auto runtime = ctx->runtime;
+
+    IJsObject *pobj = runtime->getObject(obj);
+    auto it = pobj->getIteratorObject(ctx);
+
+    out.append("{");
+    
+    SizedString key;
+    JsValue value;
+    bool first = true;
+    string buf;
+
+    while (it->next(key, value)) {
+        if (first) first = false; else out.append(",");
+
+        out.append((cstr_t)key.data, key.len);
+        out.append(": ");
+        auto s = runtime->toSizedString(ctx, value, buf);
+        out.append((cstr_t)s.data, s.len);
+    }
+
+    out.append("}");
+}
+
 void consoleLog(VMContext *ctx, const JsValue &thiz, const Arguments &args) {
     auto runtime = ctx->runtime;
     string out;
     char buf[64];
 
     for (uint32_t i = 0; i < args.count; i++) {
+        if (!out.empty()) {
+            out.append(" ");
+        }
+
         auto v = args.data[i];
-        if (v.type >= JDT_OBJECT) {
+        if (v.type == JDT_OBJECT) {
+            SetUInts historyObjs;
+            dumpObject(ctx, v, out, historyObjs);
+            continue;
+        } else if (v.type >= JDT_OBJECT) {
             Arguments noArgs;
             runtime->vm->callMember(ctx, v, "toString", noArgs);
             if (ctx->error == PE_OK) {
@@ -24,10 +68,6 @@ void consoleLog(VMContext *ctx, const JsValue &thiz, const Arguments &args) {
             } else {
                 return;
             }
-        }
-
-        if (!out.empty()) {
-            out.append(" ");
         }
 
         switch (v.type) {
@@ -71,7 +111,7 @@ void consoleLog(VMContext *ctx, const JsValue &thiz, const Arguments &args) {
     }
 
     runtime->console->log(SizedString(out));
-    ctx->retValue = JsUndefinedValue;
+    ctx->retValue = jsValueUndefined;
 }
 
 void consoleTrace(VMContext *ctx, const JsValue &thiz, const Arguments &args) {
@@ -85,7 +125,7 @@ void consoleTrace(VMContext *ctx, const JsValue &thiz, const Arguments &args) {
         }
     }
 
-    ctx->retValue = JsUndefinedValue;
+    ctx->retValue = jsValueUndefined;
 }
 
 static JsLibProperty consoleFunctions[] = {

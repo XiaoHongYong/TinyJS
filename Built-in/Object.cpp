@@ -71,12 +71,12 @@ void objectDefineProperty(VMContext *ctx, const JsValue &thiz, const Arguments &
 
     auto descriptorObj = runtime->getObject(descriptor);
 
-    auto configurable = descriptorObj->getByName(ctx, descriptor, SS_CONFIGURABLE, JsNotInitializedValue);
-    auto enumerable = descriptorObj->getByName(ctx, descriptor, SS_ENUMERABLE, JsNotInitializedValue);
-    auto writable = descriptorObj->getByName(ctx, descriptor, SS_WRITABLE, JsNotInitializedValue);
-    auto value = descriptorObj->getByName(ctx, descriptor, SS_VALUE, JsNotInitializedValue);
-    auto get = descriptorObj->getByName(ctx, descriptor, SS_GET, JsNotInitializedValue);
-    auto set = descriptorObj->getByName(ctx, descriptor, SS_SET, JsNotInitializedValue);
+    auto configurable = descriptorObj->getByName(ctx, descriptor, SS_CONFIGURABLE, jsValueNotInitialized);
+    auto enumerable = descriptorObj->getByName(ctx, descriptor, SS_ENUMERABLE, jsValueNotInitialized);
+    auto writable = descriptorObj->getByName(ctx, descriptor, SS_WRITABLE, jsValueNotInitialized);
+    auto value = descriptorObj->getByName(ctx, descriptor, SS_VALUE, jsValueNotInitialized);
+    auto get = descriptorObj->getByName(ctx, descriptor, SS_GET, jsValueNotInitialized);
+    auto set = descriptorObj->getByName(ctx, descriptor, SS_SET, jsValueNotInitialized);
 
     if (get.type < JDT_FUNCTION && get.type > JDT_UNDEFINED) {
         string buf;
@@ -96,8 +96,8 @@ void objectDefineProperty(VMContext *ctx, const JsValue &thiz, const Arguments &
         ctx->throwException(PE_TYPE_ERROR, "Invalid property descriptor. Cannot both specify accessors and a value or writable attribute, #<Object>");
     }
 
-    JsProperty propDescriptor(JsNotInitializedValue, -1, -1, -1, -1);
-    propDescriptor.setter = JsNotInitializedValue;
+    JsProperty propDescriptor(jsValueNotInitialized, -1, -1, -1, -1);
+    propDescriptor.setter = jsValueNotInitialized;
 
     if (configurable.isValid()) propDescriptor.isConfigurable = runtime->testTrue(configurable);
     if (enumerable.isValid()) propDescriptor.isEnumerable = runtime->testTrue(enumerable);
@@ -182,7 +182,7 @@ bool getStringOwnPropertyDescriptor(VMContext *ctx, const JsValue &thiz, JsValue
 // https://developer.mozilla.org/zh-CN/docs/Web/JavaScript/Reference/Global_Objects/Object/getOwnPropertyDescriptor
 void getOwnPropertyDescriptor(VMContext *ctx, const JsValue &thiz, const Arguments &args) {
     auto runtime = ctx->runtime;
-    ctx->retValue = JsUndefinedValue;
+    ctx->retValue = jsValueUndefined;
 
     if (args.count < 1 || args[0].type <= JDT_NULL) {
         ctx->throwException(PE_TYPE_ERROR, "Cannot convert undefined or null to object");
@@ -239,10 +239,10 @@ void getOwnPropertyDescriptor(VMContext *ctx, const JsValue &thiz, const Argumen
     }
 
     if (!descriptor.isGetter && descriptor.setter.type < JDT_FUNCTION) {
-        desc->setByName(ctx, descValue, SS_CONFIGURABLE, descriptor.isConfigurable);
-        desc->setByName(ctx, descValue, SS_ENUMERABLE, descriptor.isEnumerable);
-        desc->setByName(ctx, descValue, SS_WRITABLE, descriptor.isWritable);
-        desc->setByName(ctx, descValue, SS_VALUE, descriptor.value.isValid() ? descriptor.value : JsUndefinedValue);
+        desc->setByName(ctx, descValue, SS_CONFIGURABLE, JsValue(JDT_BOOL, descriptor.isConfigurable));
+        desc->setByName(ctx, descValue, SS_ENUMERABLE, JsValue(JDT_BOOL, descriptor.isEnumerable));
+        desc->setByName(ctx, descValue, SS_WRITABLE, JsValue(JDT_BOOL, descriptor.isWritable));
+        desc->setByName(ctx, descValue, SS_VALUE, descriptor.value.isValid() ? descriptor.value : jsValueUndefined);
     }
 
     ctx->retValue = descValue;
@@ -266,12 +266,13 @@ static JsLibProperty objectPrototypeFunctions[] = {
 };
 
 void registerObject(VMRuntimeCommon *rt) {
-    auto prototype = new JsLibObject(rt, objectPrototypeFunctions, CountOf(objectPrototypeFunctions));
-    prototype->setAsObjectPrototype();
-    rt->objPrototypeObject = prototype;
-    rt->prototypeObject.value = rt->pushObjValue(JDT_LIB_OBJECT, prototype);
+    auto prototypeObj = new JsLibObject(rt, objectPrototypeFunctions, CountOf(objectPrototypeFunctions));
+    prototypeObj->setAsObjectPrototype();
+    rt->objPrototypeObject = prototypeObj;
+    auto prototype = rt->pushObjValue(JDT_LIB_OBJECT, prototypeObj);
+    assert(prototype == jsValuePrototypeObject);
 
-    SET_PROTOTYPE(objectFunctions, rt->prototypeObject);
+    SET_PROTOTYPE(objectFunctions, prototype);
 
     rt->setGlobalObject("Object",
         new JsLibObject(rt, objectFunctions, CountOf(objectFunctions), objectConstructor));

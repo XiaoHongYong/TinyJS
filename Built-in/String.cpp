@@ -55,7 +55,7 @@ void stringFromCharCode(VMContext *ctx, const JsValue &thiz, const Arguments &ar
 }
 
 void stringFromCodePoint(VMContext *ctx, const JsValue &thiz, const Arguments &args) {
-    ctx->retValue = JsUndefinedValue;
+    ctx->retValue = jsValueUndefined;
 }
 
 static JsLibProperty stringFunctions[] = {
@@ -91,7 +91,7 @@ void stringPrototypeAt(VMContext *ctx, const JsValue &thiz, const Arguments &arg
     if (index < 0) {
         index = str.len + index;
         if (index < 0) {
-            ctx->retValue = JsUndefinedValue;
+            ctx->retValue = jsValueUndefined;
             return;
         }
     }
@@ -99,7 +99,7 @@ void stringPrototypeAt(VMContext *ctx, const JsValue &thiz, const Arguments &arg
     if (index < str.len) {
         ctx->retValue = JsValue(JDT_CHAR, str.data[index]);
     } else {
-        ctx->retValue = JsUndefinedValue;
+        ctx->retValue = jsValueUndefined;
     }
 }
 
@@ -149,11 +149,12 @@ static JsLibProperty stringPrototypeFunctions[] = {
 };
 
 void registerString(VMRuntimeCommon *rt) {
-    auto prototype = new JsLibObject(rt, stringPrototypeFunctions, CountOf(stringPrototypeFunctions));
-    rt->objPrototypeString = prototype;
-    rt->prototypeString.value = rt->pushObjValue(JDT_LIB_OBJECT, prototype);
+    auto prototypeObj = new JsLibObject(rt, stringPrototypeFunctions, CountOf(stringPrototypeFunctions));
+    rt->objPrototypeString = prototypeObj;
+    auto prototype = rt->pushObjValue(JDT_LIB_OBJECT, prototypeObj);
+    assert(prototype == jsValuePrototypeString);
 
-    SET_PROTOTYPE(stringFunctions, rt->prototypeString);
+    SET_PROTOTYPE(stringFunctions, prototype);
 
     rt->setGlobalObject("String",
         new JsLibObject(rt, stringFunctions, CountOf(stringFunctions), stringConstructor));

@@ -22,7 +22,7 @@ static void arrayConstructor(VMContext *ctx, const JsValue &thiz, const Argument
             auto v = runtime->getDouble(len);
             if (v != (uint32_t)v) {
                 ctx->throwException(PE_RANGE_ERROR, "Invalid array length");
-                ctx->retValue = JsUndefinedValue;
+                ctx->retValue = jsValueUndefined;
                 return;
             }
             n = (uint32_t)v;
@@ -66,12 +66,13 @@ static JsLibProperty arrayPrototypeFunctions[] = {
 };
 
 void registerArray(VMRuntimeCommon *rt) {
-    auto prototype = new JsLibObject(rt, arrayPrototypeFunctions, CountOf(arrayPrototypeFunctions));
+    auto prototypeObj = new JsLibObject(rt, arrayPrototypeFunctions, CountOf(arrayPrototypeFunctions));
 
-    rt->objPrototypeArray = prototype;
-    rt->prototypeArray.value = rt->pushObjValue(JDT_LIB_OBJECT, prototype);
+    rt->objPrototypeArray = prototypeObj;
+    auto prototype = rt->pushObjValue(JDT_LIB_OBJECT, prototypeObj);
+    assert(prototype == jsValuePrototypeArray);
 
-    SET_PROTOTYPE(arrayFunctions, rt->prototypeArray);
+    SET_PROTOTYPE(arrayFunctions, prototype);
 
     rt->setGlobalObject("Array",
         new JsLibObject(rt, arrayFunctions, CountOf(arrayFunctions), arrayConstructor));

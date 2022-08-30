@@ -10,8 +10,8 @@
 
 JsObjectFunction::JsObjectFunction(const VecVMStackScopes &stackScopes, Function *function) : stackScopes(stackScopes), function(function) {
     type = JDT_FUNCTION;
-    __proto__ = JsNotInitializedValue;
-    _prototype = JsNotInitializedValue;
+    __proto__ = jsValueNotInitialized;
+    _prototype = jsValueNotInitialized;
     _obj__Proto__ = nullptr;
     _obj = nullptr;
 }
@@ -104,9 +104,9 @@ JsValue JsObjectFunction::getByName(VMContext *ctx, const JsValue &thiz, const S
     } else if (prop.equal(SS_LENGTH)) {
         return JsValue(JDT_INT32, 0);
     } else if (prop.equal(SS_CALLER)) {
-        return JsNullValue;
+        return jsValueNull;
     } else if (prop.equal(SS_ARGUMENTS)) {
-        return JsNullValue;
+        return jsValueNull;
     }
 
     if (_obj) {
@@ -220,6 +220,12 @@ IJsObject *JsObjectFunction::clone() {
     if (_obj) { obj->_obj = (JsObject *)_obj->clone(); }
 
     return obj;
+}
+
+IJsIterator *JsObjectFunction::getIteratorObject(VMContext *ctx) {
+    // auto it = new JsObjectIterator(ctx, this);
+    // return it;
+    return nullptr;
 }
 
 void JsObjectFunction::_newObject() {

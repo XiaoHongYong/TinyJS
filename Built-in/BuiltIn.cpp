@@ -32,13 +32,14 @@ void registerEval(VMRuntimeCommon *rt);
 
 
 void registerBuiltIns(VMRuntimeCommon *rt) {
+    // 注册的顺序必须按照此顺序来，也不能插入其他的类型，因为 JS_OBJ_PROTOTYPE_IDX_XXX 是按照此顺序来的
     registerBoolean(rt);
     registerNumber(rt);
-    registerRegExp(rt);
     registerString(rt);
-    registerObject(rt);
-    registerArray(rt);
     registerSymbol(rt);
+    registerObject(rt);
+    registerRegExp(rt);
+    registerArray(rt);
     registerObjFunction(rt);
     registerErrorAPIs(rt);
     registerEval(rt);

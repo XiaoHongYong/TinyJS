@@ -54,15 +54,6 @@ VMRuntimeCommon::VMRuntimeCommon() {
     objPrototypeArray = nullptr;
     objPrototypeFunction = nullptr;
 
-    prototypeString = JsProperty(JsUndefinedValue, false, false, false, true);
-    prototypeNumber = JsProperty(JsUndefinedValue, false, false, false, true);
-    prototypeBoolean = JsProperty(JsUndefinedValue, false, false, false, true);
-    prototypeSymbol = JsProperty(JsUndefinedValue, false, false, false, true);
-    prototypeRegex = JsProperty(JsUndefinedValue, false, false, false, true);
-    prototypeObject = JsProperty(JsUndefinedValue, false, false, false, true);
-    prototypeArray = JsProperty(JsUndefinedValue, false, false, false, true);
-    prototypeFunction = JsProperty(JsUndefinedValue, false, false, false, true);
-
     // 把 0 占用了，0 为非法的位置
     doubleValues.push_back(0);
     stringValues.push_back(JsString());
@@ -74,17 +65,17 @@ VMRuntimeCommon::VMRuntimeCommon() {
     addConstStrings(this);
 
     auto idx = pushDoubleValue(NAN);
-    assert(idx.value.index == JsNaNValue.value.index);
+    assert(idx.value.index == jsValueNaN.value.index);
 
     auto resourcePool = new ResourcePool();
     Function *rootFunc = new Function(resourcePool, nullptr, 0);
     globalScope = new VMScope(rootFunc->scope);
 
     // 添加不能被修改的全局变量
-    setGlobalValue("undefined", JsUndefinedValue);
+    setGlobalValue("undefined", jsValueUndefined);
     countImmutableGlobalVars++; assert(countImmutableGlobalVars == globalScope->vars.size());
 
-    setGlobalValue("NaN", JsNaNValue);
+    setGlobalValue("NaN", jsValueNaN);
     countImmutableGlobalVars++; assert(countImmutableGlobalVars == globalScope->vars.size());
 
     registerBuiltIns(this);
@@ -255,23 +246,14 @@ void VMRuntime::init(JsVirtualMachine *vm, VMRuntimeCommon *rtCommon) {
         smallStringPools.append(pool);
     }
 
-    prototypeString = rtCommon->prototypeString;
-    prototypeNumber = rtCommon->prototypeNumber;
-    prototypeBoolean = rtCommon->prototypeBoolean;
-    prototypeSymbol = rtCommon->prototypeSymbol;
-    prototypeRegex = rtCommon->prototypeRegex;
-    prototypeObject = rtCommon->prototypeObject;
-    prototypeArray = rtCommon->prototypeArray;
-    prototypeFunction = rtCommon->prototypeFunction;
-
-    objPrototypeString = objValues[prototypeString.value.value.index];
-    objPrototypeNumber = objValues[prototypeNumber.value.value.index];
-    objPrototypeBoolean = objValues[prototypeBoolean.value.value.index];
-    objPrototypeSymbol = objValues[prototypeSymbol.value.value.index];
-    objPrototypeRegex = objValues[prototypeRegex.value.value.index];
-    objPrototypeObject = objValues[prototypeObject.value.value.index];
-    objPrototypeArray = objValues[prototypeArray.value.value.index];
-    objPrototypeFunction = objValues[prototypeFunction.value.value.index];
+    objPrototypeString = objValues[JS_OBJ_PROTOTYPE_IDX_STRING];
+    objPrototypeNumber = objValues[JS_OBJ_PROTOTYPE_IDX_NUMBER];
+    objPrototypeBoolean = objValues[JS_OBJ_PROTOTYPE_IDX_BOOL];
+    objPrototypeSymbol = objValues[JS_OBJ_PROTOTYPE_IDX_SYMBOL];
+    objPrototypeRegex = objValues[JS_OBJ_PROTOTYPE_IDX_REGEXP];
+    objPrototypeObject = objValues[JS_OBJ_PROTOTYPE_IDX_OBJECT];
+    objPrototypeArray = objValues[JS_OBJ_PROTOTYPE_IDX_ARRAY];
+    objPrototypeFunction = objValues[JS_OBJ_PROTOTYPE_IDX_FUNCTION];
 }
 
 void VMRuntime::dump(BinaryOutputStream &stream) {
@@ -447,6 +429,9 @@ JsValue VMRuntime::joinSmallString(const SizedString &sz1, const SizedString &sz
 }
 
 JsValue VMRuntime::addString(const JsValue &s1, const JsValue &s2) {
+    assert(s1.type == JDT_STRING);
+    assert(s2.type == JDT_STRING);
+
     JsString js1, js2;
     SizedString ss1, ss2;
 
@@ -531,7 +516,7 @@ JsPoolString VMRuntime::allocString(uint32_t size) {
             smallStringPools.append(pool);
         }
     } else if (size <= POOL_STRING_MID) {
-        StringPool *pool = midStringPools.front();
+        pool = midStringPools.front();
         if (pool != nullptr && pool->capacity() < size) {
             midStringPools.remove(pool);
             smallStringPools.append(pool);
@@ -680,7 +665,7 @@ JsValue VMRuntime::toString(VMContext *ctx, const JsValue &v) {
         }
     }
 
-    return JsUndefinedValue;
+    return jsValueUndefined;
 }
 
 SizedString VMRuntime::toSizedString(VMContext *ctx, const JsValue &v, string &buf) {

@@ -10,8 +10,6 @@
 
 
 static JsValue __errorPrototype;
-static JsValue __errorToStringPrefix;
-static SizedString SS_ERR_STRING_PREFIX = makeCommonString("Error: ");
 
 static string getStack(VMContext *ctx) {
     string str;
@@ -39,7 +37,7 @@ static string getStack(VMContext *ctx) {
 static void errorConstructor(VMContext *ctx, const JsValue &thiz, const Arguments &args) {
     auto runtime = ctx->runtime;
 
-    auto message = JsUndefinedValue;
+    auto message = jsValueUndefined;
     if (args.count > 0) {
         string buf;
         auto str = runtime->toSizedString(ctx, args[0], buf);
@@ -68,7 +66,7 @@ static void errorToString(VMContext *ctx, const JsValue &thiz, const Arguments &
     if (msg.type == JDT_UNDEFINED) {
         ctx->retValue = ctx->runtime->pushString(SS_ERROR);
     } else {
-        ctx->retValue = ctx->runtime->addString(__errorToStringPrefix, msg);
+        ctx->retValue = msg;
     }
 }
 

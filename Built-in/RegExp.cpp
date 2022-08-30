@@ -9,7 +9,7 @@
 
 
 void regExpConstructor(VMContext *ctx, const JsValue &thiz, const Arguments &args) {
-    ctx->retValue = JsUndefinedValue;
+    ctx->retValue = jsValueUndefined;
 }
 
 static JsLibProperty regExpFunctions[] = {
@@ -25,7 +25,7 @@ void regExpPrototypeToString(VMContext *ctx, const JsValue &thiz, const Argument
         return;
     }
 
-    ctx->retValue = JsUndefinedValue;
+    ctx->retValue = jsValueUndefined;
 }
 
 static JsLibProperty regExpPrototypeFunctions[] = {
@@ -33,11 +33,12 @@ static JsLibProperty regExpPrototypeFunctions[] = {
 };
 
 void registerRegExp(VMRuntimeCommon *rt) {
-    auto prototype = new JsLibObject(rt, regExpPrototypeFunctions, CountOf(regExpPrototypeFunctions));
-    rt->objPrototypeRegex = prototype;
-    rt->prototypeRegex.value = rt->pushObjValue(JDT_LIB_OBJECT, prototype);
+    auto prototypeObj = new JsLibObject(rt, regExpPrototypeFunctions, CountOf(regExpPrototypeFunctions));
+    rt->objPrototypeRegex = prototypeObj;
+    auto prototype = rt->pushObjValue(JDT_LIB_OBJECT, prototypeObj);
+    assert(prototype == jsValuePrototypeRegExp);
 
-    SET_PROTOTYPE(regExpFunctions, rt->prototypeRegex);
+    SET_PROTOTYPE(regExpFunctions, prototype);
 
     rt->setGlobalObject("RegExp",
         new JsLibObject(rt, regExpFunctions, CountOf(regExpFunctions), regExpConstructor));

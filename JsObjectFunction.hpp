@@ -28,9 +28,9 @@ public:
     virtual JsProperty *getRawByIndex(VMContext *ctx, uint32_t index, bool &isSelfPropOut) override;
     virtual JsProperty *getRawBySymbol(VMContext *ctx, uint32_t index, bool &isSelfPropOut) override;
 
-    virtual JsValue getByName(VMContext *ctx, const JsValue &thiz, const SizedString &prop, const JsValue &defVal = JsUndefinedValue) override;
-    virtual JsValue getByIndex(VMContext *ctx, const JsValue &thiz, uint32_t index, const JsValue &defVal = JsUndefinedValue) override;
-    virtual JsValue getBySymbol(VMContext *ctx, const JsValue &thiz, uint32_t index, const JsValue &defVal = JsUndefinedValue) override;
+    virtual JsValue getByName(VMContext *ctx, const JsValue &thiz, const SizedString &prop, const JsValue &defVal = jsValueUndefined) override;
+    virtual JsValue getByIndex(VMContext *ctx, const JsValue &thiz, uint32_t index, const JsValue &defVal = jsValueUndefined) override;
+    virtual JsValue getBySymbol(VMContext *ctx, const JsValue &thiz, uint32_t index, const JsValue &defVal = jsValueUndefined) override;
 
     virtual void setByName(VMContext *ctx, const JsValue &thiz, const SizedString &prop, const JsValue &value) override;
     virtual void setByIndex(VMContext *ctx, const JsValue &thiz, uint32_t index, const JsValue &value) override;
@@ -41,6 +41,8 @@ public:
     virtual bool removeBySymbol(VMContext *ctx, uint32_t index) override;
 
     virtual IJsObject *clone() override;
+
+    virtual IJsIterator *getIteratorObject(VMContext *ctx) override;
 
 public:
     VecVMStackScopes            stackScopes;

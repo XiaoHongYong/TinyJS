@@ -29,7 +29,7 @@ void numberConstructor(VMContext *ctx, const JsValue &thiz, const Arguments &arg
 
 
 void numberIsNaN(VMContext *ctx, const JsValue &thiz, const Arguments &args) {
-    ctx->retValue = JsUndefinedValue;
+    ctx->retValue = jsValueUndefined;
 }
 
 static JsLibProperty numberFunctions[] = {
@@ -74,11 +74,12 @@ static JsLibProperty numberPrototypeFunctions[] = {
 };
 
 void registerNumber(VMRuntimeCommon *rt) {
-    auto prototype = new JsLibObject(rt, numberPrototypeFunctions, CountOf(numberPrototypeFunctions));
-    rt->objPrototypeNumber = prototype;
-    rt->prototypeNumber.value = rt->pushObjValue(JDT_LIB_OBJECT, prototype);
+    auto prototypeObj = new JsLibObject(rt, numberPrototypeFunctions, CountOf(numberPrototypeFunctions));
+    rt->objPrototypeNumber = prototypeObj;
+    auto prototype = rt->pushObjValue(JDT_LIB_OBJECT, prototypeObj);
+    assert(prototype == jsValuePrototypeNumber);
 
-    SET_PROTOTYPE(numberFunctions, rt->prototypeNumber);
+    SET_PROTOTYPE(numberFunctions, prototype);
 
     rt->setGlobalObject("Number",
         new JsLibObject(rt, numberFunctions, CountOf(numberFunctions), numberConstructor));

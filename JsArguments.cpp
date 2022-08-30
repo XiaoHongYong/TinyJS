@@ -82,7 +82,7 @@ bool JsArguments::getOwnPropertyDescriptorByName(VMContext *ctx, const SizedStri
 }
 
 bool JsArguments::getOwnPropertyDescriptorByIndex(VMContext *ctx, uint32_t index, JsProperty &descriptorOut) {
-    descriptorOut = JsProperty(JsUndefinedValue);
+    descriptorOut = JsProperty(jsValueUndefined);
 
     if (index >= _args->count) {
         NumberToSizedString ss(index);
@@ -239,6 +239,12 @@ bool JsArguments::removeBySymbol(VMContext *ctx, uint32_t index) {
 IJsObject *JsArguments::clone() {
     assert(0 && "NOT supported.");
 
+    return nullptr;
+}
+
+IJsIterator *JsArguments::getIteratorObject(VMContext *ctx) {
+    // auto it = new JsObjectIterator(ctx, this);
+    // return it;
     return nullptr;
 }
 

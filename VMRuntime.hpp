@@ -94,14 +94,6 @@ public:
     IJsObject                   *objPrototypeArray;
     IJsObject                   *objPrototypeFunction;
 
-    JsProperty                  prototypeString;
-    JsProperty                  prototypeNumber;
-    JsProperty                  prototypeBoolean;
-    JsProperty                  prototypeSymbol;
-    JsProperty                  prototypeRegex;
-    JsProperty                  prototypeObject;
-    JsProperty                  prototypeArray;
-    JsProperty                  prototypeFunction;
 
     VMScope                     *globalScope;
 
@@ -282,15 +274,6 @@ public:
     IJsObject                   *objPrototypeObject;
     IJsObject                   *objPrototypeArray;
     IJsObject                   *objPrototypeFunction;
-
-    JsProperty                  prototypeString;
-    JsProperty                  prototypeNumber;
-    JsProperty                  prototypeBoolean;
-    JsProperty                  prototypeSymbol;
-    JsProperty                  prototypeRegex;
-    JsProperty                  prototypeObject;
-    JsProperty                  prototypeArray;
-    JsProperty                  prototypeFunction;
 
 };
 

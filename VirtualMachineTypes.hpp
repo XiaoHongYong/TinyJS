@@ -332,12 +332,33 @@ struct JsProperty {
     }
 };
 
-const JsValue JsNotInitializedValue = JsValue();
-const JsValue JsNullValue = JsValue(JDT_NULL, 0);
-const JsValue JsUndefinedValue = JsValue(JDT_UNDEFINED, 0);
-const JsValue JsTrueValue = JsValue(JDT_BOOL, true);
-const JsValue JsFalseValue = JsValue(JDT_BOOL, false);
-const JsValue JsNaNValue = JsValue(JDT_NUMBER, 1);
+
+enum JsValueObjectIndex {
+    JS_OBJ_PROTOTYPE_IDX_BOOL               = 1,
+    JS_OBJ_PROTOTYPE_IDX_NUMBER             = 3,
+    JS_OBJ_PROTOTYPE_IDX_STRING             = 5,
+    JS_OBJ_PROTOTYPE_IDX_SYMBOL             = 7,
+    JS_OBJ_PROTOTYPE_IDX_OBJECT             = 9,
+    JS_OBJ_PROTOTYPE_IDX_REGEXP             = 11,
+    JS_OBJ_PROTOTYPE_IDX_ARRAY              = 13,
+    JS_OBJ_PROTOTYPE_IDX_FUNCTION           = 15,
+};
+
+const JsValue jsValuePrototypeBool = JsValue(JDT_LIB_OBJECT, JS_OBJ_PROTOTYPE_IDX_BOOL);
+const JsValue jsValuePrototypeNumber = JsValue(JDT_LIB_OBJECT, JS_OBJ_PROTOTYPE_IDX_NUMBER);
+const JsValue jsValuePrototypeString = JsValue(JDT_LIB_OBJECT, JS_OBJ_PROTOTYPE_IDX_STRING);
+const JsValue jsValuePrototypeSymbol = JsValue(JDT_LIB_OBJECT, JS_OBJ_PROTOTYPE_IDX_SYMBOL);
+const JsValue jsValuePrototypeObject = JsValue(JDT_LIB_OBJECT, JS_OBJ_PROTOTYPE_IDX_OBJECT);
+const JsValue jsValuePrototypeRegExp = JsValue(JDT_LIB_OBJECT, JS_OBJ_PROTOTYPE_IDX_REGEXP);
+const JsValue jsValuePrototypeArray = JsValue(JDT_LIB_OBJECT, JS_OBJ_PROTOTYPE_IDX_ARRAY);
+const JsValue jsValuePrototypeFunction = JsValue(JDT_LIB_OBJECT, JS_OBJ_PROTOTYPE_IDX_FUNCTION);
+
+const JsValue jsValueNotInitialized = JsValue();
+const JsValue jsValueNull = JsValue(JDT_NULL, 0);
+const JsValue jsValueUndefined = JsValue(JDT_UNDEFINED, 0);
+const JsValue jsValueTrue = JsValue(JDT_BOOL, true);
+const JsValue jsValueFalse = JsValue(JDT_BOOL, false);
+const JsValue jsValueNaN = JsValue(JDT_NUMBER, 1);
 
 using VecJsValues = std::vector<JsValue>;
 using VecJsDoubles = std::vector<JsDouble>;

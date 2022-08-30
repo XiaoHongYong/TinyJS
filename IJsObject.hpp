@@ -17,9 +17,13 @@ using DequeJsValue = std::deque<JsValue>;
 
 class IJsIterator {
 public:
+    virtual ~IJsIterator() {}
+
+    virtual bool nextKey(SizedString &keyOut) = 0;
     virtual bool nextKey(JsValue &keyOut) = 0;
     virtual bool nextValue(JsValue &valueOut) = 0;
-    virtual bool next(JsValue &nameOut, JsValue &valueOut) = 0;
+    virtual bool next(JsValue &keyOut, JsValue &valueOut) = 0;
+    virtual bool next(SizedString &keyOut, JsValue &valueOut) = 0;
 
 };
 
@@ -41,7 +45,7 @@ public:
     void defineProperty(VMContext *ctx, const JsValue &prop, const JsProperty &descriptor);
     bool getOwnPropertyDescriptor(VMContext *ctx, const JsValue &prop, JsProperty &descriptorOut);
 
-    JsValue get(VMContext *ctx, const JsValue &thiz, const JsValue &prop, const JsValue &defVal = JsUndefinedValue);
+    JsValue get(VMContext *ctx, const JsValue &thiz, const JsValue &prop, const JsValue &defVal = jsValueUndefined);
     void set(VMContext *ctx, const JsValue &thiz, const JsValue &prop, const JsValue &value);
     bool remove(VMContext *ctx, const JsValue &prop);
 
@@ -57,9 +61,9 @@ public:
     virtual JsProperty *getRawByIndex(VMContext *ctx, uint32_t index, bool &isSelfPropOut) = 0;
     virtual JsProperty *getRawBySymbol(VMContext *ctx, uint32_t index, bool &isSelfPropOut) = 0;
 
-    virtual JsValue getByName(VMContext *ctx, const JsValue &thiz, const SizedString &prop, const JsValue &defVal = JsUndefinedValue) = 0;
-    virtual JsValue getByIndex(VMContext *ctx, const JsValue &thiz, uint32_t index, const JsValue &defVal = JsUndefinedValue) = 0;
-    virtual JsValue getBySymbol(VMContext *ctx, const JsValue &thiz, uint32_t index, const JsValue &defVal = JsUndefinedValue) = 0;
+    virtual JsValue getByName(VMContext *ctx, const JsValue &thiz, const SizedString &prop, const JsValue &defVal = jsValueUndefined) = 0;
+    virtual JsValue getByIndex(VMContext *ctx, const JsValue &thiz, uint32_t index, const JsValue &defVal = jsValueUndefined) = 0;
+    virtual JsValue getBySymbol(VMContext *ctx, const JsValue &thiz, uint32_t index, const JsValue &defVal = jsValueUndefined) = 0;
 
     virtual void setByName(VMContext *ctx, const JsValue &thiz, const SizedString &prop, const JsValue &value) = 0;
     virtual void setByIndex(VMContext *ctx, const JsValue &thiz, uint32_t index, const JsValue &value) = 0;
@@ -71,8 +75,8 @@ public:
 
     virtual IJsObject *clone() = 0;
 
+    virtual IJsIterator *getIteratorObject(VMContext *ctx) = 0;
     virtual JsValue getIterator(VMContext *ctx);
-    // virtual IJsIterator *getIteratorObject() = 0;
 
 public:
     JsDataType                  type;
@@ -93,7 +97,7 @@ using MapSymbolToJsValue = std::unordered_map<uint32_t, JsValue>;
 
 class JsObject : public IJsObject {
 public:
-    JsObject(const JsValue &__proto__ = JsNotInitializedValue);
+    JsObject(const JsValue &__proto__ = jsValuePrototypeObject);
     virtual ~JsObject();
 
     virtual void definePropertyByName(VMContext *ctx, const SizedString &prop, const JsProperty &descriptor) override;
@@ -108,9 +112,9 @@ public:
     virtual JsProperty *getRawByIndex(VMContext *ctx, uint32_t index, bool &isSelfPropOut) override;
     virtual JsProperty *getRawBySymbol(VMContext *ctx, uint32_t index, bool &isSelfPropOut) override;
 
-    virtual JsValue getByName(VMContext *ctx, const JsValue &thiz, const SizedString &prop, const JsValue &defVal = JsUndefinedValue) override;
-    virtual JsValue getByIndex(VMContext *ctx, const JsValue &thiz, uint32_t index, const JsValue &defVal = JsUndefinedValue) override;
-    virtual JsValue getBySymbol(VMContext *ctx, const JsValue &thiz, uint32_t index, const JsValue &defVal = JsUndefinedValue) override;
+    virtual JsValue getByName(VMContext *ctx, const JsValue &thiz, const SizedString &prop, const JsValue &defVal = jsValueUndefined) override;
+    virtual JsValue getByIndex(VMContext *ctx, const JsValue &thiz, uint32_t index, const JsValue &defVal = jsValueUndefined) override;
+    virtual JsValue getBySymbol(VMContext *ctx, const JsValue &thiz, uint32_t index, const JsValue &defVal = jsValueUndefined) override;
 
     virtual void setByName(VMContext *ctx, const JsValue &thiz, const SizedString &prop, const JsValue &value) override;
     virtual void setByIndex(VMContext *ctx, const JsValue &thiz, uint32_t index, const JsValue &value) override;
@@ -122,8 +126,11 @@ public:
 
     virtual IJsObject *clone() override;
 
+    virtual IJsIterator *getIteratorObject(VMContext *ctx) override;
+
 protected:
     friend class JsLibObject;
+    friend class JsObjectIterator;
 
     JsProperty                  __proto__;
 

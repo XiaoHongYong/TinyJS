@@ -42,6 +42,7 @@ function f21() {
 f21();
 /* OUTPUT
 [object Object]
+true
 */
 
 // 重新定义 g.prototype.__proto__
@@ -580,6 +581,9 @@ function f6() {
 }
 f6();
 /* OUTPUT
+get 1
+x undefined
+set y 3
 */
 
 // 测试 Arguments 的 Object.defineProperty
@@ -606,31 +610,9 @@ function f61(a, b, c) {
 }
 f61(1, 2, 3);
 /* OUTPUT
+get 1
+x undefined 2
+set y 3
 */
 
-
-// 测试 entries
-function f7() {
-    function g() {
-        this.a = 1;
-    }
-
-    g.prototype = {
-        b: 2,
-    };
-
-    Object.defineProperty(g.prototype, 'c', {
-        get: function() {
-            console.log('get 1');
-            return 'x';
-        },
-    });
-
-    var a = new g();;
-
-    console.log(Object.entries(a));
-}
-f7();
-/* OUTPUT
-*/
 

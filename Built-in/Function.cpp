@@ -44,6 +44,7 @@ static void functionConstructor(VMContext *ctx, const JsValue &thiz, const Argum
 static JsLibProperty functionFunctions[] = {
     { "name", nullptr, "Function" },
     { "length", nullptr, nullptr, JsValue(JDT_INT32, 1) },
+    { "prototype", nullptr, nullptr, JsValue(JDT_INT32, 1) },
 };
 
 void functionPrototypeToString(VMContext *ctx, const JsValue &thiz, const Arguments &args) {
@@ -81,9 +82,12 @@ static JsLibProperty functionPrototypeFunctions[] = {
 };
 
 void registerObjFunction(VMRuntimeCommon *rt) {
-    auto prototype = new JsLibObject(rt, functionPrototypeFunctions, CountOf(functionPrototypeFunctions));
-    rt->objPrototypeFunction = prototype;
-    rt->prototypeFunction.value = rt->pushObjValue(JDT_LIB_OBJECT, prototype);
+    auto prototypeObj = new JsLibObject(rt, functionPrototypeFunctions, CountOf(functionPrototypeFunctions));
+    rt->objPrototypeFunction = prototypeObj;
+    auto prototype = rt->pushObjValue(JDT_LIB_OBJECT, prototypeObj);
+    assert(prototype == jsValuePrototypeFunction);
+
+    SET_PROTOTYPE(functionFunctions, prototype);
 
     rt->setGlobalObject("Function",
         new JsLibObject(rt, functionFunctions, CountOf(functionFunctions), functionConstructor));

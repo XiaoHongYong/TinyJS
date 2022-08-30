@@ -75,7 +75,7 @@ void Arguments::copy(const Arguments &other, uint32_t minSize) {
 
     // 将额外的位置赋值为 Undefined.
     while (minSize > count) {
-        data[--minSize] = JsUndefinedValue;
+        data[--minSize] = jsValueUndefined;
     }
 }
 
@@ -121,7 +121,7 @@ void VMContext::throwException(ParseError err, JsValue errorMessage) {
     if (errorInTry != PE_OK) {
         // 在 finally 中抛出异常，会清除上一次的异常内容
         errorInTry = PE_OK;
-        errorMessageInTry = JsUndefinedValue;
+        errorMessageInTry = jsValueUndefined;
     }
 }
 
@@ -185,7 +185,7 @@ void JsVirtualMachine::eval(cstr_t code, size_t len, VMContext *vmctx, VecVMStac
     // 检查全局变量的空间
     auto globalScope = runtime->globalScope;
     if (globalScope->vars.size() < globalScope->scopeDsc->varDeclares.size()) {
-        globalScope->vars.resize(globalScope->scopeDsc->varDeclares.size(), JsNotInitializedValue);
+        globalScope->vars.resize(globalScope->scopeDsc->varDeclares.size(), jsValueNotInitialized);
     }
     
     VecVMStackFrames stackFrames;
@@ -269,7 +269,7 @@ JsValue JsVirtualMachine::getMemberDot(VMContext *ctx, const JsValue &thiz, cons
         }
     }
 
-    return JsUndefinedValue;
+    return jsValueUndefined;
 }
 
 void JsVirtualMachine::setMemberDot(VMContext *ctx, const JsValue &thiz, const SizedString &prop, const JsValue &value) {
@@ -331,7 +331,7 @@ JsValue JsVirtualMachine::getMemberIndex(VMContext *ctx, const JsValue &thiz, co
         }
     }
 
-    return JsUndefinedValue;
+    return jsValueUndefined;
 }
 
 void JsVirtualMachine::setMemberIndex(VMContext *ctx, const JsValue &thiz, const JsValue &prop, const JsValue &value) {
@@ -376,7 +376,7 @@ void JsVirtualMachine::call(Function *function, VMContext *ctx, VecVMStackScopes
     auto resourcePool = function->resourcePool;
     auto &stack = ctx->stack;
     auto bytecode = function->bytecode, endBytecode = bytecode + function->lenByteCode;
-    auto retValue = JsUndefinedValue;
+    auto retValue = jsValueUndefined;
 
     VMScope *functionScope, *scopeLocal;
     scopeLocal = new VMScope(function->scope);
@@ -447,7 +447,7 @@ void JsVirtualMachine::call(Function *function, VMContext *ctx, VecVMStackScopes
                     retValue = stack.back();
                     stack.pop_back();
                 } else {
-                    retValue = JsUndefinedValue;
+                    retValue = jsValueUndefined;
                 }
                 bytecode = endBytecode;
 
@@ -651,19 +651,19 @@ void JsVirtualMachine::call(Function *function, VMContext *ctx, VecVMStackScopes
                 break;
             }
             case OP_PUSH_UNDFINED: {
-                stack.push_back(JsUndefinedValue);
+                stack.push_back(jsValueUndefined);
                 break;
             }
             case OP_PUSH_TRUE: {
-                stack.push_back(JsTrueValue);
+                stack.push_back(jsValueTrue);
                 break;
             }
             case OP_PUSH_FALSE: {
-                stack.push_back(JsFalseValue);
+                stack.push_back(jsValueFalse);
                 break;
             }
             case OP_PUSH_NULL: {
-                stack.push_back(JsNullValue);
+                stack.push_back(jsValueNull);
                 break;
             }
             case OP_PUSH_ID_GLOBAL: {
@@ -782,7 +782,7 @@ void JsVirtualMachine::call(Function *function, VMContext *ctx, VecVMStackScopes
                 auto idx = readUInt32(bytecode);
                 auto obj = stack.back();
                 if (obj.type <= JDT_NULL) {
-                    stack.back() = JsUndefinedValue;
+                    stack.back() = jsValueUndefined;
                 } else {
                     auto prop = runtime->getStringByIdx(idx, resourcePool);
                     auto value = getMemberDot(ctx, obj, prop);
@@ -820,7 +820,7 @@ void JsVirtualMachine::call(Function *function, VMContext *ctx, VecVMStackScopes
                     auto value = getMemberDot(ctx, obj, prop);
                     stack.push_back(value);
                 } else {
-                    stack.push_back(JsUndefinedValue);
+                    stack.push_back(jsValueUndefined);
                 }
                 break;
             }
@@ -1133,11 +1133,11 @@ void JsVirtualMachine::call(Function *function, VMContext *ctx, VecVMStackScopes
                     auto *pobj = runtime->getObject(obj);
                     auto prop = runtime->getStringByIdx(stringIdx, resourcePool);
                     if (!pobj->removeByName(ctx, prop)) {
-                        stack.push_back(JsFalseValue);
+                        stack.push_back(jsValueFalse);
                         break;
                     }
                 }
-                stack.push_back(JsTrueValue);
+                stack.push_back(jsValueTrue);
                 break;
             }
             case OP_DELETE_MEMBER_INDEX: {
@@ -1147,12 +1147,12 @@ void JsVirtualMachine::call(Function *function, VMContext *ctx, VecVMStackScopes
                     auto *pobj = runtime->getObject(obj);
                     pobj->remove(ctx, index);
                 }
-                stack.push_back(JsTrueValue);
+                stack.push_back(jsValueTrue);
                 break;
             }
             case OP_DELETE: {
                 auto value = stack.back(); stack.pop_back();
-                stack.push_back(JsTrueValue);
+                stack.push_back(jsValueTrue);
                 break;
             }
             case OP_TYPEOF: {
@@ -1171,7 +1171,7 @@ void JsVirtualMachine::call(Function *function, VMContext *ctx, VecVMStackScopes
                 break;
             }
             case OP_VOID: {
-                stack.push_back(JsUndefinedValue);
+                stack.push_back(jsValueUndefined);
                 break;
             }
             case OP_NEW: {
@@ -1189,7 +1189,7 @@ void JsVirtualMachine::call(Function *function, VMContext *ctx, VecVMStackScopes
 
                         auto prototype = obj->getByName(ctx, func, SS_PROTOTYPE);
                         if (prototype.type < JDT_OBJECT) {
-                            prototype = runtime->prototypeObject.value;
+                            prototype = jsValuePrototypeObject;
                         }
                         auto thizVal = runtime->pushObjValue(JDT_OBJECT, new JsObject(prototype));
                         call(obj->function, ctx, obj->stackScopes, thizVal, args);
@@ -1246,7 +1246,7 @@ void JsVirtualMachine::call(Function *function, VMContext *ctx, VecVMStackScopes
                 JsProperty descriptor;
                 descriptor.isGetter = true;
                 descriptor.value = value;
-                descriptor.setter = JsNotInitializedValue;
+                descriptor.setter = jsValueNotInitialized;
                 pobj->definePropertyByName(ctx, name, descriptor);
                 break;
             }
@@ -1257,7 +1257,7 @@ void JsVirtualMachine::call(Function *function, VMContext *ctx, VecVMStackScopes
                 assert(obj.type == JDT_OBJECT);
                 auto pobj = (JsObject *)runtime->getObject(obj);
                 auto name = runtime->getStringByIdx(idx, resourcePool);
-                JsProperty descriptor(JsNotInitializedValue);
+                JsProperty descriptor(jsValueNotInitialized);
                 descriptor.setter = value;
                 descriptor.isGetter = -1;
                 pobj->definePropertyByName(ctx, name, descriptor);
@@ -1285,7 +1285,7 @@ void JsVirtualMachine::call(Function *function, VMContext *ctx, VecVMStackScopes
                 auto arr = stack.back();
                 assert(arr.type == JDT_ARRAY);
                 auto a = (JsArray *)runtime->getObject(arr);
-                a->push(ctx, JsUndefinedValue);
+                a->push(ctx, jsValueUndefined);
                 break;
             }
             case OP_ARRAY_ASSING_CREATE: {
@@ -1372,7 +1372,7 @@ void JsVirtualMachine::call(Function *function, VMContext *ctx, VecVMStackScopes
                     ctx->error = ctx->errorInTry;
                     ctx->errorMessage = ctx->errorMessageInTry;
                     ctx->errorInTry = PE_OK;
-                    ctx->errorMessageInTry = JsUndefinedValue;
+                    ctx->errorMessageInTry = jsValueUndefined;
                     stack.push_back(ctx->errorMessage);
                 }
                 break;
@@ -1383,7 +1383,7 @@ void JsVirtualMachine::call(Function *function, VMContext *ctx, VecVMStackScopes
             // 有异常发生
 
             // 异常会清除 return 相关内容
-            retValue = JsUndefinedValue;
+            retValue = jsValueUndefined;
 
             auto &stackTryCatch = ctx->stackTryCatch;
             if (stackTryCatch.empty() || stackTryCatch.top().flags != makeTryCatchPointFlags(function, functionScope)) {

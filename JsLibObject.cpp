@@ -283,6 +283,12 @@ IJsObject *JsLibObject::clone() {
     return obj;
 }
 
+IJsIterator *JsLibObject::getIteratorObject(VMContext *ctx) {
+    // auto it = new JsObjectIterator(ctx, this);
+    // return it;
+    return nullptr;
+}
+
 /**
  * 约定 prototype 在最后一个位置.
  */
@@ -295,7 +301,7 @@ void JsLibObject::_newObject() {
     assert(_obj == nullptr);
 
     // 如果是 Object.prototype, 避免循环调用到 __proto__ 的 get 函数中.
-    _obj = new JsObject(_isObjectPrototype ? JsNullValue : JsNotInitializedValue);
+    _obj = new JsObject(_isObjectPrototype ? jsValueNull : jsValueNotInitialized);
 }
 
 void JsLibObject::_copyForModify() {

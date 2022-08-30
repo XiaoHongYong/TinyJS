@@ -28,7 +28,7 @@ static void symbolConstructor(VMContext *ctx, const JsValue &thiz, const Argumen
 
 static void symbolFor(VMContext *ctx, const JsValue &thiz, const Arguments &args) {
     assert(0);
-    ctx->retValue = JsUndefinedValue;
+    ctx->retValue = jsValueUndefined;
 }
 
 static JsLibProperty symbolFunctions[] = {
@@ -44,7 +44,7 @@ void symbolPrototypeToString(VMContext *ctx, const JsValue &thiz, const Argument
         return;
     }
 
-    ctx->retValue = JsUndefinedValue;
+    ctx->retValue = jsValueUndefined;
 }
 
 static JsLibProperty symbolPrototypeFunctions[] = {
@@ -52,11 +52,12 @@ static JsLibProperty symbolPrototypeFunctions[] = {
 };
 
 void registerSymbol(VMRuntimeCommon *rt) {
-    auto prototype = new JsLibObject(rt, symbolPrototypeFunctions, CountOf(symbolPrototypeFunctions));
-    rt->objPrototypeSymbol = prototype;
-    rt->prototypeSymbol.value = rt->pushObjValue(JDT_LIB_OBJECT, prototype);
+    auto prototypeObj = new JsLibObject(rt, symbolPrototypeFunctions, CountOf(symbolPrototypeFunctions));
+    rt->objPrototypeSymbol = prototypeObj;
+    auto prototype = rt->pushObjValue(JDT_LIB_OBJECT, prototypeObj);
+    assert(prototype == jsValuePrototypeSymbol);
 
-    SET_PROTOTYPE(symbolFunctions, rt->prototypeSymbol);
+    SET_PROTOTYPE(symbolFunctions, prototype);
 
     rt->setGlobalObject("Symbol",
         new JsLibObject(rt, symbolFunctions, CountOf(symbolFunctions), symbolConstructor));

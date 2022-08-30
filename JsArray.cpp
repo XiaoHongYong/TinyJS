@@ -266,7 +266,7 @@ void JsArray::setByIndex(VMContext *ctx, const JsValue &thiz, uint32_t index, co
         block = _firstBlock;
 
         if (index >= _firstBlockItems->size()) {
-            _firstBlockItems->resize(index + 1, JsNotInitializedValue);
+            _firstBlockItems->resize(index + 1, jsValueNotInitialized);
             assert(_blocks.size() <= 1 || index < _blocks[1]->index);
 
             if (index >= _length) {
@@ -330,13 +330,19 @@ IJsObject *JsArray::clone() {
     return nullptr;
 }
 
+IJsIterator *JsArray::getIteratorObject(VMContext *ctx) {
+    // auto it = new JsObjectIterator(ctx, this);
+    // return it;
+    return nullptr;
+}
+
 void JsArray::push(VMContext *ctx, const JsValue &value) {
-    setByIndex(ctx, JsNullValue, _length, value);
+    setByIndex(ctx, jsValueNull, _length, value);
 }
 
 void JsArray::push(VMContext *ctx, const JsValue *first, uint32_t count) {
     for (int i = 0; i < count; i++) {
-        setByIndex(ctx, JsNullValue, _length, first[i]);
+        setByIndex(ctx, jsValueNull, _length, first[i]);
     }
 }
 
@@ -391,7 +397,7 @@ void JsArray::toString(VMContext *ctx, const JsValue &thiz, BinaryOutputStream &
 
 void JsArray::_newObject(VMContext *ctx) {
     assert(_obj == nullptr);
-    _obj = new JsObject(ctx->runtime->prototypeArray.value);
+    _obj = new JsObject(jsValuePrototypeArray);
 }
 
 JsArray::Block *JsArray::findBlock(uint32_t index) {
@@ -410,7 +416,7 @@ JsArray::Block *JsArray::findToModifyBlock(uint32_t index) {
     if (index < ARRAY_BLOCK_SIZE) {
         // 在第一个 block 内
         if (index >= _firstBlockItems->size()) {
-            _firstBlockItems->resize(index + 1, JsNotInitializedValue);
+            _firstBlockItems->resize(index + 1, jsValueNotInitialized);
             assert(_blocks.size() <= 1 || index < _blocks[1]->index);
 
             if (index >= _length) {
@@ -434,7 +440,7 @@ JsArray::Block *JsArray::findToModifyBlock(uint32_t index) {
             block->index = roundIndexToBlock(index);
         }
 
-        block->items.resize(index - block->index + 1, JsNotInitializedValue);
+        block->items.resize(index - block->index + 1, jsValueNotInitialized);
 
         if (index >= _length) {
             _length = index + 1;
@@ -468,9 +474,9 @@ JsArray::Block *JsArray::findToModifyBlock(uint32_t index) {
             prev = new Block;
             _blocks.insert(it, prev);
             prev->index = roundIndexToBlock(index);
-            prev->items.push_back(JsProperty(JsNotInitializedValue));
+            prev->items.push_back(JsProperty(jsValueNotInitialized));
         }
-        prev->items.resize(index - prev->index + 1, JsNotInitializedValue);
+        prev->items.resize(index - prev->index + 1, jsValueNotInitialized);
         return prev;
     }
 
@@ -489,9 +495,9 @@ JsArray::Block *JsArray::findToModifyBlock(uint32_t index) {
             && block->index - index < ARRAY_BLOCK_SIZE / 2) {
         // 距离后一个近，而且后一个还没满，且添加的距离不小于 ARRAY_BLOCK_SIZE / 2
         auto insertCount = block->index - index;
-        block->items.insert(block->items.begin(), insertCount, JsProperty(JsNotInitializedValue));
+        block->items.insert(block->items.begin(), insertCount, JsProperty(jsValueNotInitialized));
         if (block->setters) {
-            block->setters->insert(block->setters->begin(), insertCount, JsNotInitializedValue);
+            block->setters->insert(block->setters->begin(), insertCount, jsValueNotInitialized);
         }
         block->index = index;
         return block;
@@ -500,7 +506,7 @@ JsArray::Block *JsArray::findToModifyBlock(uint32_t index) {
         block = new Block;
         _blocks.insert(it, block);
         block->index = index;
-        block->items.push_back(JsProperty(JsNotInitializedValue));
+        block->items.push_back(JsProperty(jsValueNotInitialized));
         return block;
     }
 }
@@ -517,7 +523,7 @@ void JsArray::reserveSize(uint32_t length) {
         auto b = new Block();
         _blocks.push_back(b);
         b->index = index;
-        b->items.resize(size, JsNotInitializedValue);
+        b->items.resize(size, jsValueNotInitialized);
 
         index += size;
         length -= size;

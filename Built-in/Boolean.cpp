@@ -38,11 +38,12 @@ static JsLibProperty booleanPrototypeFunctions[] = {
 };
 
 void registerBoolean(VMRuntimeCommon *rt) {
-    auto prototype = new JsLibObject(rt, booleanPrototypeFunctions, CountOf(booleanPrototypeFunctions));
-    rt->objPrototypeBoolean = prototype;
-    rt->prototypeBoolean.value = rt->pushObjValue(JDT_LIB_OBJECT, prototype);
+    auto prototypeObj = new JsLibObject(rt, booleanPrototypeFunctions, CountOf(booleanPrototypeFunctions));
+    rt->objPrototypeBoolean = prototypeObj;
+    auto prototype = rt->pushObjValue(JDT_LIB_OBJECT, prototypeObj);
+    assert(prototype == jsValuePrototypeBool);
 
-    SET_PROTOTYPE(booleanFunctions, rt->prototypeBoolean);
+    SET_PROTOTYPE(booleanFunctions, prototype);
 
     rt->setGlobalObject("Boolean",
         new JsLibObject(rt, booleanFunctions, CountOf(booleanFunctions), booleanConstructor));

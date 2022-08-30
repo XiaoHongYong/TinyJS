@@ -73,7 +73,7 @@ bool IJsObject::getOwnPropertyDescriptor(VMContext *ctx, const JsValue &propOrg,
         prop = ctx->runtime->toString(ctx, propOrg);
     }
 
-    descriptorOut = JsProperty(JsUndefinedValue);
+    descriptorOut = JsProperty(jsValueUndefined);
 
     switch (prop.type) {
         case JDT_NOT_INITIALIZED:
@@ -142,7 +142,7 @@ JsValue IJsObject::get(VMContext *ctx, const JsValue &thiz, const JsValue &propO
         }
     }
 
-    return JsUndefinedValue;
+    return jsValueUndefined;
 }
 
 void IJsObject::set(VMContext *ctx, const JsValue &thiz, const JsValue &propOrg, const JsValue &value) {
@@ -227,10 +227,108 @@ bool IJsObject::remove(VMContext *ctx, const JsValue &propOrg) {
 }
 
 JsValue IJsObject::getIterator(VMContext *ctx) {
-    return JsUndefinedValue;
+//    auto obj = getIteratorObject(ctx);
+//    return ctx->runtime->pushObjValue(obj);
+
+    return jsValueUndefined;
 //    auto obj = getIteratorObject();
 //    return ctx->runtime->pushObjValue(obj);
 }
+
+/**
+ * 为了遍历 Object 的所有属性
+ */
+class JsObjectIterator : public IJsIterator {
+public:
+    JsObjectIterator(VMContext *ctx, JsObject *obj) {
+        assert(obj->type == JDT_OBJECT);
+        _ctx = ctx;
+        _obj = obj;
+        _it = obj->_props.begin();
+    }
+
+    virtual bool nextKey(SizedString &keyOut) override {
+        if (_it == _obj->_props.end()) {
+            return false;
+        }
+        keyOut = (*_it).first;
+
+        _it++;
+        return true;
+    }
+
+    virtual bool nextKey(JsValue &keyOut) override {
+        if (_it == _obj->_props.end()) {
+            return false;
+        }
+        keyOut = _ctx->runtime->pushString((*_it).first);
+
+        _it++;
+        return true;
+    }
+
+    virtual bool nextValue(JsValue &valueOut) override {
+        if (_it == _obj->_props.end()) {
+            return false;
+        }
+
+        auto &prop = (*_it).second;
+        if (prop.isGetter) {
+            _ctx->vm->callMember(_ctx, _obj->self, prop.value, Arguments());
+            valueOut = _ctx->retValue;
+        } else {
+            valueOut = prop.value;
+        }
+
+        _it++;
+        return true;
+    }
+
+    virtual bool next(JsValue &keyOut, JsValue &valueOut) override {
+        if (_it == _obj->_props.end()) {
+            return false;
+        }
+
+        keyOut = _ctx->runtime->pushString((*_it).first);
+
+        auto &prop = (*_it).second;
+        if (prop.isGetter) {
+            _ctx->vm->callMember(_ctx, _obj->self, prop.value, Arguments());
+            valueOut = _ctx->retValue;
+        } else {
+            valueOut = prop.value;
+        }
+
+        _it++;
+        return true;
+    }
+
+    virtual bool next(SizedString &keyOut, JsValue &valueOut) override {
+        if (_it == _obj->_props.end()) {
+            return false;
+        }
+
+        keyOut = (*_it).first;
+
+        auto &prop = (*_it).second;
+        if (prop.isGetter) {
+            _ctx->vm->callMember(_ctx, _obj->self, prop.value, Arguments());
+            valueOut = _ctx->retValue;
+        } else {
+            valueOut = prop.value;
+        }
+
+        _it++;
+        return true;
+    }
+
+protected:
+    VMContext                       *_ctx;
+    JsObject                        *_obj;
+    MapNameToJsProperty::iterator   _it;
+
+};
+
 
 JsObject::JsObject(const JsValue &proto) : __proto__(proto, false, false, false, true) {
     type = JDT_OBJECT;
@@ -330,12 +428,7 @@ JsProperty *JsObject::getRawByName(VMContext *ctx, const SizedString &prop, bool
     isSelfPropOut = true;
 
     if (prop.equal(SS___PROTO__)) {
-        if (__proto__.value.type == JDT_NOT_INITIALIZED) {
-            // 缺省的 Object.prototype
-            return &ctx->runtime->prototypeObject;
-        } else {
-            return &__proto__;
-        }
+        return &__proto__;
     }
 
     auto it = _props.find(prop);
@@ -398,7 +491,7 @@ JsValue JsObject::getByName(VMContext *ctx, const JsValue &thiz, const SizedStri
             return propValue->value;
         } else {
             // 有 key，所以返回 undefined，而非 defVal
-            return JsUndefinedValue;
+            return jsValueUndefined;
         }
     }
 
@@ -531,6 +624,11 @@ IJsObject *JsObject::clone() {
     if (_symbolProps) { obj->_symbolProps = new MapSymbolToJsProperty; *obj->_symbolProps = *_symbolProps; }
 
     return obj;
+}
+
+IJsIterator *JsObject::getIteratorObject(VMContext *ctx) {
+    auto it = new JsObjectIterator(ctx, this);
+    return it;
 }
 
 void mergeJsProperty(VMContext *ctx, JsProperty *dst, const JsProperty &src, const SizedString &name) {

@@ -18,7 +18,7 @@ static void _eval(VMContext *ctx, const JsValue &thiz, const Arguments &args) {
     auto runtime = ctx->runtime;
 
     if (args.count == 0) {
-        ctx->stack.push_back(JsUndefinedValue);
+        ctx->stack.push_back(jsValueUndefined);
         return;
     }
 
@@ -35,7 +35,7 @@ static void _eval(VMContext *ctx, const JsValue &thiz, const Arguments &args) {
 
         ctx->vm->eval((cstr_t)code.data, code.len, ctx, *stackScopes, args);
     } else if (v.type == JDT_CHAR) {
-        ctx->retValue = JsUndefinedValue;
+        ctx->retValue = jsValueUndefined;
     } else {
         ctx->retValue = v;
     }

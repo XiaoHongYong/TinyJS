@@ -62,7 +62,7 @@ TEST(JsArray, findToModifyBlock) {
 
     // 测试不存在的值
     ret = a.getByIndex(ctx, thiz, 30);
-    ASSERT_EQ(ret, JsUndefinedValue);
+    ASSERT_EQ(ret, jsValueUndefined);
 
     // 添加在第 2 block, 按照 ARRAY_BLOCK_SIZE 分段
     int startIndex = ARRAY_BLOCK_SIZE * 3;
