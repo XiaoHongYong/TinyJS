@@ -800,6 +800,21 @@ IJsNode *JSParser::_expectExpression(Precedence pred, bool enableIn) {
             _readToken();
             break;
         }
+        case TK_TRUE: {
+            expr = PoolNew(_pool, JsExprBoolTrue)();
+            _readToken();
+            break;
+        }
+        case TK_FALSE: {
+            expr = PoolNew(_pool, JsExprBoolFalse)();
+            _readToken();
+            break;
+        }
+        case TK_NULL: {
+            expr = PoolNew(_pool, JsExprNull)();
+            _readToken();
+            break;
+        }
         case TK_FUNCTION:
             expr = _expectFunctionExpression(FT_EXPRESSION);
             break;
@@ -825,25 +840,40 @@ IJsNode *JSParser::_expectExpression(Precedence pred, bool enableIn) {
             expr = exprNew;
             break;
         }
+        case TK_DELETE: {
+            _readToken();
+            expr = PoolNew(_pool, JsExprDelete)(_expectExpression(PRED_UNARY_PREFIX));
+            break;
+        }
+        case TK_VOID: {
+            _readToken();
+            expr = PoolNew(_pool, JsExprUnaryPrefix)(_expectExpression(PRED_UNARY_PREFIX), OP_VOID);
+            break;
+        }
+        case TK_TYPEOF: {
+            _readToken();
+            expr = PoolNew(_pool, JsExprUnaryPrefix)(_expectExpression(PRED_UNARY_PREFIX), OP_TYPEOF);
+            break;
+        }
         case TK_UNARY_PREFIX: {
             // !, ~
             auto opcode = _curToken.opr;
             _readToken();
-            expr = PoolNew(_pool, JsExprUnaryPrefix)(_expectExpression(PRED_UNARY_PREFIX, false), opcode);
+            expr = PoolNew(_pool, JsExprUnaryPrefix)(_expectExpression(PRED_UNARY_PREFIX), opcode);
             break;
         }
         case TK_POSTFIX: {
             // ++, --
             bool increase = _curToken.buf[0] == '+';
             _readToken();
-            expr = PoolNew(_pool, JsExprPrefixXCrease)(_expectExpression(PRED_UNARY_PREFIX, false), increase);
+            expr = PoolNew(_pool, JsExprPrefixXCrease)(_expectExpression(PRED_UNARY_PREFIX), increase);
             break;
         }
         case TK_ADD: {
             // +, -
             bool isNegative = _curToken.buf[0] == '-';
             _readToken();
-            expr = _expectExpression(PRED_UNARY_PREFIX, false);
+            expr = _expectExpression(PRED_UNARY_PREFIX);
             if (isNegative) {
                 expr = PoolNew(_pool, JsExprUnaryPrefix)(expr, OP_PREFIX_NEGATE);
             }
@@ -948,7 +978,7 @@ IJsNode *JSParser::_expectExpression(Precedence pred, bool enableIn) {
             }
 
             _readToken();
-            expr = PoolNew(_pool, JsExprAssign)(expr, _expectExpression(PRED_ASSIGNMENT));
+            expr = PoolNew(_pool, JsExprAssign)(expr, _expectExpression(PRED_ASSIGNMENT, enableIn));
             break;
         }
         case TK_ASSIGN_X: {
@@ -958,7 +988,7 @@ IJsNode *JSParser::_expectExpression(Precedence pred, bool enableIn) {
 
             auto opr = _curToken.opr;
             _readToken();
-            expr = PoolNew(_pool, JsExprAssignX)(expr, _expectExpression(PRED_ASSIGNMENT), opr);
+            expr = PoolNew(_pool, JsExprAssignX)(expr, _expectExpression(PRED_ASSIGNMENT, enableIn), opr);
             break;
         }
         default:

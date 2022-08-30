@@ -13,6 +13,7 @@
 
 
 class IJsObject;
+class VMContext;
 
 #define OP_CODE_DEFINES \
     OP_ITEM(OP_INVALID, "not_used"), \
@@ -43,7 +44,9 @@ class IJsObject;
     OP_ITEM(OP_PUSH_STACK_TOP, ""), \
     \
     OP_ITEM(OP_PUSH_UNDFINED, ""), \
-    OP_ITEM(OP_PUSH_IDENTIFIER, "not_used"), \
+    OP_ITEM(OP_PUSH_NULL, ""), \
+    OP_ITEM(OP_PUSH_TRUE, ""), \
+    OP_ITEM(OP_PUSH_FALSE, ""), \
     OP_ITEM(OP_PUSH_ID_LOCAL_SCOPE, "var_idx:u16"), \
     OP_ITEM(OP_PUSH_ID_LOCAL_ARGUMENT, "argument_idx:u16"), \
     OP_ITEM(OP_PUSH_ID_PARENT_ARGUMENT, "scope_depth:u8, argument_idx:u16"), \
@@ -120,6 +123,11 @@ class IJsObject;
     OP_ITEM(OP_GREATER_EQUAL_THAN, ""), \
     OP_ITEM(OP_IN, ""), \
     OP_ITEM(OP_INSTANCE_OF, ""), \
+    OP_ITEM(OP_DELETE_MEMBER_DOT, "property_string_idx:u32"), \
+    OP_ITEM(OP_DELETE_MEMBER_INDEX, ""), \
+    OP_ITEM(OP_DELETE, ""), \
+    OP_ITEM(OP_TYPEOF, ""), \
+    OP_ITEM(OP_VOID, ""), \
     \
     OP_ITEM(OP_NEW, "count_args:u16"), \
     OP_ITEM(OP_NEW_TARGET, ""), \
@@ -176,12 +184,16 @@ enum JsDataType : uint8_t {
     JDT_SYMBOL,
     JDT_CHAR, // 单个字符的 String
     JDT_STRING,
+
+    // Object 开始
     JDT_OBJECT,
     JDT_REGEX,
     JDT_ARRAY,
-    JDT_LIB_OBJECT,
+
+    // 函数 开始
     JDT_FUNCTION,
     JDT_NATIVE_FUNCTION,
+    JDT_LIB_OBJECT,
 };
 
 const char *jsDataTypeToString(JsDataType type);
@@ -201,9 +213,11 @@ struct JsValue {
     } value;
 
     JsValue() { *(uint64_t *)this = 0; }
-    JsValue(bool b) { *(uint64_t *)this = 0; type = JDT_BOOL; value.n32 = b; }
     JsValue(int32_t n32) { *(uint64_t *)this = 0; type = JDT_INT32; value.n32 = n32; }
     JsValue(JsDataType type, uint32_t objIdx) { *(uint64_t *)this = 0; this->type = type; value.index = objIdx; }
+
+    inline bool isValid() const { return type > JDT_NOT_INITIALIZED; }
+    inline bool equal(const JsValue &other) const { return *(uint64_t *)this == *(uint64_t *)&other; }
 };
 
 inline bool operator==(const JsValue &a, const JsValue &b) {
@@ -289,11 +303,41 @@ static_assert(sizeof(JsString) == 24, "JsPoolString should be 24 bytes long.");
 
 #pragma pack(pop)
 
+/**
+ * JsProperty 定义了 Object 的基本属性
+ */
+struct JsProperty {
+    JsValue                     value; // 属性值，或者 getter
+    JsValue                     setter;
+    int8_t                      isGetter;
+    int8_t                      isConfigurable;
+    int8_t                      isEnumerable;
+    int8_t                      isWritable;
+    
+    JsProperty(const JsValue &value, int8_t isGetter = false, int8_t isConfigurable = true, int8_t isEnumerable = true, int8_t isWritable = true) : value(value), isGetter(isGetter), isConfigurable(isConfigurable), isEnumerable(isEnumerable), isWritable(isWritable) {
+    }
+
+    JsProperty() : JsProperty(JsValue(JDT_UNDEFINED, 0)) { }
+
+    bool merge(const JsProperty &src);
+
+    JsProperty defineProperty() const {
+        JsProperty ret = *this;
+        if (value.type == JDT_NOT_INITIALIZED) ret.value = JsValue(JDT_UNDEFINED, 0);
+        if (isGetter == -1) ret.isGetter = false;
+        if (isConfigurable == -1) ret.isConfigurable = false;
+        if (isEnumerable == -1) ret.isEnumerable = false;
+        if (isWritable == -1) ret.isWritable = false;
+        return ret;
+    }
+};
 
 const JsValue JsNotInitializedValue = JsValue();
 const JsValue JsNullValue = JsValue(JDT_NULL, 0);
 const JsValue JsUndefinedValue = JsValue(JDT_UNDEFINED, 0);
-const JsValue JsNaNValue = JsValue(JDT_NUMBER, 0);
+const JsValue JsTrueValue = JsValue(JDT_BOOL, true);
+const JsValue JsFalseValue = JsValue(JDT_BOOL, false);
+const JsValue JsNaNValue = JsValue(JDT_NUMBER, 1);
 
 using VecJsValues = std::vector<JsValue>;
 using VecJsDoubles = std::vector<JsDouble>;

@@ -15,15 +15,9 @@ struct JsLibProperty {
     SizedString                 name;
     JsNativeFunction            function;
     const char                  *strValue;
-    JsValue                     value;
+    JsProperty                  prop;
 
     JsNativeFunction            functionSet;
-    JsValue                     valueSetter;
-
-    bool                        isGetter;
-    bool                        isConfigurable;
-    bool                        isEnumerable;
-    bool                        isWritable;
 
 };
 
@@ -35,26 +29,30 @@ struct JsLibProperty {
  * - __proto__ 缺省为 Object.prototype, 但是 Object.prototype.__proto__ 是 null
  */
 class JsLibObject : public IJsObject {
+private:
+    JsLibObject(const JsLibObject &);
+    JsLibObject &operator=(const JsLibObject &);
+
 public:
     JsLibObject(VMRuntimeCommon *rt, JsLibProperty *libProps, int countProps, JsNativeFunction function = nullptr);
     JsLibObject(JsLibObject *from);
     ~JsLibObject();
 
-    virtual void definePropertyByName(VMContext *ctx, const SizedString &prop, const JsProperty &descriptor, const JsValue &setter) override;
-    virtual void definePropertyByIndex(VMContext *ctx, uint32_t index, const JsProperty &descriptor, const JsValue &setter) override;
-    virtual void definePropertyBySymbol(VMContext *ctx, uint32_t index, const JsProperty &descriptor, const JsValue &setter) override;
+    virtual void definePropertyByName(VMContext *ctx, const SizedString &prop, const JsProperty &descriptor) override;
+    virtual void definePropertyByIndex(VMContext *ctx, uint32_t index, const JsProperty &descriptor) override;
+    virtual void definePropertyBySymbol(VMContext *ctx, uint32_t index, const JsProperty &descriptor) override;
 
-    virtual bool getOwnPropertyDescriptorByName(VMContext *ctx, const SizedString &prop, JsProperty &descriptorOut, JsValue &setterOut) override;
-    virtual bool getOwnPropertyDescriptorByIndex(VMContext *ctx, uint32_t index, JsProperty &descriptorOut, JsValue &setterOut) override;
-    virtual bool getOwnPropertyDescriptorBySymbol(VMContext *ctx, uint32_t index, JsProperty &descriptorOut, JsValue &setterOut) override;
+    virtual bool getOwnPropertyDescriptorByName(VMContext *ctx, const SizedString &prop, JsProperty &descriptorOut) override;
+    virtual bool getOwnPropertyDescriptorByIndex(VMContext *ctx, uint32_t index, JsProperty &descriptorOut) override;
+    virtual bool getOwnPropertyDescriptorBySymbol(VMContext *ctx, uint32_t index, JsProperty &descriptorOut) override;
 
-    virtual JsValue getSetterByName(VMContext *ctx, const SizedString &prop) override;
-    virtual JsValue getSetterByIndex(VMContext *ctx, uint32_t index) override;
-    virtual JsValue getSetterBySymbol(VMContext *ctx, uint32_t index) override;
+    virtual JsProperty *getRawByName(VMContext *ctx, const SizedString &prop, bool &isSelfPropOut) override;
+    virtual JsProperty *getRawByIndex(VMContext *ctx, uint32_t index, bool &isSelfPropOut) override;
+    virtual JsProperty *getRawBySymbol(VMContext *ctx, uint32_t index, bool &isSelfPropOut) override;
 
-    virtual JsValue getByName(VMContext *ctx, const JsValue &thiz, const SizedString &prop) override;
-    virtual JsValue getByIndex(VMContext *ctx, const JsValue &thiz, uint32_t index) override;
-    virtual JsValue getBySymbol(VMContext *ctx, const JsValue &thiz, uint32_t index) override;
+    virtual JsValue getByName(VMContext *ctx, const JsValue &thiz, const SizedString &prop, const JsValue &defVal = JsUndefinedValue) override;
+    virtual JsValue getByIndex(VMContext *ctx, const JsValue &thiz, uint32_t index, const JsValue &defVal = JsUndefinedValue) override;
+    virtual JsValue getBySymbol(VMContext *ctx, const JsValue &thiz, uint32_t index, const JsValue &defVal = JsUndefinedValue) override;
 
     virtual void setByName(VMContext *ctx, const JsValue &thiz, const SizedString &prop, const JsValue &value) override;
     virtual void setByIndex(VMContext *ctx, const JsValue &thiz, uint32_t index, const JsValue &value) override;
@@ -85,5 +83,9 @@ protected:
 };
 
 JsLibProperty makeJsLibPropertyGetter(const char *name, JsNativeFunction f);
+
+void setPrototype(JsLibProperty *prop, const JsProperty &value);
+
+#define SET_PROTOTYPE(props, prototype)     setPrototype(props + CountOf(props) - 1, prototype)
 
 #endif /* JsLibObject_hpp */

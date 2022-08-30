@@ -143,20 +143,50 @@ bool isIdentifierStart(uint8_t code) {
     return (code >= 'a' && code <= 'z') || (code >= 'A' && code <= 'Z') || code == '_' || code == '$' || code >= 0xaa;
 }
 
+struct Keyword {
+    cstr_t                  name;
+    TokenType               token;
+};
+
 //
 // !!! KEYWORDS 必须按照从小到大的顺序排序，因为后面会使用二分查找来搜索.
 //
-cstr_t KEYWORDS[] = { "break", "case", "catch", "const", "continue", "debugger", "default",
-    "delete", "do", "else", "false", "finally", "for", "function", "if", "in", "instanceof", "let", "new",
-    "null", "return", "switch", "throw", "true", "try", "typeof", "var", "void", "while", "with" };
-
-TokenType KEYWORDS_TYPE[] = { TK_BREAK, TK_CASE, TK_CATCH, TK_CONST, TK_CONTINUE, TK_DEBUGGER, TK_DEFAULT,
-    TK_DELETE, TK_DO, TK_ELSE, TK_FALSE, TK_FINALLY, TK_FOR, TK_FUNCTION, TK_IF, TK_IN, TK_INSTANCEOF, TK_LET, TK_NEW,
-    TK_NULL, TK_RETURN, TK_SWITCH, TK_THROW, TK_TRUE, TK_TRY, TK_TYPEOF, TK_VAR, TK_VOID, TK_WHILE, TK_WITH };
+Keyword KEYWORDS[] = {
+    { "break", TK_BREAK },
+    { "case", TK_CASE },
+    { "catch", TK_CATCH },
+    { "const", TK_CONST },
+    { "continue", TK_CONTINUE },
+    { "debugger", TK_DEBUGGER },
+    { "default", TK_DEFAULT },
+    { "delete", TK_DELETE },
+    { "do", TK_DO },
+    { "else", TK_ELSE },
+    { "false", TK_FALSE },
+    { "finally", TK_FINALLY },
+    { "for", TK_FOR },
+    { "function", TK_FUNCTION },
+    { "if", TK_IF },
+    { "in", TK_IN },
+    { "instanceof", TK_INSTANCEOF },
+    { "let", TK_LET },
+    { "new", TK_NEW },
+    { "null", TK_NULL },
+    { "return", TK_RETURN },
+    { "switch", TK_SWITCH },
+    { "throw", TK_THROW },
+    { "true", TK_TRUE },
+    { "try", TK_TRY },
+    { "typeof", TK_TYPEOF },
+    { "var", TK_VAR },
+    { "void", TK_VOID },
+    { "while", TK_WHILE },
+    { "with", TK_WITH },
+};
 
 struct KeywordCompareLess {
-    bool operator()(cstr_t left, const SizedString &right) {
-        const uint8_t *p1 = (uint8_t *)left;
+    bool operator()(const Keyword &left, const SizedString &right) {
+        const uint8_t *p1 = (uint8_t *)left.name;
         const uint8_t *p2 = right.data, *p2End = right.data + right.len;
 
         for (; *p1 && p2 < p2End; p1++, p2++) {
@@ -567,8 +597,8 @@ void JSLexer::_readToken() {
                 SizedString str(_curToken.buf, (size_t)(_bufPos - _curToken.buf));
                 auto p = lower_bound(KEYWORDS, KEYWORDS + CountOf(KEYWORDS), str, KeywordCompareLess());
                 if (p < KEYWORDS + CountOf(KEYWORDS)) {
-                    if (str.equal(*p)) {
-                        _curToken.type = KEYWORDS_TYPE[p - KEYWORDS];
+                    if (str.equal(p->name)) {
+                        _curToken.type = p->token;
                         break;
                     }
                 }

@@ -54,11 +54,9 @@ static JsLibProperty symbolPrototypeFunctions[] = {
 void registerSymbol(VMRuntimeCommon *rt) {
     auto prototype = new JsLibObject(rt, symbolPrototypeFunctions, CountOf(symbolPrototypeFunctions));
     rt->objPrototypeSymbol = prototype;
-    rt->prototypeSymbol = rt->pushObjValue(JDT_LIB_OBJECT, prototype);
+    rt->prototypeSymbol.value = rt->pushObjValue(JDT_LIB_OBJECT, prototype);
 
-    auto idxPrototype = CountOf(symbolFunctions) - 1;
-    assert(symbolFunctions[idxPrototype].name.equal("prototype"));
-    symbolFunctions[idxPrototype].value = rt->prototypeSymbol;
+    SET_PROTOTYPE(symbolFunctions, rt->prototypeSymbol);
 
     rt->setGlobalObject("Symbol",
         new JsLibObject(rt, symbolFunctions, CountOf(symbolFunctions), symbolConstructor));

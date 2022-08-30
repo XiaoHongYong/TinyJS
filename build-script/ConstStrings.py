@@ -18,6 +18,7 @@ HEADER_TEMPLATE = '''/**
 {}
 
 enum JsValueStringIndex {{
+    __JS_STRING_IDX_INVALID__,
 {}
 }};
 
@@ -71,6 +72,13 @@ CONST_STRINGS = [
     [ 'Name', 'name' ],
     [ 'Caller', 'caller' ],
     [ 'Constructor', 'constructor' ],
+    [ 'Object', 'object' ],
+    [ 'Function', 'function' ],
+    [ 'Number', 'number' ],
+    [ 'String', 'string' ],
+    [ 'Boolean', 'boolean' ],
+    [ 'Bigint', 'bigint' ],
+    [ 'Symbol', 'symbol' ],
     # [ '', '' ],
 ]
 

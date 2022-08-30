@@ -35,11 +35,9 @@ static JsLibProperty regExpPrototypeFunctions[] = {
 void registerRegExp(VMRuntimeCommon *rt) {
     auto prototype = new JsLibObject(rt, regExpPrototypeFunctions, CountOf(regExpPrototypeFunctions));
     rt->objPrototypeRegex = prototype;
-    rt->prototypeRegex = rt->pushObjValue(JDT_LIB_OBJECT, prototype);
+    rt->prototypeRegex.value = rt->pushObjValue(JDT_LIB_OBJECT, prototype);
 
-    auto idxPrototype = CountOf(regExpFunctions) - 1;
-    assert(regExpFunctions[idxPrototype].name.equal("prototype"));
-    regExpFunctions[idxPrototype].value = rt->prototypeRegex;
+    SET_PROTOTYPE(regExpFunctions, rt->prototypeRegex);
 
     rt->setGlobalObject("RegExp",
         new JsLibObject(rt, regExpFunctions, CountOf(regExpFunctions), regExpConstructor));

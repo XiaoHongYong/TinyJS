@@ -58,6 +58,8 @@ enum JsNodeType : uint8_t {
 
     // Expression 的类型
     NT_COMMA_EXPRESSION,
+    NT_BOOLEAN,
+    NT_NULL,
     NT_STRING,
     NT_INT32,
     NT_NUMBER,
@@ -86,6 +88,7 @@ enum JsNodeType : uint8_t {
     NT_FUNCTION_EXPR,
 
     NT_UNARY_PREFIX,
+    NT_DELETE,
     NT_PREFIX_XCREASE,
     NT_POSTFIX,
 

@@ -11,23 +11,6 @@
 #include "VirtualMachine.hpp"
 
 
-struct JsProperty {
-    JsValue                     value;
-    bool                        isGetter;
-    bool                        isConfigurable;
-    bool                        isEnumerable;
-    bool                        isWritable;
-
-    JsProperty(const JsValue &value) : value(value) {
-        isGetter = false;
-        isConfigurable = true;
-        isEnumerable = true;
-        isWritable = true;
-    }
-
-    JsProperty() : JsProperty(JsUndefinedValue) { }
-};
-
 using DequeJsProperties = std::deque<JsProperty>;
 using VecJsProperties = std::vector<JsProperty>;
 using DequeJsValue = std::deque<JsValue>;
@@ -55,28 +38,28 @@ public:
     bool getBool(VMContext *ctx, const JsValue &thiz, const SizedString &name);
     bool getBool(VMContext *ctx, const JsValue &thiz, const JsValue &prop);
 
-    void defineProperty(VMContext *ctx, const JsValue &prop, const JsProperty &descriptor, const JsValue &setter = JsUndefinedValue);
-    bool getOwnPropertyDescriptor(VMContext *ctx, const JsValue &prop, JsProperty &descriptorOut, JsValue &setterOut);
+    void defineProperty(VMContext *ctx, const JsValue &prop, const JsProperty &descriptor);
+    bool getOwnPropertyDescriptor(VMContext *ctx, const JsValue &prop, JsProperty &descriptorOut);
 
-    JsValue get(VMContext *ctx, const JsValue &thiz, const JsValue &prop);
+    JsValue get(VMContext *ctx, const JsValue &thiz, const JsValue &prop, const JsValue &defVal = JsUndefinedValue);
     void set(VMContext *ctx, const JsValue &thiz, const JsValue &prop, const JsValue &value);
-    bool remove(VMContext *ctx, const JsValue &prop, const JsValue &value);
+    bool remove(VMContext *ctx, const JsValue &prop);
 
-    virtual void definePropertyByName(VMContext *ctx, const SizedString &prop, const JsProperty &descriptor, const JsValue &setter) = 0;
-    virtual void definePropertyByIndex(VMContext *ctx, uint32_t index, const JsProperty &descriptor, const JsValue &setter) = 0;
-    virtual void definePropertyBySymbol(VMContext *ctx, uint32_t index, const JsProperty &descriptor, const JsValue &setter) = 0;
+    virtual void definePropertyByName(VMContext *ctx, const SizedString &prop, const JsProperty &descriptor) = 0;
+    virtual void definePropertyByIndex(VMContext *ctx, uint32_t index, const JsProperty &descriptor) = 0;
+    virtual void definePropertyBySymbol(VMContext *ctx, uint32_t index, const JsProperty &descriptor) = 0;
 
-    virtual bool getOwnPropertyDescriptorByName(VMContext *ctx, const SizedString &prop, JsProperty &descriptorOut, JsValue &setterOut) = 0;
-    virtual bool getOwnPropertyDescriptorByIndex(VMContext *ctx, uint32_t index, JsProperty &descriptorOut, JsValue &setterOut) = 0;
-    virtual bool getOwnPropertyDescriptorBySymbol(VMContext *ctx, uint32_t index, JsProperty &descriptorOut, JsValue &setterOut) = 0;
+    virtual bool getOwnPropertyDescriptorByName(VMContext *ctx, const SizedString &prop, JsProperty &descriptorOut) = 0;
+    virtual bool getOwnPropertyDescriptorByIndex(VMContext *ctx, uint32_t index, JsProperty &descriptorOut) = 0;
+    virtual bool getOwnPropertyDescriptorBySymbol(VMContext *ctx, uint32_t index, JsProperty &descriptorOut) = 0;
 
-    virtual JsValue getSetterByName(VMContext *ctx, const SizedString &prop) = 0;
-    virtual JsValue getSetterByIndex(VMContext *ctx, uint32_t index) = 0;
-    virtual JsValue getSetterBySymbol(VMContext *ctx, uint32_t index) = 0;
+    virtual JsProperty *getRawByName(VMContext *ctx, const SizedString &prop, bool &isSelfPropOut) = 0;
+    virtual JsProperty *getRawByIndex(VMContext *ctx, uint32_t index, bool &isSelfPropOut) = 0;
+    virtual JsProperty *getRawBySymbol(VMContext *ctx, uint32_t index, bool &isSelfPropOut) = 0;
 
-    virtual JsValue getByName(VMContext *ctx, const JsValue &thiz, const SizedString &prop) = 0;
-    virtual JsValue getByIndex(VMContext *ctx, const JsValue &thiz, uint32_t index) = 0;
-    virtual JsValue getBySymbol(VMContext *ctx, const JsValue &thiz, uint32_t index) = 0;
+    virtual JsValue getByName(VMContext *ctx, const JsValue &thiz, const SizedString &prop, const JsValue &defVal = JsUndefinedValue) = 0;
+    virtual JsValue getByIndex(VMContext *ctx, const JsValue &thiz, uint32_t index, const JsValue &defVal = JsUndefinedValue) = 0;
+    virtual JsValue getBySymbol(VMContext *ctx, const JsValue &thiz, uint32_t index, const JsValue &defVal = JsUndefinedValue) = 0;
 
     virtual void setByName(VMContext *ctx, const JsValue &thiz, const SizedString &prop, const JsValue &value) = 0;
     virtual void setByIndex(VMContext *ctx, const JsValue &thiz, uint32_t index, const JsValue &value) = 0;
@@ -90,7 +73,7 @@ public:
 
     virtual JsValue getIterator(VMContext *ctx);
     // virtual IJsIterator *getIteratorObject() = 0;
-    
+
 public:
     JsDataType                  type;
     int8_t                      referIdx;
@@ -113,21 +96,21 @@ public:
     JsObject(const JsValue &__proto__ = JsNotInitializedValue);
     virtual ~JsObject();
 
-    virtual void definePropertyByName(VMContext *ctx, const SizedString &prop, const JsProperty &descriptor, const JsValue &setter) override;
-    virtual void definePropertyByIndex(VMContext *ctx, uint32_t index, const JsProperty &descriptor, const JsValue &setter) override;
-    virtual void definePropertyBySymbol(VMContext *ctx, uint32_t index, const JsProperty &descriptor, const JsValue &setter) override;
+    virtual void definePropertyByName(VMContext *ctx, const SizedString &prop, const JsProperty &descriptor) override;
+    virtual void definePropertyByIndex(VMContext *ctx, uint32_t index, const JsProperty &descriptor) override;
+    virtual void definePropertyBySymbol(VMContext *ctx, uint32_t index, const JsProperty &descriptor) override;
 
-    virtual bool getOwnPropertyDescriptorByName(VMContext *ctx, const SizedString &prop, JsProperty &descriptorOut, JsValue &setterOut) override;
-    virtual bool getOwnPropertyDescriptorByIndex(VMContext *ctx, uint32_t index, JsProperty &descriptorOut, JsValue &setterOut) override;
-    virtual bool getOwnPropertyDescriptorBySymbol(VMContext *ctx, uint32_t index, JsProperty &descriptorOut, JsValue &setterOut) override;
+    virtual bool getOwnPropertyDescriptorByName(VMContext *ctx, const SizedString &prop, JsProperty &descriptorOut) override;
+    virtual bool getOwnPropertyDescriptorByIndex(VMContext *ctx, uint32_t index, JsProperty &descriptorOut) override;
+    virtual bool getOwnPropertyDescriptorBySymbol(VMContext *ctx, uint32_t index, JsProperty &descriptorOut) override;
 
-    virtual JsValue getSetterByName(VMContext *ctx, const SizedString &prop) override;
-    virtual JsValue getSetterByIndex(VMContext *ctx, uint32_t index) override;
-    virtual JsValue getSetterBySymbol(VMContext *ctx, uint32_t index) override;
+    virtual JsProperty *getRawByName(VMContext *ctx, const SizedString &prop, bool &isSelfPropOut) override;
+    virtual JsProperty *getRawByIndex(VMContext *ctx, uint32_t index, bool &isSelfPropOut) override;
+    virtual JsProperty *getRawBySymbol(VMContext *ctx, uint32_t index, bool &isSelfPropOut) override;
 
-    virtual JsValue getByName(VMContext *ctx, const JsValue &thiz, const SizedString &prop) override;
-    virtual JsValue getByIndex(VMContext *ctx, const JsValue &thiz, uint32_t index) override;
-    virtual JsValue getBySymbol(VMContext *ctx, const JsValue &thiz, uint32_t index) override;
+    virtual JsValue getByName(VMContext *ctx, const JsValue &thiz, const SizedString &prop, const JsValue &defVal = JsUndefinedValue) override;
+    virtual JsValue getByIndex(VMContext *ctx, const JsValue &thiz, uint32_t index, const JsValue &defVal = JsUndefinedValue) override;
+    virtual JsValue getBySymbol(VMContext *ctx, const JsValue &thiz, uint32_t index, const JsValue &defVal = JsUndefinedValue) override;
 
     virtual void setByName(VMContext *ctx, const JsValue &thiz, const SizedString &prop, const JsValue &value) override;
     virtual void setByIndex(VMContext *ctx, const JsValue &thiz, uint32_t index, const JsValue &value) override;
@@ -142,15 +125,17 @@ public:
 protected:
     friend class JsLibObject;
 
-    JsValue                     __proto__;
+    JsProperty                  __proto__;
 
     // MapNameToJsProperty 中的 SizedString 需要由 JsObject 自己管理内存.
     MapNameToJsProperty         _props;
-    MapNameToJsValue            *_setters;
 
     MapSymbolToJsProperty       *_symbolProps;
-    MapSymbolToJsValue          *_symbolSetters;
 
 };
+
+void mergeJsProperty(VMContext *ctx, JsProperty *dst, const JsProperty &src, const SizedString &name);
+void mergeSymbolJsProperty(VMContext *ctx, JsProperty *dst, const JsProperty &src, uint32_t index);
+void mergeIndexJsProperty(VMContext *ctx, JsProperty *dst, const JsProperty &src, uint32_t index);
 
 #endif /* IJsObject_hpp */

@@ -107,3 +107,49 @@ bool decodeBytecode(uint8_t *bytecode, int lenBytecode, BinaryOutputStream &stre
 
     return true;
 }
+
+static bool isModified(int8_t dst, int8_t src) {
+    if (src != -1) {
+        assert(dst != -1);
+        return dst != src;
+    }
+    return false;
+}
+
+static inline void copyProperty(int8_t &dst, int8_t src) {
+    if (src != -1) {
+        dst = src;
+    }
+}
+
+bool JsProperty::merge(const JsProperty &src) {
+    if (!isWritable && !isGetter && !setter.isValid()) {
+        if (src.value.type != JDT_NOT_INITIALIZED && !src.value.equal(value)) return false;
+    }
+
+    if (!isConfigurable) {
+        if (isModified(isConfigurable, src.isConfigurable)) return false;
+        if (isModified(isEnumerable, src.isEnumerable)) return false;
+        if (isModified(isWritable, src.isWritable)) return false;
+        if (isModified(isGetter, src.isGetter)) return false;
+        if (src.setter.type != JDT_NOT_INITIALIZED && !src.setter.equal(setter)) return false;
+
+        return true;
+    }
+
+    copyProperty(isGetter, src.isGetter);
+    copyProperty(isConfigurable, src.isConfigurable);
+    copyProperty(isEnumerable, src.isEnumerable);
+    copyProperty(isWritable, src.isWritable);
+
+    if (src.setter.type >= JDT_FUNCTION) {
+        setter = src.setter;
+        isWritable = false;
+    }
+
+    if (src.value.type >= JDT_UNDEFINED) {
+        value = src.value;
+    }
+
+    return true;
+}

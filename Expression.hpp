@@ -21,6 +21,39 @@ public:
 
 };
 
+class JsExprBoolTrue : public IJsNode {
+public:
+    JsExprBoolTrue() : IJsNode(NT_STRING) { }
+
+    virtual void convertToByteCode(ByteCodeStream &stream) {
+        stream.writeOpCode(OP_PUSH_TRUE);
+    }
+
+};
+
+class JsExprBoolFalse : public IJsNode {
+public:
+    JsExprBoolFalse() : IJsNode(NT_STRING) { }
+
+    virtual void convertToByteCode(ByteCodeStream &stream) {
+        stream.writeOpCode(OP_PUSH_FALSE);
+    }
+
+};
+
+class JsExprNull : public IJsNode {
+public:
+    JsExprNull() : IJsNode(NT_NULL) { }
+
+    virtual void convertToByteCode(ByteCodeStream &stream) {
+        stream.writeOpCode(OP_PUSH_NULL);
+    }
+
+protected:
+    bool                        value;
+
+};
+
 class JsExprString : public IJsNode {
 public:
     JsExprString(uint32_t stringIdx) : IJsNode(NT_STRING), stringIdx(stringIdx) { }
@@ -188,6 +221,32 @@ public:
     IJsNode                     *obj;
     uint32_t                    stringIdx;
     bool                        isOptional;
+
+};
+
+class JsExprDelete : public IJsNode {
+public:
+    JsExprDelete(IJsNode *expr) : IJsNode(NT_DELETE), expr(expr) { }
+
+    virtual void convertToByteCode(ByteCodeStream &stream) {
+        if (expr->type == NT_MEMBER_DOT) {
+            auto target = (JsExprMemberDot *)expr;
+            target->obj->convertToByteCode(stream);
+            stream.writeOpCode(OP_DELETE_MEMBER_DOT);
+            stream.writeUint32(target->stringIdx);
+        } else if (expr->type == NT_MEMBER_INDEX) {
+            auto target = (JsExprMemberIndex *)expr;
+            target->obj->convertToByteCode(stream);
+            target->index->convertToByteCode(stream);
+            stream.writeOpCode(OP_DELETE_MEMBER_INDEX);
+        } else {
+            expr->convertToByteCode(stream);
+            stream.writeOpCode(OP_DELETE);
+        }
+    }
+
+protected:
+    IJsNode                     *expr;
 
 };
 

@@ -23,12 +23,12 @@ JsArguments::~JsArguments() {
     if (_setters) delete _setters;
 }
 
-void JsArguments::definePropertyByName(VMContext *ctx, const SizedString &prop, const JsProperty &descriptor, const JsValue &setter) {
+void JsArguments::definePropertyByName(VMContext *ctx, const SizedString &prop, const JsProperty &descriptor) {
     if (prop.len > 0 && isDigit(prop.data[0])) {
         bool successful = false;
         auto n = prop.atoi(successful);
         if (successful && n < _args->count) {
-            return definePropertyByIndex(ctx, (uint32_t)n, descriptor, setter);
+            return definePropertyByIndex(ctx, (uint32_t)n, descriptor);
         }
     }
 
@@ -36,13 +36,13 @@ void JsArguments::definePropertyByName(VMContext *ctx, const SizedString &prop, 
         _newObject();
     }
 
-    _obj->definePropertyByName(ctx, prop, descriptor, setter);
+    _obj->definePropertyByName(ctx, prop, descriptor);
 }
 
-void JsArguments::definePropertyByIndex(VMContext *ctx, uint32_t index, const JsProperty &descriptor, const JsValue &setter) {
+void JsArguments::definePropertyByIndex(VMContext *ctx, uint32_t index, const JsProperty &descriptor) {
     if (index >= _args->count) {
         NumberToSizedString ss(index);
-        definePropertyByName(ctx, ss, descriptor, setter);
+        definePropertyByName(ctx, ss, descriptor);
         return;
     }
 
@@ -50,49 +50,43 @@ void JsArguments::definePropertyByIndex(VMContext *ctx, uint32_t index, const Js
         _argDescriptors = new VecJsProperties;
         _argDescriptors->resize(_args->count);
     }
-    _argDescriptors->at(index) = descriptor;
 
-    if (setter.type > JDT_OBJECT) {
-        if (!_setters) {
-            _setters = new VecJsValues;
-            _setters->resize(_args->count);
-        }
-
-        _setters->at(index) = setter;
+    auto &propValue = _argDescriptors->at(index);
+    if (propValue.isConfigurable) {
+        mergeIndexJsProperty(ctx, &propValue, descriptor, index);
     }
 }
 
-void JsArguments::definePropertyBySymbol(VMContext *ctx, uint32_t index, const JsProperty &descriptor, const JsValue &setter) {
+void JsArguments::definePropertyBySymbol(VMContext *ctx, uint32_t index, const JsProperty &descriptor) {
     if (!_obj) {
         _newObject();
     }
 
-    _obj->definePropertyBySymbol(ctx, index, descriptor, setter);
+    _obj->definePropertyBySymbol(ctx, index, descriptor);
 }
 
-bool JsArguments::getOwnPropertyDescriptorByName(VMContext *ctx, const SizedString &prop, JsProperty &descriptorOut, JsValue &setterOut) {
+bool JsArguments::getOwnPropertyDescriptorByName(VMContext *ctx, const SizedString &prop, JsProperty &descriptorOut) {
     if (prop.len > 0 && isDigit(prop.data[0])) {
         bool successful = false;
         auto n = prop.atoi(successful);
         if (successful && n < _args->count) {
-            return getOwnPropertyDescriptorByIndex(ctx, (uint32_t)n, descriptorOut, setterOut);
+            return getOwnPropertyDescriptorByIndex(ctx, (uint32_t)n, descriptorOut);
         }
     }
 
     if (_obj) {
-        return _obj->getOwnPropertyDescriptorByName(ctx, prop, descriptorOut, setterOut);
+        return _obj->getOwnPropertyDescriptorByName(ctx, prop, descriptorOut);
     }
 
     return false;
 }
 
-bool JsArguments::getOwnPropertyDescriptorByIndex(VMContext *ctx, uint32_t index, JsProperty &descriptorOut, JsValue &setterOut) {
+bool JsArguments::getOwnPropertyDescriptorByIndex(VMContext *ctx, uint32_t index, JsProperty &descriptorOut) {
     descriptorOut = JsProperty(JsUndefinedValue);
-    setterOut = JsUndefinedValue;
 
     if (index >= _args->count) {
         NumberToSizedString ss(index);
-        return getOwnPropertyDescriptorByName(ctx, ss, descriptorOut, setterOut);
+        return getOwnPropertyDescriptorByName(ctx, ss, descriptorOut);
     }
 
     if (!_argDescriptors) {
@@ -100,42 +94,38 @@ bool JsArguments::getOwnPropertyDescriptorByIndex(VMContext *ctx, uint32_t index
     }
     descriptorOut = _argDescriptors->at(index);
 
-    if (_setters) {
-        setterOut = _setters->at(index);
-    }
-
     return true;
 }
 
-bool JsArguments::getOwnPropertyDescriptorBySymbol(VMContext *ctx, uint32_t index, JsProperty &descriptorOut, JsValue &setterOut) {
+bool JsArguments::getOwnPropertyDescriptorBySymbol(VMContext *ctx, uint32_t index, JsProperty &descriptorOut) {
     if (_obj) {
-        return _obj->getOwnPropertyDescriptorBySymbol(ctx, index, descriptorOut, setterOut);
+        return _obj->getOwnPropertyDescriptorBySymbol(ctx, index, descriptorOut);
     }
 
     return false;
 }
 
-JsValue JsArguments::getSetterByName(VMContext *ctx, const SizedString &prop) {
+JsProperty *JsArguments::getRawByName(VMContext *ctx, const SizedString &prop, bool &isSelfPropOut) {
     assert(0);
-    return JsUndefinedValue;
+    return nullptr;
 }
 
-JsValue JsArguments::getSetterByIndex(VMContext *ctx, uint32_t index) {
+JsProperty *JsArguments::getRawByIndex(VMContext *ctx, uint32_t index, bool &isSelfPropOut) {
     assert(0);
-    return JsUndefinedValue;
+    return nullptr;
 }
 
-JsValue JsArguments::getSetterBySymbol(VMContext *ctx, uint32_t index) {
+JsProperty *JsArguments::getRawBySymbol(VMContext *ctx, uint32_t index, bool &isSelfPropOut) {
     assert(0);
-    return JsUndefinedValue;
+    return nullptr;
 }
 
-JsValue JsArguments::getByName(VMContext *ctx, const JsValue &thiz, const SizedString &prop) {
+JsValue JsArguments::getByName(VMContext *ctx, const JsValue &thiz, const SizedString &prop, const JsValue &defVal) {
     if (prop.len > 0 && isDigit(prop.data[0])) {
         bool successful = false;
         auto n = prop.atoi(successful);
         if (successful && n < _args->count) {
-            return getByIndex(ctx, thiz, (uint32_t)n);
+            return getByIndex(ctx, thiz, (uint32_t)n, defVal);
         }
     }
 
@@ -144,16 +134,16 @@ JsValue JsArguments::getByName(VMContext *ctx, const JsValue &thiz, const SizedS
     }
 
     if (_obj) {
-        return _obj->getByName(ctx, thiz, prop);
+        return _obj->getByName(ctx, thiz, prop, defVal);
     }
 
-    return JsUndefinedValue;
+    return defVal;
 }
 
-JsValue JsArguments::getByIndex(VMContext *ctx, const JsValue &thiz, uint32_t index) {
+JsValue JsArguments::getByIndex(VMContext *ctx, const JsValue &thiz, uint32_t index, const JsValue &defVal) {
     if (index >= _args->count) {
         NumberToSizedString ss(index);
-        return getByName(ctx, thiz, ss);
+        return getByName(ctx, thiz, ss, defVal);
     }
 
     if (_argDescriptors) {
@@ -167,12 +157,12 @@ JsValue JsArguments::getByIndex(VMContext *ctx, const JsValue &thiz, uint32_t in
     return (*_args)[index];
 }
 
-JsValue JsArguments::getBySymbol(VMContext *ctx, const JsValue &thiz, uint32_t index) {
+JsValue JsArguments::getBySymbol(VMContext *ctx, const JsValue &thiz, uint32_t index, const JsValue &defVal) {
     if (_obj) {
-        return _obj->getBySymbol(ctx, thiz, index);
+        return _obj->getBySymbol(ctx, thiz, index, defVal);
     }
 
-    return JsUndefinedValue;
+    return defVal;
 }
 
 void JsArguments::setByName(VMContext *ctx, const JsValue &thiz, const SizedString &prop, const JsValue &value) {

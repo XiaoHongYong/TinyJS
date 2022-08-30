@@ -139,24 +139,7 @@ void stringPrototypeLength(VMContext *ctx, const JsValue &thiz, const Arguments 
         return;
     }
 
-    uint32_t len = 0;
-    if (thiz.type == JDT_CHAR) {
-        len = 1;
-    } else {
-        if (thiz.isInResourcePool) {
-            auto ss = runtime->getStringInResourcePool(thiz.value.index);
-            len = ss.len;
-        } else {
-            auto &js = runtime->stringValues[thiz.value.index];
-            if (js.isJoinedString) {
-                len = js.value.joinedString.len;
-            } else {
-                len = js.value.poolString.value.len;
-            }
-        }
-    }
-
-    ctx->retValue = JsValue(JDT_INT32, len);
+    ctx->retValue = JsValue(JDT_INT32, runtime->getStringLength(thiz));
 }
 
 static JsLibProperty stringPrototypeFunctions[] = {
@@ -168,11 +151,9 @@ static JsLibProperty stringPrototypeFunctions[] = {
 void registerString(VMRuntimeCommon *rt) {
     auto prototype = new JsLibObject(rt, stringPrototypeFunctions, CountOf(stringPrototypeFunctions));
     rt->objPrototypeString = prototype;
-    rt->prototypeString = rt->pushObjValue(JDT_LIB_OBJECT, prototype);
+    rt->prototypeString.value = rt->pushObjValue(JDT_LIB_OBJECT, prototype);
 
-    auto idxPrototype = CountOf(stringFunctions) - 1;
-    assert(stringFunctions[idxPrototype].name.equal("prototype"));
-    stringFunctions[idxPrototype].value = rt->prototypeString;
+    SET_PROTOTYPE(stringFunctions, rt->prototypeString);
 
     rt->setGlobalObject("String",
         new JsLibObject(rt, stringFunctions, CountOf(stringFunctions), stringConstructor));

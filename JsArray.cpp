@@ -59,67 +59,58 @@ JsArray::~JsArray() {
     }
 }
 
-void JsArray::definePropertyByName(VMContext *ctx, const SizedString &prop, const JsProperty &descriptor, const JsValue &setter) {
+void JsArray::definePropertyByName(VMContext *ctx, const SizedString &prop, const JsProperty &descriptor) {
     if (prop.len > 0 && isDigit(prop.data[0])) {
         bool successful = false;
         auto n = prop.atoi(successful);
         if (successful && n <= ARRAY_MAX_INDEX) {
-            return definePropertyByIndex(ctx, (uint32_t)n, descriptor, setter);
+            return definePropertyByIndex(ctx, (uint32_t)n, descriptor);
         }
     }
 
     if (!_obj) {
-        _newObject();
+        _newObject(ctx);
     }
 
-    _obj->definePropertyByName(ctx, prop, descriptor, setter);
+    _obj->definePropertyByName(ctx, prop, descriptor);
 }
 
-void JsArray::definePropertyByIndex(VMContext *ctx, uint32_t index, const JsProperty &descriptor, const JsValue &setter) {
+void JsArray::definePropertyByIndex(VMContext *ctx, uint32_t index, const JsProperty &descriptor) {
     auto block = findToModifyBlock(index);
     index -= block->index;
     assert(index < block->items.size());
-    block->items[index] = descriptor;
 
-    if (setter.type > JDT_OBJECT) {
-        if (!block->setters) {
-            block->setters = new DequeJsValue;
-        }
-
-        if (index >= block->setters->size()) {
-            block->setters->resize(index + 1, JsUndefinedValue);
-        }
-        (*block->setters)[index] = setter;
-    }
+    mergeIndexJsProperty(ctx, &(block->items[index]), descriptor, index);
 }
 
-void JsArray::definePropertyBySymbol(VMContext *ctx, uint32_t index, const JsProperty &descriptor, const JsValue &setter) {
+void JsArray::definePropertyBySymbol(VMContext *ctx, uint32_t index, const JsProperty &descriptor) {
     if (!_obj) {
-        _newObject();
+        _newObject(ctx);
     }
 
-    _obj->definePropertyBySymbol(ctx, index, descriptor, setter);
+    _obj->definePropertyBySymbol(ctx, index, descriptor);
 }
 
-bool JsArray::getOwnPropertyDescriptorByName(VMContext *ctx, const SizedString &prop, JsProperty &descriptorOut, JsValue &setterOut) {
+bool JsArray::getOwnPropertyDescriptorByName(VMContext *ctx, const SizedString &prop, JsProperty &descriptorOut) {
+    descriptorOut = JsProperty();
+
     if (prop.len > 0 && isDigit(prop.data[0])) {
         bool successful = false;
         auto n = prop.atoi(successful);
         if (successful && n <= ARRAY_MAX_INDEX) {
-            return getOwnPropertyDescriptorByIndex(ctx, (uint32_t)n, descriptorOut, setterOut);
+            return getOwnPropertyDescriptorByIndex(ctx, (uint32_t)n, descriptorOut);
         }
     }
 
     if (_obj) {
-        return _obj->getOwnPropertyDescriptorByName(ctx, prop, descriptorOut, setterOut);
+        return _obj->getOwnPropertyDescriptorByName(ctx, prop, descriptorOut);
     }
 
     return false;
 }
 
-bool JsArray::getOwnPropertyDescriptorByIndex(VMContext *ctx, uint32_t index, JsProperty &descriptorOut, JsValue &setterOut) {
-    descriptorOut = JsProperty(JsUndefinedValue);
-    setterOut = JsUndefinedValue;
+bool JsArray::getOwnPropertyDescriptorByIndex(VMContext *ctx, uint32_t index, JsProperty &descriptorOut) {
+    descriptorOut = JsProperty();
 
     auto block = findBlock(index);
     if (!block) {
@@ -130,42 +121,38 @@ bool JsArray::getOwnPropertyDescriptorByIndex(VMContext *ctx, uint32_t index, Js
     assert(index < block->items.size());
     descriptorOut = block->items[index];
 
-    if (block->setters && index < block->setters->size()) {
-        setterOut = (*block->setters)[index];
-    }
-
     return true;
 }
 
-bool JsArray::getOwnPropertyDescriptorBySymbol(VMContext *ctx, uint32_t index, JsProperty &descriptorOut, JsValue &setterOut) {
+bool JsArray::getOwnPropertyDescriptorBySymbol(VMContext *ctx, uint32_t index, JsProperty &descriptorOut) {
     if (_obj) {
-        return _obj->getOwnPropertyDescriptorBySymbol(ctx, index, descriptorOut, setterOut);
+        return _obj->getOwnPropertyDescriptorBySymbol(ctx, index, descriptorOut);
     }
 
     return false;
 }
 
-JsValue JsArray::getSetterByName(VMContext *ctx, const SizedString &prop) {
+JsProperty *JsArray::getRawByName(VMContext *ctx, const SizedString &prop, bool &isSelfPropOut) {
     assert(0);
-    return JsUndefinedValue;
+    return nullptr;
 }
 
-JsValue JsArray::getSetterByIndex(VMContext *ctx, uint32_t index) {
+JsProperty *JsArray::getRawByIndex(VMContext *ctx, uint32_t index, bool &isSelfPropOut) {
     assert(0);
-    return JsUndefinedValue;
+    return nullptr;
 }
 
-JsValue JsArray::getSetterBySymbol(VMContext *ctx, uint32_t index) {
+JsProperty *JsArray::getRawBySymbol(VMContext *ctx, uint32_t index, bool &isSelfPropOut) {
     assert(0);
-    return JsUndefinedValue;
+    return nullptr;
 }
 
-JsValue JsArray::getByName(VMContext *ctx, const JsValue &thiz, const SizedString &prop) {
+JsValue JsArray::getByName(VMContext *ctx, const JsValue &thiz, const SizedString &prop, const JsValue &defVal) {
     if (prop.len > 0 && isDigit(prop.data[0])) {
         bool successful = false;
         auto n = prop.atoi(successful);
         if (successful && n <= ARRAY_MAX_INDEX) {
-            return getByIndex(ctx, thiz, (uint32_t)n);
+            return getByIndex(ctx, thiz, (uint32_t)n, defVal);
         }
     }
 
@@ -177,22 +164,22 @@ JsValue JsArray::getByName(VMContext *ctx, const JsValue &thiz, const SizedStrin
         return _obj->getByName(ctx, thiz, prop);
     }
 
-    return ctx->runtime->objPrototypeArray->getByName(ctx, thiz, prop);
+    return ctx->runtime->objPrototypeArray->getByName(ctx, thiz, prop, defVal);
 }
 
-JsValue JsArray::getByIndex(VMContext *ctx, const JsValue &thiz, uint32_t index) {
+JsValue JsArray::getByIndex(VMContext *ctx, const JsValue &thiz, uint32_t index, const JsValue &defVal) {
     Block *block;
     if (index < ARRAY_BLOCK_SIZE) {
         // 大多数情况都是在第一块内
         block = _firstBlock;
         if (index >= _firstBlock->items.size()) {
             assert(_blocks.size() == 1);
-            return JsUndefinedValue;
+            return defVal;
         }
     } else {
         block = findBlock(index);
         if (!block) {
-            return JsUndefinedValue;
+            return defVal;
         }
 
         index -= block->index;
@@ -208,12 +195,12 @@ JsValue JsArray::getByIndex(VMContext *ctx, const JsValue &thiz, uint32_t index)
     return propValue.value;
 }
 
-JsValue JsArray::getBySymbol(VMContext *ctx, const JsValue &thiz, uint32_t index) {
+JsValue JsArray::getBySymbol(VMContext *ctx, const JsValue &thiz, uint32_t index, const JsValue &defVal) {
     if (_obj) {
-        return _obj->getBySymbol(ctx, thiz, index);
+        return _obj->getBySymbol(ctx, thiz, index, defVal);
     }
 
-    return JsUndefinedValue;
+    return defVal;
 }
 
 void JsArray::setByName(VMContext *ctx, const JsValue &thiz, const SizedString &prop, const JsValue &value) {
@@ -267,7 +254,7 @@ void JsArray::setByName(VMContext *ctx, const JsValue &thiz, const SizedString &
     }
 
     if (!_obj) {
-        _newObject();
+        _newObject(ctx);
     }
     _obj->setByName(ctx, thiz, prop, value);
 }
@@ -308,7 +295,7 @@ void JsArray::setByIndex(VMContext *ctx, const JsValue &thiz, uint32_t index, co
 
 void JsArray::setBySymbol(VMContext *ctx, const JsValue &thiz, uint32_t index, const JsValue &value) {
     if (!_obj) {
-        _newObject();
+        _newObject(ctx);
     }
     _obj->setBySymbol(ctx, thiz, index, value);
 }
@@ -402,9 +389,9 @@ void JsArray::toString(VMContext *ctx, const JsValue &thiz, BinaryOutputStream &
     toStringCallStack.erase(thiz.value.index);
 }
 
-void JsArray::_newObject() {
+void JsArray::_newObject(VMContext *ctx) {
     assert(_obj == nullptr);
-    _obj = new JsObject();
+    _obj = new JsObject(ctx->runtime->prototypeArray.value);
 }
 
 JsArray::Block *JsArray::findBlock(uint32_t index) {

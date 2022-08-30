@@ -69,11 +69,9 @@ void registerArray(VMRuntimeCommon *rt) {
     auto prototype = new JsLibObject(rt, arrayPrototypeFunctions, CountOf(arrayPrototypeFunctions));
 
     rt->objPrototypeArray = prototype;
-    rt->prototypeArray = rt->pushObjValue(JDT_LIB_OBJECT, prototype);
-    
-    auto idxPrototype = CountOf(arrayFunctions) - 1;
-    assert(arrayFunctions[idxPrototype].name.equal("prototype"));
-    arrayFunctions[idxPrototype].value = prototype;
+    rt->prototypeArray.value = rt->pushObjValue(JDT_LIB_OBJECT, prototype);
+
+    SET_PROTOTYPE(arrayFunctions, rt->prototypeArray);
 
     rt->setGlobalObject("Array",
         new JsLibObject(rt, arrayFunctions, CountOf(arrayFunctions), arrayConstructor));

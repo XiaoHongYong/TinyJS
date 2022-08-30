@@ -94,14 +94,14 @@ public:
     IJsObject                   *objPrototypeArray;
     IJsObject                   *objPrototypeFunction;
 
-    JsValue                     prototypeString;
-    JsValue                     prototypeNumber;
-    JsValue                     prototypeBoolean;
-    JsValue                     prototypeSymbol;
-    JsValue                     prototypeRegex;
-    JsValue                     prototypeObject;
-    JsValue                     prototypeArray;
-    JsValue                     prototypeFunction;
+    JsProperty                  prototypeString;
+    JsProperty                  prototypeNumber;
+    JsProperty                  prototypeBoolean;
+    JsProperty                  prototypeSymbol;
+    JsProperty                  prototypeRegex;
+    JsProperty                  prototypeObject;
+    JsProperty                  prototypeArray;
+    JsProperty                  prototypeFunction;
 
     VMScope                     *globalScope;
 
@@ -221,15 +221,19 @@ public:
     JsPoolString allocString(uint32_t size);
 
     double toNumber(VMContext *ctx, const JsValue &v);
+    bool toNumber(VMContext *ctx, const JsValue &v, double &out);
     JsValue toString(VMContext *ctx, const JsValue &v);
     SizedString toSizedString(VMContext *ctx, const JsValue &v, string &buf);
 
     bool isEmptyString(const JsValue &v);
+    uint32_t getStringLength(const JsValue &v);
 
     bool testTrue(const JsValue &v);
+    bool testEqual(const JsValue &left, const JsValue &right);
+    bool testStrictEqual(const JsValue &left, const JsValue &right);
 
     void extendObject(const JsValue &dst, const JsValue &src);
-    
+
 protected:
     StringPool *newStringPool(uint32_t size);
 
@@ -279,14 +283,14 @@ public:
     IJsObject                   *objPrototypeArray;
     IJsObject                   *objPrototypeFunction;
 
-    JsValue                     prototypeString;
-    JsValue                     prototypeNumber;
-    JsValue                     prototypeBoolean;
-    JsValue                     prototypeSymbol;
-    JsValue                     prototypeRegex;
-    JsValue                     prototypeObject;
-    JsValue                     prototypeArray;
-    JsValue                     prototypeFunction;
+    JsProperty                  prototypeString;
+    JsProperty                  prototypeNumber;
+    JsProperty                  prototypeBoolean;
+    JsProperty                  prototypeSymbol;
+    JsProperty                  prototypeRegex;
+    JsProperty                  prototypeObject;
+    JsProperty                  prototypeArray;
+    JsProperty                  prototypeFunction;
 
 };
 

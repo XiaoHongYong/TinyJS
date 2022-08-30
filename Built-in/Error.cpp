@@ -80,9 +80,7 @@ void registerErrorAPIs(VMRuntimeCommon *rt) {
     auto prototype = new JsLibObject(rt, errorPrototypeFunctions, CountOf(errorPrototypeFunctions));
     __errorPrototype = rt->pushObjValue(JDT_LIB_OBJECT, prototype);
 
-    auto idxPrototype = CountOf(errorFunctions) - 1;
-    assert(errorFunctions[idxPrototype].name.equal("prototype"));
-    errorFunctions[idxPrototype].value = __errorPrototype;
+    SET_PROTOTYPE(errorFunctions, __errorPrototype);
 
     rt->setGlobalObject("Error",
         new JsLibObject(rt, errorFunctions, CountOf(errorFunctions), errorConstructor));

@@ -654,8 +654,16 @@ void JsVirtualMachine::call(Function *function, VMContext *ctx, VecVMStackScopes
                 stack.push_back(JsUndefinedValue);
                 break;
             }
-            case OP_PUSH_IDENTIFIER: {
-                assert(0);
+            case OP_PUSH_TRUE: {
+                stack.push_back(JsTrueValue);
+                break;
+            }
+            case OP_PUSH_FALSE: {
+                stack.push_back(JsFalseValue);
+                break;
+            }
+            case OP_PUSH_NULL: {
+                stack.push_back(JsNullValue);
                 break;
             }
             case OP_PUSH_ID_GLOBAL: {
@@ -1015,11 +1023,15 @@ void JsVirtualMachine::call(Function *function, VMContext *ctx, VecVMStackScopes
                 break;
             }
             case OP_EQUAL_STRICT: {
-                assert(0);
+                JsValue right = stack.back(); stack.pop_back();
+                JsValue left = stack.back(); stack.pop_back();
+                stack.push_back(JsValue(JDT_BOOL, runtime->testStrictEqual(left, right)));
                 break;
             }
             case OP_EQUAL: {
-                assert(0);
+                JsValue right = stack.back(); stack.pop_back();
+                JsValue left = stack.back(); stack.pop_back();
+                stack.push_back(JsValue(JDT_BOOL, runtime->testEqual(left, right)));
                 break;
             }
             case OP_CONDITIONAL: {
@@ -1114,6 +1126,54 @@ void JsVirtualMachine::call(Function *function, VMContext *ctx, VecVMStackScopes
                 assert(0);
                 break;
             }
+            case OP_DELETE_MEMBER_DOT: {
+                auto obj = stack.back(); stack.pop_back();
+                auto stringIdx = readUInt32(bytecode);
+                if (obj.type >= JDT_OBJECT) {
+                    auto *pobj = runtime->getObject(obj);
+                    auto prop = runtime->getStringByIdx(stringIdx, resourcePool);
+                    if (!pobj->removeByName(ctx, prop)) {
+                        stack.push_back(JsFalseValue);
+                        break;
+                    }
+                }
+                stack.push_back(JsTrueValue);
+                break;
+            }
+            case OP_DELETE_MEMBER_INDEX: {
+                auto obj = stack.back(); stack.pop_back();
+                auto index = stack.back(); stack.pop_back();
+                if (obj.type >= JDT_OBJECT) {
+                    auto *pobj = runtime->getObject(obj);
+                    pobj->remove(ctx, index);
+                }
+                stack.push_back(JsTrueValue);
+                break;
+            }
+            case OP_DELETE: {
+                auto value = stack.back(); stack.pop_back();
+                stack.push_back(JsTrueValue);
+                break;
+            }
+            case OP_TYPEOF: {
+                auto value = stack.back(); stack.pop_back();
+                switch (value.type) {
+                    case JDT_UNDEFINED: stack.push_back(JsStringValueUndefined); break;
+                    case JDT_NULL: stack.push_back(JsStringValueObject); break;
+                    case JDT_BOOL: stack.push_back(JsStringValueBoolean); break;
+                    case JDT_INT32: stack.push_back(JsStringValueNumber); break;
+                    case JDT_NUMBER: stack.push_back(JsStringValueNumber); break;
+                    case JDT_SYMBOL: stack.push_back(JsStringValueSymbol); break;
+                    case JDT_CHAR: stack.push_back(JsStringValueString); break;
+                    case JDT_STRING: stack.push_back(JsStringValueString); break;
+                    default: stack.push_back(JsStringValueObject); break;
+                }
+                break;
+            }
+            case OP_VOID: {
+                stack.push_back(JsUndefinedValue);
+                break;
+            }
             case OP_NEW: {
                 uint16_t countArgs = readUInt16(bytecode);
                 auto posStack = stack.size() - countArgs - 1;
@@ -1128,6 +1188,9 @@ void JsVirtualMachine::call(Function *function, VMContext *ctx, VecVMStackScopes
                         }
 
                         auto prototype = obj->getByName(ctx, func, SS_PROTOTYPE);
+                        if (prototype.type < JDT_OBJECT) {
+                            prototype = runtime->prototypeObject.value;
+                        }
                         auto thizVal = runtime->pushObjValue(JDT_OBJECT, new JsObject(prototype));
                         call(obj->function, ctx, obj->stackScopes, thizVal, args);
                         stack.resize(posStack);
@@ -1183,7 +1246,8 @@ void JsVirtualMachine::call(Function *function, VMContext *ctx, VecVMStackScopes
                 JsProperty descriptor;
                 descriptor.isGetter = true;
                 descriptor.value = value;
-                pobj->definePropertyByName(ctx, name, descriptor, JsUndefinedValue);
+                descriptor.setter = JsNotInitializedValue;
+                pobj->definePropertyByName(ctx, name, descriptor);
                 break;
             }
             case OP_OBJ_SET_SETTER: {
@@ -1193,8 +1257,10 @@ void JsVirtualMachine::call(Function *function, VMContext *ctx, VecVMStackScopes
                 assert(obj.type == JDT_OBJECT);
                 auto pobj = (JsObject *)runtime->getObject(obj);
                 auto name = runtime->getStringByIdx(idx, resourcePool);
-                JsProperty descriptor;
-                pobj->definePropertyByName(ctx, name, descriptor, value);
+                JsProperty descriptor(JsNotInitializedValue);
+                descriptor.setter = value;
+                descriptor.isGetter = -1;
+                pobj->definePropertyByName(ctx, name, descriptor);
                 break;
             }
             case OP_ARRAY_CREATE: {

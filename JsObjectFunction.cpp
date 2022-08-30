@@ -22,70 +22,75 @@ JsObjectFunction::~JsObjectFunction() {
     }
 }
 
-void JsObjectFunction::definePropertyByName(VMContext *ctx, const SizedString &prop, const JsProperty &descriptor, const JsValue &setter) {
+void JsObjectFunction::definePropertyByName(VMContext *ctx, const SizedString &prop, const JsProperty &descriptor) {
+    if (prop.equal(SS_PROTOTYPE) || prop.equal(SS_CALLER) || prop.equal(SS_ARGUMENTS)) {
+        ctx->throwException(PE_TYPE_ERROR, "Cannot redefine property: %.*s", (int)prop.len, prop.data);
+        return;
+    }
+
     if (!_obj) {
         _newObject();
     }
 
-    _obj->definePropertyByName(ctx, prop, descriptor, setter);
+    _obj->definePropertyByName(ctx, prop, descriptor);
 }
 
-void JsObjectFunction::definePropertyByIndex(VMContext *ctx, uint32_t index, const JsProperty &descriptor, const JsValue &setter) {
+void JsObjectFunction::definePropertyByIndex(VMContext *ctx, uint32_t index, const JsProperty &descriptor) {
     if (!_obj) {
         _newObject();
     }
 
-    _obj->definePropertyByIndex(ctx, index, descriptor, setter);
+    _obj->definePropertyByIndex(ctx, index, descriptor);
 }
 
-void JsObjectFunction::definePropertyBySymbol(VMContext *ctx, uint32_t index, const JsProperty &descriptor, const JsValue &setter) {
+void JsObjectFunction::definePropertyBySymbol(VMContext *ctx, uint32_t index, const JsProperty &descriptor) {
     if (!_obj) {
         _newObject();
     }
 
-    _obj->definePropertyBySymbol(ctx, index, descriptor, setter);
+    _obj->definePropertyBySymbol(ctx, index, descriptor);
 }
 
-bool JsObjectFunction::getOwnPropertyDescriptorByName(VMContext *ctx, const SizedString &prop, JsProperty &descriptorOut, JsValue &setterOut) {
-    if (_obj && _obj->getOwnPropertyDescriptorByName(ctx, prop, descriptorOut, setterOut)) {
+bool JsObjectFunction::getOwnPropertyDescriptorByName(VMContext *ctx, const SizedString &prop, JsProperty &descriptorOut) {
+    if (_obj && _obj->getOwnPropertyDescriptorByName(ctx, prop, descriptorOut)) {
         return true;
     }
 
     return false;
 }
 
-bool JsObjectFunction::getOwnPropertyDescriptorByIndex(VMContext *ctx, uint32_t index, JsProperty &descriptorOut, JsValue &setterOut) {
+bool JsObjectFunction::getOwnPropertyDescriptorByIndex(VMContext *ctx, uint32_t index, JsProperty &descriptorOut) {
     if (_obj) {
-        return _obj->getOwnPropertyDescriptorByIndex(ctx, index, descriptorOut, setterOut);
+        return _obj->getOwnPropertyDescriptorByIndex(ctx, index, descriptorOut);
     }
 
     return false;
 }
 
-bool JsObjectFunction::getOwnPropertyDescriptorBySymbol(VMContext *ctx, uint32_t index, JsProperty &descriptorOut, JsValue &setterOut) {
+bool JsObjectFunction::getOwnPropertyDescriptorBySymbol(VMContext *ctx, uint32_t index, JsProperty &descriptorOut) {
     if (_obj) {
-        return _obj->getOwnPropertyDescriptorBySymbol(ctx, index, descriptorOut, setterOut);
+        return _obj->getOwnPropertyDescriptorBySymbol(ctx, index, descriptorOut);
     }
 
     return false;
 }
 
-JsValue JsObjectFunction::getSetterByName(VMContext *ctx, const SizedString &prop) {
+JsProperty *JsObjectFunction::getRawByName(VMContext *ctx, const SizedString &prop, bool &isSelfPropOut) {
     assert(0);
-    return JsUndefinedValue;
+    return nullptr;
 }
 
-JsValue JsObjectFunction::getSetterByIndex(VMContext *ctx, uint32_t index) {
+JsProperty *JsObjectFunction::getRawByIndex(VMContext *ctx, uint32_t index, bool &isSelfPropOut) {
     assert(0);
-    return JsUndefinedValue;
+    return nullptr;
 }
 
-JsValue JsObjectFunction::getSetterBySymbol(VMContext *ctx, uint32_t index) {
+JsProperty *JsObjectFunction::getRawBySymbol(VMContext *ctx, uint32_t index, bool &isSelfPropOut) {
     assert(0);
-    return JsUndefinedValue;
+    return nullptr;
 }
 
-JsValue JsObjectFunction::getByName(VMContext *ctx, const JsValue &thiz, const SizedString &prop) {
+JsValue JsObjectFunction::getByName(VMContext *ctx, const JsValue &thiz, const SizedString &prop, const JsValue &defVal) {
     if (prop.equal(SS_PROTOTYPE)) {
         if (_prototype.type == JDT_NOT_INITIALIZED) {
             // 为了节省内存分配，延迟初始化 _prototype 属性
@@ -117,23 +122,23 @@ JsValue JsObjectFunction::getByName(VMContext *ctx, const JsValue &thiz, const S
         return obj->getByName(ctx, thiz, prop);
     }
 
-    return JsUndefinedValue;
+    return defVal;
 }
 
-JsValue JsObjectFunction::getByIndex(VMContext *ctx, const JsValue &thiz, uint32_t index) {
+JsValue JsObjectFunction::getByIndex(VMContext *ctx, const JsValue &thiz, uint32_t index, const JsValue &defVal) {
     if (_obj) {
-        return _obj->getByIndex(ctx, thiz, index);
+        return _obj->getByIndex(ctx, thiz, index, defVal);
     }
 
-    return JsUndefinedValue;
+    return defVal;
 }
 
-JsValue JsObjectFunction::getBySymbol(VMContext *ctx, const JsValue &thiz, uint32_t index) {
+JsValue JsObjectFunction::getBySymbol(VMContext *ctx, const JsValue &thiz, uint32_t index, const JsValue &defVal) {
     if (_obj) {
-        return _obj->getBySymbol(ctx, thiz, index);
+        return _obj->getBySymbol(ctx, thiz, index, defVal);
     }
 
-    return JsUndefinedValue;
+    return defVal;
 }
 
 void JsObjectFunction::setByName(VMContext *ctx, const JsValue &thiz, const SizedString &prop, const JsValue &value) {
@@ -175,6 +180,14 @@ void JsObjectFunction::setBySymbol(VMContext *ctx, const JsValue &thiz, uint32_t
 }
 
 bool JsObjectFunction::removeByName(VMContext *ctx, const SizedString &prop) {
+    if (prop.equal(SS_PROTOTYPE)) {
+        return false;
+    } else if (prop.equal(SS_CALLER)) {
+        return false;
+    } else if (prop.equal(SS_ARGUMENTS)) {
+        return false;
+    }
+
     if (_obj) {
         return _obj->removeByName(ctx, prop);
     }

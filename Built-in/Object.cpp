@@ -18,6 +18,39 @@ static void objectConstructor(VMContext *ctx, const JsValue &thiz, const Argumen
     }
 }
 
+
+SizedString objectPrototypeToSizedString(const JsValue &thiz) {
+    switch (thiz.type) {
+        case JDT_UNDEFINED: return SizedString("[object Undefined]");
+        case JDT_NULL: return SizedString("[object Null]");
+        case JDT_BOOL: return SizedString("[object Boolean]");
+        case JDT_INT32: return SizedString("[object Number]");
+        case JDT_SYMBOL: return SizedString("[object Symbol]");
+        case JDT_CHAR:
+        case JDT_STRING: return SizedString("[object String]");
+        case JDT_OBJECT: return SizedString("[object Object]");
+        case JDT_REGEX: return SizedString("[object RegExp]");
+        case JDT_ARRAY: return SizedString("[object Array]");
+        case JDT_LIB_OBJECT: return SizedString("[object Object]");
+        case JDT_NATIVE_FUNCTION:
+        case JDT_FUNCTION: return SizedString("[object Function]");
+        default:
+            assert(0);
+            return SizedString("[object Object]");
+            break;
+    }
+}
+
+SizedString definePropertyXetterToString(VMContext *ctx, const JsValue &xetter, string &buf) {
+    if (xetter.type < JDT_OBJECT) {
+        return ctx->runtime->toSizedString(ctx, xetter, buf);
+    } else if (xetter.type == JDT_OBJECT) {
+        return SizedString("#<Object>");
+    } else {
+        return objectPrototypeToSizedString(xetter);
+    }
+}
+
 // https://developer.mozilla.org/zh-CN/docs/Web/JavaScript/Reference/Global_Objects/Object/defineProperty
 void objectDefineProperty(VMContext *ctx, const JsValue &thiz, const Arguments &args) {
     auto runtime = ctx->runtime;
@@ -37,76 +70,195 @@ void objectDefineProperty(VMContext *ctx, const JsValue &thiz, const Arguments &
     }
 
     auto descriptorObj = runtime->getObject(descriptor);
-    JsProperty propDescriptor;
-    propDescriptor.isConfigurable = descriptorObj->getBool(ctx, descriptor, SS_CONFIGURABLE);
-    propDescriptor.isEnumerable = descriptorObj->getBool(ctx, descriptor, SS_ENUMERABLE);
-    propDescriptor.isWritable = descriptorObj->getBool(ctx, descriptor, SS_WRITABLE);
 
-    auto getter = descriptorObj->getByName(ctx, descriptor, SS_GET);
-    if (getter.type > JDT_OBJECT) {
+    auto configurable = descriptorObj->getByName(ctx, descriptor, SS_CONFIGURABLE, JsNotInitializedValue);
+    auto enumerable = descriptorObj->getByName(ctx, descriptor, SS_ENUMERABLE, JsNotInitializedValue);
+    auto writable = descriptorObj->getByName(ctx, descriptor, SS_WRITABLE, JsNotInitializedValue);
+    auto value = descriptorObj->getByName(ctx, descriptor, SS_VALUE, JsNotInitializedValue);
+    auto get = descriptorObj->getByName(ctx, descriptor, SS_GET, JsNotInitializedValue);
+    auto set = descriptorObj->getByName(ctx, descriptor, SS_SET, JsNotInitializedValue);
+
+    if (get.type < JDT_FUNCTION && get.type > JDT_UNDEFINED) {
+        string buf;
+        SizedString str = definePropertyXetterToString(ctx, get, buf);
+        ctx->throwException(PE_TYPE_ERROR, "Getter must be a function: %.*s", (int)str.len, str.data);
+        return;
+    }
+
+    if (set.type < JDT_FUNCTION && set.type > JDT_UNDEFINED) {
+        string buf;
+        SizedString str = definePropertyXetterToString(ctx, set, buf);
+        ctx->throwException(PE_TYPE_ERROR, "Setter must be a function: %.*s", (int)str.len, str.data);
+        return;
+    }
+
+    if ((get.isValid() || set.isValid()) && (writable.isValid() || value.isValid())) {
+        ctx->throwException(PE_TYPE_ERROR, "Invalid property descriptor. Cannot both specify accessors and a value or writable attribute, #<Object>");
+    }
+
+    JsProperty propDescriptor(JsNotInitializedValue, -1, -1, -1, -1);
+    propDescriptor.setter = JsNotInitializedValue;
+
+    if (configurable.isValid()) propDescriptor.isConfigurable = runtime->testTrue(configurable);
+    if (enumerable.isValid()) propDescriptor.isEnumerable = runtime->testTrue(enumerable);
+    if (writable.isValid()) propDescriptor.isWritable = runtime->testTrue(writable);
+
+    if (get.isValid()) {
         propDescriptor.isGetter = true;
-        propDescriptor.value = getter;
+        propDescriptor.value = get;
     } else {
-        propDescriptor.value = descriptorObj->getByName(ctx, descriptor, SS_VALUE);
+        propDescriptor.value = value;
+    }
+
+    if (set.isValid()) {
+        propDescriptor.setter = set;
     }
 
     auto pObj = runtime->getObject(obj);
-    pObj->defineProperty(ctx, prop, propDescriptor, descriptorObj->getByName(ctx, thiz, SS_SET));
+    pObj->defineProperty(ctx, prop, propDescriptor);
 
+    ctx->retValue = thiz;
+}
+
+void stringPrototypeCharAt(VMContext *ctx, const JsValue &thiz, const Arguments &args);
+
+bool getStringOwnPropertyDescriptor(VMContext *ctx, const JsValue &thiz, JsValue name, JsProperty &descriptorOut) {
+    assert(thiz.type == JDT_CHAR || thiz.type == JDT_STRING);
+
+    auto runtime = ctx->runtime;
+
+    auto len = runtime->getStringLength(thiz);
+
+    while (true) {
+        if (name.type == JDT_NUMBER || name.type == JDT_INT32) {
+            int32_t index;
+            if (name.type == JDT_NUMBER) {
+                auto v = runtime->getDouble(name);
+                index = (int32_t)v;
+                if (v != index) {
+                    return false;
+                }
+            } else {
+                index = name.value.n32;
+            }
+
+            if (index >= 0 && index < len) {
+                ArgumentsX args(JsValue(JDT_INT32, index));
+                stringPrototypeCharAt(ctx, thiz, args);
+                descriptorOut.value = ctx->retValue;
+                descriptorOut.isConfigurable = false;
+                descriptorOut.isEnumerable = true;
+                descriptorOut.isWritable = false;
+                descriptorOut.isGetter = false;
+                return true;
+            }
+            return false;
+        } else {
+            bool ret = false;
+            string buf;
+
+            auto str = runtime->toSizedString(ctx, name, buf);
+            if (str.equal(SS_LENGTH)) {
+                descriptorOut.value = JsValue(JDT_INT32, len);
+                descriptorOut.isConfigurable = false;
+                descriptorOut.isEnumerable = true;
+                descriptorOut.isWritable = false;
+                descriptorOut.isGetter = false;
+                ret = true;
+            } else {
+                bool successful;
+                auto n = str.atoi(successful);
+                if (successful) {
+                    name = JsValue(JDT_INT32, (uint32_t)n);
+                    ret = true;
+                }
+            }
+
+            return ret;
+        }
+    }
+}
+
+// https://developer.mozilla.org/zh-CN/docs/Web/JavaScript/Reference/Global_Objects/Object/getOwnPropertyDescriptor
+void getOwnPropertyDescriptor(VMContext *ctx, const JsValue &thiz, const Arguments &args) {
+    auto runtime = ctx->runtime;
     ctx->retValue = JsUndefinedValue;
+
+    if (args.count < 1 || args[0].type <= JDT_NULL) {
+        ctx->throwException(PE_TYPE_ERROR, "Cannot convert undefined or null to object");
+        return;
+    } else if (args.count < 2) {
+        return;
+    }
+
+    auto &obj = args[0];
+    auto &name = args[1];
+
+    if (obj.type < JDT_OBJECT) {
+        return;
+    }
+
+    JsProperty descriptor;
+
+    switch (obj.type) {
+        case JDT_NOT_INITIALIZED:
+        case JDT_UNDEFINED:
+        case JDT_NULL:
+            assert(0);
+            return;
+        case JDT_BOOL:
+        case JDT_INT32:
+        case JDT_NUMBER:
+        case JDT_SYMBOL:
+            return;
+        case JDT_CHAR:
+        case JDT_STRING:
+            if (!getStringOwnPropertyDescriptor(ctx, obj, name, descriptor)) {
+                return;
+            }
+            break;
+        default: {
+            auto pobj = runtime->getObject(obj);
+            if (!pobj->getOwnPropertyDescriptor(ctx, name, descriptor)) {
+                return;
+            }
+            break;
+        }
+    }
+
+    // 将 descriptor 转换为 object
+    auto desc = new JsObject();
+    auto descValue = runtime->pushObjValue(JDT_OBJECT, desc);
+
+    if (descriptor.isGetter) {
+        desc->setByName(ctx, descValue, SS_GET, descriptor.value);
+    }
+
+    if (descriptor.setter.type >= JDT_FUNCTION) {
+        desc->setByName(ctx, descValue, SS_SET, descriptor.setter);
+    }
+
+    if (!descriptor.isGetter && descriptor.setter.type < JDT_FUNCTION) {
+        desc->setByName(ctx, descValue, SS_CONFIGURABLE, descriptor.isConfigurable);
+        desc->setByName(ctx, descValue, SS_ENUMERABLE, descriptor.isEnumerable);
+        desc->setByName(ctx, descValue, SS_WRITABLE, descriptor.isWritable);
+        desc->setByName(ctx, descValue, SS_VALUE, descriptor.value.isValid() ? descriptor.value : JsUndefinedValue);
+    }
+
+    ctx->retValue = descValue;
 }
 
 static JsLibProperty objectFunctions[] = {
+    { "name", nullptr, "Object" },
+    { "length", nullptr, nullptr, JsValue(JDT_INT32, 1) },
     { "defineProperty", objectDefineProperty },
+    { "getOwnPropertyDescriptor", getOwnPropertyDescriptor },
+    { "prototype", nullptr, nullptr, JsValue(JDT_INT32, 1) },
 };
 
 void objectPrototypeToString(VMContext *ctx, const JsValue &thiz, const Arguments &args) {
-    auto runtime = ctx->runtime;
-    JsValue value;
-
-    switch (thiz.type) {
-        case JDT_UNDEFINED:
-            value = runtime->pushString("[object Undefined]");
-            break;
-        case JDT_NULL:
-            value = runtime->pushString("[object Null]");
-            break;
-        case JDT_BOOL:
-            value = runtime->pushString("[object Boolean]");
-            break;
-        case JDT_INT32:
-            value = runtime->pushString("[object Number]");
-            break;
-        case JDT_SYMBOL:
-            value = runtime->pushString("[object Symbol]");
-            break;
-        case JDT_CHAR:
-        case JDT_STRING:
-            value = runtime->pushString("[object String]");
-            break;
-        case JDT_OBJECT:
-            value = runtime->pushString("[object Object]");
-            break;
-        case JDT_REGEX:
-            value = runtime->pushString("[object RegExp]");
-            break;
-        case JDT_ARRAY:
-            value = runtime->pushString("[object Array]");
-            break;
-        case JDT_LIB_OBJECT:
-            value = runtime->pushString("[object Object]");
-            break;
-        case JDT_NATIVE_FUNCTION:
-        case JDT_FUNCTION:
-            value = runtime->pushString("[object Function]");
-            break;
-        default:
-            assert(0);
-            value = runtime->pushString("[object Object]");
-            break;
-    }
-
-    ctx->retValue = value;
+    auto str = objectPrototypeToSizedString(thiz);
+    ctx->retValue = ctx->runtime->pushString(str);
 }
 
 static JsLibProperty objectPrototypeFunctions[] = {
@@ -117,7 +269,9 @@ void registerObject(VMRuntimeCommon *rt) {
     auto prototype = new JsLibObject(rt, objectPrototypeFunctions, CountOf(objectPrototypeFunctions));
     prototype->setAsObjectPrototype();
     rt->objPrototypeObject = prototype;
-    rt->prototypeObject = rt->pushObjValue(JDT_LIB_OBJECT, prototype);
+    rt->prototypeObject.value = rt->pushObjValue(JDT_LIB_OBJECT, prototype);
+
+    SET_PROTOTYPE(objectFunctions, rt->prototypeObject);
 
     rt->setGlobalObject("Object",
         new JsLibObject(rt, objectFunctions, CountOf(objectFunctions), objectConstructor));

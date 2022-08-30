@@ -54,6 +54,21 @@ VMRuntimeCommon::VMRuntimeCommon() {
     objPrototypeArray = nullptr;
     objPrototypeFunction = nullptr;
 
+    prototypeString = JsProperty(JsUndefinedValue, false, false, false, true);
+    prototypeNumber = JsProperty(JsUndefinedValue, false, false, false, true);
+    prototypeBoolean = JsProperty(JsUndefinedValue, false, false, false, true);
+    prototypeSymbol = JsProperty(JsUndefinedValue, false, false, false, true);
+    prototypeRegex = JsProperty(JsUndefinedValue, false, false, false, true);
+    prototypeObject = JsProperty(JsUndefinedValue, false, false, false, true);
+    prototypeArray = JsProperty(JsUndefinedValue, false, false, false, true);
+    prototypeFunction = JsProperty(JsUndefinedValue, false, false, false, true);
+
+    // 把 0 占用了，0 为非法的位置
+    doubleValues.push_back(0);
+    stringValues.push_back(JsString());
+    objValues.push_back(new JsObject());
+    nativeFunctions.push_back(nullptr);
+
     countImmutableGlobalVars = 0;
     
     addConstStrings(this);
@@ -181,14 +196,14 @@ VMRuntime::VMRuntime() {
     console = nullptr;
     globalScope = nullptr;
 
-    prototypeString = nullptr;
-    prototypeNumber = nullptr;
-    prototypeBoolean = nullptr;
-    prototypeRegex = nullptr;
-    prototypeSymbol = nullptr;
-    prototypeObject = nullptr;
-    prototypeArray = nullptr;
-    prototypeFunction = nullptr;
+    objPrototypeString = nullptr;
+    objPrototypeNumber = nullptr;
+    objPrototypeBoolean = nullptr;
+    objPrototypeRegex = nullptr;
+    objPrototypeSymbol = nullptr;
+    objPrototypeObject = nullptr;
+    objPrototypeArray = nullptr;
+    objPrototypeFunction = nullptr;
 
     countCommonDobules = 0;
     countCommonStrings = 0;
@@ -209,6 +224,9 @@ void VMRuntime::init(JsVirtualMachine *vm, VMRuntimeCommon *rtCommon) {
     countCommonDobules = (int)rtCommon->doubleValues.size();
     countCommonStrings = (int)rtCommon->stringValues.size();
     countCommonObjs = (int)rtCommon->objValues.size();
+
+    // 把 0 占用了，0 为非法的位置
+    symbolValues.push_back(JsSymbol());
 
     doubleValues = rtCommon->doubleValues;
     stringValues = rtCommon->stringValues;
@@ -246,14 +264,14 @@ void VMRuntime::init(JsVirtualMachine *vm, VMRuntimeCommon *rtCommon) {
     prototypeArray = rtCommon->prototypeArray;
     prototypeFunction = rtCommon->prototypeFunction;
 
-    objPrototypeString = objValues[prototypeString.value.index];
-    objPrototypeNumber = objValues[prototypeNumber.value.index];
-    objPrototypeBoolean = objValues[prototypeBoolean.value.index];
-    objPrototypeSymbol = objValues[prototypeSymbol.value.index];
-    objPrototypeRegex = objValues[prototypeRegex.value.index];
-    objPrototypeObject = objValues[prototypeObject.value.index];
-    objPrototypeArray = objValues[prototypeArray.value.index];
-    objPrototypeFunction = objValues[prototypeFunction.value.index];
+    objPrototypeString = objValues[prototypeString.value.value.index];
+    objPrototypeNumber = objValues[prototypeNumber.value.value.index];
+    objPrototypeBoolean = objValues[prototypeBoolean.value.value.index];
+    objPrototypeSymbol = objValues[prototypeSymbol.value.value.index];
+    objPrototypeRegex = objValues[prototypeRegex.value.value.index];
+    objPrototypeObject = objValues[prototypeObject.value.value.index];
+    objPrototypeArray = objValues[prototypeArray.value.value.index];
+    objPrototypeFunction = objValues[prototypeFunction.value.value.index];
 }
 
 void VMRuntime::dump(BinaryOutputStream &stream) {
@@ -566,7 +584,13 @@ JsValue VMRuntime::pushString(const SizedString &str) {
     return pushString(JsString(js));
 }
 
-double VMRuntime::toNumber(VMContext *ctx, const JsValue &item) {
+double VMRuntime::toNumber(VMContext *ctx, const JsValue &v) {
+    double ret = 0;
+    toNumber(ctx, v, ret);
+    return ret;
+}
+
+bool VMRuntime::toNumber(VMContext *ctx, const JsValue &item, double &out) {
     auto v = item;
     if (item.type >= JDT_OBJECT) {
         Arguments noArgs;
@@ -577,35 +601,40 @@ double VMRuntime::toNumber(VMContext *ctx, const JsValue &item) {
     switch (v.type) {
         case JDT_NOT_INITIALIZED:
             ctx->throwException(PE_REFERECNE_ERROR, "Cannot access variable before initialization");
-            return NAN;
+            out = NAN;
+            return false;
         case JDT_UNDEFINED:
         case JDT_NULL:
-            return 0;
+            out = 0;
+            return false;
         case JDT_INT32:
         case JDT_BOOL:
-            return v.value.n32;
+            out = v.value.n32;
+            return true;
         case JDT_CHAR:
             if (v.value.n32 >= '0' && v.value.n32 <= '9') {
                 return v.value.n32 - '0';
             }
-            return NAN;
+            out = NAN;
+            return false;
         case JDT_STRING: {
             auto s = getString(v);
             s.trim();
-            double v;
-            auto p = parseNumber(s, v);
+            auto p = parseNumber(s, out);
             if (p != s.data + s.len) {
-                v = NAN;
+                out = NAN;
             }
-            return v;
+            return true;
         }
         case JDT_NUMBER:
             return getDouble(v);
         case JDT_SYMBOL:
             ctx->throwException(PE_TYPE_ERROR, "Cannot convert a Symbol value to a number");
-            return NAN;
+            out = NAN;
+            return false;
         default:
-            return NAN;
+            out = NAN;
+            return false;
     }
 }
 
@@ -724,6 +753,29 @@ bool VMRuntime::isEmptyString(const JsValue &v) {
     }
 }
 
+uint32_t VMRuntime::getStringLength(const JsValue &value) {
+    assert(value.type == JDT_STRING || value.type == JDT_CHAR);
+
+    uint32_t len = 0;
+    if (value.type == JDT_CHAR) {
+        len = 1;
+    } else {
+        if (value.isInResourcePool) {
+            auto ss = getStringInResourcePool(value.value.index);
+            len = ss.len;
+        } else {
+            auto &js = stringValues[value.value.index];
+            if (js.isJoinedString) {
+                len = js.value.joinedString.len;
+            } else {
+                len = js.value.poolString.value.len;
+            }
+        }
+    }
+
+    return len;
+}
+
 bool VMRuntime::testTrue(const JsValue &value) {
     switch (value.type) {
         case JDT_NOT_INITIALIZED:
@@ -744,6 +796,162 @@ bool VMRuntime::testTrue(const JsValue &value) {
         default:
             return true;
     }
+}
+
+bool VMRuntime::testEqual(const JsValue &left, const JsValue &right) {
+    if (left.equal(right)) {
+        return true;
+    }
+
+    switch (left.type) {
+        case JDT_NOT_INITIALIZED:
+        case JDT_UNDEFINED:
+        case JDT_NULL:
+            if (right.type <= JDT_NULL) {
+                return true;
+            }
+            return false;
+        case JDT_BOOL:
+        case JDT_INT32: {
+            auto n = left.value.n32;
+            if (right.type <= JDT_NULL) {
+                return false;
+            } else if (right.type == JDT_BOOL || right.type == JDT_INT32) {
+                return n == right.value.n32;
+            } else if (right.type == JDT_NUMBER) {
+                return n == getDouble(right);
+            } else if (right.type == JDT_CHAR) {
+                return right.value.n32 - '0' == n;
+            } else {
+                double r;
+                if (toNumber(mainVmCtx, right, r)) {
+                    return r == n;
+                }
+                return false;
+            }
+        }
+        case JDT_NUMBER: {
+            auto n = getDouble(left);
+            if (right.type <= JDT_NULL) {
+                return false;
+            } else if (right.type == JDT_BOOL || right.type == JDT_INT32) {
+                return n == right.value.n32;
+            } else if (right.type == JDT_NUMBER) {
+                return n == getDouble(right);
+            } else if (right.type == JDT_CHAR) {
+                return right.value.n32 - '0' == n;
+            } else {
+                double r;
+                if (toNumber(mainVmCtx, right, r)) {
+                    return r == n;
+                }
+                return false;
+            }
+        }
+        case JDT_CHAR: {
+            if (right.type <= JDT_NULL) {
+                return false;
+            } else if (right.type == JDT_BOOL || right.type == JDT_INT32) {
+                return left.value.n32 - '0' == right.value.n32;
+            } else if (right.type == JDT_NUMBER) {
+                return left.value.n32 - '0' == getDouble(right);
+            } else if (right.type == JDT_CHAR) {
+                return left.value.n32 == right.value.n32;
+            } else {
+                string buf;
+                auto str = toSizedString(mainVmCtx, right, buf);
+                return str.len == 1 && str.data[0] == left.value.n32;
+            }
+        }
+        case JDT_STRING: {
+            if (right.type <= JDT_NULL) {
+                return false;
+            } else if (right.type == JDT_BOOL || right.type == JDT_INT32) {
+                double v;
+                if (toNumber(mainVmCtx, left, v)) {
+                    return v == right.value.n32;
+                }
+                return false;
+            } else if (right.type == JDT_NUMBER) {
+                double v;
+                if (toNumber(mainVmCtx, left, v)) {
+                    return v == getDouble(right);
+                }
+                return false;
+            } else if (right.type == JDT_CHAR) {
+                auto str = getString(left);
+                return str.len == 1 && str.data[0] == right.value.n32;
+            } else if (right.type == JDT_STRING) {
+                auto str1 = getString(left);
+                auto str2 = getString(right);
+                return str1.equal(str2);
+            } else {
+                string buf;
+                auto str2 = toSizedString(mainVmCtx, right, buf);
+                auto str1 = getString(left);
+                return str1.equal(str2);
+            }
+        }
+        default: {
+            if (right.type <= JDT_NULL) {
+                return false;
+            } else if (right.type == JDT_BOOL || right.type == JDT_INT32) {
+                double v;
+                if (toNumber(mainVmCtx, left, v)) {
+                    return v == right.value.n32;
+                }
+                return false;
+            } else if (right.type == JDT_NUMBER) {
+                double v;
+                if (toNumber(mainVmCtx, left, v)) {
+                    return v == getDouble(right);
+                }
+                return false;
+            } else if (right.type == JDT_CHAR) {
+                auto str = getString(left);
+                return str.len == 1 && str.data[0] == right.value.n32;
+            } else if (right.type == JDT_STRING) {
+                auto str1 = getString(left);
+                auto str2 = getString(right);
+                return str1.equal(str2);
+            } else {
+                string buf;
+                auto str2 = toSizedString(mainVmCtx, right, buf);
+                auto str1 = getString(left);
+                return str1.equal(str2);
+            }
+        }
+    }
+}
+
+bool VMRuntime::testStrictEqual(const JsValue &left, const JsValue &right) {
+    if (left.equal(right)) {
+        return true;
+    }
+
+    if (left.type == JDT_CHAR) {
+        if (right.type == JDT_STRING && getStringLength(right) == 1) {
+            auto s = getString(right);
+            return s.data[0] == left.value.index;
+        }
+    } else if (left.type == JDT_STRING) {
+        auto len1 = getStringLength(left);
+        if (right.type == JDT_CHAR) {
+            if (len1 == 1) {
+                auto s2 = getString(right);
+                return s2.data[0] == left.value.n32;
+            }
+        } else if (right.type == JDT_STRING) {
+            auto len2 = getStringLength(right);
+            if (len1 == len2) {
+                auto s1 = getString(left);
+                auto s2 = getString(right);
+                return s1.equal(s2);
+            }
+        }
+    }
+
+    return false;
 }
 
 void VMRuntime::extendObject(const JsValue &dst, const JsValue &src) {
