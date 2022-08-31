@@ -6,9 +6,17 @@ function f1() {
     console.log(undefined--);
     console.log(++undefined);
     console.log(--undefined);
-    console.log(undefined + =10);
+    console.log(undefined += 10);
 }
 f1();
+/* OUTPUT
+1
+1
+2
+2
+1
+11
+*/
 
 
 function f2() {
@@ -22,6 +30,13 @@ function f2() {
 f2();
 var NaN = 1;
 console.log(NaN);
+/* OUTPUT
+1
+1
+2
+true
+NaN
+*/
 
 
 function f3() {
@@ -33,6 +48,12 @@ function f3() {
     console.log(a + 1);
 }
 f3();
+/* OUTPUT
+NaN
+NaN
+NaN
+NaN
+*/
 
 
 function f4(undefined) {
@@ -41,6 +62,10 @@ function f4(undefined) {
     console.log(undefined);
 }
 f4(1);
+/* OUTPUT
+1
+4
+*/
 
 
 function f5() {
@@ -50,3 +75,7 @@ function f5() {
     console.log(undefined);
 }
 f5();
+/* OUTPUT
+function undefined() {}
+2
+*/

@@ -205,6 +205,7 @@ protected:
     bool                    _newLineBefore;
 
     TokenType               _prevTokenType;
+    uint8_t                 *_prevTokenEndPos;
 
 };
 

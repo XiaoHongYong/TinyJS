@@ -87,10 +87,16 @@ void consoleLog(VMContext *ctx, const JsValue &thiz, const Arguments &args) {
             case JDT_BOOL:
                 out.append(v.value.n32 ? "true" : "false");
                 break;
-            case JDT_NUMBER:
-                sprintf(buf, "%lf", runtime->getDouble(v));
-                out.append(buf);
+            case JDT_NUMBER: {
+                auto d = runtime->getDouble(v);
+                if (isnan(d)) {
+                    out.append("NaN");
+                } else {
+                    sprintf(buf, "%lf", d);
+                    out.append(buf);
+                }
                 break;
+            }
             case JDT_CHAR:
                 out.append(1, (char)v.value.n32);
                 break;
@@ -100,8 +106,8 @@ void consoleLog(VMContext *ctx, const JsValue &thiz, const Arguments &args) {
                 break;
             }
             case JDT_SYMBOL: {
-                auto s = runtime->getSymbolName(v);
-                out.append((const char *)s.data, s.len);
+                auto s = runtime->getSymbol(v);
+                out.append(s.toString());
                 break;
             }
             default:

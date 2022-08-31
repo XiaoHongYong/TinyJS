@@ -240,6 +240,7 @@ JSLexer::JSLexer(ResourcePool *resPool, const char *buf, size_t len) : _resPool(
     _newLineBefore = true;
 
     _prevTokenType = TK_SEMI_COLON; // 缺省的前一个 token 为 ';'
+    _prevTokenEndPos = _buf;
 
     memset(&_curToken, 0, sizeof(_curToken));
     memset(&_nextToken, 0, sizeof(_nextToken));
@@ -248,6 +249,9 @@ JSLexer::JSLexer(ResourcePool *resPool, const char *buf, size_t len) : _resPool(
 
 void JSLexer::_readToken() {
     if (_nextToken.type != TK_ERR) {
+        _prevTokenType = _curToken.type;
+        _prevTokenEndPos = _curToken.buf + _curToken.len;
+
         _curToken = _nextToken;
         _nextToken.type = TK_ERR;
         return;
@@ -270,9 +274,9 @@ void JSLexer::_readToken() {
     }
 
     _prevTokenType = _curToken.type;
+    _prevTokenEndPos = _curToken.buf + _curToken.len;
 
     _curToken.newLineBefore = _newLineBefore;
-    _curToken.type = TK_ERR;
     _curToken.buf = _bufPos - 1;
     _curToken.line = _line;
     _curToken.col = _col;
@@ -573,9 +577,7 @@ void JSLexer::_readToken() {
                 }
             }
 
-            if (_curToken.type == TK_ERR) {
-                _parseError(PE_SYNTAX_ERROR, "Template string is NOT closed.");
-            }
+            _parseError(PE_SYNTAX_ERROR, "Template string is NOT closed.");
             break;
         case '~':
             _curToken.type = TK_UNARY_PREFIX;
@@ -621,10 +623,14 @@ void JSLexer::_readToken() {
 
 void JSLexer::_peekToken() {
     if (_nextToken.type == TK_ERR) {
+        auto prevTokenType = _prevTokenType;
+        auto prevTokenEndPos = _prevTokenEndPos;
         auto tmp = _curToken;
         _readToken();
         _nextToken = _curToken;
         _curToken = tmp;
+        _prevTokenType = prevTokenType;
+        _prevTokenEndPos = prevTokenEndPos;
     }
 }
 
@@ -743,11 +749,11 @@ void JSLexer::_skipLineComment() {
         }
     }
 
+    auto tmpPrevTokenEndPos = _prevTokenEndPos;
     auto tmpNewLineBefore = _newLineBefore;
-    auto tmp = _prevTokenType;
     _readToken();
-    tmp = _prevTokenType;
     _curToken.newLineBefore |= tmpNewLineBefore;
+    _prevTokenEndPos = tmpPrevTokenEndPos;
 }
 
 void JSLexer::_skipMultilineComment() {
@@ -760,11 +766,11 @@ void JSLexer::_skipMultilineComment() {
 
         if (*_bufPos++ == '*' && *_bufPos == '/') {
             _bufPos++;
-            auto tmp = _prevTokenType;
+            auto tmpPrevTokenEndPos = _prevTokenEndPos;
             auto tmpNewLineBefore = _newLineBefore;
             _readToken();
-            tmp = _prevTokenType;
             _curToken.newLineBefore |= tmpNewLineBefore;
+            _prevTokenEndPos = tmpPrevTokenEndPos;
             return;
         }
     }

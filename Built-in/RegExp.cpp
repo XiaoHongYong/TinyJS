@@ -6,10 +6,20 @@
 //
 
 #include "BuiltIn.hpp"
+#include "../JsRegExp.hpp"
 
 
 void regExpConstructor(VMContext *ctx, const JsValue &thiz, const Arguments &args) {
-    ctx->retValue = jsValueUndefined;
+    auto runtime = ctx->runtime;
+
+    string buf;
+    SizedString strRe;
+    if (args.count > 0) {
+        strRe = runtime->toSizedString(ctx, args[0], buf);
+    }
+    auto re = new JsRegExp(strRe);
+
+    ctx->retValue = runtime->pushObjValue(JDT_REGEX, re);
 }
 
 static JsLibProperty regExpFunctions[] = {
@@ -25,7 +35,10 @@ void regExpPrototypeToString(VMContext *ctx, const JsValue &thiz, const Argument
         return;
     }
 
-    ctx->retValue = jsValueUndefined;
+    auto re = (JsRegExp *)ctx->runtime->getObject(thiz);
+    auto &str = re->toString();
+
+    ctx->retValue = ctx->runtime->pushString(SizedString(str));
 }
 
 static JsLibProperty regExpPrototypeFunctions[] = {

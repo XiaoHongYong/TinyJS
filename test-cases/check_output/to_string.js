@@ -15,4 +15,6 @@ function f1() {
     console.log(obj.toString());
 }
 f1();
-
+/* OUTPUT
+[error] Uncaught TypeError: Cannot convert object to primitive value
+*/

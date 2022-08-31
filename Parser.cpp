@@ -505,6 +505,8 @@ IJsNode *JSParser::_expectVariableDeclaration(TokenType declareType, bool initFr
         } else {
             if (left->type == NT_IDENTIFIER) {
                 // JsExprIdentifier 并未被赋值，引用，需要从 _headIdRefs 中删除
+                ((JsExprIdentifier *)left)->noAssignAndRef = true;
+
                 assert(_headIdRefs == left);
                 _headIdRefs = ((JsExprIdentifier *)left)->next;
             }
@@ -812,6 +814,11 @@ IJsNode *JSParser::_expectExpression(Precedence pred, bool enableIn) {
         }
         case TK_NULL: {
             expr = PoolNew(_pool, JsExprNull)();
+            _readToken();
+            break;
+        }
+        case TK_REGEX: {
+            expr = PoolNew(_pool, JsExprRegExp)(_getStringIndex(_curToken));
             _readToken();
             break;
         }
@@ -1576,7 +1583,7 @@ Function *JSParser::_enterFunction(const Token &tokenStart, bool isCodeBlock, bo
 }
 
 void JSParser::_leaveFunction() {
-    _curFunction->srcCode.len = uint32_t(_curToken.buf - _curFunction->srcCode.data);
+    _curFunction->srcCode.len = uint32_t(_prevTokenEndPos - _curFunction->srcCode.data);
 
     _curFunction = _stackFunctions.back(); _stackFunctions.pop_back();
 

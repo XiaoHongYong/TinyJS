@@ -121,7 +121,7 @@ f6(1, 20);
 1 20 20 1
 1 2 2 1
 3 4 xx
-[object Object]
+{}
 set as undefined undefined
 xy
 */

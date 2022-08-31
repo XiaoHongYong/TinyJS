@@ -580,6 +580,10 @@ bool VMRuntime::toNumber(VMContext *ctx, const JsValue &item, double &out) {
     if (item.type >= JDT_OBJECT) {
         Arguments noArgs;
         vm->callMember(ctx, v, "toString", noArgs);
+        if (ctx->retValue.type >= JDT_OBJECT) {
+            ctx->throwException(PE_TYPE_ERROR, " Cannot convert object to primitive value");
+            return false;
+        }
         v = ctx->retValue;
     }
 
@@ -627,6 +631,10 @@ JsValue VMRuntime::toString(VMContext *ctx, const JsValue &v) {
     JsValue val = v;
     if (val.type >= JDT_OBJECT) {
         vm->callMember(ctx, v, "toString", Arguments());
+        if (ctx->retValue.type >= JDT_OBJECT) {
+            ctx->throwException(PE_TYPE_ERROR, " Cannot convert object to primitive value");
+            return JsStringValueEmpty;
+        }
         val = ctx->retValue;
     }
 
@@ -657,8 +665,7 @@ JsValue VMRuntime::toString(VMContext *ctx, const JsValue &v) {
         case JDT_SYMBOL: {
             auto index = val.value.n32;
             assert(index < symbolValues.size());
-            CStrPrintf str("Symbol(%s)", symbolValues[index].name);
-            return pushString(SizedString(str.c_str(), str.size()));
+            return pushString(SizedString(symbolValues[index].toString()));
         }
         default: {
             ctx->throwException(PE_TYPE_ERROR, "Cannot convert object to primitive value");
@@ -672,6 +679,10 @@ SizedString VMRuntime::toSizedString(VMContext *ctx, const JsValue &v, string &b
     JsValue val = v;
     if (val.type >= JDT_OBJECT) {
         vm->callMember(ctx, v, "toString", Arguments());
+        if (ctx->retValue.type >= JDT_OBJECT) {
+            ctx->throwException(PE_TYPE_ERROR, " Cannot convert object to primitive value");
+            return SizedString();
+        }
         val = ctx->retValue;
     }
 
@@ -708,8 +719,7 @@ SizedString VMRuntime::toSizedString(VMContext *ctx, const JsValue &v, string &b
         case JDT_SYMBOL: {
             auto index = val.value.n32;
             assert(index < symbolValues.size());
-            CStrPrintf str("Symbol(%s)", symbolValues[index].name);
-            buf = str.c_str();
+            buf = symbolValues[index].toString();
             return SizedString(buf);
         }
         default: {
@@ -784,7 +794,7 @@ bool VMRuntime::testTrue(const JsValue &value) {
 }
 
 bool VMRuntime::testEqual(const JsValue &left, const JsValue &right) {
-    if (left.equal(right)) {
+    if (left.equal(right) && !left.equal(jsValueNaN)) {
         return true;
     }
 
@@ -807,6 +817,8 @@ bool VMRuntime::testEqual(const JsValue &left, const JsValue &right) {
                 return n == getDouble(right);
             } else if (right.type == JDT_CHAR) {
                 return right.value.n32 - '0' == n;
+            } else if (right.type == JDT_SYMBOL) {
+                return false;
             } else {
                 double r;
                 if (toNumber(mainVmCtx, right, r)) {
@@ -825,6 +837,8 @@ bool VMRuntime::testEqual(const JsValue &left, const JsValue &right) {
                 return n == getDouble(right);
             } else if (right.type == JDT_CHAR) {
                 return right.value.n32 - '0' == n;
+            } else if (right.type == JDT_SYMBOL) {
+                return false;
             } else {
                 double r;
                 if (toNumber(mainVmCtx, right, r)) {
@@ -877,6 +891,10 @@ bool VMRuntime::testEqual(const JsValue &left, const JsValue &right) {
                 return str1.equal(str2);
             }
         }
+        case JDT_SYMBOL: {
+            // Symbol.for 创建的“相同” 的 symbol 在最开始就判断了.
+            return false;
+        }
         default: {
             if (right.type <= JDT_NULL) {
                 return false;
@@ -893,24 +911,25 @@ bool VMRuntime::testEqual(const JsValue &left, const JsValue &right) {
                 }
                 return false;
             } else if (right.type == JDT_CHAR) {
-                auto str = getString(left);
-                return str.len == 1 && str.data[0] == right.value.n32;
+                string buf;
+                auto str1 = toSizedString(mainVmCtx, left, buf);
+                return str1.len == 1 && str1.data[0] == right.value.n32;
             } else if (right.type == JDT_STRING) {
-                auto str1 = getString(left);
+                string buf;
+                auto str1 = toSizedString(mainVmCtx, left, buf);
                 auto str2 = getString(right);
                 return str1.equal(str2);
+            } else if (right.type == JDT_SYMBOL) {
+                return false;
             } else {
-                string buf;
-                auto str2 = toSizedString(mainVmCtx, right, buf);
-                auto str1 = getString(left);
-                return str1.equal(str2);
+                return false;
             }
         }
     }
 }
 
 bool VMRuntime::testStrictEqual(const JsValue &left, const JsValue &right) {
-    if (left.equal(right)) {
+    if (left.equal(right) && !left.equal(jsValueNaN)) {
         return true;
     }
 
@@ -937,6 +956,130 @@ bool VMRuntime::testStrictEqual(const JsValue &left, const JsValue &right) {
     }
 
     return false;
+}
+
+JsValue VMRuntime::increase(VMContext *ctx, JsValue &v) {
+    JsValue org = jsValueNaN;
+
+    switch (v.type) {
+        case JDT_NOT_INITIALIZED:
+        case JDT_UNDEFINED: v = jsValueNaN; break;;
+        case JDT_NULL: org = JsValue(JDT_INT32, 0); v = JsValue(JDT_INT32, 1); break;;
+        case JDT_BOOL: org = JsValue(JDT_INT32, v.value.n32); v = JsValue(JDT_INT32, v.value.n32 + 1); break;;
+        case JDT_INT32: {
+            org = v;
+            int64_t n = v.value.n32;
+            n++;
+            if (n == (int32_t)n) {
+                v = JsValue(JDT_INT32, (int32_t)n);
+            } else {
+                v = pushDoubleValue(n);
+            }
+            break;
+        }
+        case JDT_NUMBER: {
+            org = v;
+            v = pushDoubleValue(getDouble(v) + 1);
+            break;
+        }
+        case JDT_SYMBOL: {
+            ctx->throwException(PE_TYPE_ERROR, " Cannot convert a Symbol value to a number");
+            break;;
+        }
+        case JDT_CHAR: {
+            if (isdigit(v.value.n32)) {
+                org = JsValue(JDT_INT32, v.value.n32 - '0');
+                v = JsValue(JDT_INT32, v.value.n32 - '0' + 1);
+            } else {
+                v = jsValueNaN;
+            }
+            break;
+        }
+        default: {
+            double n;
+            if (toNumber(ctx, v, n)) {
+                n++;
+                if (n == (int32_t)n) {
+                    org = JsValue(JDT_INT32, (int32_t)n - 1);
+                    v = JsValue(JDT_INT32, n);
+                } else {
+                    org = pushDoubleValue(n - 1);
+                    v = pushDoubleValue(n);
+                }
+            } else {
+                v = jsValueNaN;
+            }
+            break;
+        }
+    }
+
+    return org;
+}
+
+JsValue VMRuntime::decrease(VMContext *ctx, JsValue &v) {
+    JsValue org = jsValueNaN;
+
+    switch (v.type) {
+        case JDT_NOT_INITIALIZED:
+        case JDT_UNDEFINED: v = jsValueNaN; break;;
+        case JDT_NULL: org = JsValue(JDT_INT32, 0); v = JsValue(JDT_INT32, -1); break;;
+        case JDT_BOOL: org = JsValue(JDT_INT32, v.value.n32); v = JsValue(JDT_INT32, v.value.n32 - 1); break;;
+        case JDT_INT32: {
+            org = v;
+            int64_t n = v.value.n32;
+            n--;
+            if (n == (int32_t)n) {
+                v = JsValue(JDT_INT32, (int32_t)n);
+            } else {
+                v = pushDoubleValue(n);
+            }
+            break;
+        }
+        case JDT_NUMBER: {
+            org = v;
+            v = pushDoubleValue(getDouble(v) - 1);
+            break;
+        }
+        case JDT_SYMBOL: {
+            ctx->throwException(PE_TYPE_ERROR, " Cannot convert a Symbol value to a number");
+            break;;
+        }
+        case JDT_CHAR: {
+            if (isdigit(v.value.n32)) {
+                org = JsValue(JDT_INT32, v.value.n32 - '0');
+                v = JsValue(JDT_INT32, v.value.n32 - '0' - 1);
+            } else {
+                v = jsValueNaN;
+            }
+            break;
+        }
+        default: {
+            double n;
+            if (toNumber(ctx, v, n)) {
+                n--;
+                if (n == (int32_t)n) {
+                    org = JsValue(JDT_INT32, (int32_t)n + 1);
+                    v = JsValue(JDT_INT32, n);
+                } else {
+                    org = pushDoubleValue(n + 1);
+                    v = pushDoubleValue(n);
+                }
+            } else {
+                v = jsValueNaN;
+            }
+            break;
+        }
+    }
+
+    return org;
+}
+
+JsValue VMRuntime::increaseMemberDot(VMContext *ctx, const JsValue &obj, SizedString &prop, bool isPost) {
+    return jsValueUndefined;
+}
+
+JsValue VMRuntime::decreaseMemberDot(VMContext *ctx, const JsValue &obj, SizedString &prop, bool isPost) {
+    return jsValueUndefined;
 }
 
 void VMRuntime::extendObject(const JsValue &dst, const JsValue &src) {

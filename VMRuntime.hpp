@@ -146,10 +146,10 @@ public:
         }
     }
 
-    SizedString getSymbolName(const JsValue &val) {
+    const JsSymbol &getSymbol(const JsValue &val) {
         assert(val.type == JDT_SYMBOL);
         assert(val.value.index < symbolValues.size());
-        return SizedString(symbolValues[val.value.index].name);
+        return symbolValues[val.value.index];
     }
 
     SizedString getStringInResourcePool(uint32_t index) {
@@ -223,6 +223,12 @@ public:
     bool testTrue(const JsValue &v);
     bool testEqual(const JsValue &left, const JsValue &right);
     bool testStrictEqual(const JsValue &left, const JsValue &right);
+
+    JsValue increase(VMContext *ctx, JsValue &v);
+    JsValue decrease(VMContext *ctx, JsValue &v);
+
+    JsValue increaseMemberDot(VMContext *ctx, const JsValue &obj, SizedString &prop, bool isPost);
+    JsValue decreaseMemberDot(VMContext *ctx, const JsValue &obj, SizedString &prop, bool isPost);
 
     void extendObject(const JsValue &dst, const JsValue &src);
 

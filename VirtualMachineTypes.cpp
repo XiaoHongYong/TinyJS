@@ -122,6 +122,10 @@ static inline void copyProperty(int8_t &dst, int8_t src) {
     }
 }
 
+string JsSymbol::toString() const {
+    return "Symbol(" + name + ")";
+}
+
 bool JsProperty::merge(const JsProperty &src) {
     if (!isWritable && !isGetter && !setter.isValid()) {
         if (src.value.type != JDT_NOT_INITIALIZED && !src.value.equal(value)) return false;

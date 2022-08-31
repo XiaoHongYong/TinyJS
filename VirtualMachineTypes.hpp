@@ -57,6 +57,7 @@ class VMContext;
     OP_ITEM(OP_PUSH_ID_PARENT_FUNCTION, "scope_depth:u8, function_idx:u16"), \
     OP_ITEM(OP_PUSH_STRING, "string_idx:u32"), \
     OP_ITEM(OP_PUSH_COMMON_STRING, "string_idx:u16"), /*系统常用的 string，不会涉及资源回收*/\
+    OP_ITEM(OP_PUSH_REGEXP, "string_idx:u32"), \
     OP_ITEM(OP_PUSH_INT32, "int_number:i32"), \
     OP_ITEM(OP_PUSH_DOUBLE, "value_idx:u32"), \
     OP_ITEM(OP_PUSH_FUNCTION_EXPR, "scope_depth:u8, function_idx:u16"), \
@@ -66,6 +67,7 @@ class VMContext;
     OP_ITEM(OP_PUSH_MEMBER_DOT, "property_string_idx:u32"), \
     OP_ITEM(OP_PUSH_MEMBER_DOT_OPTIONAL, "property_string_idx:u32"), \
     \
+    OP_ITEM(OP_PUSH_MEMBER_INDEX_NO_POP, ""), \
     OP_ITEM(OP_PUSH_THIS_MEMBER_INDEX, ""), \
     OP_ITEM(OP_PUSH_THIS_MEMBER_INDEX_INT, "index:u32"), \
     OP_ITEM(OP_PUSH_THIS_MEMBER_DOT, "property_string_idx:u32"), \
@@ -83,10 +85,10 @@ class VMContext;
     OP_ITEM(OP_INCREMENT_MEMBER_DOT_POST, "property_string_idx:u32"), \
     OP_ITEM(OP_DECREMENT_MEMBER_DOT_PRE, "property_string_idx:u32"), \
     OP_ITEM(OP_DECREMENT_MEMBER_DOT_POST, "property_string_idx:u32"), \
-    OP_ITEM(OP_INCREMENT_MEMBER_INDEX_PRE, "property_string_idx:u32"), \
-    OP_ITEM(OP_INCREMENT_MEMBER_INDEX_POST, "property_string_idx:u32"), \
-    OP_ITEM(OP_DECREMENT_MEMBER_INDEX_PRE, "property_string_idx:u32"), \
-    OP_ITEM(OP_DECREMENT_MEMBER_INDEX_POST, "property_string_idx:u32"), \
+    OP_ITEM(OP_INCREMENT_MEMBER_INDEX_PRE, ""), \
+    OP_ITEM(OP_INCREMENT_MEMBER_INDEX_POST, ""), \
+    OP_ITEM(OP_DECREMENT_MEMBER_INDEX_PRE, ""), \
+    OP_ITEM(OP_DECREMENT_MEMBER_INDEX_POST, ""), \
     \
     OP_ITEM(OP_ADD, ""), \
     OP_ITEM(OP_SUB, ""), \
@@ -246,12 +248,14 @@ struct JsDouble {
  * 存储 Symbol 类型的值
  */
 struct JsSymbol {
-    JsSymbol() { referIdx = 0; nextFreeIdx = 0; name = nullptr; }
-    JsSymbol(const char *name) { referIdx = 0; nextFreeIdx = 0; this->name = name; }
+    JsSymbol() { referIdx = 0; nextFreeIdx = 0; }
+    JsSymbol(const SizedString &name) { referIdx = 0; nextFreeIdx = 0; this->name.assign((cstr_t)name.data, name.len); }
+
+    string toString() const;
 
     int8_t                      referIdx; // 用于资源回收时所用
     uint32_t                    nextFreeIdx; // 下一个空闲的索引位置
-    const char                  *name;
+    string                      name;
 };
 
 //
@@ -313,7 +317,7 @@ struct JsProperty {
     int8_t                      isConfigurable;
     int8_t                      isEnumerable;
     int8_t                      isWritable;
-    
+
     JsProperty(const JsValue &value, int8_t isGetter = false, int8_t isConfigurable = true, int8_t isEnumerable = true, int8_t isWritable = true) : value(value), isGetter(isGetter), isConfigurable(isConfigurable), isEnumerable(isEnumerable), isWritable(isWritable) {
     }
 

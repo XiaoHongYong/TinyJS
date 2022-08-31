@@ -5,28 +5,28 @@ function g() { }
 function f1(r, p) {
     console.log('round: ', r, p);
 
-    console.log(p == undefined);
-    console.log(p == null);
-    console.log(p == NaN);
-    console.log(p == 0);
-    console.log(p == 0.0);
-    console.log(p == 1.0);
-    console.log(p == -1);
-    console.log(p == -1.0);
-    console.log(p == true);
-    console.log(p == false);
-    console.log(p == '');
-    console.log(p == '0');
-    console.log(p == '1');
-    console.log(p == '0.0');
-    console.log(p == '1.0');
-    console.log(p == 'true');
-    console.log(p == 'false');
-    console.log(p == g);
-    console.log(p == obj);
-    console.log(p == /a/);
-    console.log(p == Symbol());
-    console.log(p == Symbol(''));
+    console.log(p === undefined);
+    console.log(p === null);
+    console.log(p === NaN);
+    console.log(p === 0);
+    console.log(p === 0.0);
+    console.log(p === 1.0);
+    console.log(p === -1);
+    console.log(p === -1.0);
+    console.log(p === true);
+    console.log(p === false);
+    console.log(p === '');
+    console.log(p === '0');
+    console.log(p === '1');
+    console.log(p === '0.0');
+    console.log(p === '1.0');
+    console.log(p === 'true');
+    console.log(p === 'false');
+    console.log(p === g);
+    console.log(p === obj);
+    console.log(p === /a/);
+    console.log(p === Symbol());
+    console.log(p === Symbol(''));
 }
 f1('1', undefined);
 f1('2', null);
@@ -53,7 +53,7 @@ f1('22', Symbol(''));
 /* OUTPUT
 round:  1 undefined
 true
-true
+false
 false
 false
 false
@@ -75,7 +75,7 @@ false
 false
 false
 round:  2 null
-true
+false
 true
 false
 false
@@ -130,11 +130,11 @@ false
 false
 false
 false
-true
-true
-true
 false
-true
+false
+false
+false
+false
 false
 false
 false
@@ -153,11 +153,11 @@ false
 false
 false
 false
-true
-true
-true
 false
-true
+false
+false
+false
+false
 false
 false
 false
@@ -175,17 +175,17 @@ false
 true
 false
 false
-true
 false
 false
 false
-true
-false
-true
 false
 false
 false
-true
+false
+false
+false
+false
+false
 false
 false
 false
@@ -241,20 +241,20 @@ false
 false
 false
 false
-true
-false
-false
-true
 false
 false
 false
 true
 false
-true
 false
 false
 false
-true
+false
+false
+false
+false
+false
+false
 false
 false
 false
@@ -262,17 +262,17 @@ round:  10 false
 false
 false
 false
-true
+false
+false
+false
+false
+false
+false
 true
 false
 false
 false
 false
-true
-true
-true
-false
-true
 false
 false
 false
@@ -285,13 +285,13 @@ round:  11
 false
 false
 false
-true
-true
 false
 false
 false
 false
-true
+false
+false
+false
 true
 false
 false
@@ -308,13 +308,13 @@ round:  12 0
 false
 false
 false
-true
-true
 false
 false
 false
 false
-true
+false
+false
+false
 false
 true
 false
@@ -333,10 +333,10 @@ false
 false
 false
 false
-true
 false
 false
-true
+false
+false
 false
 false
 false
@@ -354,13 +354,13 @@ round:  14 0.0
 false
 false
 false
-true
-true
 false
 false
 false
 false
-true
+false
+false
+false
 false
 false
 false
@@ -379,20 +379,20 @@ false
 false
 false
 false
-true
-false
-false
-true
 false
 false
 false
 false
 false
-true
+false
 false
 false
 false
 true
+false
+false
+false
+false
 false
 false
 false
@@ -471,16 +471,16 @@ false
 false
 false
 false
-true
-false
-false
-true
 false
 false
 false
 false
 false
-true
+false
+false
+false
+false
+false
 false
 false
 false

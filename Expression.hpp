@@ -68,6 +68,20 @@ protected:
 
 };
 
+class JsExprRegExp : public IJsNode {
+public:
+    JsExprRegExp(uint32_t stringIdx) : IJsNode(NT_REGEXP), stringIdx(stringIdx) { }
+
+    virtual void convertToByteCode(ByteCodeStream &stream) {
+        stream.writeOpCode(OP_PUSH_REGEXP);
+        stream.writeUint32(stringIdx);
+    }
+
+protected:
+    uint32_t                    stringIdx;
+
+};
+
 class JsExprInt32 : public IJsNode {
 public:
     JsExprInt32(int32_t value) : IJsNode(NT_INT32), value(value) {
@@ -108,20 +122,30 @@ public:
         isUsedNotAsFunctionCall = true;
         declare = nullptr;
         next = nullptr;
+        noAssignAndRef = false;
     }
 
     virtual void setBeingAssigned() {
         isBeingAssigned = true;
     }
 
+    void writeAddress(ByteCodeStream &stream) {
+        stream.writeUint8(declare->varStorageType);
+        stream.writeUint8(declare->scope->depth);
+        stream.writeUint16(declare->storageIndex);
+    }
+    
     virtual void convertToByteCode(ByteCodeStream &stream) {
+        if (noAssignAndRef) {
+            // 未被赋值或者引用
+            return;
+        }
+
         if (isBeingAssigned) {
             // 赋值表达式的左边，前一个指令应该是 OP_ASSIGN_IDENTIFIER
             // 这里需要写入 identifier 的地址
             stream.writeUint8(OP_ASSIGN_IDENTIFIER);
-            stream.writeUint8(declare->varStorageType);
-            stream.writeUint8(declare->scope->depth);
-            stream.writeUint16(declare->storageIndex);
+            writeAddress(stream);
         } else {
             // 将 identifier 压栈，根据不同的类型，优化使用不同的指令
             if (declare->varStorageType == VST_ARGUMENT) {
@@ -170,6 +194,8 @@ public:
     bool                    isModified;
     bool                    isUsedNotAsFunctionCall;
 
+    bool                    noAssignAndRef;
+    
     IdentifierDeclare       *declare;
 
     // 此变量所在的 scope
@@ -270,40 +296,23 @@ public:
     JsExprPrefixXCrease(IJsNode *expr, bool increase) : IJsNode(NT_PREFIX_XCREASE), expr(expr), increase(increase) { }
 
     virtual void convertToByteCode(ByteCodeStream &stream) {
-        // expr->convertToByteCode(stream);
-        // stream.writeOpCode(code);
-//        if (upsStatus != UPS_NONE) {
-//            // Now handle prefix expression
-//            if (prevOp == OP_INVALID) {
-//                _parseError(PE_SYNTAX_ERROR, "Invalid left-hand side expression in prefix operation");
-//                return;
-//            }
-//
-//            if (prevOp == OP_PUSH_IDENTIFIER) {
-//                if (upsStatus == UPS_INCREAMENT) {
-//                    writer.writeOpCode(OP_INCREMENT_ID_PRE);
-//                } else {
-//                    writer.writeOpCode(OP_DECREMENT_ID_PRE);
-//                }
-//                assert(identifier);
-//                writer.writeIdentifierAddress(identifier);
-//            } else if (prevOp == OP_PUSH_MEMBER_INDEX) {
-//                if (upsStatus == UPS_INCREAMENT) {
-//                    writer.writeOpCode(OP_INCREMENT_MEMBER_INDEX_PRE);
-//                } else {
-//                    writer.writeOpCode(OP_DECREMENT_MEMBER_INDEX_PRE);
-//                }
-//            } else if (prevOp == OP_PUSH_MEMBER_DOT || prevOp == OP_PUSH_MEMBER_DOT_OPTIONAL) {
-//                if (upsStatus == UPS_INCREAMENT) {
-//                    writer.writeOpCode(OP_INCREMENT_MEMBER_DOT_PRE);
-//                } else {
-//                    writer.writeOpCode(OP_DECREMENT_MEMBER_DOT_PRE);
-//                }
-//                writer.writeUint32(prevStringIdx);
-//            } else {
-//                assert(prevOp == OP_INVALID);
-//            }
-//        }
+        if (expr->type == NT_MEMBER_DOT) {
+            auto dst = (JsExprMemberDot *)expr;
+            dst->obj->convertToByteCode(stream);
+            stream.writeOpCode(increase ? OP_INCREMENT_MEMBER_DOT_PRE : OP_DECREMENT_MEMBER_DOT_PRE);
+            stream.writeUint32(dst->stringIdx);
+        } else if (expr->type == NT_MEMBER_INDEX) {
+            auto dst = (JsExprMemberIndex *)expr;
+            dst->obj->convertToByteCode(stream);
+            dst->index->convertToByteCode(stream);
+
+            stream.writeOpCode(increase ? OP_INCREMENT_MEMBER_INDEX_PRE : OP_DECREMENT_MEMBER_INDEX_PRE);
+        } else {
+            assert(expr->type == NT_IDENTIFIER);
+            stream.writeOpCode(increase ? OP_INCREMENT_ID_PRE : OP_DECREMENT_ID_PRE);
+            auto id = (JsExprIdentifier *)expr;
+            id->writeAddress(stream);
+        }
     }
 
 protected:
@@ -317,31 +326,23 @@ public:
     JsExprPostfix(IJsNode *expr, bool increase) : IJsNode(NT_POSTFIX), expr(expr), increase(increase) { }
 
     virtual void convertToByteCode(ByteCodeStream &stream) {
-        expr->convertToByteCode(stream);
-//        if (prevOp == OP_PUSH_IDENTIFIER) {
-//            if (_curToken.buf[0] == '+') {
-//                writer.writeOpCode(OP_INCREMENT_ID_POST);
-//            } else {
-//                writer.writeOpCode(OP_DECREMENT_ID_POST);
-//            }
-//            assert(identifier);
-//            writer.writeIdentifierAddress(identifier);
-//        } else if (prevOp == OP_PUSH_MEMBER_INDEX) {
-//            if (_curToken.buf[0] == '+') {
-//                writer.writeOpCode(OP_INCREMENT_MEMBER_INDEX_POST);
-//            } else {
-//                writer.writeOpCode(OP_DECREMENT_MEMBER_INDEX_POST);
-//            }
-//        } else if (prevOp == OP_PUSH_MEMBER_DOT || prevOp == OP_PUSH_MEMBER_DOT_OPTIONAL) {
-//            if (_curToken.buf[0] == '+') {
-//                writer.writeOpCode(OP_INCREMENT_MEMBER_DOT_POST);
-//            } else {
-//                writer.writeOpCode(OP_DECREMENT_MEMBER_DOT_POST);
-//            }
-//            writer.writeUint32(prevStringIdx);
-//        } else {
-//            assert(prevOp == OP_INVALID);
-//        }
+        if (expr->type == NT_MEMBER_DOT) {
+            auto dst = (JsExprMemberDot *)expr;
+            dst->obj->convertToByteCode(stream);
+            stream.writeOpCode(increase ? OP_INCREMENT_MEMBER_DOT_POST : OP_DECREMENT_MEMBER_DOT_POST);
+            stream.writeUint32(dst->stringIdx);
+        } else if (expr->type == NT_MEMBER_INDEX) {
+            auto dst = (JsExprMemberIndex *)expr;
+            dst->obj->convertToByteCode(stream);
+            dst->index->convertToByteCode(stream);
+
+            stream.writeOpCode(increase ? OP_INCREMENT_MEMBER_INDEX_POST : OP_DECREMENT_MEMBER_INDEX_POST);
+        } else {
+            assert(expr->type == NT_IDENTIFIER);
+            stream.writeOpCode(increase ? OP_INCREMENT_ID_POST : OP_DECREMENT_ID_POST);
+            auto id = (JsExprIdentifier *)expr;
+            id->writeAddress(stream);
+        }
     }
 
 protected:
@@ -945,29 +946,34 @@ public:
     }
 
     virtual void convertToByteCode(ByteCodeStream &stream) {
-        assert(0);
-//        // 将 left += right 转换为 left = left + right
-//        // push left
-//        writePrevInstruction(prevOp, prevStringIdx, identifier, writer);
-//
-//        _readToken();
-//        _expectExpression(writer, PRED_ASSIGNMENT, false);
-//
-//        // binary operator
-//        writer.writeUint8(opr);
-//
-//        // assign
-//        if (prevOp == OP_PUSH_IDENTIFIER) {
-//            writer.writeOpCode(OP_ASSIGN_IDENTIFIER);
-//            assert(identifier);
-//            writer.writeIdentifierAddress(identifier);
-//        } else if (prevOp == OP_PUSH_MEMBER_INDEX) {
-//            writer.writeOpCode(OP_ASSIGN_MEMBER_INDEX);
-//        } else if (prevOp == OP_PUSH_MEMBER_DOT || prevOp == OP_PUSH_MEMBER_DOT_OPTIONAL) {
-//            writer.writeOpCode(OP_ASSIGN_MEMBER_DOT);
-//        } else {
-//            assert(prevOp == OP_INVALID);
-//        }
+        if (left->type == NT_MEMBER_DOT) {
+            auto dst = (JsExprMemberDot *)left;
+            dst->obj->convertToByteCode(stream);
+            stream.writeOpCode(OP_PUSH_THIS_MEMBER_DOT);
+            stream.writeUint32(dst->stringIdx);
+
+            right->convertToByteCode(stream);
+            stream.writeOpCode(xopr);
+
+            stream.writeOpCode(OP_ASSIGN_MEMBER_DOT);
+            stream.writeUint32(dst->stringIdx);
+        } else if (left->type == NT_MEMBER_INDEX) {
+            auto dst = (JsExprMemberIndex *)left;
+            dst->obj->convertToByteCode(stream);
+            dst->index->convertToByteCode(stream);
+
+            // 不 pop object 和 index
+            stream.writeOpCode(OP_PUSH_MEMBER_INDEX_NO_POP);
+
+            right->convertToByteCode(stream);
+            stream.writeOpCode(xopr);
+
+            stream.writeOpCode(OP_ASSIGN_MEMBER_INDEX);
+        } else {
+            right->convertToByteCode(stream);
+            assert(left->type == NT_IDENTIFIER);
+            left->convertToByteCode(stream);
+        }
     }
 
 protected:
