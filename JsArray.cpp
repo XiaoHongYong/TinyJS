@@ -59,10 +59,10 @@ JsArray::~JsArray() {
     }
 }
 
-void JsArray::definePropertyByName(VMContext *ctx, const SizedString &prop, const JsProperty &descriptor) {
-    if (prop.len > 0 && isDigit(prop.data[0])) {
+void JsArray::definePropertyByName(VMContext *ctx, const SizedString &name, const JsProperty &descriptor) {
+    if (name.len > 0 && isDigit(name.data[0])) {
         bool successful = false;
-        auto n = prop.atoi(successful);
+        auto n = name.atoi(successful);
         if (successful && n <= ARRAY_MAX_INDEX) {
             return definePropertyByIndex(ctx, (uint32_t)n, descriptor);
         }
@@ -72,7 +72,7 @@ void JsArray::definePropertyByName(VMContext *ctx, const SizedString &prop, cons
         _newObject(ctx);
     }
 
-    _obj->definePropertyByName(ctx, prop, descriptor);
+    _obj->definePropertyByName(ctx, name, descriptor);
 }
 
 void JsArray::definePropertyByIndex(VMContext *ctx, uint32_t index, const JsProperty &descriptor) {
@@ -80,7 +80,7 @@ void JsArray::definePropertyByIndex(VMContext *ctx, uint32_t index, const JsProp
     index -= block->index;
     assert(index < block->items.size());
 
-    mergeIndexJsProperty(ctx, &(block->items[index]), descriptor, index);
+    defineIndexProperty(ctx, &(block->items[index]), descriptor, index);
 }
 
 void JsArray::definePropertyBySymbol(VMContext *ctx, uint32_t index, const JsProperty &descriptor) {
@@ -91,129 +91,16 @@ void JsArray::definePropertyBySymbol(VMContext *ctx, uint32_t index, const JsPro
     _obj->definePropertyBySymbol(ctx, index, descriptor);
 }
 
-bool JsArray::getOwnPropertyDescriptorByName(VMContext *ctx, const SizedString &prop, JsProperty &descriptorOut) {
-    descriptorOut = JsProperty();
-
-    if (prop.len > 0 && isDigit(prop.data[0])) {
+void JsArray::setByName(VMContext *ctx, const JsValue &thiz, const SizedString &name, const JsValue &value) {
+    if (name.len > 0 && isDigit(name.data[0])) {
         bool successful = false;
-        auto n = prop.atoi(successful);
+        auto n = name.atoi(successful);
         if (successful && n <= ARRAY_MAX_INDEX) {
-            return getOwnPropertyDescriptorByIndex(ctx, (uint32_t)n, descriptorOut);
+            return setByIndex(ctx, thiz, (uint32_t)n, value);
         }
     }
 
-    if (_obj) {
-        return _obj->getOwnPropertyDescriptorByName(ctx, prop, descriptorOut);
-    }
-
-    return false;
-}
-
-bool JsArray::getOwnPropertyDescriptorByIndex(VMContext *ctx, uint32_t index, JsProperty &descriptorOut) {
-    descriptorOut = JsProperty();
-
-    auto block = findBlock(index);
-    if (!block) {
-        return false;
-    }
-
-    index -= block->index;
-    assert(index < block->items.size());
-    descriptorOut = block->items[index];
-
-    return true;
-}
-
-bool JsArray::getOwnPropertyDescriptorBySymbol(VMContext *ctx, uint32_t index, JsProperty &descriptorOut) {
-    if (_obj) {
-        return _obj->getOwnPropertyDescriptorBySymbol(ctx, index, descriptorOut);
-    }
-
-    return false;
-}
-
-JsProperty *JsArray::getRawByName(VMContext *ctx, const SizedString &prop, bool &isSelfPropOut) {
-    assert(0);
-    return nullptr;
-}
-
-JsProperty *JsArray::getRawByIndex(VMContext *ctx, uint32_t index, bool &isSelfPropOut) {
-    assert(0);
-    return nullptr;
-}
-
-JsProperty *JsArray::getRawBySymbol(VMContext *ctx, uint32_t index, bool &isSelfPropOut) {
-    assert(0);
-    return nullptr;
-}
-
-JsValue JsArray::getByName(VMContext *ctx, const JsValue &thiz, const SizedString &prop, const JsValue &defVal) {
-    if (prop.len > 0 && isDigit(prop.data[0])) {
-        bool successful = false;
-        auto n = prop.atoi(successful);
-        if (successful && n <= ARRAY_MAX_INDEX) {
-            return getByIndex(ctx, thiz, (uint32_t)n, defVal);
-        }
-    }
-
-    if (prop.equal(SS_LENGTH)) {
-        return JsValue(JDT_INT32, _length);
-    }
-
-    if (_obj) {
-        return _obj->getByName(ctx, thiz, prop);
-    }
-
-    return ctx->runtime->objPrototypeArray->getByName(ctx, thiz, prop, defVal);
-}
-
-JsValue JsArray::getByIndex(VMContext *ctx, const JsValue &thiz, uint32_t index, const JsValue &defVal) {
-    Block *block;
-    if (index < ARRAY_BLOCK_SIZE) {
-        // 大多数情况都是在第一块内
-        block = _firstBlock;
-        if (index >= _firstBlock->items.size()) {
-            assert(_blocks.size() == 1);
-            return defVal;
-        }
-    } else {
-        block = findBlock(index);
-        if (!block) {
-            return defVal;
-        }
-
-        index -= block->index;
-    }
-
-    assert(index < block->items.size());
-    auto &propValue = block->items[index];
-    if (propValue.isGetter) {
-        ctx->vm->callMember(ctx, thiz, propValue.value, Arguments());
-        return ctx->retValue;
-    }
-
-    return propValue.value;
-}
-
-JsValue JsArray::getBySymbol(VMContext *ctx, const JsValue &thiz, uint32_t index, const JsValue &defVal) {
-    if (_obj) {
-        return _obj->getBySymbol(ctx, thiz, index, defVal);
-    }
-
-    return defVal;
-}
-
-void JsArray::setByName(VMContext *ctx, const JsValue &thiz, const SizedString &prop, const JsValue &value) {
-    if (prop.len > 0 && isDigit(prop.data[0])) {
-        bool successful = false;
-        auto n = prop.atoi(successful);
-        if (successful && n < ARRAY_MAX_INDEX) {
-            setByIndex(ctx, thiz, uint32_t(n), value);
-            return;
-        }
-    }
-
-    if (prop.equal(SS_LENGTH)) {
+    if (name.equal(SS_LENGTH)) {
         auto tmp = ctx->runtime->toNumber(ctx, value);
         auto length = (uint32_t)tmp;
         if (length != tmp) {
@@ -221,42 +108,15 @@ void JsArray::setByName(VMContext *ctx, const JsValue &thiz, const SizedString &
             return;
         }
 
-        if (length > _length) {
-            // 扩大 length
-            _length = length;
-        } else if (length < _length) {
-            // 缩小 length
-            _length = length;
-
-            auto it = lower_bound(_blocks.begin(), _blocks.end(), length, BlockLessCompare());
-            if (it != _blocks.end()) {
-                // 分配了空间，先删除 length 所在 block 的
-                auto block = *it;
-                length -= block->index;
-                block->items.resize(length);
-
-                if (block->setters && length > block->setters->size()) {
-                    // 删除 setters
-                    block->setters->resize(length);
-                }
-
-                // 删除剩下的 block
-                ++it;
-                auto itStart = it;
-                for (; it != _blocks.end(); ++it) {
-                    auto block = *it;
-                    delete block;
-                }
-                _blocks.erase(itStart, _blocks.end());
-            }
-        }
+        setLength(length);
         return;
     }
 
     if (!_obj) {
         _newObject(ctx);
     }
-    _obj->setByName(ctx, thiz, prop, value);
+
+    _obj->setByName(ctx, thiz, name, value);
 }
 
 void JsArray::setByIndex(VMContext *ctx, const JsValue &thiz, uint32_t index, const JsValue &value) {
@@ -282,15 +142,8 @@ void JsArray::setByIndex(VMContext *ctx, const JsValue &thiz, uint32_t index, co
         index -= block->index;
     }
 
-    if (block->setters && index < block->setters->size()) {
-        // 有 setter 的情况
-        auto setter = (*block->setters)[index];
-        ArgumentsX args(value);
-        ctx->vm->callMember(ctx, thiz, setter, args);
-        return;
-    }
-
-    block->items[index] = value;
+    auto prop = &block->items[index];
+    set(ctx, prop, thiz, value);
 }
 
 void JsArray::setBySymbol(VMContext *ctx, const JsValue &thiz, uint32_t index, const JsValue &value) {
@@ -300,17 +153,140 @@ void JsArray::setBySymbol(VMContext *ctx, const JsValue &thiz, uint32_t index, c
     _obj->setBySymbol(ctx, thiz, index, value);
 }
 
-bool JsArray::removeByName(VMContext *ctx, const SizedString &prop) {
+JsValue JsArray::increaseByName(VMContext *ctx, const JsValue &thiz, const SizedString &name, int n, bool isPost) {
+    if (name.len > 0 && isDigit(name.data[0])) {
+        bool successful = false;
+        auto index = name.atoi(successful);
+        if (successful && n <= ARRAY_MAX_INDEX) {
+            return increaseByIndex(ctx, thiz, (uint32_t)index, n, isPost);
+        }
+    }
+
+    if (name.equal(SS_LENGTH)) {
+        setLength(_length + 1);
+        return JsValue(JDT_INT32, isPost ? _length - 1 : _length);
+    }
+
+    if (!_obj) {
+        _newObject(ctx);
+    }
+
+    return _obj->increaseByName(ctx, thiz, name, n, isPost);
+}
+
+JsValue JsArray::increaseByIndex(VMContext *ctx, const JsValue &thiz, uint32_t index, int n, bool isPost) {
+    Block *block = nullptr;
+    if (index < ARRAY_BLOCK_SIZE) {
+        // 大多数情况都是在第一块内
+        block = _firstBlock;
+
+        if (index >= _firstBlockItems->size()) {
+            _firstBlockItems->resize(index + 1, jsValueNotInitialized);
+            assert(_blocks.size() <= 1 || index < _blocks[1]->index);
+
+            if (index >= _length) {
+                _length = index + 1;
+            }
+
+            // 没有 setter，直接修改
+            _firstBlockItems->at(index) = jsValueNaN;
+            return jsValueNaN;
+        }
+    } else {
+        block = findToModifyBlock(index);
+        index -= block->index;
+    }
+
+    auto prop = &block->items[index];
+    return increase(ctx, prop, thiz, n, isPost);
+}
+
+JsValue JsArray::increaseBySymbol(VMContext *ctx, const JsValue &thiz, uint32_t index, int n, bool isPost) {
+    if (!_obj) {
+        _newObject(ctx);
+    }
+    return _obj->increaseBySymbol(ctx, thiz, index, n, isPost);
+}
+
+JsProperty *JsArray::getRawByName(VMContext *ctx, const SizedString &name, JsNativeFunction &funcGetterOut, bool includeProtoProp) {
+    funcGetterOut = nullptr;
+    if (name.len > 0 && isDigit(name.data[0])) {
+        bool successful = false;
+        auto n = name.atoi(successful);
+        if (successful && n <= ARRAY_MAX_INDEX) {
+            return getRawByIndex(ctx, (uint32_t)n, includeProtoProp);
+        }
+    }
+
+    if (name.equal(SS_LENGTH)) {
+        static JsProperty prop(JsValue(JDT_INT32, _length), false, false);
+        return &prop;
+    }
+
     if (_obj) {
-        return _obj->removeByName(ctx, prop);
+        return _obj->getRawByName(ctx, name, funcGetterOut, includeProtoProp);
+    }
+
+    if (includeProtoProp) {
+        return ctx->runtime->objPrototypeArray->getRawByName(ctx, name, funcGetterOut, true);
+    }
+    return nullptr;
+}
+
+JsProperty *JsArray::getRawByIndex(VMContext *ctx, uint32_t index, bool includeProtoProp) {
+    Block *block;
+    if (index < ARRAY_BLOCK_SIZE) {
+        // 大多数情况都是在第一块内
+        block = _firstBlock;
+        if (index >= _firstBlock->items.size()) {
+            assert(_blocks.size() == 1);
+            return nullptr;
+        }
+    } else {
+        block = findBlock(index);
+        if (!block) {
+            return nullptr;
+        }
+
+        index -= block->index;
+    }
+
+    assert(index < block->items.size());
+    return &block->items[index];
+}
+
+JsProperty *JsArray::getRawBySymbol(VMContext *ctx, uint32_t index, bool includeProtoProp) {
+    if (_obj) {
+        return _obj->getRawBySymbol(ctx, index, includeProtoProp);
+    }
+
+    return nullptr;
+}
+
+bool JsArray::removeByName(VMContext *ctx, const SizedString &name) {
+    if (_obj) {
+        return _obj->removeByName(ctx, name);
     }
 
     return true;
 }
 
 bool JsArray::removeByIndex(VMContext *ctx, uint32_t index) {
-    if (_obj) {
-        _obj->removeByIndex(ctx, index);
+    auto block = findBlock(index);
+    if (!block) {
+        if (_obj) {
+            return _obj->removeByIndex(ctx, index);
+        }
+
+        return true;
+    }
+    index -= block->index;
+
+    assert(index < block->items.size());
+    auto &prop = block->items[index];
+
+    if (prop.isConfigurable) {
+        prop = JsProperty(jsValueNotInitialized);
     }
 
     return true;
@@ -370,7 +346,7 @@ void JsArray::toString(VMContext *ctx, const JsValue &thiz, BinaryOutputStream &
 
         for (auto &item : b->items) {
             auto v = item.value;
-            if (item.isGetter) {
+            if (item.isGSetter && item.value.type >= JDT_FUNCTION) {
                 ctx->vm->callMember(ctx, thiz, item.value, Arguments());
                 v = ctx->retValue;
             }
@@ -393,6 +369,33 @@ void JsArray::toString(VMContext *ctx, const JsValue &thiz, BinaryOutputStream &
     }
 
     toStringCallStack.erase(thiz.value.index);
+}
+
+void JsArray::setLength(uint32_t length) {
+    if (length > _length) {
+        // 扩大 length
+        _length = length;
+    } else if (length < _length) {
+        // 缩小 length
+        _length = length;
+
+        auto it = lower_bound(_blocks.begin(), _blocks.end(), length, BlockLessCompare());
+        if (it != _blocks.end()) {
+            // 分配了空间，先删除 length 所在 block 的
+            auto block = *it;
+            length -= block->index;
+            block->items.resize(length);
+
+            // 删除剩下的 block
+            ++it;
+            auto itStart = it;
+            for (; it != _blocks.end(); ++it) {
+                auto block = *it;
+                delete block;
+            }
+            _blocks.erase(itStart, _blocks.end());
+        }
+    }
 }
 
 void JsArray::_newObject(VMContext *ctx) {
@@ -496,9 +499,6 @@ JsArray::Block *JsArray::findToModifyBlock(uint32_t index) {
         // 距离后一个近，而且后一个还没满，且添加的距离不小于 ARRAY_BLOCK_SIZE / 2
         auto insertCount = block->index - index;
         block->items.insert(block->items.begin(), insertCount, JsProperty(jsValueNotInitialized));
-        if (block->setters) {
-            block->setters->insert(block->setters->begin(), insertCount, jsValueNotInitialized);
-        }
         block->index = index;
         return block;
     } else {

@@ -62,14 +62,14 @@ JsLibObject::~JsLibObject() {
     }
 }
 
-void JsLibObject::definePropertyByName(VMContext *ctx, const SizedString &prop, const JsProperty &descriptor) {
-    auto first = std::lower_bound(_libProps, _libPropsEnd, prop, JsLibFunctionLessCmp());
-    if (first != _libPropsEnd && first->name.equal(prop)) {
+void JsLibObject::definePropertyByName(VMContext *ctx, const SizedString &name, const JsProperty &descriptor) {
+    auto first = std::lower_bound(_libProps, _libPropsEnd, name, JsLibFunctionLessCmp());
+    if (first != _libPropsEnd && first->name.equal(name)) {
         // 修改现有的属性
         _copyForModify();
 
         first->function = nullptr;
-        mergeJsProperty(ctx, &first->prop, descriptor, prop);
+        defineNameProperty(ctx, &first->prop, descriptor, name);
         return;
     }
 
@@ -77,12 +77,12 @@ void JsLibObject::definePropertyByName(VMContext *ctx, const SizedString &prop, 
         _newObject();
     }
 
-    _obj->definePropertyByName(ctx, prop, descriptor);
+    _obj->definePropertyByName(ctx, name, descriptor);
 }
 
 void JsLibObject::definePropertyByIndex(VMContext *ctx, uint32_t index, const JsProperty &descriptor) {
-    NumberToSizedString ss(index);
-    definePropertyByName(ctx, ss, descriptor);
+    NumberToSizedString name(index);
+    definePropertyByName(ctx, name, descriptor);
 }
 
 void JsLibObject::definePropertyBySymbol(VMContext *ctx, uint32_t index, const JsProperty &descriptor) {
@@ -93,148 +93,43 @@ void JsLibObject::definePropertyBySymbol(VMContext *ctx, uint32_t index, const J
     _obj->definePropertyBySymbol(ctx, index, descriptor);
 }
 
-bool JsLibObject::getOwnPropertyDescriptorByName(VMContext *ctx, const SizedString &prop, JsProperty &descriptorOut) {
-    if (_obj && _obj->getOwnPropertyDescriptorByName(ctx, prop, descriptorOut)) {
-        return true;
-    }
-
-    // 使用二分查找找到
-    auto first = std::lower_bound(_libProps, _libPropsEnd, prop, JsLibFunctionLessCmp());
-    if (first != _libPropsEnd && first->name.equal(prop)) {
-        descriptorOut = first->prop;
-        return true;
-    }
-
-    return false;
-}
-
-bool JsLibObject::getOwnPropertyDescriptorByIndex(VMContext *ctx, uint32_t index, JsProperty &descriptorOut) {
-    NumberToSizedString ss(index);
-    return getOwnPropertyDescriptorByName(ctx, ss, descriptorOut);
-}
-
-bool JsLibObject::getOwnPropertyDescriptorBySymbol(VMContext *ctx, uint32_t index, JsProperty &descriptorOut) {
-    if (_obj) {
-        return _obj->getOwnPropertyDescriptorBySymbol(ctx, index, descriptorOut);
-    }
-
-    return false;
-}
-
-JsProperty *JsLibObject::getRawByName(VMContext *ctx, const SizedString &prop, bool &isSelfPropOut) {
-    // 使用二分查找
-    auto first = std::lower_bound(_libProps, _libPropsEnd, prop, JsLibFunctionLessCmp());
-    if (first != _libPropsEnd && first->name.equal(prop)) {
-        return &first->prop;
-    }
-
-    if (_obj) {
-        return _obj->getRawByName(ctx, prop, isSelfPropOut);
-    }
-
-    return nullptr;
-}
-
-JsProperty *JsLibObject::getRawByIndex(VMContext *ctx, uint32_t index, bool &isSelfPropOut) {
-    if (_obj) {
-        isSelfPropOut = true;
-        return _obj->getRawByIndex(ctx, index, isSelfPropOut);
-    }
-
-    return nullptr;
-}
-
-JsProperty *JsLibObject::getRawBySymbol(VMContext *ctx, uint32_t index, bool &isSelfPropOut) {
-    if (_obj) {
-        isSelfPropOut = true;
-        return _obj->getRawBySymbol(ctx, index, isSelfPropOut);
-    }
-
-    return nullptr;
-}
-
-JsValue JsLibObject::getByName(VMContext *ctx, const JsValue &thiz, const SizedString &prop, const JsValue &defVal) {
-    // 使用二分查找找到
-    auto first = std::lower_bound(_libProps, _libPropsEnd, prop, JsLibFunctionLessCmp());
-    if (first != _libPropsEnd && first->name.equal(prop)) {
-        auto prop = first->prop;
-        if (prop.isGetter) {
-            if (first->function) {
-                first->function(ctx, thiz, Arguments());
-            } else {
-                ctx->vm->callMember(ctx, thiz, prop.value, Arguments());
-            }
-            return ctx->retValue;
-        }
-
-        return prop.value;
-    }
-
-    if (_obj) {
-        auto value = _obj->getByName(ctx, thiz, prop, defVal);
-        if (value.type != JDT_NOT_INITIALIZED) {
-            return value;
-        }
-    }
-
-    return defVal;
-}
-
-JsValue JsLibObject::getByIndex(VMContext *ctx, const JsValue &thiz, uint32_t index, const JsValue &defVal) {
-    NumberToSizedString ss(index);
-    return getByName(ctx, thiz, ss, defVal);
-}
-
-JsValue JsLibObject::getBySymbol(VMContext *ctx, const JsValue &thiz, uint32_t index, const JsValue &defVal) {
-    if (_obj) {
-        return _obj->getBySymbol(ctx, thiz, index, defVal);
-    }
-
-    return defVal;
-}
-
-void JsLibObject::setByName(VMContext *ctx, const JsValue &thiz, const SizedString &prop, const JsValue &value) {
+void JsLibObject::setByName(VMContext *ctx, const JsValue &thiz, const SizedString &name, const JsValue &value) {
     if (thiz.type < JDT_OBJECT) {
         // Primitive types 不能被修改，但是其 setter 函数会被调用
         if (_obj) {
-            bool isSelfProp;
-            auto propValue = _obj->getRawByName(ctx, prop, isSelfProp);
-            if (propValue && propValue->setter.type >= JDT_FUNCTION) {
+            JsNativeFunction funcGetter = nullptr;
+            auto prop = _obj->getRawByName(ctx, name, funcGetter, true);
+            if (prop && prop->setter.type >= JDT_FUNCTION) {
                 // 调用 setter 函数
                 ArgumentsX args(value);
-                ctx->vm->callMember(ctx, thiz, propValue->setter, args);
-                return;
+                ctx->vm->callMember(ctx, thiz, prop->setter, args);
             }
         }
-
         return;
     }
 
-    auto first = std::lower_bound(_libProps, _libPropsEnd, prop, JsLibFunctionLessCmp());
-    if (first != _libPropsEnd && first->name.equal(prop)) {
+    auto first = std::lower_bound(_libProps, _libPropsEnd, name, JsLibFunctionLessCmp());
+    if (first != _libPropsEnd && first->name.equal(name)) {
         _copyForModify();
 
         // 修改现有的属性
         if (first->functionSet) {
             first->functionSet(ctx, thiz, ArgumentsX(value));
-        } else if (first->prop.setter.type >= JDT_FUNCTION) {
-            ctx->vm->callMember(ctx, thiz, first->prop.setter, ArgumentsX(value));
-        } else if (first->prop.isWritable) {
-            first->prop.value = value;
+        } else {
+            set(ctx, &first->prop, thiz, value);
         }
-        return;
-    }
+    } else {
+        if (!_obj) {
+            _newObject();
+        }
 
-    if (!_obj) {
-        _newObject();
+        _obj->setByName(ctx, thiz, name, value);
     }
-
-    _obj->setByName(ctx, thiz, prop, value);
 }
 
 void JsLibObject::setByIndex(VMContext *ctx, const JsValue &thiz, uint32_t index, const JsValue &value) {
-    NumberToSizedString ss(index);
-    setByName(ctx, thiz, ss, value);
+    NumberToSizedString name(index);
+    setByName(ctx, thiz, name, value);
 }
 
 void JsLibObject::setBySymbol(VMContext *ctx, const JsValue &thiz, uint32_t index, const JsValue &value) {
@@ -244,9 +139,94 @@ void JsLibObject::setBySymbol(VMContext *ctx, const JsValue &thiz, uint32_t inde
     _obj->setBySymbol(ctx, thiz, index, value);
 }
 
-bool JsLibObject::removeByName(VMContext *ctx, const SizedString &prop) {
-    auto first = std::lower_bound(_libProps, _libPropsEnd, prop, JsLibFunctionLessCmp());
-    if (first != _libPropsEnd && first->name.equal(prop)) {
+JsValue JsLibObject::increaseByName(VMContext *ctx, const JsValue &thiz, const SizedString &name, int n, bool isPost) {
+    if (thiz.type < JDT_OBJECT) {
+        // Primitive types 不能被修改，但是其 setter 函数会被调用
+        if (_obj) {
+            JsNativeFunction funcGetter = nullptr;
+            auto prop = _obj->getRawByName(ctx, name, funcGetter, true);
+
+            // 保存到临时对象中调用
+            JsProperty tmp = *prop;
+            return increase(ctx, &tmp, thiz, n, isPost);
+        }
+        return jsValueNaN;
+    }
+
+    auto first = std::lower_bound(_libProps, _libPropsEnd, name, JsLibFunctionLessCmp());
+    if (first != _libPropsEnd && first->name.equal(name)) {
+        _copyForModify();
+
+        // 修改现有的属性
+        if (first->functionSet) {
+            // TODO: ...
+            assert(0);
+            // first->functionSet(ctx, thiz, ArgumentsX(value));
+            return jsValueNaN;
+        } else {
+            return increase(ctx, &first->prop, thiz, n, isPost);
+        }
+    } else {
+        if (!_obj) {
+            _newObject();
+        }
+
+        return _obj->increaseByName(ctx, thiz, name, n, isPost);
+    }
+}
+
+JsValue JsLibObject::increaseByIndex(VMContext *ctx, const JsValue &thiz, uint32_t index, int n, bool isPost) {
+    NumberToSizedString name(index);
+    return increaseByName(ctx, thiz, name, n, isPost);
+}
+
+JsValue JsLibObject::increaseBySymbol(VMContext *ctx, const JsValue &thiz, uint32_t index, int n, bool isPost) {
+    if (!_obj) {
+        _newObject();
+    }
+    return _obj->increaseBySymbol(ctx, thiz, index, n, isPost);
+}
+
+JsProperty *JsLibObject::getRawByName(VMContext *ctx, const SizedString &name, JsNativeFunction &funcGetterOut, bool includeProtoProp) {
+    funcGetterOut = nullptr;
+
+    // 使用二分查找
+    auto first = std::lower_bound(_libProps, _libPropsEnd, name, JsLibFunctionLessCmp());
+    if (first != _libPropsEnd && first->name.equal(name)) {
+        if (first->prop.isGSetter) {
+            funcGetterOut = first->function;
+        }
+        return &first->prop;
+    }
+
+    if (_obj) {
+        return _obj->getRawByName(ctx, name, funcGetterOut, includeProtoProp);
+    }
+
+    return nullptr;
+}
+
+JsProperty *JsLibObject::getRawByIndex(VMContext *ctx, uint32_t index, bool includeProtoProp) {
+    if (_obj) {
+        includeProtoProp = true;
+        return _obj->getRawByIndex(ctx, index, includeProtoProp);
+    }
+
+    return nullptr;
+}
+
+JsProperty *JsLibObject::getRawBySymbol(VMContext *ctx, uint32_t index, bool includeProtoProp) {
+    if (_obj) {
+        includeProtoProp = true;
+        return _obj->getRawBySymbol(ctx, index, includeProtoProp);
+    }
+
+    return nullptr;
+}
+
+bool JsLibObject::removeByName(VMContext *ctx, const SizedString &name) {
+    auto first = std::lower_bound(_libProps, _libPropsEnd, name, JsLibFunctionLessCmp());
+    if (first != _libPropsEnd && first->name.equal(name)) {
         if (!first->prop.isConfigurable) {
             return false;
         }
@@ -259,15 +239,15 @@ bool JsLibObject::removeByName(VMContext *ctx, const SizedString &prop) {
     }
 
     if (_obj) {
-        return _obj->removeByName(ctx, prop);
+        return _obj->removeByName(ctx, name);
     }
 
     return true;
 }
 
 bool JsLibObject::removeByIndex(VMContext *ctx, uint32_t index) {
-    NumberToSizedString ss(index);
-    return removeByName(ctx, ss);
+    NumberToSizedString name(index);
+    return removeByName(ctx, name);
 }
 
 bool JsLibObject::removeBySymbol(VMContext *ctx, uint32_t index) {
@@ -319,7 +299,6 @@ void JsLibObject::_copyForModify() {
 JsLibProperty makeJsLibPropertyGetter(const char *name, JsNativeFunction f) {
     JsLibProperty prop;
 
-    memset(&prop, 0, sizeof(prop));
     prop.name = name;
     prop.function = f;
     return prop;

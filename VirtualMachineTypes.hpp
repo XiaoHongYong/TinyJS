@@ -313,12 +313,12 @@ static_assert(sizeof(JsString) == 24, "JsPoolString should be 24 bytes long.");
 struct JsProperty {
     JsValue                     value; // 属性值，或者 getter
     JsValue                     setter;
-    int8_t                      isGetter;
+    int8_t                      isGSetter; // is getter/setter 中的一个有效？
     int8_t                      isConfigurable;
     int8_t                      isEnumerable;
     int8_t                      isWritable;
 
-    JsProperty(const JsValue &value, int8_t isGetter = false, int8_t isConfigurable = true, int8_t isEnumerable = true, int8_t isWritable = true) : value(value), isGetter(isGetter), isConfigurable(isConfigurable), isEnumerable(isEnumerable), isWritable(isWritable) {
+    JsProperty(const JsValue &value, int8_t isGSetter = false, int8_t isConfigurable = true, int8_t isEnumerable = true, int8_t isWritable = true) : value(value), isGSetter(isGSetter), isConfigurable(isConfigurable), isEnumerable(isEnumerable), isWritable(isWritable) {
     }
 
     JsProperty() : JsProperty(JsValue(JDT_UNDEFINED, 0)) { }
@@ -328,7 +328,7 @@ struct JsProperty {
     JsProperty defineProperty() const {
         JsProperty ret = *this;
         if (value.type == JDT_NOT_INITIALIZED) ret.value = JsValue(JDT_UNDEFINED, 0);
-        if (isGetter == -1) ret.isGetter = false;
+        if (isGSetter == -1) ret.isGSetter = false;
         if (isConfigurable == -1) ret.isConfigurable = false;
         if (isEnumerable == -1) ret.isEnumerable = false;
         if (isWritable == -1) ret.isWritable = false;

@@ -227,8 +227,8 @@ public:
     JsValue increase(VMContext *ctx, JsValue &v);
     JsValue decrease(VMContext *ctx, JsValue &v);
 
-    JsValue increaseMemberDot(VMContext *ctx, const JsValue &obj, SizedString &prop, bool isPost);
-    JsValue decreaseMemberDot(VMContext *ctx, const JsValue &obj, SizedString &prop, bool isPost);
+    JsValue increaseMemberDot(VMContext *ctx, const JsValue &obj, SizedString &name, bool isPost);
+    JsValue decreaseMemberDot(VMContext *ctx, const JsValue &obj, SizedString &name, bool isPost);
 
     void extendObject(const JsValue &dst, const JsValue &src);
 

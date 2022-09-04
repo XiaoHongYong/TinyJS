@@ -127,7 +127,7 @@ string JsSymbol::toString() const {
 }
 
 bool JsProperty::merge(const JsProperty &src) {
-    if (!isWritable && !isGetter && !setter.isValid()) {
+    if (!isWritable && !isGSetter && !setter.isValid()) {
         if (src.value.type != JDT_NOT_INITIALIZED && !src.value.equal(value)) return false;
     }
 
@@ -135,13 +135,13 @@ bool JsProperty::merge(const JsProperty &src) {
         if (isModified(isConfigurable, src.isConfigurable)) return false;
         if (isModified(isEnumerable, src.isEnumerable)) return false;
         if (isModified(isWritable, src.isWritable)) return false;
-        if (isModified(isGetter, src.isGetter)) return false;
+        if (isModified(isGSetter, src.isGSetter)) return false;
         if (src.setter.type != JDT_NOT_INITIALIZED && !src.setter.equal(setter)) return false;
 
         return true;
     }
 
-    copyProperty(isGetter, src.isGetter);
+    copyProperty(isGSetter, src.isGSetter);
     copyProperty(isConfigurable, src.isConfigurable);
     copyProperty(isEnumerable, src.isEnumerable);
     copyProperty(isWritable, src.isWritable);

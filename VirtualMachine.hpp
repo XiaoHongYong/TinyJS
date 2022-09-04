@@ -164,8 +164,8 @@ public:
     void callMember(VMContext *ctx, const JsValue &thiz, const char *memberName, const Arguments &args);
     void callMember(VMContext *ctx, const JsValue &thiz, const JsValue &memberFunc, const Arguments &args);
 
-    JsValue getMemberDot(VMContext *ctx, const JsValue &thiz, const SizedString &prop);
-    void setMemberDot(VMContext *ctx, const JsValue &thiz, const SizedString &prop, const JsValue &value);
+    JsValue getMemberDot(VMContext *ctx, const JsValue &thiz, const SizedString &name);
+    void setMemberDot(VMContext *ctx, const JsValue &thiz, const SizedString &name, const JsValue &value);
 
     JsValue getMemberIndex(VMContext *ctx, const JsValue &thiz, const JsValue &prop);
     void setMemberIndex(VMContext *ctx, const JsValue &thiz, const JsValue &prop, const JsValue &value);

@@ -11,32 +11,36 @@
 JsArguments::JsArguments(VMScope *scope, Arguments *args) {
     _scope = scope;
     _args = args;
-    _argDescriptors = nullptr;
-    _setters = nullptr;
+    _argsDescriptors = nullptr;
     _obj = nullptr;
     _length = JsValue(JDT_INT32, args->count);
 }
 
 JsArguments::~JsArguments() {
     if (_obj) delete _obj;
-    if (_argDescriptors) delete _argDescriptors;
-    if (_setters) delete _setters;
+    if (_argsDescriptors) delete _argsDescriptors;
 }
 
-void JsArguments::definePropertyByName(VMContext *ctx, const SizedString &prop, const JsProperty &descriptor) {
-    if (prop.len > 0 && isDigit(prop.data[0])) {
+void JsArguments::definePropertyByName(VMContext *ctx, const SizedString &name, const JsProperty &descriptor) {
+    if (name.len > 0 && isDigit(name.data[0])) {
         bool successful = false;
-        auto n = prop.atoi(successful);
+        auto n = name.atoi(successful);
         if (successful && n < _args->count) {
             return definePropertyByIndex(ctx, (uint32_t)n, descriptor);
         }
+    }
+
+    if (name.equal(SS_LENGTH)) {
+        // 设置标志调用 setByIndexCallback
+        defineNameProperty(ctx, &_length, descriptor, name);
+        return;
     }
 
     if (!_obj) {
         _newObject();
     }
 
-    _obj->definePropertyByName(ctx, prop, descriptor);
+    _obj->definePropertyByName(ctx, name, descriptor);
 }
 
 void JsArguments::definePropertyByIndex(VMContext *ctx, uint32_t index, const JsProperty &descriptor) {
@@ -46,14 +50,18 @@ void JsArguments::definePropertyByIndex(VMContext *ctx, uint32_t index, const Js
         return;
     }
 
-    if (!_argDescriptors) {
-        _argDescriptors = new VecJsProperties;
-        _argDescriptors->resize(_args->count);
+    if (!_argsDescriptors) {
+        _argsDescriptors = new VecJsProperties();
+        for (uint32_t i = 0; i < _args->count; i++)  {
+            _argsDescriptors->push_back(_args->data[i]);
+        }
     }
 
-    auto &propValue = _argDescriptors->at(index);
-    if (propValue.isConfigurable) {
-        mergeIndexJsProperty(ctx, &propValue, descriptor, index);
+    auto &prop = _argsDescriptors->at(index);
+    defineIndexProperty(ctx, &prop, descriptor, index);
+
+    if (!prop.isGSetter) {
+        _args->data[index] = prop.value;
     }
 }
 
@@ -65,144 +73,43 @@ void JsArguments::definePropertyBySymbol(VMContext *ctx, uint32_t index, const J
     _obj->definePropertyBySymbol(ctx, index, descriptor);
 }
 
-bool JsArguments::getOwnPropertyDescriptorByName(VMContext *ctx, const SizedString &prop, JsProperty &descriptorOut) {
-    if (prop.len > 0 && isDigit(prop.data[0])) {
+void JsArguments::setByName(VMContext *ctx, const JsValue &thiz, const SizedString &name, const JsValue &value) {
+    if (name.len > 0 && isDigit(name.data[0])) {
         bool successful = false;
-        auto n = prop.atoi(successful);
-        if (successful && n < _args->count) {
-            return getOwnPropertyDescriptorByIndex(ctx, (uint32_t)n, descriptorOut);
-        }
-    }
-
-    if (_obj) {
-        return _obj->getOwnPropertyDescriptorByName(ctx, prop, descriptorOut);
-    }
-
-    return false;
-}
-
-bool JsArguments::getOwnPropertyDescriptorByIndex(VMContext *ctx, uint32_t index, JsProperty &descriptorOut) {
-    descriptorOut = JsProperty(jsValueUndefined);
-
-    if (index >= _args->count) {
-        NumberToSizedString ss(index);
-        return getOwnPropertyDescriptorByName(ctx, ss, descriptorOut);
-    }
-
-    if (!_argDescriptors) {
-        return false;
-    }
-    descriptorOut = _argDescriptors->at(index);
-
-    return true;
-}
-
-bool JsArguments::getOwnPropertyDescriptorBySymbol(VMContext *ctx, uint32_t index, JsProperty &descriptorOut) {
-    if (_obj) {
-        return _obj->getOwnPropertyDescriptorBySymbol(ctx, index, descriptorOut);
-    }
-
-    return false;
-}
-
-JsProperty *JsArguments::getRawByName(VMContext *ctx, const SizedString &prop, bool &isSelfPropOut) {
-    assert(0);
-    return nullptr;
-}
-
-JsProperty *JsArguments::getRawByIndex(VMContext *ctx, uint32_t index, bool &isSelfPropOut) {
-    assert(0);
-    return nullptr;
-}
-
-JsProperty *JsArguments::getRawBySymbol(VMContext *ctx, uint32_t index, bool &isSelfPropOut) {
-    assert(0);
-    return nullptr;
-}
-
-JsValue JsArguments::getByName(VMContext *ctx, const JsValue &thiz, const SizedString &prop, const JsValue &defVal) {
-    if (prop.len > 0 && isDigit(prop.data[0])) {
-        bool successful = false;
-        auto n = prop.atoi(successful);
-        if (successful && n < _args->count) {
-            return getByIndex(ctx, thiz, (uint32_t)n, defVal);
-        }
-    }
-
-    if (prop.equal(SS_LENGTH)) {
-        return _length;
-    }
-
-    if (_obj) {
-        return _obj->getByName(ctx, thiz, prop, defVal);
-    }
-
-    return defVal;
-}
-
-JsValue JsArguments::getByIndex(VMContext *ctx, const JsValue &thiz, uint32_t index, const JsValue &defVal) {
-    if (index >= _args->count) {
-        NumberToSizedString ss(index);
-        return getByName(ctx, thiz, ss, defVal);
-    }
-
-    if (_argDescriptors) {
-        auto &propValue = _argDescriptors->at(index);
-        if (propValue.isGetter) {
-            ctx->vm->callMember(ctx, thiz, propValue.value, Arguments());
-            return ctx->retValue;
-        }
-    }
-
-    return (*_args)[index];
-}
-
-JsValue JsArguments::getBySymbol(VMContext *ctx, const JsValue &thiz, uint32_t index, const JsValue &defVal) {
-    if (_obj) {
-        return _obj->getBySymbol(ctx, thiz, index, defVal);
-    }
-
-    return defVal;
-}
-
-void JsArguments::setByName(VMContext *ctx, const JsValue &thiz, const SizedString &prop, const JsValue &value) {
-    if (prop.len > 0 && isDigit(prop.data[0])) {
-        bool successful = false;
-        auto n = prop.atoi(successful);
+        auto n = name.atoi(successful);
         if (successful && n < _args->count) {
             setByIndex(ctx, thiz, uint32_t(n), value);
             return;
         }
     }
 
-    if (prop.equal(SS_LENGTH)) {
-        _length = value;
+    if (name.equal(SS_LENGTH)) {
+        set(ctx, &_length, thiz, value);
         return;
     }
 
     if (!_obj) {
         _newObject();
     }
-    _obj->setByName(ctx, thiz, prop, value);
+    _obj->setByName(ctx, thiz, name, value);
 }
 
 void JsArguments::setByIndex(VMContext *ctx, const JsValue &thiz, uint32_t index, const JsValue &value) {
     if (index >= _args->count) {
-        NumberToSizedString ss(index);
-        return setByName(ctx, thiz, ss, value);
+        NumberToSizedString name(index);
+        return setByName(ctx, thiz, name, value);
     }
 
-    if (_setters) {
-        // 调用 setter 函数
-        auto setter = _setters->at(index);
-        if (setter.type > JDT_OBJECT) {
-            ArgumentsX args(value);
-            ctx->vm->callMember(ctx, thiz, setter, args);
-            return;
+    if (_argsDescriptors) {
+        auto prop = &_argsDescriptors->at(index);
+        set(ctx, prop, thiz, value);
+        if (!prop->isGSetter && prop->isWritable) {
+            // 同步修改到 _args 中
+            _args->data[index] = value;
         }
+    } else {
+        (*_args)[index] = value;
     }
-
-    (*_args)[index] = value;
 }
 
 void JsArguments::setBySymbol(VMContext *ctx, const JsValue &thiz, uint32_t index, const JsValue &value) {
@@ -212,15 +119,123 @@ void JsArguments::setBySymbol(VMContext *ctx, const JsValue &thiz, uint32_t inde
     _obj->setBySymbol(ctx, thiz, index, value);
 }
 
-bool JsArguments::removeByName(VMContext *ctx, const SizedString &prop) {
+JsValue JsArguments::increaseByName(VMContext *ctx, const JsValue &thiz, const SizedString &name, int n, bool isPost) {
+    if (name.len > 0 && isDigit(name.data[0])) {
+        bool successful = false;
+        auto index = name.atoi(successful);
+        if (successful && index < _args->count) {
+            return increaseByIndex(ctx, thiz, uint32_t(index), n, isPost);
+        }
+    }
+
+    if (name.equal(SS_LENGTH)) {
+        return increase(ctx, &_length, thiz, n, isPost);
+    }
+
+    if (!_obj) {
+        _newObject();
+    }
+    return _obj->increaseByName(ctx, thiz, name, n, isPost);
+}
+
+JsValue JsArguments::increaseByIndex(VMContext *ctx, const JsValue &thiz, uint32_t index, int n, bool isPost) {
+    if (index >= _args->count) {
+        NumberToSizedString name(index);
+        return increaseByName(ctx, thiz, name, n, isPost);
+    }
+
+    if (_argsDescriptors) {
+        auto prop = &_argsDescriptors->at(index);
+        auto ret = increase(ctx, prop, thiz, n, isPost);
+        if (!prop->isGSetter && prop->isWritable) {
+            // 同步修改到 _args 中
+            _args->data[index] = prop->value;
+        }
+        return ret;
+    } else {
+        auto org = increase(ctx, (*_args)[index], n);
+        return isPost ? org : (*_args)[index];
+    }
+}
+
+JsValue JsArguments::increaseBySymbol(VMContext *ctx, const JsValue &thiz, uint32_t index, int n, bool isPost) {
+    if (!_obj) {
+        _newObject();
+    }
+    return _obj->increaseBySymbol(ctx, thiz, index, n, isPost);
+}
+
+JsProperty *JsArguments::getRawByName(VMContext *ctx, const SizedString &name, JsNativeFunction &funcGetterOut, bool includeProtoProp) {
+    funcGetterOut = nullptr;
+
+    if (name.len > 0 && isDigit(name.data[0])) {
+        bool successful = false;
+        auto n = name.atoi(successful);
+        if (successful && n < _args->count) {
+            return getRawByIndex(ctx, uint32_t(n), includeProtoProp);
+        }
+    }
+
+    if (name.equal(SS_LENGTH)) {
+        return &_length;
+    }
+
     if (_obj) {
-        return _obj->removeByName(ctx, prop);
+        return _obj->getRawByName(ctx, name, funcGetterOut, includeProtoProp);
+    }
+
+    return nullptr;
+}
+
+JsProperty *JsArguments::getRawByIndex(VMContext *ctx, uint32_t index, bool includeProtoProp) {
+    if (index >= _args->count) {
+        NumberToSizedString name(index);
+        JsNativeFunction funcGetter;
+        return getRawByName(ctx, name, funcGetter, includeProtoProp);
+    }
+
+    if (_argsDescriptors) {
+        return &_argsDescriptors->at(index);
+    }
+
+    // 获取值
+    static JsProperty prop;
+    prop.value = _args->data[index];
+    return &prop;
+}
+
+JsProperty *JsArguments::getRawBySymbol(VMContext *ctx, uint32_t index, bool includeProtoProp) {
+    if (_obj) {
+        return _obj->getRawBySymbol(ctx, index, includeProtoProp);
+    }
+
+    return nullptr;
+}
+
+bool JsArguments::removeByName(VMContext *ctx, const SizedString &name) {
+    if (_obj) {
+        return _obj->removeByName(ctx, name);
     }
 
     return true;
 }
 
 bool JsArguments::removeByIndex(VMContext *ctx, uint32_t index) {
+    if (index >= _args->count) {
+        NumberToSizedString name(index);
+        return removeByName(ctx, name);
+    }
+
+    if (_argsDescriptors) {
+        auto prop = &_argsDescriptors->at(index);
+        if (prop->isConfigurable) {
+            prop->value = jsValueUndefined;
+            prop->isGSetter = false;
+        }
+    } else {
+        (*_args)[index] = jsValueUndefined;
+    }
+
     if (_obj) {
         _obj->removeByIndex(ctx, index);
     }

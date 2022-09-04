@@ -10,8 +10,15 @@
 
 JsObjectFunction::JsObjectFunction(const VecVMStackScopes &stackScopes, Function *function) : stackScopes(stackScopes), function(function) {
     type = JDT_FUNCTION;
+
+    // isGSetter, isConfigurable, isEnumerable, isWritable
+    _prototype = JsProperty(jsValueNotInitialized, false, false, false, true);
+    _name = JsProperty(jsValueNotInitialized, false, false, false, true);
+    _length = JsProperty(JsValue(JDT_INT32, 0), false, false, false, true);
+    _caller = JsProperty(jsValueNull, false, false, false, false);
+    _arguments = JsProperty(jsValueNull, false, false, false, false);
+
     __proto__ = jsValueNotInitialized;
-    _prototype = jsValueNotInitialized;
     _obj__Proto__ = nullptr;
     _obj = nullptr;
 }
@@ -22,17 +29,23 @@ JsObjectFunction::~JsObjectFunction() {
     }
 }
 
-void JsObjectFunction::definePropertyByName(VMContext *ctx, const SizedString &prop, const JsProperty &descriptor) {
-    if (prop.equal(SS_PROTOTYPE) || prop.equal(SS_CALLER) || prop.equal(SS_ARGUMENTS)) {
-        ctx->throwException(PE_TYPE_ERROR, "Cannot redefine property: %.*s", (int)prop.len, prop.data);
-        return;
+void JsObjectFunction::definePropertyByName(VMContext *ctx, const SizedString &name, const JsProperty &descriptor) {
+    if (name.equal(SS_PROTOTYPE)) {
+        defineNameProperty(ctx, &_prototype, descriptor, name);
+    } else if (name.equal(SS_NAME)) {
+        defineNameProperty(ctx, &_name, descriptor, name);
+    } else if (name.equal(SS_LENGTH)) {
+        defineNameProperty(ctx, &_length, descriptor, name);
+    } else if (name.equal(SS_CALLER)) {
+        defineNameProperty(ctx, &_caller, descriptor, name);
+    } else if (name.equal(SS_ARGUMENTS)) {
+        defineNameProperty(ctx, &_arguments, descriptor, name);
+    } else {
+        if (!_obj) {
+            _newObject();
+        }
+        _obj->definePropertyByName(ctx, name, descriptor);
     }
-
-    if (!_obj) {
-        _newObject();
-    }
-
-    _obj->definePropertyByName(ctx, prop, descriptor);
 }
 
 void JsObjectFunction::definePropertyByIndex(VMContext *ctx, uint32_t index, const JsProperty &descriptor) {
@@ -51,118 +64,24 @@ void JsObjectFunction::definePropertyBySymbol(VMContext *ctx, uint32_t index, co
     _obj->definePropertyBySymbol(ctx, index, descriptor);
 }
 
-bool JsObjectFunction::getOwnPropertyDescriptorByName(VMContext *ctx, const SizedString &prop, JsProperty &descriptorOut) {
-    if (_obj && _obj->getOwnPropertyDescriptorByName(ctx, prop, descriptorOut)) {
-        return true;
-    }
-
-    return false;
-}
-
-bool JsObjectFunction::getOwnPropertyDescriptorByIndex(VMContext *ctx, uint32_t index, JsProperty &descriptorOut) {
-    if (_obj) {
-        return _obj->getOwnPropertyDescriptorByIndex(ctx, index, descriptorOut);
-    }
-
-    return false;
-}
-
-bool JsObjectFunction::getOwnPropertyDescriptorBySymbol(VMContext *ctx, uint32_t index, JsProperty &descriptorOut) {
-    if (_obj) {
-        return _obj->getOwnPropertyDescriptorBySymbol(ctx, index, descriptorOut);
-    }
-
-    return false;
-}
-
-JsProperty *JsObjectFunction::getRawByName(VMContext *ctx, const SizedString &prop, bool &isSelfPropOut) {
-    assert(0);
-    return nullptr;
-}
-
-JsProperty *JsObjectFunction::getRawByIndex(VMContext *ctx, uint32_t index, bool &isSelfPropOut) {
-    assert(0);
-    return nullptr;
-}
-
-JsProperty *JsObjectFunction::getRawBySymbol(VMContext *ctx, uint32_t index, bool &isSelfPropOut) {
-    assert(0);
-    return nullptr;
-}
-
-JsValue JsObjectFunction::getByName(VMContext *ctx, const JsValue &thiz, const SizedString &prop, const JsValue &defVal) {
-    if (prop.equal(SS_PROTOTYPE)) {
-        if (_prototype.type == JDT_NOT_INITIALIZED) {
-            // 为了节省内存分配，延迟初始化 _prototype 属性
-            auto proto = new JsObject();
-            _prototype = ctx->runtime->pushObjValue(JDT_OBJECT, proto);
-            proto->setByName(ctx, _prototype, SS_CONSTRUCTOR, self);
+void JsObjectFunction::setByName(VMContext *ctx, const JsValue &thiz, const SizedString &name, const JsValue &value) {
+    if (name.equal(SS_PROTOTYPE)) {
+        set(ctx, &_prototype, thiz, value);
+    } else if (name.equal(SS_NAME)) {
+        set(ctx, &_name, thiz, value);
+    } else if (name.equal(SS_LENGTH)) {
+        set(ctx, &_length, thiz, value);
+    } else if (name.equal(SS_CALLER)) {
+        set(ctx, &_caller, thiz, value);
+    } else if (name.equal(SS_ARGUMENTS)) {
+        set(ctx, &_arguments, thiz, value);
+    } else {
+        if (!_obj) {
+            _newObject();
         }
-        return _prototype;
-    } else if (prop.equal(SS_NAME)) {
-        return ctx->runtime->pushString(function->name);
-    } else if (prop.equal(SS_LENGTH)) {
-        return JsValue(JDT_INT32, 0);
-    } else if (prop.equal(SS_CALLER)) {
-        return jsValueNull;
-    } else if (prop.equal(SS_ARGUMENTS)) {
-        return jsValueNull;
+
+        _obj->setByName(ctx, thiz, name, value);
     }
-
-    if (_obj) {
-        return _obj->getByName(ctx, thiz, prop);
-    }
-
-    if (__proto__.type == JDT_NOT_INITIALIZED) {
-        // 缺省的 Function.prototype
-        return ctx->runtime->objPrototypeFunction->getByName(ctx, thiz, prop);
-    } else if (__proto__.type >= JDT_OBJECT) {
-        auto obj = ctx->runtime->getObject(__proto__);
-        assert(obj);
-        return obj->getByName(ctx, thiz, prop);
-    }
-
-    return defVal;
-}
-
-JsValue JsObjectFunction::getByIndex(VMContext *ctx, const JsValue &thiz, uint32_t index, const JsValue &defVal) {
-    if (_obj) {
-        return _obj->getByIndex(ctx, thiz, index, defVal);
-    }
-
-    return defVal;
-}
-
-JsValue JsObjectFunction::getBySymbol(VMContext *ctx, const JsValue &thiz, uint32_t index, const JsValue &defVal) {
-    if (_obj) {
-        return _obj->getBySymbol(ctx, thiz, index, defVal);
-    }
-
-    return defVal;
-}
-
-void JsObjectFunction::setByName(VMContext *ctx, const JsValue &thiz, const SizedString &prop, const JsValue &value) {
-    // function 的这些属性是不能被修改的.
-    if (prop.equal(SS_PROTOTYPE)) {
-        _prototype = value;
-        return;
-    } else if (prop.equal(SS_NAME)) {
-        return;
-    } else if (prop.equal(SS_LENGTH)) {
-        return;
-    } else if (prop.equal(SS_LENGTH)) {
-        return;
-    } else if (prop.equal(SS_CALLER)) {
-        return;
-    } else if (prop.equal(SS_ARGUMENTS)) {
-        return;
-    }
-
-    if (!_obj) {
-        _newObject();
-    }
-
-    _obj->setByName(ctx, thiz, prop, value);
 }
 
 void JsObjectFunction::setByIndex(VMContext *ctx, const JsValue &thiz, uint32_t index, const JsValue &value) {
@@ -179,17 +98,110 @@ void JsObjectFunction::setBySymbol(VMContext *ctx, const JsValue &thiz, uint32_t
     _obj->setBySymbol(ctx, thiz, index, value);
 }
 
-bool JsObjectFunction::removeByName(VMContext *ctx, const SizedString &prop) {
-    if (prop.equal(SS_PROTOTYPE)) {
+JsValue JsObjectFunction::increaseByName(VMContext *ctx, const JsValue &thiz, const SizedString &name, int n, bool isPost) {
+    if (name.equal(SS_PROTOTYPE)) {
+        return increase(ctx, &_prototype, thiz, n, isPost);
+    } else if (name.equal(SS_NAME)) {
+        return increase(ctx, &_name, thiz, n, isPost);
+    } else if (name.equal(SS_LENGTH)) {
+        return increase(ctx, &_length, thiz, n, isPost);
+    } else if (name.equal(SS_CALLER)) {
+        return increase(ctx, &_caller, thiz, n, isPost);
+    } else if (name.equal(SS_ARGUMENTS)) {
+        return increase(ctx, &_arguments, thiz, n, isPost);
+    } else {
+        if (!_obj) {
+            _newObject();
+        }
+
+        return _obj->increaseByName(ctx, thiz, name, n, isPost);
+    }
+}
+
+JsValue JsObjectFunction::increaseByIndex(VMContext *ctx, const JsValue &thiz, uint32_t index, int n, bool isPost) {
+    if (!_obj) {
+        _newObject();
+    }
+    return _obj->increaseByIndex(ctx, thiz, index, n, isPost);
+}
+
+JsValue JsObjectFunction::increaseBySymbol(VMContext *ctx, const JsValue &thiz, uint32_t index, int n, bool isPost) {
+    if (!_obj) {
+        _newObject();
+    }
+    return _obj->increaseBySymbol(ctx, thiz, index, n, isPost);
+}
+
+JsProperty *JsObjectFunction::getRawByName(VMContext *ctx, const SizedString &name, JsNativeFunction &funcGetterOut, bool includeProtoProp) {
+    funcGetterOut = nullptr;
+
+    if (name.equal(SS_PROTOTYPE)) {
+        if (_prototype.value.type == JDT_NOT_INITIALIZED) {
+            // 为了节省内存分配，延迟初始化 _prototype 属性
+            auto proto = new JsObject();
+            _prototype.value = ctx->runtime->pushObjValue(JDT_OBJECT, proto);
+            proto->setByName(ctx, _prototype.value, SS_CONSTRUCTOR, self);
+        }
+        return &_prototype;
+    } else if (name.equal(SS_NAME)) {
+        if (!_name.value.isValid()) {
+            _name.value = ctx->runtime->pushString(function->name);
+        }
+        return &_name;
+    } else if (name.equal(SS_LENGTH)) {
+        return &_length;
+    } else if (name.equal(SS_CALLER)) {
+        return &_caller;
+    } else if (name.equal(SS_ARGUMENTS)) {
+        return &_arguments;
+    }
+
+    if (_obj) {
+        return _obj->getRawByName(ctx, name, funcGetterOut, includeProtoProp);
+    }
+
+    if (includeProtoProp) {
+        // 查找 __proto__ 的属性
+        if (__proto__.type == JDT_NOT_INITIALIZED) {
+            // 缺省的 Function.prototype
+            return ctx->runtime->objPrototypeFunction->getRawByName(ctx, name, funcGetterOut, true);
+        } else if (__proto__.type >= JDT_OBJECT) {
+            auto obj = ctx->runtime->getObject(__proto__);
+            assert(obj);
+            return obj->getRawByName(ctx, name, funcGetterOut, true);
+        }
+    }
+
+    return nullptr;
+}
+
+JsProperty *JsObjectFunction::getRawByIndex(VMContext *ctx, uint32_t index, bool includeProtoProp) {
+    if (_obj) {
+        return _obj->getRawByIndex(ctx, index, includeProtoProp);
+    }
+
+    return nullptr;
+}
+
+JsProperty *JsObjectFunction::getRawBySymbol(VMContext *ctx, uint32_t index, bool includeProtoProp) {
+    if (_obj) {
+        return _obj->getRawBySymbol(ctx, index, includeProtoProp);
+    }
+
+    return nullptr;
+}
+
+bool JsObjectFunction::removeByName(VMContext *ctx, const SizedString &name) {
+    if (name.equal(SS_PROTOTYPE)) {
         return false;
-    } else if (prop.equal(SS_CALLER)) {
+    } else if (name.equal(SS_CALLER)) {
         return false;
-    } else if (prop.equal(SS_ARGUMENTS)) {
+    } else if (name.equal(SS_ARGUMENTS)) {
         return false;
     }
 
     if (_obj) {
-        return _obj->removeByName(ctx, prop);
+        return _obj->removeByName(ctx, name);
     }
 
     return true;
@@ -231,5 +243,5 @@ IJsIterator *JsObjectFunction::getIteratorObject(VMContext *ctx) {
 void JsObjectFunction::_newObject() {
     assert(_obj == nullptr);
 
-    _obj = new JsObject();
+    _obj = new JsObject(__proto__);
 }

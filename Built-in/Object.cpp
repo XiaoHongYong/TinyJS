@@ -104,13 +104,14 @@ void objectDefineProperty(VMContext *ctx, const JsValue &thiz, const Arguments &
     if (writable.isValid()) propDescriptor.isWritable = runtime->testTrue(writable);
 
     if (get.isValid()) {
-        propDescriptor.isGetter = true;
+        propDescriptor.isGSetter = true;
         propDescriptor.value = get;
     } else {
         propDescriptor.value = value;
     }
 
     if (set.isValid()) {
+        propDescriptor.isGSetter = true;
         propDescriptor.setter = set;
     }
 
@@ -149,7 +150,7 @@ bool getStringOwnPropertyDescriptor(VMContext *ctx, const JsValue &thiz, JsValue
                 descriptorOut.isConfigurable = false;
                 descriptorOut.isEnumerable = true;
                 descriptorOut.isWritable = false;
-                descriptorOut.isGetter = false;
+                descriptorOut.isGSetter = false;
                 return true;
             }
             return false;
@@ -163,7 +164,7 @@ bool getStringOwnPropertyDescriptor(VMContext *ctx, const JsValue &thiz, JsValue
                 descriptorOut.isConfigurable = false;
                 descriptorOut.isEnumerable = true;
                 descriptorOut.isWritable = false;
-                descriptorOut.isGetter = false;
+                descriptorOut.isGSetter = false;
                 ret = true;
             } else {
                 bool successful;
@@ -230,17 +231,13 @@ void getOwnPropertyDescriptor(VMContext *ctx, const JsValue &thiz, const Argumen
     auto desc = new JsObject();
     auto descValue = runtime->pushObjValue(JDT_OBJECT, desc);
 
-    if (descriptor.isGetter) {
+    desc->setByName(ctx, descValue, SS_CONFIGURABLE, JsValue(JDT_BOOL, descriptor.isConfigurable));
+    desc->setByName(ctx, descValue, SS_ENUMERABLE, JsValue(JDT_BOOL, descriptor.isEnumerable));
+
+    if (descriptor.isGSetter) {
         desc->setByName(ctx, descValue, SS_GET, descriptor.value);
-    }
-
-    if (descriptor.setter.type >= JDT_FUNCTION) {
         desc->setByName(ctx, descValue, SS_SET, descriptor.setter);
-    }
-
-    if (!descriptor.isGetter && descriptor.setter.type < JDT_FUNCTION) {
-        desc->setByName(ctx, descValue, SS_CONFIGURABLE, JsValue(JDT_BOOL, descriptor.isConfigurable));
-        desc->setByName(ctx, descValue, SS_ENUMERABLE, JsValue(JDT_BOOL, descriptor.isEnumerable));
+    } else {
         desc->setByName(ctx, descValue, SS_WRITABLE, JsValue(JDT_BOOL, descriptor.isWritable));
         desc->setByName(ctx, descValue, SS_VALUE, descriptor.value.isValid() ? descriptor.value : jsValueUndefined);
     }

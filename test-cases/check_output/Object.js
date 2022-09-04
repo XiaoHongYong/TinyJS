@@ -261,7 +261,7 @@ function f4() {
     console.log(5, o.c);
     console.log(6, Object.getOwnPropertyDescriptor(o, 'b'));
 
-    // 相同的值不会抛异常, writable 缺省为 true
+    // 相同的值不会抛异常, writable 缺省为 false
     Object.defineProperty(g.prototype, 'c', {
         value: 4,
         writable: false,
@@ -341,6 +341,78 @@ true
 1
 true
 [error] Uncaught TypeError: Cannot redefine property: prototype
+*/
+
+
+// prototype 的 configurable: false, writable: false. 继承的 obj 不能 set 值，可以通过 defineProperty 定义同名的属性
+function f81() {
+    var proto = {};
+
+    Object.defineProperty(proto, 'x', {
+        configurable: false,
+        value: 1,
+        writable: false,
+    });
+
+    var o = { __proto__ : proto };
+
+    console.log(1, o.x, delete o.x); //
+
+    o.x = 2;
+    console.log(2, o.x); //
+
+    Object.defineProperty(o, 'x', {
+        configurable: true,
+        value: 2,
+        writable: true,
+    });
+
+    console.log(3, o.x, delete o.x, o.x); //
+}
+f81();
+/* OUTPUT
+1 1 true
+2 1
+3 2 true 1
+*/
+
+
+// prototype 的 configurable: false, writable: false. 继承的 obj 不能 set 值，可以通过 defineProperty 定义同名的属性
+function f82(a) {
+    Object.defineProperty(arguments, '0', {
+        value: 1,
+        //writable : false,
+    });
+
+    // Object.defineProperty(arguments, '0', {
+    //     get: function() {
+    //         return 10;
+    //     }
+    // });
+
+    console.log(1, a, arguments[0]);
+
+    arguments[0] = 5;
+    console.log(2, a, arguments[0]);
+
+    // 不支持同步修改到 arguments 了
+    a = 3;
+    console.log(3, a);// , arguments[0]);
+
+    arguments[0] = 6;
+    console.log(4, a, arguments[0]);
+
+    delete arguments[0];
+
+    console.log(5, a, arguments[0]);
+}
+f82(0);
+/* OUTPUT
+1 1 1
+2 5 5
+3 3
+4 6 6
+5 6 undefined
 */
 
 

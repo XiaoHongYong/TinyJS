@@ -593,9 +593,11 @@ bool VMRuntime::toNumber(VMContext *ctx, const JsValue &item, double &out) {
             out = NAN;
             return false;
         case JDT_UNDEFINED:
+            out = NAN;
+            return false;
         case JDT_NULL:
             out = 0;
-            return false;
+            return true;
         case JDT_INT32:
         case JDT_BOOL:
             out = v.value.n32;
@@ -1074,11 +1076,61 @@ JsValue VMRuntime::decrease(VMContext *ctx, JsValue &v) {
     return org;
 }
 
-JsValue VMRuntime::increaseMemberDot(VMContext *ctx, const JsValue &obj, SizedString &prop, bool isPost) {
+JsValue VMRuntime::increaseMemberDot(VMContext *ctx, const JsValue &obj, SizedString &name, bool isPost) {
+    auto runtime = ctx->runtime;
+
+    switch (obj.type) {
+        case JDT_NOT_INITIALIZED:
+        case JDT_UNDEFINED:;
+            ctx->throwException(PE_TYPE_ERROR, "Cannot read properties of undefined (reading '%.*s')", (int)name.len, name.data);
+            return jsValueNaN;
+        case JDT_NULL:
+            ctx->throwException(PE_TYPE_ERROR, "Cannot read properties of null (reading '%.*s')", (int)name.len, name.data);
+            return jsValueNaN;
+        case JDT_BOOL:
+        case JDT_INT32:
+        case JDT_NUMBER:
+        case JDT_SYMBOL:
+            return jsValueNaN;
+        case JDT_CHAR:
+        case JDT_STRING:
+            return runtime->objPrototypeString->increaseByName(ctx, obj, name, 1, isPost);
+        default: {
+            auto pobj = getObject(obj);
+            assert(pobj);
+            return pobj->increaseByName(ctx, obj, name, 1, isPost);
+        }
+    }
+
     return jsValueUndefined;
 }
 
-JsValue VMRuntime::decreaseMemberDot(VMContext *ctx, const JsValue &obj, SizedString &prop, bool isPost) {
+JsValue VMRuntime::decreaseMemberDot(VMContext *ctx, const JsValue &obj, SizedString &name, bool isPost) {
+    auto runtime = ctx->runtime;
+
+    switch (obj.type) {
+        case JDT_NOT_INITIALIZED:
+        case JDT_UNDEFINED:;
+            ctx->throwException(PE_TYPE_ERROR, "Cannot read properties of undefined (reading '%.*s')", (int)name.len, name.data);
+            return jsValueNaN;
+        case JDT_NULL:
+            ctx->throwException(PE_TYPE_ERROR, "Cannot read properties of null (reading '%.*s')", (int)name.len, name.data);
+            return jsValueNaN;
+        case JDT_BOOL:
+        case JDT_INT32:
+        case JDT_NUMBER:
+        case JDT_SYMBOL:
+            return jsValueNaN;
+        case JDT_CHAR:
+        case JDT_STRING:
+            return runtime->objPrototypeString->increaseByName(ctx, obj, name, -1, isPost);
+        default: {
+            auto pobj = getObject(obj);
+            assert(pobj);
+            return pobj->increaseByName(ctx, obj, name, -1, isPost);
+        }
+    }
+
     return jsValueUndefined;
 }
 

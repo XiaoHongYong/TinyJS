@@ -220,3 +220,136 @@ NaN NaN
 NaN NaN
 TypeError: Cannot convert a Symbol value to a number
 */
+
+// 仅有 setter：NaN
+function f5() {
+    var obj = {  set x(a) { this._x += a;}, _x : 0};
+    console.log(obj.x);
+    console.log(obj.x++);
+    console.log(obj.x);
+    console.log(obj.x += 10);
+    console.log(obj.x);
+}
+f5();
+/* OUTPUT
+undefined
+NaN
+undefined
+NaN
+undefined
+*/
+
+// 仅有 getter：不能修改
+function f51() {
+    var obj = {  get x() { return 1; }};
+    console.log(obj.x);
+    console.log(++obj.x);
+    console.log(obj.x);
+    console.log(obj.x += 10);
+    console.log(obj.x);
+}
+f51();
+/* OUTPUT
+1
+2
+1
+11
+1
+*/
+
+
+// 有 setter/getter 的情况：调用 setter
+function f6() {
+    var obj = { get x() { return this._x; }, set x(a) { this._x += a;}, _x : 0};
+    console.log(obj.x);
+    console.log(obj.x++);
+    console.log(obj.x);
+    console.log(obj.x += 10);
+    console.log(obj.x);
+}
+f6();
+/* OUTPUT
+0
+0
+1
+11
+12
+*/
+
+
+// writable false：不能修改，但是返回值增加了
+function f7() {
+    var obj = { x : 1};
+    Object.defineProperty(obj, 'x', { writable: false});
+
+    console.log(obj.x);
+    console.log(++obj.x, obj.x);
+}
+f7();
+/* OUTPUT
+1
+2 1
+*/
+
+
+// __proto__ 有属性的情况：不修改 __proto__，修改 object
+function f8() {
+    var proto = {x: 1};
+
+    var obj = { __proto__ : proto};
+
+    console.log(obj.x);
+    console.log(++obj.x, obj.x, proto.x);
+}
+f8();
+/* OUTPUT
+1
+2 2 1
+*/
+
+
+// __proto__ writable: false: 不能修改 obj
+function f9() {
+    var proto = {};
+    Object.defineProperty(proto, 'x', { writable: false, value: 1});
+
+    var obj = { __proto__ : proto};
+
+    console.log(obj.x);
+    console.log(++obj.x, obj.x, proto.x);
+}
+f9();
+/* OUTPUT
+1
+2 1 1
+*/
+
+// __proto__ 是 getter 的情况: 不修改 obj
+function f10() {
+    var proto = { _x: 1, get x() { return this._x; } };
+
+    var obj = { __proto__ : proto};
+
+    console.log(obj.x, proto.x);
+    console.log(++obj.x, obj.x, proto.x, proto._x);
+}
+f10();
+/* OUTPUT
+1 1
+2 1 1 1
+*/
+
+// __proto__ 是 setter/getter 的情况: 调用 __proto__ setter，不修改 obj
+function f11() {
+    var proto = { _x: 1, set x(a) { this._x = a; console.log('set x:', a); }, get x() { return this._x; } };
+
+    var obj = { __proto__ : proto};
+
+    console.log(obj.x, proto.x);
+    console.log(++obj.x, obj.x, proto.x, proto._x);
+}
+f11();
+/* OUTPUT
+1
+2 2 1
+*/

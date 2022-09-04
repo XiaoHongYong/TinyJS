@@ -22,39 +22,36 @@ public:
     JsArray(uint32_t length = 0);
     ~JsArray();
 
-    virtual void definePropertyByName(VMContext *ctx, const SizedString &prop, const JsProperty &descriptor) override;
+    virtual void definePropertyByName(VMContext *ctx, const SizedString &name, const JsProperty &descriptor) override;
     virtual void definePropertyByIndex(VMContext *ctx, uint32_t index, const JsProperty &descriptor) override;
     virtual void definePropertyBySymbol(VMContext *ctx, uint32_t index, const JsProperty &descriptor) override;
 
-    virtual bool getOwnPropertyDescriptorByName(VMContext *ctx, const SizedString &prop, JsProperty &descriptorOut) override;
-    virtual bool getOwnPropertyDescriptorByIndex(VMContext *ctx, uint32_t index, JsProperty &descriptorOut) override;
-    virtual bool getOwnPropertyDescriptorBySymbol(VMContext *ctx, uint32_t index, JsProperty &descriptorOut) override;
-
-    virtual JsProperty *getRawByName(VMContext *ctx, const SizedString &prop, bool &isSelfPropOut) override;
-    virtual JsProperty *getRawByIndex(VMContext *ctx, uint32_t index, bool &isSelfPropOut) override;
-    virtual JsProperty *getRawBySymbol(VMContext *ctx, uint32_t index, bool &isSelfPropOut) override;
-
-    virtual JsValue getByName(VMContext *ctx, const JsValue &thiz, const SizedString &prop, const JsValue &defVal = jsValueUndefined) override;
-    virtual JsValue getByIndex(VMContext *ctx, const JsValue &thiz, uint32_t index, const JsValue &defVal = jsValueUndefined) override;
-    virtual JsValue getBySymbol(VMContext *ctx, const JsValue &thiz, uint32_t index, const JsValue &defVal = jsValueUndefined) override;
-
-    virtual void setByName(VMContext *ctx, const JsValue &thiz, const SizedString &prop, const JsValue &value) override;
+    virtual void setByName(VMContext *ctx, const JsValue &thiz, const SizedString &name, const JsValue &value) override;
     virtual void setByIndex(VMContext *ctx, const JsValue &thiz, uint32_t index, const JsValue &value) override;
     virtual void setBySymbol(VMContext *ctx, const JsValue &thiz, uint32_t index, const JsValue &value) override;
 
-    virtual bool removeByName(VMContext *ctx, const SizedString &prop) override;
+    virtual JsValue increaseByName(VMContext *ctx, const JsValue &thiz, const SizedString &name, int n, bool isPost) override;
+    virtual JsValue increaseByIndex(VMContext *ctx, const JsValue &thiz, uint32_t index, int n, bool isPost) override;
+    virtual JsValue increaseBySymbol(VMContext *ctx, const JsValue &thiz, uint32_t index, int n, bool isPost) override;
+
+    virtual JsProperty *getRawByName(VMContext *ctx, const SizedString &name, JsNativeFunction &funcGetterOut, bool includeProtoProp = true) override;
+    virtual JsProperty *getRawByIndex(VMContext *ctx, uint32_t index, bool includeProtoProp = true) override;
+    virtual JsProperty *getRawBySymbol(VMContext *ctx, uint32_t index, bool includeProtoProp = true) override;
+
+    virtual bool removeByName(VMContext *ctx, const SizedString &name) override;
     virtual bool removeByIndex(VMContext *ctx, uint32_t index) override;
     virtual bool removeBySymbol(VMContext *ctx, uint32_t index) override;
 
     virtual IJsObject *clone() override;
-
     virtual IJsIterator *getIteratorObject(VMContext *ctx) override;
 
     void push(VMContext *ctx, const JsValue &value);
     void push(VMContext *ctx, const JsValue *first, uint32_t count);
 
     void toString(VMContext *ctx, const JsValue &thiz, BinaryOutputStream &stream);
-    
+
+    void setLength(uint32_t length);
+
     /**
      * 采用按 Block 存储所有的元素，平均每一个 Block 约 2 ** 14 = 16384 个元素
      * 整个数组采用 block 数组存储。查找位置时，先根据 index 使用二分查找到 block，再直接定位具体的元素
@@ -62,10 +59,9 @@ public:
     struct Block {
         uint32_t                index; // 此块的起始 index
         DequeJsProperties       items; // items 的数量 >= setters 的数量
-        DequeJsValue            *setters; // setters 一般不会存在.
 
-        Block() { index = 0; setters = nullptr; }
-        ~Block() { if (setters) delete setters; }
+        Block() { index = 0; }
+        ~Block() { }
     };
     using VecBlocks = vector<Block *>;
     using VecBlocksIterator = VecBlocks::iterator;
@@ -81,7 +77,7 @@ protected:
 protected:
 
     VecBlocks                   _blocks;
-    uint32_t                  _length;
+    uint32_t                    _length;
     bool                        _needGC;
     Block                       *_firstBlock;
     DequeJsProperties           *_firstBlockItems;
