@@ -443,7 +443,7 @@ void JsObject::definePropertyByName(VMContext *ctx, const SizedString &name, con
 }
 
 void JsObject::definePropertyByIndex(VMContext *ctx, uint32_t index, const JsProperty &descriptor) {
-    NumberToSizedString name(index);
+    SizedStringWrapper name(index);
     return definePropertyByName(ctx, name, descriptor);
 }
 
@@ -483,9 +483,11 @@ void JsObject::setByName(VMContext *ctx, const JsValue &thiz, const SizedString 
         }
 
         if (prop) {
-            if (prop->setter.isValid()) {
-                // prototype 带 setter 的可以直接返回用于修改调用
-                set(ctx, prop, thiz, value);
+            if (prop->isGSetter) {
+                if (prop->setter.isValid()) {
+                    // prototype 带 setter 的可以直接返回用于修改调用
+                    set(ctx, prop, thiz, value);
+                }
                 return;
             } else if (!prop->isWritable) {
                 return;
@@ -500,7 +502,7 @@ void JsObject::setByName(VMContext *ctx, const JsValue &thiz, const SizedString 
 }
 
 void JsObject::setByIndex(VMContext *ctx, const JsValue &thiz, uint32_t index, const JsValue &value) {
-    NumberToSizedString name(index);
+    SizedStringWrapper name(index);
     setByName(ctx, thiz, name, value);
 }
 
@@ -542,16 +544,17 @@ JsValue JsObject::increaseByName(VMContext *ctx, const JsValue &thiz, const Size
         if (prop) {
             if (prop->isGSetter) {
                 // prototype 带 getter/setter
-                return increase(ctx, proto, thiz, n, isPost);
-            } else if (!prop->isWritable) {
-                return increase(ctx, proto, thiz, n, isPost);
+                return increase(ctx, prop, thiz, n, isPost);
             }
 
             // 不能修改到 proto，所以先复制到 temp，再添加
             JsProperty tmp = *prop;
             auto ret = increase(ctx, &tmp, thiz, n, isPost);
-            // 添加新属性
-            _props[copyPropertyIfNeed(name)] = tmp.value;
+
+            if (prop->isWritable) {
+                // 添加新属性
+                _props[copyPropertyIfNeed(name)] = tmp.value;
+            }
             return ret;
         } else {
             // 添加新属性
@@ -564,7 +567,7 @@ JsValue JsObject::increaseByName(VMContext *ctx, const JsValue &thiz, const Size
 }
 
 JsValue JsObject::increaseByIndex(VMContext *ctx, const JsValue &thiz, uint32_t index, int n, bool isPost) {
-    NumberToSizedString name(index);
+    SizedStringWrapper name(index);
     return increaseByName(ctx, thiz, name, n, isPost);
 }
 
@@ -610,7 +613,7 @@ JsProperty *JsObject::getRawByName(VMContext *ctx, const SizedString &name, JsNa
 }
 
 JsProperty *JsObject::getRawByIndex(VMContext *ctx, uint32_t index, bool includeProtoProp) {
-    NumberToSizedString name(index);
+    SizedStringWrapper name(index);
     JsNativeFunction funcGetter;
     return getRawByName(ctx, name, funcGetter, includeProtoProp);
 }
@@ -653,7 +656,7 @@ bool JsObject::removeByName(VMContext *ctx, const SizedString &name) {
 }
 
 bool JsObject::removeByIndex(VMContext *ctx, uint32_t index) {
-    NumberToSizedString name(index);
+    SizedStringWrapper name(index);
     return removeByName(ctx, name);
 }
 

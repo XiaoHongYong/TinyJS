@@ -186,11 +186,12 @@ protected:
     inline void set(VMContext *ctx, JsProperty *prop, const JsValue &thiz, const JsValue &value) {
         assert(prop);
         // 自身的属性，可以直接修改
-        if (prop->setter.isValid()) {
-            assert(prop->setter.type > JDT_OBJECT);
-            // 调用 setter 函数
-            ArgumentsX args(value);
-            ctx->vm->callMember(ctx, thiz, prop->setter, args);
+        if (prop->isGSetter) {
+            if (prop->setter.type > JDT_OBJECT) {
+                // 调用 setter 函数
+                ArgumentsX args(value);
+                ctx->vm->callMember(ctx, thiz, prop->setter, args);
+            }
         } else if (prop->isWritable) {
             prop->value = value;
         }
@@ -230,13 +231,16 @@ protected:
 
     JsValue increase(VMContext *ctx, JsProperty *prop, const JsValue &thiz, int n, bool isPost) {
         JsValue newValue;
-        if (prop->setter.isValid()) {
+        if (prop->isGSetter) {
             if (prop->value.type >= JDT_FUNCTION) {
                 ctx->vm->callMember(ctx, thiz, prop->value, Arguments());
 
                 auto org = ctx->retValue;
                 newValue = increase(ctx, org, n);
-                ctx->vm->callMember(ctx, thiz, prop->setter, ArgumentsX(newValue));
+                if (prop->setter.isValid()) {
+                    // 有 setter，修改.
+                    ctx->vm->callMember(ctx, thiz, prop->setter, ArgumentsX(newValue));
+                }
 
                 return isPost ? org : newValue;
             } else {

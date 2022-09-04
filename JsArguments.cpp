@@ -45,7 +45,7 @@ void JsArguments::definePropertyByName(VMContext *ctx, const SizedString &name, 
 
 void JsArguments::definePropertyByIndex(VMContext *ctx, uint32_t index, const JsProperty &descriptor) {
     if (index >= _args->count) {
-        NumberToSizedString ss(index);
+        SizedStringWrapper ss(index);
         definePropertyByName(ctx, ss, descriptor);
         return;
     }
@@ -96,7 +96,7 @@ void JsArguments::setByName(VMContext *ctx, const JsValue &thiz, const SizedStri
 
 void JsArguments::setByIndex(VMContext *ctx, const JsValue &thiz, uint32_t index, const JsValue &value) {
     if (index >= _args->count) {
-        NumberToSizedString name(index);
+        SizedStringWrapper name(index);
         return setByName(ctx, thiz, name, value);
     }
 
@@ -140,7 +140,7 @@ JsValue JsArguments::increaseByName(VMContext *ctx, const JsValue &thiz, const S
 
 JsValue JsArguments::increaseByIndex(VMContext *ctx, const JsValue &thiz, uint32_t index, int n, bool isPost) {
     if (index >= _args->count) {
-        NumberToSizedString name(index);
+        SizedStringWrapper name(index);
         return increaseByName(ctx, thiz, name, n, isPost);
     }
 
@@ -189,7 +189,7 @@ JsProperty *JsArguments::getRawByName(VMContext *ctx, const SizedString &name, J
 
 JsProperty *JsArguments::getRawByIndex(VMContext *ctx, uint32_t index, bool includeProtoProp) {
     if (index >= _args->count) {
-        NumberToSizedString name(index);
+        SizedStringWrapper name(index);
         JsNativeFunction funcGetter;
         return getRawByName(ctx, name, funcGetter, includeProtoProp);
     }
@@ -222,7 +222,7 @@ bool JsArguments::removeByName(VMContext *ctx, const SizedString &name) {
 
 bool JsArguments::removeByIndex(VMContext *ctx, uint32_t index) {
     if (index >= _args->count) {
-        NumberToSizedString name(index);
+        SizedStringWrapper name(index);
         return removeByName(ctx, name);
     }
 

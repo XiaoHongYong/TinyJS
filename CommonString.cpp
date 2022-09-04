@@ -64,7 +64,7 @@ SizedString intToSizedString(uint32_t n) {
     }
 }
 
-NumberToSizedString::NumberToSizedString(uint32_t n) {
+SizedStringWrapper::SizedStringWrapper(int32_t n) {
     auto ss = intToSizedString(n);
     if (ss.len == 0) {
         ss.len = (uint32_t)::itoa(n, (char *)_buf);
@@ -74,4 +74,50 @@ NumberToSizedString::NumberToSizedString(uint32_t n) {
     len = ss.len;
     data = ss.data;
     unused = ss.unused;
+}
+
+SizedStringWrapper::SizedStringWrapper(double n) {
+    len = floatToString(n, (char *)_buf);
+    data = _buf;
+}
+
+SizedStringWrapper::SizedStringWrapper(const JsValue &v) {
+    assert(v.type == JDT_CHAR);
+
+    len = 1;
+    data = _buf;
+    data[0] = (char )v.value.n32;
+}
+
+bool SizedStringWrapper::append(const JsValue &v) {
+    if (v.type == JDT_CHAR) {
+        if (len + 1 < CountOf(_buf)) {
+            _buf[len] = (char)v.value.n32;
+            len++;
+            return true;
+        } else {
+            return false;
+        }
+    } else if (v.type == JDT_UNDEFINED) {
+        return append(JsStringValueUndefined);
+    } else if (v.type == JDT_NULL) {
+        return append(JsStringValueNull);
+    } else if (v.type == JDT_BOOL) {
+        return append(v.value.n32 ? JsStringValueTrue : JsStringValueFalse);
+    } else if (v.type == JDT_INT32) {
+        SizedStringWrapper s2(v.value.n32);
+        return append(s2.str());
+    }
+
+    return false;
+}
+
+bool SizedStringWrapper::append(const SizedString &s) {
+    if (len + s.len < CountOf(_buf)) {
+        memcpy(_buf + len, s.data, s.len);
+        len += s.len;
+        return true;
+    } else {
+        return false;
+    }
 }

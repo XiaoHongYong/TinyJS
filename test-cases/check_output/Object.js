@@ -108,6 +108,28 @@ set y via prototype:  3
 2 y
 */
 
+// proto 只有 getter，无 setter，设置 obj 属性: 不会创建新的属性
+function f32() {
+    var proto = {
+        get y() { return 'y'; },
+    }
+
+    var obj = {
+        __proto__: proto
+    };
+
+    console.log(obj.y);
+
+    obj.y = 3;
+
+    console.log(obj.y, proto.y);
+}
+f32();
+/* OUTPUT
+y
+y y
+*/
+
 
 // defineProperty: 如果一个描述符同时拥有 value 或 writable 和 get 或 set 键，则会产生一个异常。
 function f4a(p) {

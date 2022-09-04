@@ -209,6 +209,8 @@ public:
     
     void joinString(JsString &js);
     JsValue joinSmallString(const SizedString &sz1, const SizedString &sz2);
+    JsValue addString(const SizedString &s1, const JsValue &s2);
+    JsValue addString(const JsValue &s1, const SizedString &s2);
     JsValue addString(const JsValue &s1, const JsValue &s2);
     JsPoolString allocString(uint32_t size);
 
@@ -224,11 +226,8 @@ public:
     bool testEqual(const JsValue &left, const JsValue &right);
     bool testStrictEqual(const JsValue &left, const JsValue &right);
 
-    JsValue increase(VMContext *ctx, JsValue &v);
-    JsValue decrease(VMContext *ctx, JsValue &v);
-
-    JsValue increaseMemberDot(VMContext *ctx, const JsValue &obj, SizedString &name, bool isPost);
-    JsValue decreaseMemberDot(VMContext *ctx, const JsValue &obj, SizedString &name, bool isPost);
+    JsValue increase(VMContext *ctx, JsValue &v, int inc);
+    JsValue increaseMemberDot(VMContext *ctx, const JsValue &obj, SizedString &name, int inc, bool isPost);
 
     void extendObject(const JsValue &dst, const JsValue &src);
 

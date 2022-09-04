@@ -215,7 +215,6 @@ struct JsValue {
     } value;
 
     JsValue() { *(uint64_t *)this = 0; }
-    JsValue(int32_t n32) { *(uint64_t *)this = 0; type = JDT_INT32; value.n32 = n32; }
     JsValue(JsDataType type, uint32_t objIdx) { *(uint64_t *)this = 0; this->type = type; value.index = objIdx; }
 
     inline bool isValid() const { return type > JDT_NOT_INITIALIZED; }
@@ -283,6 +282,22 @@ struct JsJoinedString {
     uint32_t                    stringIdx;
     uint32_t                    nextStringIdx; // 下一个连接的字符串索引位置
     uint32_t                    len; // 长度大小
+
+    JsJoinedString() {
+        isStringIdxInResourcePool = false;
+        isNextStringIdxInResourcePool = false;
+        stringIdx = 0;
+        nextStringIdx = 0;
+        len = 0;
+    }
+
+    JsJoinedString(const JsValue &s1, const JsValue &s2) {
+        stringIdx = s1.value.index;
+        isStringIdxInResourcePool = s1.isInResourcePool;
+
+        nextStringIdx = s2.value.index;
+        isNextStringIdxInResourcePool = s2.isInResourcePool;
+    }
 };
 
 /**
@@ -363,6 +378,7 @@ const JsValue jsValueUndefined = JsValue(JDT_UNDEFINED, 0);
 const JsValue jsValueTrue = JsValue(JDT_BOOL, true);
 const JsValue jsValueFalse = JsValue(JDT_BOOL, false);
 const JsValue jsValueNaN = JsValue(JDT_NUMBER, 1);
+const JsValue jsValueInf = JsValue(JDT_NUMBER, 2);
 
 using VecJsValues = std::vector<JsValue>;
 using VecJsDoubles = std::vector<JsDouble>;

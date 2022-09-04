@@ -15,6 +15,7 @@
 #include "JsObjectFunction.hpp"
 #include "JsArray.hpp"
 #include "JsRegExp.hpp"
+#include "BinaryOperation.hpp"
 
 
 void registerGlobalValue(VMContext *ctx, VMScope *globalScope, const char *strName, const JsValue &value) {
@@ -751,7 +752,7 @@ void JsVirtualMachine::call(Function *function, VMContext *ctx, VecVMStackScopes
             }
             case OP_PUSH_INT32: {
                 auto value = readInt32(bytecode);
-                stack.push_back(JsValue(value));
+                stack.push_back(JsValue(JDT_INT32, value));
                 break;
             }
             case OP_PUSH_DOUBLE: {
@@ -935,7 +936,7 @@ void JsVirtualMachine::call(Function *function, VMContext *ctx, VecVMStackScopes
                         assert(scopeDepth < stackScopes.size());
                         scope = stackScopes[scopeDepth];
                         assert(storageIndex < scope->args.capacity);
-                        runtime->increase(ctx, scope->args[storageIndex]);
+                        runtime->increase(ctx, scope->args[storageIndex], 1);
                         stack.push_back(scope->args[storageIndex]);
                         break;
                     case VST_SCOPE_VAR:
@@ -943,12 +944,12 @@ void JsVirtualMachine::call(Function *function, VMContext *ctx, VecVMStackScopes
                         assert(scopeDepth < stackScopes.size());
                         scope = stackScopes[scopeDepth];
                         assert(storageIndex < scope->vars.size());
-                        runtime->increase(ctx, scope->vars[storageIndex]);
+                        runtime->increase(ctx, scope->vars[storageIndex], 1);
                         stack.push_back(scope->vars[storageIndex]);
                         break;
                     case VST_GLOBAL_VAR:
                         if (storageIndex >= runtime->countImmutableGlobalVars) {
-                            runtime->increase(ctx, runtime->globalScope->vars[storageIndex]);
+                            runtime->increase(ctx, runtime->globalScope->vars[storageIndex], 1);
                             stack.push_back(runtime->globalScope->vars[storageIndex]);
                         }
                         break;
@@ -968,18 +969,18 @@ void JsVirtualMachine::call(Function *function, VMContext *ctx, VecVMStackScopes
                         assert(scopeDepth < stackScopes.size());
                         scope = stackScopes[scopeDepth];
                         assert(storageIndex < scope->args.capacity);
-                        stack.push_back(runtime->increase(ctx, scope->args[storageIndex]));
+                        stack.push_back(runtime->increase(ctx, scope->args[storageIndex], 1));
                         break;
                     case VST_SCOPE_VAR:
                     case VST_FUNCTION_VAR:
                         assert(scopeDepth < stackScopes.size());
                         scope = stackScopes[scopeDepth];
                         assert(storageIndex < scope->vars.size());
-                        stack.push_back(runtime->increase(ctx, scope->vars[storageIndex]));
+                        stack.push_back(runtime->increase(ctx, scope->vars[storageIndex], 1));
                         break;
                     case VST_GLOBAL_VAR:
                         if (storageIndex >= runtime->countImmutableGlobalVars) {
-                            stack.push_back(runtime->increase(ctx, runtime->globalScope->vars[storageIndex]));
+                            stack.push_back(runtime->increase(ctx, runtime->globalScope->vars[storageIndex], 1));
                         } else {
                             stack.push_back(jsValueNaN);
                         }
@@ -1000,7 +1001,7 @@ void JsVirtualMachine::call(Function *function, VMContext *ctx, VecVMStackScopes
                         assert(scopeDepth < stackScopes.size());
                         scope = stackScopes[scopeDepth];
                         assert(storageIndex < scope->args.capacity);
-                        runtime->decrease(ctx, scope->args[storageIndex]);
+                        runtime->increase(ctx, scope->args[storageIndex], -1);
                         stack.push_back(scope->args[storageIndex]);
                         break;
                     case VST_SCOPE_VAR:
@@ -1008,12 +1009,12 @@ void JsVirtualMachine::call(Function *function, VMContext *ctx, VecVMStackScopes
                         assert(scopeDepth < stackScopes.size());
                         scope = stackScopes[scopeDepth];
                         assert(storageIndex < scope->vars.size());
-                        runtime->decrease(ctx, scope->vars[storageIndex]);
+                        runtime->increase(ctx, scope->vars[storageIndex], -1);
                         stack.push_back(scope->vars[storageIndex]);
                         break;
                     case VST_GLOBAL_VAR:
                         if (storageIndex >= runtime->countImmutableGlobalVars) {
-                            runtime->decrease(ctx, runtime->globalScope->vars[storageIndex]);
+                            runtime->increase(ctx, runtime->globalScope->vars[storageIndex], -1);
                             stack.push_back(runtime->globalScope->vars[storageIndex]);
                         }
                         break;
@@ -1033,18 +1034,18 @@ void JsVirtualMachine::call(Function *function, VMContext *ctx, VecVMStackScopes
                         assert(scopeDepth < stackScopes.size());
                         scope = stackScopes[scopeDepth];
                         assert(storageIndex < scope->args.capacity);
-                        stack.push_back(runtime->decrease(ctx, scope->args[storageIndex]));
+                        stack.push_back(runtime->increase(ctx, scope->args[storageIndex], -1));
                         break;
                     case VST_SCOPE_VAR:
                     case VST_FUNCTION_VAR:
                         assert(scopeDepth < stackScopes.size());
                         scope = stackScopes[scopeDepth];
                         assert(storageIndex < scope->vars.size());
-                        stack.push_back(runtime->decrease(ctx, scope->vars[storageIndex]));
+                        stack.push_back(runtime->increase(ctx, scope->vars[storageIndex], -1));
                         break;
                     case VST_GLOBAL_VAR:
                         if (storageIndex >= runtime->countImmutableGlobalVars) {
-                            stack.push_back(runtime->decrease(ctx, runtime->globalScope->vars[storageIndex]));
+                            stack.push_back(runtime->increase(ctx, runtime->globalScope->vars[storageIndex], -1));
                         } else {
                             stack.push_back(jsValueNaN);
                         }
@@ -1059,7 +1060,7 @@ void JsVirtualMachine::call(Function *function, VMContext *ctx, VecVMStackScopes
                 auto idx = readUInt32(bytecode);
                 auto name = runtime->getStringByIdx(idx, resourcePool);
                 JsValue obj = stack.back(); stack.pop_back();
-                auto value = runtime->increaseMemberDot(ctx, obj, name, false);
+                auto value = runtime->increaseMemberDot(ctx, obj, name, 1, false);
                 stack.push_back(value);
                 break;
             }
@@ -1067,7 +1068,7 @@ void JsVirtualMachine::call(Function *function, VMContext *ctx, VecVMStackScopes
                 auto idx = readUInt32(bytecode);
                 auto name = runtime->getStringByIdx(idx, resourcePool);
                 JsValue obj = stack.back(); stack.pop_back();
-                auto value = runtime->increaseMemberDot(ctx, obj, name, true);
+                auto value = runtime->increaseMemberDot(ctx, obj, name, 1, true);
                 stack.push_back(value);
                 break;
             }
@@ -1075,7 +1076,7 @@ void JsVirtualMachine::call(Function *function, VMContext *ctx, VecVMStackScopes
                 auto idx = readUInt32(bytecode);
                 auto name = runtime->getStringByIdx(idx, resourcePool);
                 JsValue obj = stack.back(); stack.pop_back();
-                auto value = runtime->decreaseMemberDot(ctx, obj, name, false);
+                auto value = runtime->increaseMemberDot(ctx, obj, name, -1, false);
                 stack.push_back(value);
                 break;
             }
@@ -1083,7 +1084,7 @@ void JsVirtualMachine::call(Function *function, VMContext *ctx, VecVMStackScopes
                 auto idx = readUInt32(bytecode);
                 auto name = runtime->getStringByIdx(idx, resourcePool);
                 JsValue obj = stack.back(); stack.pop_back();
-                auto value = runtime->decreaseMemberDot(ctx, obj, name, true);
+                auto value = runtime->increaseMemberDot(ctx, obj, name, -1, true);
                 stack.push_back(value);
                 break;
             }
@@ -1104,62 +1105,27 @@ void JsVirtualMachine::call(Function *function, VMContext *ctx, VecVMStackScopes
                 break;
             }
             case OP_ADD: {
-                JsValue right = stack.back();
-                stack.pop_back();
+                JsValue right = stack.back(); stack.pop_back();
                 JsValue left = stack.back();
-                switch (left.type) {
-                    case JDT_BOOL:
-                        switch (right.type) {
-                            case JDT_BOOL:
-                                left.value.n32 += right.value.n32;
-                                left.type = JDT_INT32;
-                                break;
-                            default:
-                                assert(0);
-                                break;
-                        }
-                        break;
-                    case JDT_INT32:
-                        switch (right.type) {
-                            case JDT_INT32:
-                                left.value.n32 += right.value.n32;
-                                left.type = JDT_INT32;
-                                break;
-                            default:
-                                assert(0);
-                                break;
-                        }
-                        break;
-                    case JDT_CHAR:
-                    case JDT_STRING:
-                        switch (right.type) {
-                            case JDT_CHAR:
-                            case JDT_STRING:
-                                left = runtime->addString(left, right);
-                                break;
-                            default:
-                                assert(0);
-                                break;
-                        }
-                        break;
-                    default:
-                        assert(0);
-                        break;
-                }
-
-                stack.back() = left;
+                stack.back() = plusOperate(ctx, runtime, left, right);
                 break;
             }
             case OP_SUB: {
-                assert(0);
+                JsValue right = stack.back(); stack.pop_back();
+                JsValue left = stack.back();
+                stack.back() = arithmeticBinaryOperation(ctx, runtime, left, right, BinaryOpSub());
                 break;
             }
             case OP_MUL: {
-                assert(0);
+                JsValue right = stack.back(); stack.pop_back();
+                JsValue left = stack.back();
+                stack.back() = arithmeticBinaryOperation(ctx, runtime, left, right, BinaryOpMul());
                 break;
             }
             case OP_DIV: {
-                assert(0);
+                JsValue right = stack.back(); stack.pop_back();
+                JsValue left = stack.back();
+                stack.back() = arithmeticBinaryOperation(ctx, runtime, left, right, BinaryOpDiv());
                 break;
             }
             case OP_MOD: {

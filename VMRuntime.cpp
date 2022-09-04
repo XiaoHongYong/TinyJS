@@ -5,11 +5,12 @@
 //  Created by henry_xiao on 2022/7/25.
 //
 
+#include <algorithm>
+
 #include "VMRuntime.hpp"
 #include "VirtualMachine.hpp"
 #include "WebAPI/WebAPI.hpp"
 #include "Built-in/BuiltIn.hpp"
-#include <algorithm>
 
 
 #define MAX_STACK_SIZE          (1024 * 1024 / 8)
@@ -66,6 +67,9 @@ VMRuntimeCommon::VMRuntimeCommon() {
 
     auto idx = pushDoubleValue(NAN);
     assert(idx.value.index == jsValueNaN.value.index);
+
+    idx = pushDoubleValue(INFINITY);
+    assert(idx.value.index == jsValueInf.value.index);
 
     auto resourcePool = new ResourcePool();
     Function *rootFunc = new Function(resourcePool, nullptr, 0);
@@ -428,6 +432,34 @@ JsValue VMRuntime::joinSmallString(const SizedString &sz1, const SizedString &sz
     return pushString(JsString(js));
 }
 
+JsValue VMRuntime::addString(const SizedString &str1, const JsValue &s2) {
+    assert(s2.type == JDT_STRING);
+
+    if (getStringLength(s2) >= JOINED_STRING_MIN_SIZE) {
+        auto s1 = pushString(str1);
+
+        JsJoinedString js(s1, s2);
+        return pushString(JsString(js));
+    } else {
+        auto str2 = getString(s2);
+        return joinSmallString(str1, str2);
+    }
+}
+
+JsValue VMRuntime::addString(const JsValue &s1, const SizedString &str2) {
+    assert(s1.type == JDT_STRING);
+
+    if (getStringLength(s1) >= JOINED_STRING_MIN_SIZE) {
+        auto s2 = pushString(str2);
+
+        JsJoinedString js(s1, s2);
+        return pushString(JsString(js));
+    } else {
+        auto str1 = getString(s1);
+        return joinSmallString(str1, str2);
+    }
+}
+
 JsValue VMRuntime::addString(const JsValue &s1, const JsValue &s2) {
     assert(s1.type == JDT_STRING);
     assert(s2.type == JDT_STRING);
@@ -455,13 +487,7 @@ JsValue VMRuntime::addString(const JsValue &s1, const JsValue &s2) {
 
     if ((!s1.isInResourcePool && js1.isJoinedString) || (!s2.isInResourcePool && js2.isJoinedString)) {
         // 任何一个是 JoinedString
-        JsJoinedString js;
-
-        js.stringIdx = s1.value.index;
-        js.isStringIdxInResourcePool = s1.isInResourcePool;
-
-        js.nextStringIdx = s2.value.index;
-        js.isNextStringIdxInResourcePool = s2.isInResourcePool;
+        JsJoinedString js(s1, s2);
         return pushString(JsString(js));
     }
 
@@ -484,13 +510,7 @@ JsValue VMRuntime::addString(const JsValue &s1, const JsValue &s2) {
 
     if (ss1.len + ss2.len >= JOINED_STRING_MIN_SIZE) {
         // 超过 JOINED_STRING_MIN_SIZE，连接两个字符串
-        JsJoinedString js;
-
-        js.stringIdx = s1.value.index;
-        js.isStringIdxInResourcePool = s1.isInResourcePool;
-
-        js.nextStringIdx = s2.value.index;
-        js.isNextStringIdxInResourcePool = s2.isInResourcePool;
+        JsJoinedString js(s1, s2);
         return pushString(JsString(js));
     } else {
         // 直接拼接
@@ -648,7 +668,7 @@ JsValue VMRuntime::toString(VMContext *ctx, const JsValue &v) {
         case JDT_NULL: return JsStringValueNull;
         case JDT_BOOL: return val.value.n32 ? JsStringValueTrue : JsStringValueFalse;
         case JDT_INT32: {
-            NumberToSizedString str(val.value.n32);
+            SizedStringWrapper str(val.value.n32);
             return pushString(str);
         }
         case JDT_NUMBER: {
@@ -960,18 +980,18 @@ bool VMRuntime::testStrictEqual(const JsValue &left, const JsValue &right) {
     return false;
 }
 
-JsValue VMRuntime::increase(VMContext *ctx, JsValue &v) {
+JsValue VMRuntime::increase(VMContext *ctx, JsValue &v, int inc) {
     JsValue org = jsValueNaN;
 
     switch (v.type) {
         case JDT_NOT_INITIALIZED:
         case JDT_UNDEFINED: v = jsValueNaN; break;;
-        case JDT_NULL: org = JsValue(JDT_INT32, 0); v = JsValue(JDT_INT32, 1); break;;
-        case JDT_BOOL: org = JsValue(JDT_INT32, v.value.n32); v = JsValue(JDT_INT32, v.value.n32 + 1); break;;
+        case JDT_NULL: org = JsValue(JDT_INT32, 0); v = JsValue(JDT_INT32, inc); break;;
+        case JDT_BOOL: org = JsValue(JDT_INT32, v.value.n32); v = JsValue(JDT_INT32, v.value.n32 + inc); break;;
         case JDT_INT32: {
             org = v;
             int64_t n = v.value.n32;
-            n++;
+            n += inc;
             if (n == (int32_t)n) {
                 v = JsValue(JDT_INT32, (int32_t)n);
             } else {
@@ -981,7 +1001,7 @@ JsValue VMRuntime::increase(VMContext *ctx, JsValue &v) {
         }
         case JDT_NUMBER: {
             org = v;
-            v = pushDoubleValue(getDouble(v) + 1);
+            v = pushDoubleValue(getDouble(v) + inc);
             break;
         }
         case JDT_SYMBOL: {
@@ -991,7 +1011,7 @@ JsValue VMRuntime::increase(VMContext *ctx, JsValue &v) {
         case JDT_CHAR: {
             if (isdigit(v.value.n32)) {
                 org = JsValue(JDT_INT32, v.value.n32 - '0');
-                v = JsValue(JDT_INT32, v.value.n32 - '0' + 1);
+                v = JsValue(JDT_INT32, v.value.n32 - '0' + inc);
             } else {
                 v = jsValueNaN;
             }
@@ -1000,12 +1020,12 @@ JsValue VMRuntime::increase(VMContext *ctx, JsValue &v) {
         default: {
             double n;
             if (toNumber(ctx, v, n)) {
-                n++;
+                n += inc;
                 if (n == (int32_t)n) {
-                    org = JsValue(JDT_INT32, (int32_t)n - 1);
+                    org = JsValue(JDT_INT32, (int32_t)n - inc);
                     v = JsValue(JDT_INT32, n);
                 } else {
-                    org = pushDoubleValue(n - 1);
+                    org = pushDoubleValue(n - inc);
                     v = pushDoubleValue(n);
                 }
             } else {
@@ -1018,65 +1038,7 @@ JsValue VMRuntime::increase(VMContext *ctx, JsValue &v) {
     return org;
 }
 
-JsValue VMRuntime::decrease(VMContext *ctx, JsValue &v) {
-    JsValue org = jsValueNaN;
-
-    switch (v.type) {
-        case JDT_NOT_INITIALIZED:
-        case JDT_UNDEFINED: v = jsValueNaN; break;;
-        case JDT_NULL: org = JsValue(JDT_INT32, 0); v = JsValue(JDT_INT32, -1); break;;
-        case JDT_BOOL: org = JsValue(JDT_INT32, v.value.n32); v = JsValue(JDT_INT32, v.value.n32 - 1); break;;
-        case JDT_INT32: {
-            org = v;
-            int64_t n = v.value.n32;
-            n--;
-            if (n == (int32_t)n) {
-                v = JsValue(JDT_INT32, (int32_t)n);
-            } else {
-                v = pushDoubleValue(n);
-            }
-            break;
-        }
-        case JDT_NUMBER: {
-            org = v;
-            v = pushDoubleValue(getDouble(v) - 1);
-            break;
-        }
-        case JDT_SYMBOL: {
-            ctx->throwException(PE_TYPE_ERROR, " Cannot convert a Symbol value to a number");
-            break;;
-        }
-        case JDT_CHAR: {
-            if (isdigit(v.value.n32)) {
-                org = JsValue(JDT_INT32, v.value.n32 - '0');
-                v = JsValue(JDT_INT32, v.value.n32 - '0' - 1);
-            } else {
-                v = jsValueNaN;
-            }
-            break;
-        }
-        default: {
-            double n;
-            if (toNumber(ctx, v, n)) {
-                n--;
-                if (n == (int32_t)n) {
-                    org = JsValue(JDT_INT32, (int32_t)n + 1);
-                    v = JsValue(JDT_INT32, n);
-                } else {
-                    org = pushDoubleValue(n + 1);
-                    v = pushDoubleValue(n);
-                }
-            } else {
-                v = jsValueNaN;
-            }
-            break;
-        }
-    }
-
-    return org;
-}
-
-JsValue VMRuntime::increaseMemberDot(VMContext *ctx, const JsValue &obj, SizedString &name, bool isPost) {
+JsValue VMRuntime::increaseMemberDot(VMContext *ctx, const JsValue &obj, SizedString &name, int inc, bool isPost) {
     auto runtime = ctx->runtime;
 
     switch (obj.type) {
@@ -1094,40 +1056,11 @@ JsValue VMRuntime::increaseMemberDot(VMContext *ctx, const JsValue &obj, SizedSt
             return jsValueNaN;
         case JDT_CHAR:
         case JDT_STRING:
-            return runtime->objPrototypeString->increaseByName(ctx, obj, name, 1, isPost);
+            return runtime->objPrototypeString->increaseByName(ctx, obj, name, inc, isPost);
         default: {
             auto pobj = getObject(obj);
             assert(pobj);
-            return pobj->increaseByName(ctx, obj, name, 1, isPost);
-        }
-    }
-
-    return jsValueUndefined;
-}
-
-JsValue VMRuntime::decreaseMemberDot(VMContext *ctx, const JsValue &obj, SizedString &name, bool isPost) {
-    auto runtime = ctx->runtime;
-
-    switch (obj.type) {
-        case JDT_NOT_INITIALIZED:
-        case JDT_UNDEFINED:;
-            ctx->throwException(PE_TYPE_ERROR, "Cannot read properties of undefined (reading '%.*s')", (int)name.len, name.data);
-            return jsValueNaN;
-        case JDT_NULL:
-            ctx->throwException(PE_TYPE_ERROR, "Cannot read properties of null (reading '%.*s')", (int)name.len, name.data);
-            return jsValueNaN;
-        case JDT_BOOL:
-        case JDT_INT32:
-        case JDT_NUMBER:
-        case JDT_SYMBOL:
-            return jsValueNaN;
-        case JDT_CHAR:
-        case JDT_STRING:
-            return runtime->objPrototypeString->increaseByName(ctx, obj, name, -1, isPost);
-        default: {
-            auto pobj = getObject(obj);
-            assert(pobj);
-            return pobj->increaseByName(ctx, obj, name, -1, isPost);
+            return pobj->increaseByName(ctx, obj, name, inc, isPost);
         }
     }
 
