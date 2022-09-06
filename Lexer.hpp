@@ -166,6 +166,7 @@ inline bool canTokenBeMemberName(TokenType type) {
 
 uint8_t *parseNumber(uint8_t *start, uint8_t *end, double &retValue);
 uint8_t *parseNumber(const SizedString &str, double &retValue);
+bool jsStringToNumber(const SizedString &str, double &retValue);
 
 class JSLexer {
 public:

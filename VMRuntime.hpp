@@ -206,7 +206,16 @@ public:
         index -= countCommonStrings;
         return makeJsValueOfStringInResourcePool(poolIndex, index);
     }
-    
+
+    JsValue numberIdxToJsValue(uint16_t poolIndex, uint32_t index) {
+        if (index < countCommonDobules) {
+            return JsValue(JDT_NUMBER, index);
+        }
+
+        index -= countCommonDobules;
+        return makeJsValueOfNumberInResourcePool(poolIndex, index);
+    }
+
     void joinString(JsString &js);
     JsValue joinSmallString(const SizedString &sz1, const SizedString &sz2);
     JsValue addString(const SizedString &s1, const JsValue &s2);
@@ -223,8 +232,6 @@ public:
     uint32_t getStringLength(const JsValue &v);
 
     bool testTrue(const JsValue &v);
-    bool testEqual(const JsValue &left, const JsValue &right);
-    bool testStrictEqual(const JsValue &left, const JsValue &right);
 
     JsValue increase(VMContext *ctx, JsValue &v, int inc);
     JsValue increaseMemberDot(VMContext *ctx, const JsValue &obj, SizedString &name, int inc, bool isPost);

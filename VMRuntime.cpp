@@ -82,6 +82,9 @@ VMRuntimeCommon::VMRuntimeCommon() {
     setGlobalValue("NaN", jsValueNaN);
     countImmutableGlobalVars++; assert(countImmutableGlobalVars == globalScope->vars.size());
 
+    setGlobalValue("Infinity", jsValueInf);
+    countImmutableGlobalVars++; assert(countImmutableGlobalVars == globalScope->vars.size());
+
     registerBuiltIns(this);
     registerWebAPIs(this);
 }
@@ -624,21 +627,16 @@ bool VMRuntime::toNumber(VMContext *ctx, const JsValue &item, double &out) {
             return true;
         case JDT_CHAR:
             if (v.value.n32 >= '0' && v.value.n32 <= '9') {
-                return v.value.n32 - '0';
+                out = v.value.n32 - '0';
+                return true;
             }
             out = NAN;
             return false;
-        case JDT_STRING: {
-            auto s = getString(v);
-            s.trim();
-            auto p = parseNumber(s, out);
-            if (p != s.data + s.len) {
-                out = NAN;
-            }
-            return true;
-        }
+        case JDT_STRING:
+            return jsStringToNumber(getString(v), out);
         case JDT_NUMBER:
-            return getDouble(v);
+            out = getDouble(v);
+            return true;
         case JDT_SYMBOL:
             ctx->throwException(PE_TYPE_ERROR, "Cannot convert a Symbol value to a number");
             out = NAN;
@@ -813,171 +811,6 @@ bool VMRuntime::testTrue(const JsValue &value) {
         default:
             return true;
     }
-}
-
-bool VMRuntime::testEqual(const JsValue &left, const JsValue &right) {
-    if (left.equal(right) && !left.equal(jsValueNaN)) {
-        return true;
-    }
-
-    switch (left.type) {
-        case JDT_NOT_INITIALIZED:
-        case JDT_UNDEFINED:
-        case JDT_NULL:
-            if (right.type <= JDT_NULL) {
-                return true;
-            }
-            return false;
-        case JDT_BOOL:
-        case JDT_INT32: {
-            auto n = left.value.n32;
-            if (right.type <= JDT_NULL) {
-                return false;
-            } else if (right.type == JDT_BOOL || right.type == JDT_INT32) {
-                return n == right.value.n32;
-            } else if (right.type == JDT_NUMBER) {
-                return n == getDouble(right);
-            } else if (right.type == JDT_CHAR) {
-                return right.value.n32 - '0' == n;
-            } else if (right.type == JDT_SYMBOL) {
-                return false;
-            } else {
-                double r;
-                if (toNumber(mainVmCtx, right, r)) {
-                    return r == n;
-                }
-                return false;
-            }
-        }
-        case JDT_NUMBER: {
-            auto n = getDouble(left);
-            if (right.type <= JDT_NULL) {
-                return false;
-            } else if (right.type == JDT_BOOL || right.type == JDT_INT32) {
-                return n == right.value.n32;
-            } else if (right.type == JDT_NUMBER) {
-                return n == getDouble(right);
-            } else if (right.type == JDT_CHAR) {
-                return right.value.n32 - '0' == n;
-            } else if (right.type == JDT_SYMBOL) {
-                return false;
-            } else {
-                double r;
-                if (toNumber(mainVmCtx, right, r)) {
-                    return r == n;
-                }
-                return false;
-            }
-        }
-        case JDT_CHAR: {
-            if (right.type <= JDT_NULL) {
-                return false;
-            } else if (right.type == JDT_BOOL || right.type == JDT_INT32) {
-                return left.value.n32 - '0' == right.value.n32;
-            } else if (right.type == JDT_NUMBER) {
-                return left.value.n32 - '0' == getDouble(right);
-            } else if (right.type == JDT_CHAR) {
-                return left.value.n32 == right.value.n32;
-            } else {
-                string buf;
-                auto str = toSizedString(mainVmCtx, right, buf);
-                return str.len == 1 && str.data[0] == left.value.n32;
-            }
-        }
-        case JDT_STRING: {
-            if (right.type <= JDT_NULL) {
-                return false;
-            } else if (right.type == JDT_BOOL || right.type == JDT_INT32) {
-                double v;
-                if (toNumber(mainVmCtx, left, v)) {
-                    return v == right.value.n32;
-                }
-                return false;
-            } else if (right.type == JDT_NUMBER) {
-                double v;
-                if (toNumber(mainVmCtx, left, v)) {
-                    return v == getDouble(right);
-                }
-                return false;
-            } else if (right.type == JDT_CHAR) {
-                auto str = getString(left);
-                return str.len == 1 && str.data[0] == right.value.n32;
-            } else if (right.type == JDT_STRING) {
-                auto str1 = getString(left);
-                auto str2 = getString(right);
-                return str1.equal(str2);
-            } else {
-                string buf;
-                auto str2 = toSizedString(mainVmCtx, right, buf);
-                auto str1 = getString(left);
-                return str1.equal(str2);
-            }
-        }
-        case JDT_SYMBOL: {
-            // Symbol.for 创建的“相同” 的 symbol 在最开始就判断了.
-            return false;
-        }
-        default: {
-            if (right.type <= JDT_NULL) {
-                return false;
-            } else if (right.type == JDT_BOOL || right.type == JDT_INT32) {
-                double v;
-                if (toNumber(mainVmCtx, left, v)) {
-                    return v == right.value.n32;
-                }
-                return false;
-            } else if (right.type == JDT_NUMBER) {
-                double v;
-                if (toNumber(mainVmCtx, left, v)) {
-                    return v == getDouble(right);
-                }
-                return false;
-            } else if (right.type == JDT_CHAR) {
-                string buf;
-                auto str1 = toSizedString(mainVmCtx, left, buf);
-                return str1.len == 1 && str1.data[0] == right.value.n32;
-            } else if (right.type == JDT_STRING) {
-                string buf;
-                auto str1 = toSizedString(mainVmCtx, left, buf);
-                auto str2 = getString(right);
-                return str1.equal(str2);
-            } else if (right.type == JDT_SYMBOL) {
-                return false;
-            } else {
-                return false;
-            }
-        }
-    }
-}
-
-bool VMRuntime::testStrictEqual(const JsValue &left, const JsValue &right) {
-    if (left.equal(right) && !left.equal(jsValueNaN)) {
-        return true;
-    }
-
-    if (left.type == JDT_CHAR) {
-        if (right.type == JDT_STRING && getStringLength(right) == 1) {
-            auto s = getString(right);
-            return s.data[0] == left.value.index;
-        }
-    } else if (left.type == JDT_STRING) {
-        auto len1 = getStringLength(left);
-        if (right.type == JDT_CHAR) {
-            if (len1 == 1) {
-                auto s2 = getString(right);
-                return s2.data[0] == left.value.n32;
-            }
-        } else if (right.type == JDT_STRING) {
-            auto len2 = getStringLength(right);
-            if (len1 == len2) {
-                auto s1 = getString(left);
-                auto s2 = getString(right);
-                return s1.equal(s2);
-            }
-        }
-    }
-
-    return false;
 }
 
 JsValue VMRuntime::increase(VMContext *ctx, JsValue &v, int inc) {

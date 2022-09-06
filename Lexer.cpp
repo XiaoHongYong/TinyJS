@@ -127,6 +127,23 @@ uint8_t *parseNumber(const SizedString &str, double &retValue) {
     return parseNumber(str.data, str.data + str.len, retValue);
 }
 
+bool jsStringToNumber(const SizedString &str, double &retValue) {
+    auto tmp = str;
+    tmp.trim();
+    if (tmp.len == 0) {
+        retValue = 0;
+        return true;
+    }
+
+    auto p = parseNumber(tmp, retValue);
+    if (p != tmp.data + tmp.len) {
+        retValue = NAN;
+        return false;
+    }
+
+    return true;
+}
+
 bool operator ==(const Token &token, const char *name) {
     return token.buf[0] == name[0] && tokenToSizedString(token).equal(name);
 }
@@ -325,7 +342,8 @@ void JSLexer::_readToken() {
         case '!':
             code = *_bufPos;
             if (code == '=') {
-                code = *_bufPos++;
+                ++_bufPos;
+                code = *_bufPos;
                 _curToken.type = TK_EQUALITY;
                 if (code == '=') {
                     // !==

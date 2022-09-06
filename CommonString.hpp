@@ -19,6 +19,18 @@ SizedString intToSizedString(uint32_t n);
 SizedString makeCommonString(const char *str);
 
 
+class NumberToSizedString : public SizedString {
+public:
+    NumberToSizedString(uint32_t n);
+
+    const SizedString &str() const { return *this; }
+    
+protected:
+    uint8_t             _buf[32];
+
+};
+
+
 class SizedStringWrapper : public SizedString {
 public:
     SizedStringWrapper(int32_t n);

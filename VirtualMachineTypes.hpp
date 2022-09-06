@@ -96,10 +96,6 @@ class VMContext;
     OP_ITEM(OP_DIV, ""), \
     OP_ITEM(OP_MOD, ""), \
     OP_ITEM(OP_EXP, ""), \
-    OP_ITEM(OP_INEQUAL_STRICT, ""), \
-    OP_ITEM(OP_INEQUAL, ""), \
-    OP_ITEM(OP_EQUAL_STRICT, ""), \
-    OP_ITEM(OP_EQUAL, ""), \
     \
     OP_ITEM(OP_CONDITIONAL, ""), \
     OP_ITEM(OP_NULLISH, ""), \
@@ -119,6 +115,10 @@ class VMContext;
     OP_ITEM(OP_LEFT_SHIFT, ""), \
     OP_ITEM(OP_RIGHT_SHIFT, ""), \
     OP_ITEM(OP_UNSIGNED_RIGHT_SHIFT, ""), \
+    OP_ITEM(OP_INEQUAL_STRICT, ""), \
+    OP_ITEM(OP_INEQUAL, ""), \
+    OP_ITEM(OP_EQUAL_STRICT, ""), \
+    OP_ITEM(OP_EQUAL, ""), \
     OP_ITEM(OP_LESS_THAN, ""), \
     OP_ITEM(OP_LESS_EQUAL_THAN, ""), \
     OP_ITEM(OP_GREATER_THAN, ""), \
@@ -227,6 +227,12 @@ inline bool operator==(const JsValue &a, const JsValue &b) {
 
 inline JsValue makeJsValueOfStringInResourcePool(uint16_t poolIndex, uint16_t index) {
     JsValue r(JDT_STRING, makeResourceIndex(poolIndex, index));
+    r.isInResourcePool = true;
+    return r;
+}
+
+inline JsValue makeJsValueOfNumberInResourcePool(uint16_t poolIndex, uint16_t index) {
+    JsValue r(JDT_NUMBER, makeResourceIndex(poolIndex, index));
     r.isInResourcePool = true;
     return r;
 }

@@ -39,7 +39,15 @@ struct BinaryOpSub {
 struct BinaryOpMul {
     JsValue operator()(VMRuntime *rt, int32_t a, int32_t b) const {
         int64_t r = (int64_t)a * (int64_t)b;
-        if (r == (int32_t)r) {
+        if (r == 0) {
+            // 特殊处理 -0 的情况
+            double r = (double)a * (double)b;
+            if (signbit(r)) {
+                return rt->pushDoubleValue(r);
+            } else {
+                return JsValue(JDT_INT32, (int32_t)r);
+            }
+        } else if (r == (int32_t)r) {
             return JsValue(JDT_INT32, (int32_t)r);
         } else {
             return rt->pushDoubleValue(r);
@@ -64,12 +72,8 @@ struct BinaryOpMul {
 
 struct BinaryOpDiv {
     JsValue operator()(VMRuntime *rt, int32_t a, int32_t b) const {
-        if (b == 0) {
-            return a == 0 ? jsValueNaN : jsValueInf;
-        }
-
-        int64_t r = (int64_t)a / (int64_t)b;
-        if (r == (int32_t)r) {
+        double r = (double)a / (double)b;
+        if (r == (int32_t)r && !(r == 0 && signbit(r))) {
             return JsValue(JDT_INT32, (int32_t)r);
         } else {
             return rt->pushDoubleValue(r);
@@ -88,6 +92,71 @@ struct BinaryOpDiv {
 
     JsValue operator()(VMRuntime *rt, double a, double b) const {
         auto r = a / b;
+        return rt->pushDoubleValue(r);
+    }
+};
+
+struct BinaryOpMod {
+    JsValue operator()(VMRuntime *rt, int32_t a, int32_t b) const {
+        if (b == 0) {
+            return jsValueNaN;
+        }
+
+        uint32_t r = a % b;
+        if (r == 0) {
+            auto r = fmod((double)a, (double)b);
+            if (signbit(r)) {
+                return rt->pushDoubleValue(r);
+            }
+        }
+        return JsValue(JDT_INT32, (int32_t)r);
+    }
+
+    JsValue operator()(VMRuntime *rt, double a, int32_t b) const {
+        auto r = fmod(a, (double)b);
+        return rt->pushDoubleValue(r);
+    }
+
+    JsValue operator()(VMRuntime *rt, int32_t a, double b) const {
+        auto r = fmod((double)a, b);
+        return rt->pushDoubleValue(r);
+    }
+
+    JsValue operator()(VMRuntime *rt, double a, double b) const {
+        auto r = fmod(a, b);
+        return rt->pushDoubleValue(r);
+    }
+};
+
+struct BinaryOpExp {
+    JsValue operator()(VMRuntime *rt, int32_t a, int32_t b) const {
+        double r = pow(a, b);
+        if (r == (int32_t)r) {
+            return JsValue(JDT_INT32, (int32_t)r);
+        }
+        return rt->pushDoubleValue(r);
+    }
+
+    JsValue operator()(VMRuntime *rt, double a, int32_t b) const {
+        double r = pow(a, (double)b);
+        return rt->pushDoubleValue(r);
+    }
+
+    JsValue operator()(VMRuntime *rt, int32_t a, double b) const {
+        if (isnan(b)) {
+            return jsValueNaN;
+        }
+
+        auto r = pow((double)a, b);
+        return rt->pushDoubleValue(r);
+    }
+
+    JsValue operator()(VMRuntime *rt, double a, double b) const {
+        if (isnan(b)) {
+            return jsValueNaN;
+        }
+
+        auto r = pow(a, b);
         return rt->pushDoubleValue(r);
     }
 };
@@ -155,14 +224,13 @@ inline JsValue plusOperate(VMContext *ctx, VMRuntime *rt, int32_t left, const Js
             return rt->pushString(SizedString(buf, len));
         }
         default: {
-            JsValue a = leftStr;
-            if (!leftStr.isValid()) {
-                SizedStringWrapper s(left);
-                a = rt->toString(ctx, right);
-            }
-
             JsValue r = rt->toString(ctx, right);
-            return rt->addString(a, r);
+            if (leftStr.isValid()) {
+                return rt->addString(leftStr, r);
+            } else {
+                SizedStringWrapper s(left);
+                return rt->addString(s, r);
+            }
         }
     }
 }
@@ -269,9 +337,9 @@ inline JsValue plusOperate(VMContext *ctx, VMRuntime *rt, const JsValue &left, c
             switch (right.type) {
                 case JDT_NOT_INITIALIZED:
                 case JDT_UNDEFINED:
-                    return rt->addString(left, jsValueUndefined);
+                    return rt->addString(left, JsStringValueUndefined);
                 case JDT_NULL:
-                    return rt->addString(left, jsValueNull);
+                    return rt->addString(left, JsStringValueNull);
                 case JDT_BOOL:
                     return rt->addString(left, right.value.n32 ? JsStringValueTrue : JsStringValueFalse);
                 case JDT_INT32: {
@@ -308,9 +376,9 @@ inline JsValue plusOperate(VMContext *ctx, VMRuntime *rt, const JsValue &left, c
             switch (right.type) {
                 case JDT_NOT_INITIALIZED:
                 case JDT_UNDEFINED:
-                    return rt->addString(str1, jsValueUndefined);
+                    return rt->addString(str1, JsStringValueUndefined);
                 case JDT_NULL:
-                    return rt->addString(str1, jsValueNull);
+                    return rt->addString(str1, JsStringValueNull);
                 case JDT_BOOL:
                     return rt->addString(str1, right.value.n32 ? JsStringValueTrue : JsStringValueFalse);
                 case JDT_INT32: {
@@ -339,6 +407,305 @@ inline JsValue plusOperate(VMContext *ctx, VMRuntime *rt, const JsValue &left, c
             break;
         }
     }
+}
+
+
+inline bool throwSymbolConvertException(VMContext *ctx) {
+    ctx->throwException(PE_TYPE_ERROR, "Cannot convert a Symbol value to a number");
+    return false;
+}
+
+// <
+struct RelationalOpLessThan {
+    bool undefinedVsNullUndefined() const { return false; }
+    bool nullVsUndefined() const { return false; }
+    bool nullVsNull() const { return false; }
+    bool nullVsNumber(double b) const { return 0 < b; }
+    bool nullVsSymbol(VMContext *ctx) const { return throwSymbolConvertException(ctx); }
+    bool numberVsNull(double a) const { return a < 0; }
+
+    bool symbolVsSymbol(VMContext *ctx, int32_t a, int32_t b) const { return throwSymbolConvertException(ctx); }
+    bool symbolVsOthers(VMContext *ctx) const { return throwSymbolConvertException(ctx); }
+
+    bool operator()(double a, double b) const {
+        return a < b;
+    }
+
+    bool operator()(const SizedString &a, const SizedString &b) const {
+        return a.cmp(b) < 0;
+    }
+};
+
+// <=
+struct RelationalOpLessEqThan {
+    bool undefinedVsNullUndefined() const { return false; }
+    bool nullVsUndefined() const { return false; }
+    bool nullVsNull() const { return true; }
+    bool nullVsNumber(double b) const { return 0 <= b; }
+    bool nullVsSymbol(VMContext *ctx) const { return throwSymbolConvertException(ctx); }
+    bool numberVsNull(double a) const { return a <= 0; }
+
+    bool symbolVsSymbol(VMContext *ctx, int32_t a, int32_t b) const { return throwSymbolConvertException(ctx); }
+    bool symbolVsOthers(VMContext *ctx) const { return throwSymbolConvertException(ctx); }
+
+    bool operator()(double a, double b) const {
+        return a <= b;
+    }
+
+    bool operator()(const SizedString &a, const SizedString &b) const {
+        return a.cmp(b) <= 0;
+    }
+};
+
+// ==
+struct RelationalOpEq {
+    bool undefinedVsNullUndefined() const { return true; }
+    bool nullVsUndefined() const { return true; }
+    bool nullVsNull() const { return true; }
+    bool nullVsNumber(double b) const { return false; }
+    bool nullVsSymbol(VMContext *) const { return false; }
+    bool numberVsNull(double a) const { return false; }
+
+    bool symbolVsSymbol(VMContext *ctx, int32_t a, int32_t b) const { return false; }
+    bool symbolVsOthers(VMContext *ctx) const { return false; }
+
+    bool operator()(double a, double b) const {
+        return a == b;
+    }
+
+    bool operator()(const SizedString &a, const SizedString &b) const {
+        return a.cmp(b) == 0;
+    }
+};
+
+// >
+struct RelationalOpGreaterThan {
+    bool undefinedVsNullUndefined() const { return false; }
+    bool nullVsUndefined() const { return false; }
+    bool nullVsNull() const { return false; }
+    bool nullVsNumber(double b) const { return 0 > b; }
+    bool nullVsSymbol(VMContext *ctx) const { return throwSymbolConvertException(ctx); }
+    bool numberVsNull(double a) const { return a > 0; }
+
+    bool symbolVsSymbol(VMContext *ctx, int32_t a, int32_t b) const { return throwSymbolConvertException(ctx); }
+    bool symbolVsOthers(VMContext *ctx) const { return throwSymbolConvertException(ctx); }
+
+    bool operator()(double a, double b) const {
+        return a > b;
+    }
+
+    bool operator()(const SizedString &a, const SizedString &b) const {
+        return a.cmp(b) > 0;
+    }
+};
+
+// >=
+struct RelationalOpGreaterEqThan {
+    bool undefinedVsNullUndefined() const { return false; }
+    bool nullVsUndefined() const { return false; }
+    bool nullVsNull() const { return true; }
+    bool nullVsNumber(double b) const { return 0 >= b; }
+    bool nullVsSymbol(VMContext *ctx) const { return throwSymbolConvertException(ctx); }
+    bool numberVsNull(double a) const { return a >= 0; }
+
+    bool symbolVsSymbol(VMContext *ctx, int32_t a, int32_t b) const { return throwSymbolConvertException(ctx); }
+    bool symbolVsOthers(VMContext *ctx) const { return throwSymbolConvertException(ctx); }
+
+    bool operator()(double a, double b) const {
+        return a >= b;
+    }
+
+    bool operator()(const SizedString &a, const SizedString &b) const {
+        return a.cmp(b) >= 0;
+    }
+};
+
+// double <, <=, ==, >, >= 运算
+template<typename Operator>
+inline bool relationalNumberCmp(VMContext *ctx, VMRuntime *rt, double left, const JsValue &right, const Operator &op) {
+    switch (right.type) {
+        case JDT_NOT_INITIALIZED:
+        case JDT_UNDEFINED:
+            return false;
+        case JDT_NULL:
+            return op.numberVsNull(left);
+        case JDT_BOOL:
+        case JDT_INT32:
+            return op(left, right.value.n32);
+        case JDT_NUMBER:
+            return op(left, rt->getDouble(right));
+        case JDT_SYMBOL:
+            return op.symbolVsOthers(ctx);
+        default:
+            // 转换为 number 进行比较
+            double n;
+            if (rt->toNumber(ctx, right, n)) {
+                return op(left, n);
+            }
+            return false;
+    }
+}
+
+// string <, <=, ==, >, >= 运算
+template<typename Operator>
+inline bool relationalStringCmp(VMContext *ctx, VMRuntime *rt, const SizedString &left, const JsValue &right, const Operator &op) {
+    switch (right.type) {
+        case JDT_NOT_INITIALIZED:
+        case JDT_UNDEFINED:
+            return false;
+        case JDT_NULL: {
+            // 转换为 number 进行比较
+            double n;
+            if (jsStringToNumber(left, n)) {
+                return op.numberVsNull(n);
+            }
+            return false;
+        }
+        case JDT_BOOL:
+        case JDT_INT32: {
+            double n;
+            if (jsStringToNumber(left, n)) {
+                return op(n, right.value.n32);
+            }
+            return false;
+        }
+        case JDT_NUMBER: {
+            double n;
+            if (jsStringToNumber(left, n)) {
+                return op(n, rt->getDouble(right));
+            }
+            return false;
+        }
+        case JDT_SYMBOL:
+            return op.symbolVsOthers(ctx);
+        case JDT_CHAR: {
+            SizedStringWrapper tmp(right);
+            return op(left, tmp.str());
+        }
+        case JDT_STRING: {
+            return op(left, rt->getString(right));
+        }
+        default: {
+            // Object 类型需要再此转换
+            ctx->vm->callMember(ctx, right, "toString", Arguments());
+            if (ctx->retValue.type >= JDT_OBJECT) {
+                ctx->throwException(PE_TYPE_ERROR, " Cannot convert object to primitive value");
+                return false;
+            }
+
+            return relationalStringCmp(ctx, rt, left, ctx->retValue, op);
+        }
+    }
+}
+
+// <, <=, ==, >, >= 运算
+template<typename Operator>
+inline bool relationalOperate(VMContext *ctx, VMRuntime *rt, const JsValue &left, const JsValue &right, const Operator &op) {
+    switch (left.type) {
+        case JDT_NOT_INITIALIZED:
+        case JDT_UNDEFINED:
+            if (right.type <= JDT_NULL) return op.undefinedVsNullUndefined();
+            if (right.type == JDT_SYMBOL) return op.nullVsSymbol(ctx);
+            return false;
+        case JDT_NULL:
+            switch (right.type) {
+                case JDT_NOT_INITIALIZED:
+                case JDT_UNDEFINED:
+                    return op.nullVsUndefined();
+                case JDT_NULL:
+                    return op.nullVsNull();
+                case JDT_BOOL:
+                case JDT_INT32:
+                    return op.nullVsNumber(right.value.n32);
+                case JDT_NUMBER:
+                    return op.nullVsNumber(rt->getDouble(right));
+                case JDT_SYMBOL:
+                    return op.nullVsSymbol(ctx);
+                default:
+                    // 转换为 number 进行比较
+                    double n;
+                    if (rt->toNumber(ctx, right, n)) {
+                        return op.nullVsNumber(n);
+                    }
+                    return false;
+            }
+            return false;
+        case JDT_BOOL:
+        case JDT_INT32:
+            return relationalNumberCmp(ctx, rt, left.value.n32, right, op);
+        case JDT_NUMBER:
+            return relationalNumberCmp(ctx, rt, rt->getDouble(left), right, op);
+        case JDT_CHAR: {
+            SizedStringWrapper str(left);
+            return relationalStringCmp(ctx, rt, str, right, op);
+        }
+        case JDT_STRING: {
+            auto str = rt->getString(left);
+            return relationalStringCmp(ctx, rt, str, right, op);
+        }
+        case JDT_SYMBOL: {
+            if (right.type == JDT_SYMBOL) {
+                return op.symbolVsSymbol(ctx, left.value.n32, right.value.n32);
+            }
+
+            return op.symbolVsOthers(ctx);
+        }
+        default: {
+            // Object 类型需要再此转换
+            ctx->vm->callMember(ctx, left, "toString", Arguments());
+            if (ctx->retValue.type >= JDT_OBJECT) {
+                ctx->throwException(PE_TYPE_ERROR, " Cannot convert object to primitive value");
+                return false;
+            }
+
+            return relationalOperate(ctx, rt, ctx->retValue, right, op);
+        }
+    }
+}
+
+bool relationalEqual(VMContext *ctx, VMRuntime *rt, const JsValue &left, const JsValue &right) {
+    if (left.equal(right)) {
+        // TODO: 需要检查 JsValue 在 runtime->doubleValues 的值是否为 NaN
+        return !left.equal(jsValueNaN);
+    } else {
+        // 需要特别判断 Object 的情况
+        if (left.type >= JDT_OBJECT && right.type >= JDT_OBJECT) {
+            return false;
+        }
+
+        return relationalOperate(ctx, rt, left, right, RelationalOpEq());
+    }
+
+}
+
+bool relationalStrictEqual(VMRuntime *rt, const JsValue &left, const JsValue &right) {
+    if (left.equal(right) && !left.equal(jsValueNaN)) {
+        return true;
+    }
+
+    if (left.type == JDT_CHAR) {
+        if (right.type == JDT_STRING && rt->getStringLength(right) == 1) {
+            auto s = rt->getString(right);
+            return s.data[0] == left.value.index;
+        }
+    } else if (left.type == JDT_STRING) {
+        auto len1 = rt->getStringLength(left);
+        if (right.type == JDT_CHAR) {
+            if (len1 == 1) {
+                auto s2 = rt->getString(right);
+                return s2.data[0] == left.value.n32;
+            }
+        } else if (right.type == JDT_STRING) {
+            auto len2 = rt->getStringLength(right);
+            if (len1 == len2) {
+                auto s1 = rt->getString(left);
+                auto s2 = rt->getString(right);
+                return s1.equal(s2);
+            }
+        }
+    }
+
+    return false;
 }
 
 #endif /* BinaryOperation_hpp */

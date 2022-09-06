@@ -443,7 +443,7 @@ void JsObject::definePropertyByName(VMContext *ctx, const SizedString &name, con
 }
 
 void JsObject::definePropertyByIndex(VMContext *ctx, uint32_t index, const JsProperty &descriptor) {
-    SizedStringWrapper name(index);
+    NumberToSizedString name(index);
     return definePropertyByName(ctx, name, descriptor);
 }
 
@@ -502,7 +502,7 @@ void JsObject::setByName(VMContext *ctx, const JsValue &thiz, const SizedString 
 }
 
 void JsObject::setByIndex(VMContext *ctx, const JsValue &thiz, uint32_t index, const JsValue &value) {
-    SizedStringWrapper name(index);
+    NumberToSizedString name(index);
     setByName(ctx, thiz, name, value);
 }
 
@@ -567,7 +567,7 @@ JsValue JsObject::increaseByName(VMContext *ctx, const JsValue &thiz, const Size
 }
 
 JsValue JsObject::increaseByIndex(VMContext *ctx, const JsValue &thiz, uint32_t index, int n, bool isPost) {
-    SizedStringWrapper name(index);
+    NumberToSizedString name(index);
     return increaseByName(ctx, thiz, name, n, isPost);
 }
 
@@ -613,7 +613,7 @@ JsProperty *JsObject::getRawByName(VMContext *ctx, const SizedString &name, JsNa
 }
 
 JsProperty *JsObject::getRawByIndex(VMContext *ctx, uint32_t index, bool includeProtoProp) {
-    SizedStringWrapper name(index);
+    NumberToSizedString name(index);
     JsNativeFunction funcGetter;
     return getRawByName(ctx, name, funcGetter, includeProtoProp);
 }
@@ -656,7 +656,7 @@ bool JsObject::removeByName(VMContext *ctx, const SizedString &name) {
 }
 
 bool JsObject::removeByIndex(VMContext *ctx, uint32_t index) {
-    SizedStringWrapper name(index);
+    NumberToSizedString name(index);
     return removeByName(ctx, name);
 }
 

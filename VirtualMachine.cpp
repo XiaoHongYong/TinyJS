@@ -757,13 +757,7 @@ void JsVirtualMachine::call(Function *function, VMContext *ctx, VecVMStackScopes
             }
             case OP_PUSH_DOUBLE: {
                 auto idx = readUInt32(bytecode);
-
-                JsValue v;
-                v.type = JDT_NUMBER;
-                v.isInResourcePool = true;
-                v.value.index = makeResourceIndex(function->resourcePool->index, idx);
-
-                stack.push_back(v);
+                stack.push_back(runtime->numberIdxToJsValue(function->resourcePool->index, idx));
                 break;
             }
             case OP_PUSH_FUNCTION_EXPR: {
@@ -1129,31 +1123,15 @@ void JsVirtualMachine::call(Function *function, VMContext *ctx, VecVMStackScopes
                 break;
             }
             case OP_MOD: {
-                assert(0);
+                JsValue right = stack.back(); stack.pop_back();
+                JsValue left = stack.back();
+                stack.back() = arithmeticBinaryOperation(ctx, runtime, left, right, BinaryOpMod());
                 break;
             }
             case OP_EXP: {
-                assert(0);
-                break;
-            }
-            case OP_INEQUAL_STRICT: {
-                assert(0);
-                break;
-            }
-            case OP_INEQUAL: {
-                assert(0);
-                break;
-            }
-            case OP_EQUAL_STRICT: {
                 JsValue right = stack.back(); stack.pop_back();
-                JsValue left = stack.back(); stack.pop_back();
-                stack.push_back(JsValue(JDT_BOOL, runtime->testStrictEqual(left, right)));
-                break;
-            }
-            case OP_EQUAL: {
-                JsValue right = stack.back(); stack.pop_back();
-                JsValue left = stack.back(); stack.pop_back();
-                stack.push_back(JsValue(JDT_BOOL, runtime->testEqual(left, right)));
+                JsValue left = stack.back();
+                stack.back() = arithmeticBinaryOperation(ctx, runtime, left, right, BinaryOpExp());
                 break;
             }
             case OP_CONDITIONAL: {
@@ -1237,20 +1215,58 @@ void JsVirtualMachine::call(Function *function, VMContext *ctx, VecVMStackScopes
                 assert(0);
                 break;
             }
+            case OP_INEQUAL_STRICT: {
+                JsValue right = stack.back(); stack.pop_back();
+                JsValue left = stack.back(); stack.pop_back();
+                stack.push_back(JsValue(JDT_BOOL, !relationalStrictEqual(runtime, left, right)));
+                break;
+            }
+            case OP_INEQUAL: {
+                JsValue right = stack.back(); stack.pop_back();
+                JsValue left = stack.back();
+                bool ret = relationalEqual(ctx, runtime, left, right);
+                stack.back() = JsValue(JDT_BOOL, !ret);
+                break;
+            }
+            case OP_EQUAL_STRICT: {
+                JsValue right = stack.back(); stack.pop_back();
+                JsValue left = stack.back(); stack.pop_back();
+                stack.push_back(JsValue(JDT_BOOL, relationalStrictEqual(runtime, left, right)));
+                break;
+            }
+            case OP_EQUAL: {
+                JsValue right = stack.back(); stack.pop_back();
+                JsValue left = stack.back();
+                bool ret = relationalEqual(ctx, runtime, left, right);
+                stack.back() = JsValue(JDT_BOOL, ret);
+                break;
+            }
             case OP_LESS_THAN: {
-                assert(0);
+                JsValue right = stack.back(); stack.pop_back();
+                JsValue left = stack.back();
+                bool ret = relationalOperate(ctx, runtime, left, right, RelationalOpLessThan());
+                stack.back() = JsValue(JDT_BOOL, ret);
                 break;
             }
             case OP_LESS_EQUAL_THAN: {
-                assert(0);
+                JsValue right = stack.back(); stack.pop_back();
+                JsValue left = stack.back();
+                bool ret = relationalOperate(ctx, runtime, left, right, RelationalOpLessEqThan());
+                stack.back() = JsValue(JDT_BOOL, ret);
                 break;
             }
             case OP_GREATER_THAN: {
-                assert(0);
+                JsValue right = stack.back(); stack.pop_back();
+                JsValue left = stack.back();
+                bool ret = relationalOperate(ctx, runtime, left, right, RelationalOpGreaterThan());
+                stack.back() = JsValue(JDT_BOOL, ret);
                 break;
             }
             case OP_GREATER_EQUAL_THAN: {
-                assert(0);
+                JsValue right = stack.back(); stack.pop_back();
+                JsValue left = stack.back();
+                bool ret = relationalOperate(ctx, runtime, left, right, RelationalOpGreaterEqThan());
+                stack.back() = JsValue(JDT_BOOL, ret);
                 break;
             }
             case OP_IN: {

@@ -81,7 +81,7 @@ void JsLibObject::definePropertyByName(VMContext *ctx, const SizedString &name, 
 }
 
 void JsLibObject::definePropertyByIndex(VMContext *ctx, uint32_t index, const JsProperty &descriptor) {
-    SizedStringWrapper name(index);
+    NumberToSizedString name(index);
     definePropertyByName(ctx, name, descriptor);
 }
 
@@ -128,7 +128,7 @@ void JsLibObject::setByName(VMContext *ctx, const JsValue &thiz, const SizedStri
 }
 
 void JsLibObject::setByIndex(VMContext *ctx, const JsValue &thiz, uint32_t index, const JsValue &value) {
-    SizedStringWrapper name(index);
+    NumberToSizedString name(index);
     setByName(ctx, thiz, name, value);
 }
 
@@ -176,7 +176,7 @@ JsValue JsLibObject::increaseByName(VMContext *ctx, const JsValue &thiz, const S
 }
 
 JsValue JsLibObject::increaseByIndex(VMContext *ctx, const JsValue &thiz, uint32_t index, int n, bool isPost) {
-    SizedStringWrapper name(index);
+    NumberToSizedString name(index);
     return increaseByName(ctx, thiz, name, n, isPost);
 }
 
@@ -246,7 +246,7 @@ bool JsLibObject::removeByName(VMContext *ctx, const SizedString &name) {
 }
 
 bool JsLibObject::removeByIndex(VMContext *ctx, uint32_t index) {
-    SizedStringWrapper name(index);
+    NumberToSizedString name(index);
     return removeByName(ctx, name);
 }
 

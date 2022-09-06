@@ -89,12 +89,8 @@ void consoleLog(VMContext *ctx, const JsValue &thiz, const Arguments &args) {
                 break;
             case JDT_NUMBER: {
                 auto d = runtime->getDouble(v);
-                if (isnan(d)) {
-                    out.append("NaN");
-                } else {
-                    sprintf(buf, "%lf", d);
-                    out.append(buf);
-                }
+                auto len = floatToString(d, buf);
+                out.append(buf, len);
                 break;
             }
             case JDT_CHAR:
