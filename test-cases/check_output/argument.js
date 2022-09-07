@@ -1,3 +1,4 @@
+// Index: 0
 /* NOT_SUPPORTED，这种情况在正常情况几乎不会存在，故不解决
 
 //// 函数名和参数相同
@@ -47,6 +48,7 @@ function a() {
 */
 
 
+// Index: 1
 //// 变量名和参数相同
 function f3(a) {
     console.log(a);
@@ -64,6 +66,7 @@ f3(1);
 */
 
 
+// Index: 2
 //// 重新对 arguments 赋值，不不会影响 a
 function f4(a) {
     console.log(arguments[0]);
@@ -79,6 +82,7 @@ f4(1);
 */
 
 
+// Index: 3
 //// arguments 在 arrow function 中，使用的 arguments 是外面的
 function f5(a) {
     var f = x => arguments[1];
@@ -91,6 +95,7 @@ f5(1, 20);
 */
 
 
+// Index: 4
 //// 修改 argument 的 length 属性：并不会影响 arguments 内的参数个数
 function f6(a, b) {
     console.log(a, b, arguments.length);
@@ -121,11 +126,13 @@ f6(1, 20);
 1 20 20 1
 1 2 2 1
 3 4 xx
-{}
+{  }
 set as undefined undefined
 xy
 */
 
+
+// Index: 5
 //// arguments 出现在 eval 中
 function f7(a, b) {
     eval('console.log(arguments.length, arguments[0], arguments[1])');
@@ -138,6 +145,7 @@ f7(1, 2);
 */
 
 
+// Index: 6
 //// 参数个数不足的情况，修改 b，并不能修改到 arguments[1]
 function f8(a, b) {
     console.log(a, b);
@@ -153,6 +161,7 @@ f8(1);
 */
 
 
+// Index: 7
 //// 同名的参数，第二个参数会覆盖第一个参数
 function f9(a, a) {
     console.log(a);
@@ -166,3 +175,4 @@ f9(1, 2);
 2 1 2
 2 1 3
 */
+

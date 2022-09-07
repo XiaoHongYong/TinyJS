@@ -1,3 +1,4 @@
+// Index: 0
 function f1() {
     var undefined = 1;
     console.log(undefined);
@@ -19,6 +20,7 @@ f1();
 */
 
 
+// Index: 1
 function f2() {
     var NaN = 1;
     console.log(NaN);
@@ -39,6 +41,7 @@ NaN
 */
 
 
+// Index: 2
 function f3() {
     var a = NaN;
     console.log(a * 10);
@@ -56,6 +59,7 @@ NaN
 */
 
 
+// Index: 3
 function f4(undefined) {
     console.log(undefined);
     undefined = 4;
@@ -68,6 +72,7 @@ f4(1);
 */
 
 
+// Index: 4
 function f5() {
     function undefined() {}
     console.log(undefined);
@@ -79,3 +84,4 @@ f5();
 function undefined() {}
 2
 */
+

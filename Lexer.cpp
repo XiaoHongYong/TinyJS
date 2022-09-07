@@ -225,13 +225,13 @@ static cstr_t PARSE_ERROR_NAMES[] = {
     "ReferenceError: ",
 };
 
-cstr_t parseErrorToString(ParseError err) {
+cstr_t parseErrorToString(JsErrorType err) {
     assert(err >= 0 && err < CountOf(PARSE_ERROR_NAMES));
 
     return PARSE_ERROR_NAMES[err];
 }
 
-ParseException::ParseException(ParseError err, cstr_t format, ...) {
+ParseException::ParseException(JsErrorType err, cstr_t format, ...) {
     error = err;
     CStrPrintf strf;
 
@@ -539,7 +539,6 @@ void JSLexer::_readToken() {
             } else {
                 // ?
                 _curToken.type = TK_CONDITIONAL;
-                _curToken.opr = OP_CONDITIONAL;
             }
             break;
         case '^':
@@ -815,7 +814,7 @@ SizedString JSLexer::_escapeString(const SizedString &str) {
     return SizedString(out, size_t(po - out));
 }
 
-void JSLexer::_parseError(ParseError err, cstr_t format, ...) {
+void JSLexer::_parseError(JsErrorType err, cstr_t format, ...) {
     CStrPrintf strf;
 
     va_list        args;

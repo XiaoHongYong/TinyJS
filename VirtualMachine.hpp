@@ -29,6 +29,8 @@ using StackJsValues = std::vector<JsValue>;
 void registerGlobalValue(VMContext *ctx, VMScope *globalScope, const char *name, const JsValue &value);
 void registerGlobalObject(VMContext *ctx, VMScope *globalScope, const char *name, IJsObject *obj);
 
+JsValue newJsError(VMContext *ctx, JsErrorType errType, const JsValue &message = jsValueUndefined);
+
 enum VMMiscFlags {
     COMMON_STRINGS              = 1,
 
@@ -123,8 +125,8 @@ private:
 public:
     VMContext(VMRuntime *runtime);
 
-    void throwException(ParseError err, cstr_t format, ...);
-    void throwException(ParseError err, JsValue errorMessage);
+    void throwException(JsErrorType err, cstr_t format, ...);
+    void throwException(JsErrorType err, JsValue errorMessage);
 
     JsVirtualMachine            *vm;
     VMScope                     *curFunctionScope;
@@ -141,11 +143,11 @@ public:
     bool                        isReturnedForTry; // 如果 return 在 try 中，并且有 fainaly 会设置此标志
     JsValue                     retValue; // 函数的返回值
 
-    ParseError                  errorInTry;
+    JsErrorType                  errorInTry;
     JsValue                     errorMessageInTry;
 
     JsValue                     errorMessage;
-    ParseError                  error;
+    JsErrorType                  error;
 
 };
 

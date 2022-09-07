@@ -225,3 +225,5 @@ function f11() {
 }
 
 f11();
+/* OUTPUT
+*/

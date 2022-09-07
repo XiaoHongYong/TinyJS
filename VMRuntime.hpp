@@ -227,6 +227,7 @@ public:
     bool toNumber(VMContext *ctx, const JsValue &v, double &out);
     JsValue toString(VMContext *ctx, const JsValue &v);
     SizedString toSizedString(VMContext *ctx, const JsValue &v, string &buf);
+    JsValue jsObjectToString(VMContext *ctx, const JsValue &v);
 
     bool isEmptyString(const JsValue &v);
     uint32_t getStringLength(const JsValue &v);

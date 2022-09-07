@@ -91,7 +91,7 @@ VMContext::VMContext(VMRuntime *runtime) : runtime(runtime) {
     error = PE_OK;
 }
 
-void VMContext::throwException(ParseError err, cstr_t format, ...) {
+void VMContext::throwException(JsErrorType err, cstr_t format, ...) {
     if (error != PE_OK) {
         return;
     }
@@ -102,8 +102,6 @@ void VMContext::throwException(ParseError err, cstr_t format, ...) {
     auto message = stringPrintf(format, args);
     va_end(args);
 
-    message.insert(0, parseErrorToString(err));
-
     // 将异常值添加到堆栈中
     // TODO: 需要转换为 err 对应的异常类型
     errorMessage = runtime->pushString(SizedString(message.c_str(), message.size()));
@@ -111,9 +109,9 @@ void VMContext::throwException(ParseError err, cstr_t format, ...) {
     throwException(err, errorMessage);
 }
 
-void VMContext::throwException(ParseError err, JsValue errorMessage) {
+void VMContext::throwException(JsErrorType err, JsValue errorMessage) {
     this->error = err;
-    this->errorMessage = errorMessage;
+    this->errorMessage = newJsError(this, error, errorMessage);
 
     if (isReturnedForTry) {
         // 在 finally 中抛出异常，会清除 return 相关内容
@@ -1132,10 +1130,6 @@ void JsVirtualMachine::call(Function *function, VMContext *ctx, VecVMStackScopes
                 JsValue right = stack.back(); stack.pop_back();
                 JsValue left = stack.back();
                 stack.back() = arithmeticBinaryOperation(ctx, runtime, left, right, BinaryOpExp());
-                break;
-            }
-            case OP_CONDITIONAL: {
-                assert(0);
                 break;
             }
             case OP_NULLISH: {

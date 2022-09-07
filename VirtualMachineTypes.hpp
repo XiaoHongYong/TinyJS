@@ -97,7 +97,6 @@ class VMContext;
     OP_ITEM(OP_MOD, ""), \
     OP_ITEM(OP_EXP, ""), \
     \
-    OP_ITEM(OP_CONDITIONAL, ""), \
     OP_ITEM(OP_NULLISH, ""), \
     OP_ITEM(OP_LOGICAL_OR, ""), \
     OP_ITEM(OP_LOGICAL_AND, ""), \

@@ -24,7 +24,7 @@ public:
 
 };
 
-JsLibObject::JsLibObject(VMRuntimeCommon *rt, JsLibProperty *libProps, int countProps, JsNativeFunction function) : _libProps(libProps), _libPropsEnd(libProps + countProps), _function(function) {
+JsLibObject::JsLibObject(VMRuntimeCommon *rt, JsLibProperty *libProps, int countProps, JsNativeFunction function, const JsValue &proto) : _libProps(libProps), _libPropsEnd(libProps + countProps), _function(function), __proto__(proto, false, false, false, true) {
     type = JDT_LIB_OBJECT;
     _obj = nullptr;
     _modified = false;
@@ -201,6 +201,18 @@ JsProperty *JsLibObject::getRawByName(VMContext *ctx, const SizedString &name, J
 
     if (_obj) {
         return _obj->getRawByName(ctx, name, funcGetterOut, includeProtoProp);
+    } else {
+        // 查找 prototye 的属性
+        auto &proto = __proto__.value;
+        JsNativeFunction funcGetter = nullptr;
+        if (proto.type == JDT_NOT_INITIALIZED) {
+            // 缺省的 Object.prototype
+            return ctx->runtime->objPrototypeObject->getRawByName(ctx, name, funcGetter, true);
+        } else if (proto.type >= JDT_OBJECT) {
+            auto obj = ctx->runtime->getObject(proto);
+            assert(obj);
+            return obj->getRawByName(ctx, name, funcGetter, true);
+        }
     }
 
     return nullptr;
@@ -280,8 +292,7 @@ void setPrototype(JsLibProperty *prop, const JsProperty &value) {
 void JsLibObject::_newObject() {
     assert(_obj == nullptr);
 
-    // 如果是 Object.prototype, 避免循环调用到 __proto__ 的 get 函数中.
-    _obj = new JsObject(_isObjectPrototype ? jsValueNull : jsValueNotInitialized);
+    _obj = new JsObject(__proto__.value);
 }
 
 void JsLibObject::_copyForModify() {

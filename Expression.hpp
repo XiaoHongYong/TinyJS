@@ -987,8 +987,19 @@ public:
     JsExprConditional(IJsNode *cond, IJsNode *exprTrue, IJsNode *exprFalse) : IJsNode(NT_CONDITIONAL), cond(cond), exprTrue(exprTrue), exprFalse(exprFalse) { }
     
     virtual void convertToByteCode(ByteCodeStream &stream) {
-        // writer.writeOpCode(OP_CONDITIONAL);
-        assert(0);
+        cond->convertToByteCode(stream);
+
+        stream.writeOpCode(OP_JUMP_IF_FALSE);
+        auto addrFalse = stream.writeReservedAddress();
+
+        exprTrue->convertToByteCode(stream);
+        stream.writeOpCode(OP_JUMP);
+        auto addrEnd = stream.writeReservedAddress();
+
+        *addrFalse = stream.address();
+        exprFalse->convertToByteCode(stream);
+
+        *addrEnd = stream.address();
     }
 
 protected:

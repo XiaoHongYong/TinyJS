@@ -9,6 +9,15 @@
 #define BinaryOperation_hpp
 
 
+inline bool throwSymbolConvertException(VMContext *ctx) {
+    ctx->throwException(PE_TYPE_ERROR, "Cannot convert a Symbol value to a number");
+    return false;
+}
+
+inline void throwSymbolConvertStringException(VMContext *ctx) {
+    ctx->throwException(PE_TYPE_ERROR, "Cannot convert a Symbol value to a string");
+}
+
 struct BinaryOpSub {
     JsValue operator()(VMRuntime *rt, int32_t a, int32_t b) const {
         int64_t r = (int64_t)a - (int64_t)b;
@@ -143,7 +152,8 @@ struct BinaryOpExp {
     }
 
     JsValue operator()(VMRuntime *rt, int32_t a, double b) const {
-        if (isnan(b)) {
+        if (isnan(b) || (isinf(b) && (a == 1 || a == -1))) {
+            // 1 ** Infinity
             return jsValueNaN;
         }
 
@@ -152,10 +162,11 @@ struct BinaryOpExp {
     }
 
     JsValue operator()(VMRuntime *rt, double a, double b) const {
-        if (isnan(b)) {
+        if (isnan(b) || (isinf(b) && (a == 1 || a == -1))) {
+            // 1 ** Infinity
             return jsValueNaN;
         }
-
+        
         auto r = pow(a, b);
         return rt->pushDoubleValue(r);
     }
@@ -207,7 +218,7 @@ inline JsValue plusOperate(VMContext *ctx, VMRuntime *rt, int32_t left, const Js
             return rt->pushDoubleValue(r);
         }
         case JDT_SYMBOL:
-            ctx->throwException(PE_TYPE_ERROR, "Cannot convert a Symbol value to a number");
+            throwSymbolConvertException(ctx);
             return jsValueNaN;
         case JDT_CHAR: {
             char buf[64];
@@ -223,14 +234,17 @@ inline JsValue plusOperate(VMContext *ctx, VMRuntime *rt, int32_t left, const Js
             buf[len++] = (char )right.value.index;
             return rt->pushString(SizedString(buf, len));
         }
-        default: {
-            JsValue r = rt->toString(ctx, right);
+        case JDT_STRING: {
             if (leftStr.isValid()) {
-                return rt->addString(leftStr, r);
+                return rt->addString(leftStr, right);
             } else {
-                SizedStringWrapper s(left);
-                return rt->addString(s, r);
+                char buf[64];
+                auto len = (uint32_t)::itoa(left, buf);
+                return rt->addString(SizedString(buf, len), right);
             }
+        }
+        default: {
+            return plusOperate(ctx, rt, left, leftStr, rt->jsObjectToString(ctx, right));
         }
     }
 }
@@ -249,7 +263,7 @@ inline JsValue plusOperate(VMContext *ctx, VMRuntime *rt, const JsValue &left, c
                     // 转换为 number，算 NaN
                     return jsValueNaN;
                 case JDT_SYMBOL:
-                    ctx->throwException(PE_TYPE_ERROR, "Cannot convert a Symbol value to a number");
+                    throwSymbolConvertException(ctx);
                     return jsValueNaN;
                 case JDT_CHAR: {
                     char buf[32] = "undefined";
@@ -259,8 +273,7 @@ inline JsValue plusOperate(VMContext *ctx, VMRuntime *rt, const JsValue &left, c
                 case JDT_STRING:
                     return rt->addString(JsStringValueUndefined, right);
                 default: {
-                    auto r = rt->toString(ctx, right);
-                    return rt->addString(JsStringValueUndefined, r);
+                    return plusOperate(ctx, rt, left, rt->jsObjectToString(ctx, right));
                 }
             }
             break;
@@ -291,13 +304,16 @@ inline JsValue plusOperate(VMContext *ctx, VMRuntime *rt, const JsValue &left, c
                     return rt->pushDoubleValue(r);
                 }
                 case JDT_SYMBOL:
-                    ctx->throwException(PE_TYPE_ERROR, "Cannot convert a Symbol value to a number");
+                    throwSymbolConvertException(ctx);
                     return jsValueNaN;
-                default: {
+                case JDT_CHAR:
+                case JDT_STRING: {
                     auto s = rt->toString(ctx, left);
                     auto r = rt->toString(ctx, right);
                     return rt->addString(s, r);
                 }
+                default:
+                    return plusOperate(ctx, rt, left, rt->jsObjectToString(ctx, right));
             }
             break;
         }
@@ -323,13 +339,10 @@ inline JsValue plusOperate(VMContext *ctx, VMRuntime *rt, const JsValue &left, c
                     return rt->pushString(str.str());
                 }
                 case JDT_SYMBOL:
-                    ctx->throwException(PE_TYPE_ERROR, "Cannot convert a Symbol value to a number");
+                    throwSymbolConvertStringException(ctx);
                     return jsValueNaN;
-                default: {
-                    SizedStringWrapper str1(left);
-                    auto r = rt->toString(ctx, right);
-                    return rt->addString(str1.str(), r);
-                }
+                default:
+                    return plusOperate(ctx, rt, left, rt->jsObjectToString(ctx, right));
             }
             break;
         }
@@ -358,61 +371,20 @@ inline JsValue plusOperate(VMContext *ctx, VMRuntime *rt, const JsValue &left, c
                     return rt->addString(left, str);
                 }
                 case JDT_SYMBOL:
-                    ctx->throwException(PE_TYPE_ERROR, "Cannot convert a Symbol value to a number");
+                    throwSymbolConvertStringException(ctx);
                     return jsValueNaN;
-                default: {
-                    auto r = rt->toString(ctx, right);
-                    return rt->addString(left, r);
-                }
+                default:
+                    return plusOperate(ctx, rt, left, rt->jsObjectToString(ctx, right));
             }
             break;
         }
         case JDT_SYMBOL: {
-            ctx->throwException(PE_TYPE_ERROR, "Cannot convert a Symbol value to a number");
+            throwSymbolConvertException(ctx);
             return jsValueNaN;
         }
-        default: {
-            auto str1 = rt->toString(ctx, left);
-            switch (right.type) {
-                case JDT_NOT_INITIALIZED:
-                case JDT_UNDEFINED:
-                    return rt->addString(str1, JsStringValueUndefined);
-                case JDT_NULL:
-                    return rt->addString(str1, JsStringValueNull);
-                case JDT_BOOL:
-                    return rt->addString(str1, right.value.n32 ? JsStringValueTrue : JsStringValueFalse);
-                case JDT_INT32: {
-                    SizedStringWrapper str(right);
-                    return rt->addString(str1, str);
-                }
-                case JDT_CHAR: {
-                    SizedStringWrapper str(right);
-                    return rt->addString(str1, str);
-                }
-                case JDT_STRING: {
-                    return rt->addString(str1, right);
-                }
-                case JDT_NUMBER: {
-                    SizedStringWrapper str(rt->getDouble(right));
-                    return rt->addString(str1, str);
-                }
-                case JDT_SYMBOL:
-                    ctx->throwException(PE_TYPE_ERROR, "Cannot convert a Symbol value to a number");
-                    return jsValueNaN;
-                default: {
-                    auto r = rt->toString(ctx, right);
-                    return rt->addString(str1, r);
-                }
-            }
-            break;
-        }
+        default:
+            return plusOperate(ctx, rt, rt->jsObjectToString(ctx, left), right);
     }
-}
-
-
-inline bool throwSymbolConvertException(VMContext *ctx) {
-    ctx->throwException(PE_TYPE_ERROR, "Cannot convert a Symbol value to a number");
-    return false;
 }
 
 // <
@@ -587,13 +559,7 @@ inline bool relationalStringCmp(VMContext *ctx, VMRuntime *rt, const SizedString
         }
         default: {
             // Object 类型需要再此转换
-            ctx->vm->callMember(ctx, right, "toString", Arguments());
-            if (ctx->retValue.type >= JDT_OBJECT) {
-                ctx->throwException(PE_TYPE_ERROR, " Cannot convert object to primitive value");
-                return false;
-            }
-
-            return relationalStringCmp(ctx, rt, left, ctx->retValue, op);
+            return relationalStringCmp(ctx, rt, left, rt->jsObjectToString(ctx, right), op);
         }
     }
 }
@@ -652,13 +618,7 @@ inline bool relationalOperate(VMContext *ctx, VMRuntime *rt, const JsValue &left
         }
         default: {
             // Object 类型需要再此转换
-            ctx->vm->callMember(ctx, left, "toString", Arguments());
-            if (ctx->retValue.type >= JDT_OBJECT) {
-                ctx->throwException(PE_TYPE_ERROR, " Cannot convert object to primitive value");
-                return false;
-            }
-
-            return relationalOperate(ctx, rt, ctx->retValue, right, op);
+            return relationalOperate(ctx, rt, rt->jsObjectToString(ctx, left), right, op);
         }
     }
 }

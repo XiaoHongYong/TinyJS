@@ -34,7 +34,7 @@ private:
     JsLibObject &operator=(const JsLibObject &);
 
 public:
-    JsLibObject(VMRuntimeCommon *rt, JsLibProperty *libProps, int countProps, JsNativeFunction function = nullptr);
+    JsLibObject(VMRuntimeCommon *rt, JsLibProperty *libProps, int countProps, JsNativeFunction function = nullptr, const JsValue &proto = jsValuePrototypeObject);
     JsLibObject(JsLibObject *from);
     ~JsLibObject();
 
@@ -61,7 +61,6 @@ public:
     virtual IJsObject *clone() override;
     virtual IJsIterator *getIteratorObject(VMContext *ctx) override;
 
-    void setAsObjectPrototype() { _isObjectPrototype = true; }
     JsNativeFunction getFunction() const { return _function; }
 
 protected:
@@ -71,9 +70,10 @@ protected:
 protected:
     JsLibObject();
 
+    JsProperty                  __proto__;
+
     JsNativeFunction            _function;
     bool                        _modified;
-    bool                        _isObjectPrototype;
     JsLibProperty               *_libProps, *_libPropsEnd;
     JsObject                    *_obj;
 

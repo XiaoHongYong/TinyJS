@@ -263,8 +263,8 @@ static JsLibProperty objectPrototypeFunctions[] = {
 };
 
 void registerObject(VMRuntimeCommon *rt) {
-    auto prototypeObj = new JsLibObject(rt, objectPrototypeFunctions, CountOf(objectPrototypeFunctions));
-    prototypeObj->setAsObjectPrototype();
+    // Object.prototype 是 null
+    auto prototypeObj = new JsLibObject(rt, objectPrototypeFunctions, CountOf(objectPrototypeFunctions), nullptr, jsValueNull);
     rt->objPrototypeObject = prototypeObj;
     auto prototype = rt->pushObjValue(JDT_LIB_OBJECT, prototypeObj);
     assert(prototype == jsValuePrototypeObject);

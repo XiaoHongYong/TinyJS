@@ -1,3 +1,4 @@
+// Index: 0
 var obj1 = { toString() { return '3.0'; }}
 var obj2 = { toString() { return 1; }}
 function g() { }
@@ -39,8 +40,8 @@ function f1(r, p) {
         var a = Symbol();
         console.log(p != a);
     } catch (e) {
-        // console.log(e.name + ': ' + e.message);
-        console.log(e);
+        console.log(e.name + ': ' + e.message);
+        // console.log(e);
     }
 }
 f1('1', undefined);
@@ -973,3 +974,4 @@ round:  28
 29 true
 true
 */
+

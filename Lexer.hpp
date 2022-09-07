@@ -111,7 +111,7 @@ enum TokenType : uint8_t {
     TK_TEMPLATE_TAIL
 };
 
-enum ParseError {
+enum JsErrorType {
     PE_OK                   = 0,
     PE_SYNTAX_ERROR,
     PE_TYPE_ERROR,
@@ -119,16 +119,16 @@ enum ParseError {
     PE_REFERECNE_ERROR,
 };
 
-cstr_t parseErrorToString(ParseError err);
+cstr_t parseErrorToString(JsErrorType err);
 
 /**
  * 在代码解析阶段可抛出异常，不能在执行 bytecode 阶段抛出异常.
  */
 class ParseException : public std::exception {
 public:
-    ParseException(ParseError err, cstr_t format, ...);
+    ParseException(JsErrorType err, cstr_t format, ...);
 
-    ParseError              error;
+    JsErrorType              error;
     string                  message;
     
 };
@@ -192,7 +192,7 @@ protected:
     
     SizedString _escapeString(const SizedString &str);
 
-    void _parseError(ParseError err, cstr_t format, ...);
+    void _parseError(JsErrorType err, cstr_t format, ...);
 
 protected:
     ResourcePool            *_resPool;

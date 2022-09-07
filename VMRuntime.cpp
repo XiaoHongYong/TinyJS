@@ -647,6 +647,16 @@ bool VMRuntime::toNumber(VMContext *ctx, const JsValue &item, double &out) {
     }
 }
 
+JsValue VMRuntime::jsObjectToString(VMContext *ctx, const JsValue &v) {
+    assert(v.type >= JDT_OBJECT);
+    vm->callMember(ctx, v, "toString", Arguments());
+    if (ctx->retValue.type >= JDT_OBJECT) {
+        ctx->throwException(PE_TYPE_ERROR, " Cannot convert object to primitive value");
+        return JsStringValueEmpty;
+    }
+    return ctx->retValue;
+}
+
 JsValue VMRuntime::toString(VMContext *ctx, const JsValue &v) {
     JsValue val = v;
     if (val.type >= JDT_OBJECT) {
