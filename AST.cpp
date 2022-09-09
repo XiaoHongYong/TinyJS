@@ -111,10 +111,6 @@ void Scope::dump(BinaryOutputStream &stream) {
 
 IdentifierDeclare *Scope::addVarDeclaration(const Token &token, bool isConst, bool isScopeVar) {
     auto nameStr = tokenToSizedString(token);
-    if (nameStr.equal(SS_UNDEFINED)) {
-        // undefined 作为变量名是无效过的（仍然是 undefined），但是可以作为参数名和函数名.
-        return nullptr;
-    }
 
     auto it = varDeclares.find(nameStr);
     if (it == varDeclares.end()) {
@@ -409,4 +405,29 @@ void ResourcePool::dump(BinaryOutputStream &stream) {
         stream.writeFormat("    %llf,\n", d);
     }
     stream.write("  ]\n");
+}
+
+void JsStmtForIn::convertToByteCode(ByteCodeStream &stream) {
+    writeEnterScope(scope, stream);
+
+    obj->convertToByteCode(stream);
+    stream.writeOpCode(isIn ? OP_ITERATOR_IN_CREATE : OP_ITERATOR_OF_CREATE);
+
+    auto addrLoopStart = stream.address();
+    stream.writeOpCode(isIn ? OP_ITERATOR_NEXT_KEY : OP_ITERATOR_NEXT_VALUE);
+    auto addrLoopEnd = stream.writeReservedAddress();
+
+    // var 需要转换为从堆栈上的赋值
+    var->convertAssignableToByteCode(nullptr, stream);
+
+    stream.writeOpCode(OP_POP_STACK_TOP);
+
+    if (stmt)
+        stmt->convertToByteCode(stream);
+
+    stream.writeOpCode(OP_JUMP);
+    stream.writeAddress(addrLoopStart);
+    *addrLoopEnd = stream.address();
+
+    writeLeaveScope(scope, stream);
 }

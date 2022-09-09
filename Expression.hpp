@@ -17,7 +17,47 @@ class IJsNode;
 
 class JsCommaExprs : public JsNodes {
 public:
-    JsCommaExprs() : JsNodes(NT_COMMA_EXPRESSION) { }
+    JsCommaExprs(JsNodeType type = NT_COMMA_EXPRESSION) : JsNodes(type) { }
+
+    virtual void convertToByteCode(ByteCodeStream &stream) {
+        assert(!nodes.empty());
+
+        uint16_t countPop = 0;
+        uint32_t end = (uint32_t)nodes.size() - 1;
+
+        for (int i = 0; i < end; i++) {
+            auto item = nodes[i];
+            if (item->type < _NT_CONST_EXPR_END) {
+                continue;
+            }
+
+            countPop++;
+            item->convertToByteCode(stream);
+
+            if (countPop >= 1000) {
+                // 及时清理堆栈
+                stream.writeOpCode(OP_POP_STACK_TOP_N);
+                stream.writeUint16(countPop);
+                countPop = 0;
+            }
+        }
+
+        if (countPop == 1) {
+            stream.writeOpCode(OP_POP_STACK_TOP);
+        } else if (countPop > 1) {
+            // 及时清理堆栈
+            stream.writeOpCode(OP_POP_STACK_TOP_N);
+            stream.writeUint16(countPop);
+        }
+
+        nodes.back()->convertToByteCode(stream);
+    }
+
+};
+
+class JsParenExpr : public JsCommaExprs {
+public:
+    JsParenExpr() : JsCommaExprs(NT_PAREN_EXPRESSION) { }
 
 };
 
@@ -125,6 +165,11 @@ public:
         noAssignAndRef = false;
     }
 
+    // 提供给 JsExprAssignX 使用，临时修改此标志
+    void setNotBeingAssigned() {
+        isBeingAssigned = false;
+    }
+
     virtual void setBeingAssigned() {
         isBeingAssigned = true;
     }
@@ -141,51 +186,56 @@ public:
             return;
         }
 
-        if (isBeingAssigned) {
-            // 赋值表达式的左边，前一个指令应该是 OP_ASSIGN_IDENTIFIER
-            // 这里需要写入 identifier 的地址
-            stream.writeUint8(OP_ASSIGN_IDENTIFIER);
-            writeAddress(stream);
-        } else {
-            // 将 identifier 压栈，根据不同的类型，优化使用不同的指令
-            if (declare->varStorageType == VST_ARGUMENT) {
-                if (declare->scope->function == scope->function) {
-                    stream.writeUint8(OP_PUSH_ID_LOCAL_ARGUMENT);
-                } else {
-                    stream.writeUint8(OP_PUSH_ID_PARENT_ARGUMENT);
-                    stream.writeUint8(declare->scope->depth);
-                    assert(declare->scope->isFunctionScope);
-                }
-                stream.writeUint16(declare->storageIndex);
-            } else if (declare->varStorageType == VST_SCOPE_VAR || declare->varStorageType == VST_FUNCTION_VAR) {
-                if (scope == declare->scope) {
-                    stream.writeUint8(OP_PUSH_ID_LOCAL_SCOPE);
-                } else {
-                    if (declare->scope->depth == 0) {
-                        stream.writeUint8(OP_PUSH_ID_GLOBAL);
-                    } else {
-                        stream.writeUint8(OP_PUSH_ID_PARENT_SCOPE);
-                        stream.writeUint8(declare->scope->depth);
-                    }
-                }
-                stream.writeUint16(declare->storageIndex);
-            } else if (declare->varStorageType == VST_GLOBAL_VAR) {
-                stream.writeUint8(OP_PUSH_ID_GLOBAL);
-                stream.writeUint16(declare->storageIndex);
+        assert(!isBeingAssigned);
+
+        // 将 identifier 压栈，根据不同的类型，优化使用不同的指令
+        if (declare->varStorageType == VST_ARGUMENT) {
+            if (declare->scope->function == scope->function) {
+                stream.writeUint8(OP_PUSH_ID_LOCAL_ARGUMENT);
             } else {
-                assert(declare->varStorageType == VST_NOT_SET);
-                assert(declare->isFuncName);
-                if (declare->isFuncName) {
-                    if (scope == declare->scope) {
-                        stream.writeUint8(OP_PUSH_ID_LOCAL_FUNCTION);
-                    } else {
-                        stream.writeUint8(OP_PUSH_ID_PARENT_FUNCTION);
-                        stream.writeUint8(declare->scope->depth);
-                    }
-                }
-                stream.writeUint16(declare->storageIndex);
+                stream.writeUint8(OP_PUSH_ID_PARENT_ARGUMENT);
+                stream.writeUint8(declare->scope->depth);
+                assert(declare->scope->isFunctionScope);
             }
+            stream.writeUint16(declare->storageIndex);
+        } else if (declare->varStorageType == VST_SCOPE_VAR || declare->varStorageType == VST_FUNCTION_VAR) {
+            if (scope == declare->scope) {
+                stream.writeUint8(OP_PUSH_ID_LOCAL_SCOPE);
+            } else {
+                if (declare->scope->depth == 0) {
+                    stream.writeUint8(OP_PUSH_ID_GLOBAL);
+                } else {
+                    stream.writeUint8(OP_PUSH_ID_PARENT_SCOPE);
+                    stream.writeUint8(declare->scope->depth);
+                }
+            }
+            stream.writeUint16(declare->storageIndex);
+        } else if (declare->varStorageType == VST_GLOBAL_VAR) {
+            stream.writeUint8(OP_PUSH_ID_GLOBAL);
+            stream.writeUint16(declare->storageIndex);
+        } else {
+            assert(declare->varStorageType == VST_NOT_SET);
+            assert(declare->isFuncName);
+            if (declare->isFuncName) {
+                if (scope == declare->scope) {
+                    stream.writeUint8(OP_PUSH_ID_LOCAL_FUNCTION);
+                } else {
+                    stream.writeUint8(OP_PUSH_ID_PARENT_FUNCTION);
+                    stream.writeUint8(declare->scope->depth);
+                }
+            }
+            stream.writeUint16(declare->storageIndex);
         }
+    }
+
+    virtual void convertAssignableToByteCode(IJsNode *valueOpt, ByteCodeStream &stream) {
+        assert(isBeingAssigned);
+        if (valueOpt) {
+            valueOpt->convertToByteCode(stream);
+        }
+
+        stream.writeUint8(OP_ASSIGN_IDENTIFIER);
+        writeAddress(stream);
     }
 
     SizedString             name;
@@ -221,6 +271,20 @@ public:
         stream.writeOpCode(OP_PUSH_MEMBER_INDEX);
     }
 
+    virtual void convertAssignableToByteCode(IJsNode *valueOpt, ByteCodeStream &stream) {
+        assert(isBeingAssigned);
+
+        obj->convertToByteCode(stream);
+        index->convertToByteCode(stream);
+
+        if (valueOpt) {
+            valueOpt->convertToByteCode(stream);
+            stream.writeUint8( OP_ASSIGN_MEMBER_INDEX);
+        } else {
+            stream.writeUint8( OP_ASSIGN_VALUE_AHEAD_MEMBER_INDEX);
+        }
+    }
+
     IJsNode                     *obj;
     IJsNode                     *index;
 
@@ -241,6 +305,22 @@ public:
         assert(!isBeingAssigned);
         obj->convertToByteCode(stream);
         stream.writeOpCode(isOptional ? OP_PUSH_MEMBER_DOT_OPTIONAL : OP_PUSH_MEMBER_DOT);
+        stream.writeUint32(stringIdx);
+    }
+
+    virtual void convertAssignableToByteCode(IJsNode *valueOpt, ByteCodeStream &stream) {
+        assert(!isOptional);
+        assert(isBeingAssigned);
+
+        obj->convertToByteCode(stream);
+
+        if (valueOpt) {
+            valueOpt->convertToByteCode(stream);
+            stream.writeUint8( OP_ASSIGN_MEMBER_DOT);
+        } else {
+            stream.writeUint8( OP_ASSIGN_VALUE_AHEAD_MEMBER_DOT);
+        }
+
         stream.writeUint32(stringIdx);
     }
 
@@ -541,12 +621,13 @@ public:
     }
 
     virtual void convertToByteCode(ByteCodeStream &stream) {
-        if (isBeingAssigned) {
-        } else {
-            expr->convertToByteCode(stream);
-            stream.writeUint8(OP_ARRAY_PUSH_VALUE);
-        }
+        assert(!isBeingAssigned);
+
+        expr->convertToByteCode(stream);
+        stream.writeUint8(OP_ARRAY_PUSH_VALUE);
     }
+
+    virtual void convertAssignableToByteCode(IJsNode *valueOpt, ByteCodeStream &stream);
 
 protected:
     IJsNode                         *expr;
@@ -567,12 +648,14 @@ public:
     }
 
     virtual void convertToByteCode(ByteCodeStream &stream) {
-        if (isBeingAssigned) {
-            stream.writeUint8(OP_ARRAY_ASSIGN_REST_VALUE);
-        } else {
-            expr->convertToByteCode(stream);
-            stream.writeUint8(OP_ARRAY_SPREAD_VALUE);
-        }
+        assert(!isBeingAssigned);
+        expr->convertToByteCode(stream);
+        stream.writeUint8(OP_ARRAY_SPREAD_VALUE);
+    }
+
+    virtual void convertAssignableToByteCode(IJsNode *valueOpt, ByteCodeStream &stream) {
+        assert(isBeingAssigned);
+        stream.writeUint8(OP_ARRAY_ASSIGN_REST_VALUE);
     }
 
 protected:
@@ -591,11 +674,13 @@ public:
     }
 
     virtual void convertToByteCode(ByteCodeStream &stream) {
-        if (isBeingAssigned) {
-            // 仅仅占位
-        } else {
-            stream.writeUint8(OP_ARRAY_PUSH_UNDEFINED_VALUE);
-        }
+        assert(!isBeingAssigned);
+        stream.writeUint8(OP_ARRAY_PUSH_UNDEFINED_VALUE);
+    }
+
+    virtual void convertAssignableToByteCode(IJsNode *valueOpt, ByteCodeStream &stream) {
+        assert(isBeingAssigned);
+        // 仅仅占位
     }
 
 };
@@ -623,29 +708,32 @@ public:
     }
 
     virtual void convertToByteCode(ByteCodeStream &stream) {
-        if (isBeingAssigned) {
-            // Array Assignable 赋值
-            auto size = nodes.size();
-            for (int i = 0; i < size; i++) {
-                auto item = nodes[i];
-                // item->initFromStackTop = true;
+        assert(!isBeingAssigned);
+        // Array 表达式
+        stream.writeOpCode(OP_ARRAY_CREATE);
 
-                // 从 initExpr 获取第 index 个元素，压入堆栈，用于赋值
-                stream.writeOpCode(OP_PUSH_THIS_MEMBER_INDEX_INT);
-                stream.writeUint32(i);
+        for (auto item : nodes) {
+            item->convertToByteCode(stream);
+        }
+    }
 
-                item->convertToByteCode(stream);
+    virtual void convertAssignableToByteCode(IJsNode *valueOpt, ByteCodeStream &stream) {
+        assert(isBeingAssigned);
 
-                // 弹出压入的 OP_PUSH_THIS_MEMBER_INDEX_INT
-                stream.writeOpCode(OP_POP_STACK_TOP);
-            }
-        } else {
-            // Array 表达式
-            stream.writeOpCode(OP_ARRAY_CREATE);
+        // Array Assignable 赋值
+        auto size = nodes.size();
+        for (int i = 0; i < size; i++) {
+            auto item = nodes[i];
+            // item->initFromStackTop = true;
 
-            for (auto item : nodes) {
-                item->convertToByteCode(stream);
-            }
+            // 从 initExpr 获取第 index 个元素，压入堆栈，用于赋值
+            stream.writeOpCode(OP_PUSH_THIS_MEMBER_INDEX_INT);
+            stream.writeUint32(i);
+
+            item->convertAssignableToByteCode(nullptr, stream);
+
+            // 弹出压入的 OP_PUSH_THIS_MEMBER_INDEX_INT
+            stream.writeOpCode(OP_POP_STACK_TOP);
         }
     }
 
@@ -661,9 +749,15 @@ public:
     }
 
     virtual void convertToByteCode(ByteCodeStream &stream) {
+        assert(!isBeingAssigned);
         expr->convertToByteCode(stream);
         stream.writeUint8(OP_OBJ_SET_PROPERTY);
         stream.writeUint32(nameIdx);
+    }
+
+    virtual void convertAssignableToByteCode(IJsNode *valueOpt, ByteCodeStream &stream) {
+        assert(isBeingAssigned);
+        assert(0 && "TBD");
     }
 
 protected:
@@ -690,6 +784,10 @@ public:
     }
 
     virtual void convertToByteCode(ByteCodeStream &stream) {
+        assert(0 && "NOT a valid js grammer.");
+    }
+
+    virtual void convertAssignableToByteCode(IJsNode *valueOpt, ByteCodeStream &stream) {
         assert(isBeingAssigned);
 
         stream.writeOpCode(OP_PUSH_THIS_MEMBER_DOT);
@@ -762,16 +860,19 @@ public:
     }
 
     virtual void convertToByteCode(ByteCodeStream &stream) {
-        if (isBeingAssigned) {
-            name->convertToByteCode(stream);
-            assert(0);
-            stream.writeOpCode(OP_PUSH_THIS_MEMBER_INDEX);
-            value->convertToByteCode(stream);
-        } else {
-            name->convertToByteCode(stream);
-            value->convertToByteCode(stream);
-            stream.writeUint8(OP_OBJ_SET_COMPUTED_PROPERTY);
-        }
+        assert(!isBeingAssigned);
+        name->convertToByteCode(stream);
+        value->convertToByteCode(stream);
+        stream.writeUint8(OP_OBJ_SET_COMPUTED_PROPERTY);
+    }
+
+    virtual void convertAssignableToByteCode(IJsNode *valueOpt, ByteCodeStream &stream) {
+        assert(isBeingAssigned);
+
+        name->convertToByteCode(stream);
+        assert(0);
+        stream.writeOpCode(OP_PUSH_THIS_MEMBER_INDEX);
+        value->convertToByteCode(stream);
     }
 
 protected:
@@ -792,8 +893,14 @@ public:
     }
 
     virtual void convertToByteCode(ByteCodeStream &stream) {
+        assert(!isBeingAssigned);
         expr->convertToByteCode(stream);
         stream.writeUint8(OP_OBJ_SPREAD_PROPERTY);
+    }
+
+    virtual void convertAssignableToByteCode(IJsNode *valueOpt, ByteCodeStream &stream) {
+        assert(isBeingAssigned);
+        assert(0 && "TBD");
     }
 
 protected:
@@ -829,16 +936,19 @@ public:
     }
 
     virtual void convertToByteCode(ByteCodeStream &stream) {
-        if (isBeingAssigned) {
-            // Object Assignable 赋值
-        } else {
-            // Object 表达式
-            stream.writeOpCode(OP_OBJ_CREATE);
+        assert(!isBeingAssigned);
+        // Object 表达式
+        stream.writeOpCode(OP_OBJ_CREATE);
 
-            for (auto item : nodes) {
-                item->convertToByteCode(stream);
-            }
+        for (auto item : nodes) {
+            item->convertToByteCode(stream);
         }
+    }
+
+    virtual void convertAssignableToByteCode(IJsNode *valueOpt, ByteCodeStream &stream) {
+        // Object Assignable 赋值
+        assert(isBeingAssigned);
+        assert(0 && "TBD");
     }
 
 };
@@ -858,6 +968,12 @@ public:
     }
 
     virtual void convertToByteCode(ByteCodeStream &stream) {
+        // 两种方式都有可能会调用到.
+        convertAssignableToByteCode(nullptr, stream);
+    }
+
+    virtual void convertAssignableToByteCode(IJsNode *valueOpt, ByteCodeStream &stream) {
+        assert(isBeingAssigned);
         if (defVal) {
             // 如果栈顶的值为 undefined，则使用缺省值，否则使用栈顶值
             stream.writeUint8(OP_JUMP_IF_NOT_NULL_UNDEFINED_KEEP_VALID);
@@ -869,9 +985,11 @@ public:
             *addrEnd = stream.address();
         }
 
-        left->convertToByteCode(stream);
+        left->convertAssignableToByteCode(nullptr, stream);
     }
 
+    IJsNode *defaultValue() { return defVal; }
+    
 protected:
     IJsNode                         *left, *defVal;
     bool                            isAssignFromStack;
@@ -892,46 +1010,12 @@ public:
     }
 
     virtual void convertToByteCode(ByteCodeStream &stream) {
-        switch (left->type) {
-            case NT_IDENTIFIER: {
-                right->convertToByteCode(stream);
-                left->convertToByteCode(stream);
-                break;
-            }
-            case NT_MEMBER_INDEX: {
-                auto e = (JsExprMemberIndex *)left;
-                e->obj->convertToByteCode(stream);
-                e->index->convertToByteCode(stream);
-
-                right->convertToByteCode(stream);
-
-                stream.writeUint8(OP_ASSIGN_MEMBER_INDEX);
-                break;
-            }
-            case NT_MEMBER_DOT: {
-                auto e = (JsExprMemberDot *)left;
-                e->obj->convertToByteCode(stream);
-
-                right->convertToByteCode(stream);
-
-                assert(!e->isOptional);
-                stream.writeUint8(OP_ASSIGN_MEMBER_DOT);
-                stream.writeUint32(e->stringIdx);
-                break;
-            }
-            case NT_OBJECT:
-            case NT_ARRAY: {
-                right->convertToByteCode(stream);
-                left->convertToByteCode(stream);
-                break;
-            }
-            default:
-                assert(0);
-                break;
-        }
+        left->convertAssignableToByteCode(right, stream);
     }
 
 protected:
+    friend class JsExprArrayItem;
+
     IJsNode                         *left, *right;
 
 };
@@ -940,9 +1024,6 @@ class JsExprAssignX : public IJsNode {
 public:
     JsExprAssignX(IJsNode *left, IJsNode *right, OpCode xopr) : IJsNode(NT_ASSIGN_X), left(left), right(right), xopr(xopr) {
         left->setBeingAssigned();
-    }
-
-    virtual void setBeingAssigned() {
     }
 
     virtual void convertToByteCode(ByteCodeStream &stream) {
@@ -971,8 +1052,15 @@ public:
             stream.writeOpCode(OP_ASSIGN_MEMBER_INDEX);
         } else {
             right->convertToByteCode(stream);
+
             assert(left->type == NT_IDENTIFIER);
-            left->convertToByteCode(stream);
+            auto id = (JsExprIdentifier *)left;
+            id->setNotBeingAssigned();
+            id->convertToByteCode(stream);
+            id->setBeingAssigned();
+
+            stream.writeOpCode(xopr);
+            left->convertAssignableToByteCode(nullptr, stream);
         }
     }
 

@@ -59,9 +59,11 @@ public:
     virtual bool removeBySymbol(VMContext *ctx, uint32_t index) override;
 
     virtual IJsObject *clone() override;
+    virtual bool isOfIterable() override { return _isOfIterable; }
     virtual IJsIterator *getIteratorObject(VMContext *ctx) override;
 
     JsNativeFunction getFunction() const { return _function; }
+    void setOfIteratorTrue() { _isOfIterable = true; }
 
 protected:
     virtual void _newObject();
@@ -74,6 +76,7 @@ protected:
 
     JsNativeFunction            _function;
     bool                        _modified;
+    bool                        _isOfIterable;
     JsLibProperty               *_libProps, *_libPropsEnd;
     JsObject                    *_obj;
 

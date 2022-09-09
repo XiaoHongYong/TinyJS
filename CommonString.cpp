@@ -65,15 +65,19 @@ SizedString intToSizedString(uint32_t n) {
 }
 
 NumberToSizedString::NumberToSizedString(uint32_t n) {
+    set(n);
+}
+
+void NumberToSizedString::set(uint32_t n) {
     auto ss = intToSizedString(n);
     if (ss.len == 0) {
-        ss.len = (uint32_t)::itoa(n, (char *)_buf);
-        ss.data = _buf;
+        len = (uint32_t)::itoa(n, (char *)_buf);
+        data = _buf;
+    } else {
+        len = ss.len;
+        data = ss.data;
+        unused = ss.unused;
     }
-
-    len = ss.len;
-    data = ss.data;
-    unused = ss.unused;
 }
 
 SizedStringWrapper::SizedStringWrapper(int32_t n) {
@@ -105,6 +109,11 @@ SizedStringWrapper::SizedStringWrapper(const JsValue &v) {
         SizedStringWrapper s2(v.value.n32);
         append(s2.str());
     }
+}
+
+void SizedStringWrapper::clear() {
+    len = 0;
+    data = _buf;
 }
 
 bool SizedStringWrapper::append(const JsValue &v) {

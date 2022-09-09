@@ -4,8 +4,8 @@ var obj2 = { toString() { return 1; }}
 function g() { }
 
 // 测试 ==
-function f1(r, p) {
-    console.log('round: ', r, p);
+function f1(r, p, noPrint) {
+    console.log('round: ', r, noPrint ? '' : p);
 
     console.log('1', p > undefined);
     console.log('2', p > null);
@@ -67,9 +67,9 @@ f1('20', '0.0');
 f1('21', '1.0');
 f1('22', 'true');
 f1('23', 'false');
-f1('24', g);
-f1('25', obj1);
-f1('26', obj2);
+f1('24', g, 1);
+f1('25', obj1, 1);
+f1('26', obj2, 1);
 f1('27', /a/);
 /* OUTPUT
 round:  1 undefined
@@ -785,7 +785,7 @@ round:  23 false
 28 false
 29 true
 TypeError: Cannot convert a Symbol value to a number
-round:  24 function g() { }
+round:  24 
 1 false
 2 false
 3 false
@@ -816,7 +816,7 @@ round:  24 function g() { }
 28 false
 29 true
 TypeError: Cannot convert a Symbol value to a number
-round:  25 { toString:  }
+round:  25 
 1 false
 2 true
 3 false
@@ -847,7 +847,7 @@ round:  25 { toString:  }
 28 true
 29 true
 TypeError: Cannot convert a Symbol value to a number
-round:  26 { toString:  }
+round:  26 
 1 false
 2 true
 3 false

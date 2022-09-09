@@ -107,54 +107,55 @@ bool IJsObject::getOwnPropertyDescriptor(VMContext *ctx, const JsValue &nameOrg,
     return false;
 }
 
-JsValue IJsObject::get(VMContext *ctx, const JsValue &thiz, const JsValue &nameOrg, const JsValue &defVal) {
-    JsValue name = nameOrg;
-    if (name.type >= JDT_OBJECT) {
-        name = ctx->runtime->toString(ctx, nameOrg);
-    }
-
-    JsNativeFunction funcGetter = nullptr;
-    JsProperty *prop = nullptr;
+JsProperty *IJsObject::getRaw(VMContext *ctx, const JsValue &name, JsNativeFunction &funcGetterOut, bool includeProtoProp) {
     switch (name.type) {
         case JDT_NOT_INITIALIZED:
             ctx->throwException(PE_TYPE_ERROR, "Cannot access '?' before initialization");
-            return jsValueUndefined;
-        case JDT_UNDEFINED: prop = getRawByName(ctx, SS_UNDEFINED, funcGetter, true); break;
-        case JDT_NULL: prop = getRawByName(ctx, SS_NULL, funcGetter, true); break;
-        case JDT_BOOL: prop = getRawByName(ctx, name.value.n32 ? SS_TRUE : SS_FALSE, funcGetter, true); break;
-        case JDT_INT32: prop = getRawByIndex(ctx, name.value.n32, true); break;
+            return nullptr;
+        case JDT_UNDEFINED: return getRawByName(ctx, SS_UNDEFINED, funcGetterOut, includeProtoProp); break;
+        case JDT_NULL: return getRawByName(ctx, SS_NULL, funcGetterOut, includeProtoProp); break;
+        case JDT_BOOL: return getRawByName(ctx, name.value.n32 ? SS_TRUE : SS_FALSE, funcGetterOut, includeProtoProp); break;
+        case JDT_INT32: return getRawByIndex(ctx, name.value.n32, includeProtoProp); break;
         case JDT_NUMBER: {
             auto d = ctx->runtime->getDouble(name);
             if (d == (int32_t)d) {
-                prop = getRawByIndex(ctx, (int32_t)d, true);
+                return getRawByIndex(ctx, (int32_t)d, includeProtoProp);
             } else {
                 char buf[64];
                 auto len = floatToString(d, buf);
-                prop = getRawByName(ctx, SizedString(buf, len), funcGetter, true);
+                return getRawByName(ctx, SizedString(buf, len), funcGetterOut, includeProtoProp);
             }
             break;
         }
         case JDT_CHAR: {
             char buf[32];
             buf[0] = name.value.n32;
-            prop = getRawByName(ctx, SizedString(buf, 1), funcGetter, true);
+            return getRawByName(ctx, SizedString(buf, 1), funcGetterOut, includeProtoProp);
             break;
         }
         case JDT_STRING: {
             auto str = ctx->runtime->getString(name);
-            prop = getRawByName(ctx, str, funcGetter, true);
+            return getRawByName(ctx, str, funcGetterOut, includeProtoProp);
             break;
         }
         case JDT_SYMBOL: {
-            prop = getRawBySymbol(ctx, name.value.index, true);
+            return getRawBySymbol(ctx, name.value.index, includeProtoProp);
             break;
         }
         default: {
-            ctx->throwException(PE_TYPE_ERROR, "Cannot convert object to primitive value");
-            return defVal;
+            assert(name.type >= JDT_OBJECT);
+            auto nameNew = ctx->runtime->jsObjectToString(ctx, name);
+            if (ctx->error != PE_OK) {
+                return nullptr;
+            }
+            return getRaw(ctx, nameNew, funcGetterOut, includeProtoProp);
         }
     }
+}
 
+JsValue IJsObject::get(VMContext *ctx, const JsValue &thiz, const JsValue &nameOrg, const JsValue &defVal) {
+    JsNativeFunction funcGetter = nullptr;
+    JsProperty *prop = getRaw(ctx, nameOrg, funcGetter, true);
     if (prop) {
         if (prop->isGSetter) {
             if (funcGetter) {
@@ -313,15 +314,6 @@ bool IJsObject::remove(VMContext *ctx, const JsValue &propOrg) {
     }
 
     return true;
-}
-
-JsValue IJsObject::getIterator(VMContext *ctx) {
-//    auto obj = getIteratorObject(ctx);
-//    return ctx->runtime->pushObjValue(obj);
-
-    return jsValueUndefined;
-//    auto obj = getIteratorObject();
-//    return ctx->runtime->pushObjValue(obj);
 }
 
 /**

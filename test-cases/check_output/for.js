@@ -1,18 +1,63 @@
-//// for in array
-function f2() {
-    var a = [1, 2, 3, 5, 7];
-    a['x'] = 10;
-    a['y'] = 20;
-    for (var i in a) {
+// Index: 0
+//// for in arguments
+function f1(a, b) {
+    console.log('# 0')
+    for (var i in arguments) {
+        console.log(i, arguments[i]);
+    }
+    for (var i of arguments) {
+        console.log(i);
+    }
+
+    // 暂时不支持 chrome 中对 length 更改之后的 for 循环
+    // console.log('# 1')
+    // arguments.length = 3;
+    // for (var i in arguments) {
+    //     console.log(i, arguments[i]);
+    // }
+    // for (var i of arguments) {
+    //     console.log(i);
+    // }
+
+    // console.log('# 2')
+    // arguments.length = 3;
+    // arguments[2] = 'x';
+    // for (var i in arguments) {
+    //     console.log(i, arguments[i]);
+    // }
+    // for (var i of arguments) {
+    //     console.log(i);
+    // }
+
+    console.log('# 3')
+    arguments = [4, 5, 6, 7];
+    for (var i in arguments) {
+        console.log(i, arguments[i]);
+    }
+    for (var i of arguments) {
         console.log(i);
     }
 }
-f2();
+f1(1, 2);
 /* OUTPUT
-0 1 2 3 4 x y
+# 0
+0 1
+1 2
+1
+2
+# 3
+0 4
+1 5
+2 6
+3 7
+4
+5
+6
+7
 */
 
 
+// Index: 1
 //// for of array
 function f3() {
     var a = [1, 2, 3, 5, 7];
@@ -24,26 +69,38 @@ function f3() {
 }
 f3();
 /* OUTPUT
-1 2 3 5 7 10 20
+1
+2
+3
+5
+7
 */
 
 
+// Index: 2
 //// for in with in
 function f4() {
     var a = [1, 2, 3, 5, 7];
     a['x'] = 10;
-    a['y'] = 20;
     for (var i in 1 in (console.log(21), [2]), console.log(22), console.log(23), a) {
         console.log(i);
     }
 }
 f4();
 /* OUTPUT
-21 22 23
-0 1 2 3 4 x y
+21
+22
+23
+0
+1
+2
+3
+4
+x
 */
 
 
+// Index: 3
 //// for of array
 function f5() {
     var obj = { x : 1 };
@@ -74,6 +131,7 @@ g
 */
 
 
+// Index: 4
 //// for of array
 function f6() {
     var a = [[1, 2], [3, 5]];
@@ -89,6 +147,7 @@ f6();
 */
 
 
+// Index: 5
 //// for of array
 function f7() {
     var a = [[1, 2], [3, 5]];
@@ -105,6 +164,7 @@ f7();
 */
 
 
+// Index: 6
 //// for of array
 function f71() {
     var a = [[1, 2], [3, 5], [6], []];
@@ -123,6 +183,7 @@ f71();
 */
 
 
+// Index: 7
 //// for of array
 function f72() {
     var a = [[3, 5], [6], []];
@@ -136,12 +197,15 @@ function f72() {
 }
 f72();
 /* OUTPUT
-> 1 2
 > 3 5
-> 6 4
-> 3 4
+=g:  6
+> 6 undefined
+=g:  3
+> 3 undefined
 */
 
+
+// Index: 8
 //// for ;;;
 function f73() {
     var a = [0, 1, 2, 3, 4, 5];
@@ -153,15 +217,16 @@ function f73() {
 }
 f73();
 /* OUTPUT
-0 3
-1 4
-2 5
-3 6
-4 7
-5 8
+> 0 3
+> 1 4
+> 2 5
+> 3 6
+> 4 7
+> 5 8
 */
 
 
+// Index: 9
 //// for of array: SyntaxError: Invalid left-hand side in for-loop
 function f8() {
     var a = [[1, 2], [3, 5]];
@@ -173,23 +238,11 @@ function f8() {
 }
 f8();
 /* OUTPUT
+Uncaught SyntaxError: Invalid left-hand side in for-loop
 */
 
 
-//// for of array: SyntaxError: Invalid left-hand side in for-loop
-function f81() {
-    var a = [[1, 2], [3, 5]];
-    var i, j;
-
-    for (i = 1 of a) {
-        console.log('>', i);
-    }
-}
-f81();
-/* OUTPUT
-*/
-
-
+// Index: 10
 //// for of array: SyntaxError: Invalid left-hand side in for-loop
 function f82() {
     var a = [[1, 2], [3, 5]];
@@ -201,23 +254,11 @@ function f82() {
 }
 f82();
 /* OUTPUT
+Uncaught SyntaxError: Invalid left-hand side in for-loop
 */
 
 
-//// for of array: SyntaxError: Invalid left-hand side in for-in loop: Must have a single binding
-function f9() {
-    var a = [[1, 2], [3, 5]];
-    var i, j;
-
-    for (var i, j of a) {
-        console.log('>', i);
-    }
-}
-f9();
-/* OUTPUT
-*/
-
-
+// Index: 11
 //// for of array: SyntaxError: for-of loop variable declaration may not have an initializer
 function f10() {
     var a = [[1, 2], [3, 5]];
@@ -229,4 +270,116 @@ function f10() {
 }
 f10();
 /* OUTPUT
+Uncaught SyntaxError: for-of loop variable declaration may not have an initializer.
 */
+
+
+// Index: 12
+var arr1 = ['a', 'b', 1];
+var arr2 = [1, 4, 'x'];
+arr2.a = 'v1';
+arr2.b = 'v2';
+
+var obj = {'a': '_x', 1: 'y', f: function() {}};
+
+function f1(r, obj, noPrint) {
+    console.log('Round: ', r, noPrint ? '' : obj)
+
+    try {
+        for (var i in obj) {
+            console.log(i, obj[i]);
+        }
+        for (var i of obj) {
+            console.log(i);
+        }
+    } catch (e) {
+        console.log(e.toString());
+    }
+}
+f1('1', undefined);
+f1('2', null);
+f1('3', NaN);
+f1('4', Infinity);
+f1('5', 0);
+f1('6', '');
+f1('7', 'abc');
+f1('8', 'a');
+f1('9', 'abc'.charAt(2));
+f1('10', true);
+f1('11', '/a/');
+f1('12', Symbol('x'));
+f1('13', [11, 12, 13], 1);
+f1('14', obj, 1);
+f1('15', arr1, 1);
+f1('16', arr2, 1);
+f1('17', function () { return 1; }, 1);
+f1('18', Array.prototype, 1);
+/* OUTPUT-FIXED
+Round:  1 undefined
+TypeError: undefined is not iterable
+Round:  2 null
+TypeError: null is not iterable
+Round:  3 NaN
+TypeError: NaN is not iterable
+Round:  4 Infinity
+TypeError: Infinity is not iterable
+Round:  5 0
+TypeError: 0 is not iterable
+Round:  6  
+Round:  7 abc
+0 a
+1 b
+2 c
+a
+b
+c
+Round:  8 a
+0 a
+a
+Round:  9 c
+0 c
+c
+Round:  10 true
+TypeError: true is not iterable
+Round:  11 /a/
+0 /
+1 a
+2 /
+/
+a
+/
+Round:  12 Symbol(x)
+TypeError: Symbol(x) is not iterable
+Round:  13
+0 11
+1 12
+2 13
+11
+12
+13
+Round:  14
+f function() {}
+1 y
+a _x
+TypeError: [object Object] is not iterable
+Round:  15
+0 a
+1 b
+2 1
+a
+b
+1
+Round:  16
+0 1
+1 4
+2 x
+b v2
+a v1
+1
+4
+x
+Round:  17
+TypeError: function () { return 1; } is not iterable
+Round:  18
+*/
+

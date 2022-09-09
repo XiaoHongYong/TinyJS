@@ -1,14 +1,14 @@
-
+// Index: 0
 function f1() {
     try {
         try {
             let a = xxyy;
-        } catch (error) {
-            console.log('in catch1', error);
+        } catch (e) {
+            console.log('in catch1', e.name + ': ' + e.message);
             let b = xxy;;
         }
-    } catch (error) {
-        console.log('in catch2', error);
+    } catch (e) {
+        console.log('in catch2', e.name + ': ' + e.message);
     }
 }
 f1();
@@ -18,6 +18,7 @@ in catch2 ReferenceError: xxy is not defined
 */
 
 
+// Index: 1
 function f2() {
     try {
         try {
@@ -26,7 +27,7 @@ function f2() {
             console.log('in finally1');
             // let b = xxy;;
         }
-    } catch (error) {
+    } catch (e) {
         console.log('in catch2');
     } finally {
         console.log('in finally2');
@@ -40,6 +41,7 @@ in finally2
 */
 
 
+// Index: 2
 function f3() {
     try {
         try {
@@ -51,7 +53,7 @@ function f3() {
             console.log('in finally1');
             // let b = xxy;;
         }
-    } catch (error) {
+    } catch (e) {
         console.log('in catch2');
     } finally {
         console.log('in finally2');
@@ -66,6 +68,7 @@ in finally2
 */
 
 
+// Index: 3
 //// 在 finally 抛出的异常会导致在 try 中的 return 不生效
 function f4() {
     try {
@@ -79,7 +82,7 @@ function f4() {
             // let b = xxy;;
             throw "a";
         }
-    } catch (error) {
+    } catch (e) {
         console.log('in catch2');
     } finally {
         console.log('in finally2');
@@ -100,6 +103,7 @@ undefined
 */
 
 
+// Index: 4
 //// finally 处理后，会继续外层的异常处理
 function f41() {
     try {
@@ -110,8 +114,8 @@ function f41() {
             console.log('in finally1');
             //throw "a";
         }
-    } catch (error) {
-        console.log('in catch2', error);
+    } catch (e) {
+        console.log('in catch2', e.name + ': ' + e.message);
     } finally {
         console.log('in finally2');
     }
@@ -127,6 +131,7 @@ f4 end
 */
 
 
+// Index: 5
 //// finally 中的 return 会覆盖 throw 的异常，不会进入 catch2.
 function f42() {
     try {
@@ -137,8 +142,8 @@ function f42() {
             console.log('in finally1');
             return 1;
         }
-    } catch (error) {
-        console.log('in catch2', error);
+    } catch (e) {
+        console.log('in catch2', e.name + ': ' + e.message);
     } finally {
         console.log('in finally2');
     }
@@ -152,19 +157,37 @@ in finally2
 */
 
 
+// Index: 6
 function f5() {
     try {
         throw Error(['abc', 'def'])
-    } catch (error) {
-        console.log('in catch', error.toString());
+    } catch (e) {
+        console.log(typeof e.message);
+        console.log('in catch', e.name + ': ' + e.message);
+    }
+
+    try {
+        throw 'abc';
+    } catch (e) {
+        console.log(typeof e);
+    }
+
+    try {
+        throw NaN;
+    } catch (e) {
+        console.log(typeof e);
     }
 }
 f5();
 /* OUTPUT
+string
 in catch Error: abc,def
+string
+number
 */
 
 
+// Index: 7
 function f6() {
     try {
     } catch (e) {
@@ -177,6 +200,7 @@ f6
 */
 
 
+// Index: 8
 function f7() {
     try {
     } catch {
@@ -189,6 +213,7 @@ f7
 */
 
 
+// Index: 9
 function f8() {
     try {
     } finally {
@@ -200,9 +225,10 @@ f8();
 f8
 */
 
-//// 在 chrome 下 会抛出异常 g 未定义，我们为了简化，仍然会把 g 添加到上层的 scope 中
+
+// Index: 10
 function f9() {
-    if (0)
+    if (1) // 如果 是 “0”， 在 chrome 下 会抛出异常 g 未定义，我们为了简化，仍然会把 g 添加到上层的 scope 中
         function g() { console.log(2); }
     else
         console.log(1);
@@ -212,11 +238,12 @@ function f9() {
 }
 f9();
 /* OUTPUT
-1
 2
 f9
 */
 
+
+// Index: 11
 function f10() {
     try {
         throw [1, 2];

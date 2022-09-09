@@ -20,7 +20,10 @@ class VMScope;
 class VMContext;
 class Arguments;
 class JsVirtualMachine;
+class IJsIterator;
 
+
+using VecJsIterators = vector<IJsIterator *>;
 
 typedef void (*JsNativeFunction)(VMContext *ctx, const JsValue &thiz, const Arguments &args);
 
@@ -120,6 +123,7 @@ public:
     void dump(BinaryOutputStream &stream);
 
     JsValue pushObjValue(JsDataType type, IJsObject *value);
+    JsValue pushJsIterator(IJsIterator *it) { uint32_t n = (uint32_t)iteratorValues.size(); iteratorValues.push_back(it); return JsValue(JDT_ITERATOR, n); }
     JsValue pushDoubleValue(double value) { uint32_t n = (uint32_t)doubleValues.size(); doubleValues.push_back(JsDouble(value)); return JsValue(JDT_NUMBER, n); }
     uint32_t pushResourcePool(ResourcePool *pool) { uint32_t n = (uint32_t)resourcePools.size(); resourcePools.push_back(pool); return n; }
     JsValue pushSymbolValue(JsSymbol &value) { uint32_t n = (uint32_t)symbolValues.size(); symbolValues.push_back(value); return JsValue(JDT_SYMBOL, n); }
@@ -173,6 +177,12 @@ public:
 
             return js.value.poolString.value;
         }
+    }
+
+    IJsIterator *getJsIterator(const JsValue &val) {
+        assert(val.type == JDT_ITERATOR);
+        assert(val.value.index < iteratorValues.size());
+        return iteratorValues[val.value.index];
     }
 
     IJsObject *getObject(const JsValue &val) {
@@ -234,9 +244,6 @@ public:
 
     bool testTrue(const JsValue &v);
 
-    JsValue increase(VMContext *ctx, JsValue &v, int inc);
-    JsValue increaseMemberDot(VMContext *ctx, const JsValue &obj, SizedString &name, int inc, bool isPost);
-
     void extendObject(const JsValue &dst, const JsValue &src);
 
 protected:
@@ -266,6 +273,7 @@ public:
     VecJsDoubles                doubleValues;
     VecJsSymbols                symbolValues;
     VecJsStrings                stringValues;
+    VecJsIterators              iteratorValues;
     VecJsObjects                objValues;
     VecJsNativeFunction         nativeFunctions;
     VecJsNativeFunction         nativeFunctionsModified; // 为了提高 GC 的性能，被修改的函数会被加入到此

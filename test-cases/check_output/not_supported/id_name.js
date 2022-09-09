@@ -1,3 +1,4 @@
+// Index: 0
 function f(a) {
     console.log(a);
     var a = 1;
@@ -11,3 +12,4 @@ f(2);
 1
 1
 */
+

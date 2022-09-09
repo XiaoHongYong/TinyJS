@@ -1,3 +1,4 @@
+// Index: 0
 function f1() {
     var obj = { toString() { return '1.0'; }}
     function g() { }
@@ -25,7 +26,7 @@ function f1() {
     try {
         obj.a = Symbol();         console.log(obj.a++);
     } catch (e) {
-        console.log(e);
+        console.log(e.name + ': ' + e.message);
     }
 }
 f1();
@@ -54,6 +55,7 @@ TypeError: Cannot convert a Symbol value to a number
 */
 
 
+// Index: 1
 function f2() {
     var obj = { toString() { return '1.0'; }}
     function g() { }
@@ -81,7 +83,7 @@ function f2() {
     try {
         obj.a = Symbol();         console.log(obj.a--);
     } catch (e) {
-        console.log(e);
+        console.log(e.name + ': ' + e.message);
     }
 }
 f2();
@@ -110,6 +112,7 @@ TypeError: Cannot convert a Symbol value to a number
 */
 
 
+// Index: 2
 function f3() {
     var obj = { toString() { return '1.0'; }}
     function g() { }
@@ -137,7 +140,7 @@ function f3() {
     try {
         obj.a = Symbol();         console.log(--obj.a);
     } catch (e) {
-        console.log(e);
+        console.log(e.name + ': ' + e.message);
     }
 }
 f3();
@@ -166,6 +169,7 @@ TypeError: Cannot convert a Symbol value to a number
 */
 
 
+// Index: 3
 function f4() {
     var obj = { toString() { return '1.0'; }}
     function g() { }
@@ -193,7 +197,7 @@ function f4() {
     try {
         obj.a = Symbol();         console.log(++obj.a);
     } catch (e) {
-        console.log(e);
+        console.log(e.name + ': ' + e.message);
     }
 }
 f4();
@@ -221,6 +225,8 @@ NaN NaN
 TypeError: Cannot convert a Symbol value to a number
 */
 
+
+// Index: 4
 // 仅有 setter：NaN
 function f5() {
     var obj = {  set x(a) { this._x += a;}, _x : 0};
@@ -239,6 +245,8 @@ NaN
 undefined
 */
 
+
+// Index: 5
 // 仅有 getter：不能修改
 function f51() {
     var obj = {  get x() { return 1; }};
@@ -258,6 +266,7 @@ f51();
 */
 
 
+// Index: 6
 // 有 setter/getter 的情况：调用 setter
 function f6() {
     var obj = { get x() { return this._x; }, set x(a) { this._x += a;}, _x : 0};
@@ -277,6 +286,7 @@ f6();
 */
 
 
+// Index: 7
 // writable false：不能修改，但是返回值增加了
 function f7() {
     var obj = { x : 1};
@@ -292,6 +302,7 @@ f7();
 */
 
 
+// Index: 8
 // __proto__ 有属性的情况：不修改 __proto__，修改 object
 function f8() {
     var proto = {x: 1};
@@ -308,6 +319,7 @@ f8();
 */
 
 
+// Index: 9
 // __proto__ writable: false: 不能修改 obj
 function f9() {
     var proto = {};
@@ -324,6 +336,8 @@ f9();
 2 1 1
 */
 
+
+// Index: 10
 // __proto__ 是 getter 的情况: 不修改 obj
 function f10() {
     var proto = { _x: 1, get x() { return this._x; } };
@@ -339,6 +353,8 @@ f10();
 2 1 1 1
 */
 
+
+// Index: 11
 // __proto__ 是 setter/getter 的情况: 调用 __proto__ setter，不修改 obj
 function f11() {
     var proto = { _x: 1, set x(a) { this._x = a; console.log('set x:', a); }, get x() { return this._x; } };
@@ -354,3 +370,4 @@ f11();
 set x: 2
 2 2 1 1
 */
+

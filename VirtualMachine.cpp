@@ -16,6 +16,8 @@
 #include "JsArray.hpp"
 #include "JsRegExp.hpp"
 #include "BinaryOperation.hpp"
+#include "UnaryOperation.hpp"
+#include "JsString.hpp"
 
 
 void registerGlobalValue(VMContext *ctx, VMScope *globalScope, const char *strName, const JsValue &value) {
@@ -102,16 +104,14 @@ void VMContext::throwException(JsErrorType err, cstr_t format, ...) {
     auto message = stringPrintf(format, args);
     va_end(args);
 
-    // 将异常值添加到堆栈中
-    // TODO: 需要转换为 err 对应的异常类型
-    errorMessage = runtime->pushString(SizedString(message.c_str(), message.size()));
+    auto errValue = runtime->pushString(SizedString(message.c_str(), message.size()));
 
-    throwException(err, errorMessage);
+    throwException(err, newJsError(this, err, errValue));
 }
 
 void VMContext::throwException(JsErrorType err, JsValue errorMessage) {
     this->error = err;
-    this->errorMessage = newJsError(this, error, errorMessage);
+    this->errorMessage = errorMessage;
 
     if (isReturnedForTry) {
         // 在 finally 中抛出异常，会清除 return 相关内容
@@ -322,7 +322,7 @@ JsValue JsVirtualMachine::getMemberIndex(VMContext *ctx, const JsValue &thiz, co
             return runtime->objPrototypeNumber->get(ctx, thiz, name);
         case JDT_CHAR:
         case JDT_STRING:
-            return runtime->objPrototypeString->get(ctx, thiz, name);
+            return getStringMemberIndex(ctx, thiz, name);
         case JDT_SYMBOL:
             return runtime->objPrototypeSymbol->get(ctx, thiz, name);
         default: {
@@ -360,6 +360,44 @@ void JsVirtualMachine::setMemberIndex(VMContext *ctx, const JsValue &thiz, const
             break;
         }
     }
+}
+
+inline void opIncreaseIdentifier(VMContext *ctx, VMRuntime *runtime, uint8_t *&bytecode, VecVMStackScopes &stackScopes, int inc, bool isPost) {
+    auto varStorageType = *bytecode++;
+    auto scopeDepth = *bytecode++;
+    auto storageIndex = readUInt16(bytecode);
+
+    JsValue value = jsValueUndefined;
+    switch (varStorageType) {
+        case VST_ARGUMENT: {
+            assert(scopeDepth < stackScopes.size());
+            auto scope = stackScopes[scopeDepth];
+            assert(storageIndex < scope->args.capacity);
+            value = increaseJsValue(ctx, scope->args[storageIndex], inc, isPost);
+            break;
+        }
+        case VST_SCOPE_VAR:
+        case VST_FUNCTION_VAR: {
+            assert(scopeDepth < stackScopes.size());
+            auto scope = stackScopes[scopeDepth];
+            assert(storageIndex < scope->vars.size());
+            value = increaseJsValue(ctx, scope->vars[storageIndex], inc, isPost);
+            break;
+        }
+        case VST_GLOBAL_VAR:
+            if (storageIndex >= runtime->countImmutableGlobalVars) {
+                value = increaseJsValue(ctx, runtime->globalScope->vars[storageIndex], inc, isPost);
+            } else {
+                auto temp = runtime->globalScope->vars[storageIndex];
+                value = increaseJsValue(ctx, temp, inc, isPost);
+            }
+            break;
+        default:
+            assert(0);
+            break;
+    }
+
+    ctx->stack.push_back(value);
 }
 
 void JsVirtualMachine::call(Function *function, VMContext *ctx, VecVMStackScopes &stackScopes, const JsValue &thiz, const Arguments &args) {
@@ -473,7 +511,7 @@ void JsVirtualMachine::call(Function *function, VMContext *ctx, VecVMStackScopes
                 break;
             }
             case OP_THROW: {
-                ctx->throwException(PE_TYPE_ERROR, stack.back());
+                ctx->throwException(PE_ERROR, stack.back());
                 stack.pop_back();
                 break;
             }
@@ -654,6 +692,13 @@ void JsVirtualMachine::call(Function *function, VMContext *ctx, VecVMStackScopes
             //    ERR_LOG1("Unkown opcode: %d", code);
             //    break;
             case OP_POP_STACK_TOP: {
+                stack.pop_back();
+                break;
+            }
+            case OP_POP_STACK_TOP_N: {
+                auto count = readUInt16(bytecode);
+                auto start = stack.end() - count;
+                stack.erase(start, stack.end());
                 stack.pop_back();
                 break;
             }
@@ -880,179 +925,64 @@ void JsVirtualMachine::call(Function *function, VMContext *ctx, VecVMStackScopes
                 break;
             }
             case OP_ASSIGN_MEMBER_INDEX: {
-                auto pos = stack.size() - 3;
-                auto value = stack.back();
-                auto index = stack[pos + 1];
-                auto obj = stack[pos];
-                if (obj.type < JDT_OBJECT) {
-                    // Primitive 类型都不能设置属性
-                    stack.resize(pos);
-                    stack.push_back(value);
-                    break;
-                }
+                auto value = stack.back(); stack.pop_back();
+                auto index = stack.back(); stack.pop_back();
+                auto obj = stack.back();
 
-                if (index.type >= JDT_OBJECT) {
-                    callMember(ctx, obj, "toString", Arguments());
-                    if (ctx->error != PE_OK) {
-                        bytecode = endBytecode;
-                        break;
-                    }
-                    index = ctx->retValue;
-                }
+                assignMemberIndexOperation(ctx, runtime, obj, index, value);
 
-                auto pobj = runtime->getObject(obj);
-
-                stack.resize(pos);
-                stack.push_back(value);
-
-                pobj->set(ctx, obj, index, value);
+                stack.back() = value;
                 break;
             }
             case OP_ASSIGN_MEMBER_DOT: {
                 auto idx = readUInt32(bytecode);
-                auto value = stack.back();
-                auto obj = stack[stack.size() - 2];
+                auto value = stack.back(); stack.pop_back();
+                auto obj = stack.back(); stack.pop_back();
                 auto name = runtime->getStringByIdx(idx, resourcePool);
                 setMemberDot(ctx, obj, name, value);
-                stack.resize(stack.size() - 2);
                 stack.push_back(value);
                 break;
             }
+            case OP_ASSIGN_VALUE_AHEAD_MEMBER_INDEX: {
+                // 和 OP_ASSIGN_MEMBER_INDEX 不同的是，先 push value，再 push member index
+                auto index = stack.back(); stack.pop_back();
+                auto obj = stack.back(); stack.pop_back();
+                auto value = stack.back();
+
+                assignMemberIndexOperation(ctx, runtime, obj, index, value);
+                break;
+            }
+            case OP_ASSIGN_VALUE_AHEAD_MEMBER_DOT: {
+                // 和 OP_ASSIGN_MEMBER_DOT 不同的是，先 push value，再 push member dot
+                auto idx = readUInt32(bytecode);
+                auto obj = stack.back(); stack.pop_back();
+                auto value = stack.back();
+                auto name = runtime->getStringByIdx(idx, resourcePool);
+
+                setMemberDot(ctx, obj, name, value);
+                break;
+            }
             case OP_INCREMENT_ID_PRE: {
-                auto varStorageType = *bytecode++;
-                auto scopeDepth = *bytecode++;
-                auto storageIndex = readUInt16(bytecode);
-                VMScope *scope;
-                switch (varStorageType) {
-                    case VST_ARGUMENT:
-                        assert(scopeDepth < stackScopes.size());
-                        scope = stackScopes[scopeDepth];
-                        assert(storageIndex < scope->args.capacity);
-                        runtime->increase(ctx, scope->args[storageIndex], 1);
-                        stack.push_back(scope->args[storageIndex]);
-                        break;
-                    case VST_SCOPE_VAR:
-                    case VST_FUNCTION_VAR:
-                        assert(scopeDepth < stackScopes.size());
-                        scope = stackScopes[scopeDepth];
-                        assert(storageIndex < scope->vars.size());
-                        runtime->increase(ctx, scope->vars[storageIndex], 1);
-                        stack.push_back(scope->vars[storageIndex]);
-                        break;
-                    case VST_GLOBAL_VAR:
-                        if (storageIndex >= runtime->countImmutableGlobalVars) {
-                            runtime->increase(ctx, runtime->globalScope->vars[storageIndex], 1);
-                            stack.push_back(runtime->globalScope->vars[storageIndex]);
-                        }
-                        break;
-                    default:
-                        assert(0);
-                        break;
-                }
+                opIncreaseIdentifier(ctx, runtime, bytecode, stackScopes, 1, false);
                 break;
             }
             case OP_INCREMENT_ID_POST: {
-                auto varStorageType = *bytecode++;
-                auto scopeDepth = *bytecode++;
-                auto storageIndex = readUInt16(bytecode);
-                VMScope *scope;
-                switch (varStorageType) {
-                    case VST_ARGUMENT:
-                        assert(scopeDepth < stackScopes.size());
-                        scope = stackScopes[scopeDepth];
-                        assert(storageIndex < scope->args.capacity);
-                        stack.push_back(runtime->increase(ctx, scope->args[storageIndex], 1));
-                        break;
-                    case VST_SCOPE_VAR:
-                    case VST_FUNCTION_VAR:
-                        assert(scopeDepth < stackScopes.size());
-                        scope = stackScopes[scopeDepth];
-                        assert(storageIndex < scope->vars.size());
-                        stack.push_back(runtime->increase(ctx, scope->vars[storageIndex], 1));
-                        break;
-                    case VST_GLOBAL_VAR:
-                        if (storageIndex >= runtime->countImmutableGlobalVars) {
-                            stack.push_back(runtime->increase(ctx, runtime->globalScope->vars[storageIndex], 1));
-                        } else {
-                            stack.push_back(jsValueNaN);
-                        }
-                        break;
-                    default:
-                        assert(0);
-                        break;
-                }
+                opIncreaseIdentifier(ctx, runtime, bytecode, stackScopes, 1, true);
                 break;
             }
             case OP_DECREMENT_ID_PRE: {
-                auto varStorageType = *bytecode++;
-                auto scopeDepth = *bytecode++;
-                auto storageIndex = readUInt16(bytecode);
-                VMScope *scope;
-                switch (varStorageType) {
-                    case VST_ARGUMENT:
-                        assert(scopeDepth < stackScopes.size());
-                        scope = stackScopes[scopeDepth];
-                        assert(storageIndex < scope->args.capacity);
-                        runtime->increase(ctx, scope->args[storageIndex], -1);
-                        stack.push_back(scope->args[storageIndex]);
-                        break;
-                    case VST_SCOPE_VAR:
-                    case VST_FUNCTION_VAR:
-                        assert(scopeDepth < stackScopes.size());
-                        scope = stackScopes[scopeDepth];
-                        assert(storageIndex < scope->vars.size());
-                        runtime->increase(ctx, scope->vars[storageIndex], -1);
-                        stack.push_back(scope->vars[storageIndex]);
-                        break;
-                    case VST_GLOBAL_VAR:
-                        if (storageIndex >= runtime->countImmutableGlobalVars) {
-                            runtime->increase(ctx, runtime->globalScope->vars[storageIndex], -1);
-                            stack.push_back(runtime->globalScope->vars[storageIndex]);
-                        }
-                        break;
-                    default:
-                        assert(0);
-                        break;
-                }
+                opIncreaseIdentifier(ctx, runtime, bytecode, stackScopes, -1, false);
                 break;
             }
             case OP_DECREMENT_ID_POST: {
-                auto varStorageType = *bytecode++;
-                auto scopeDepth = *bytecode++;
-                auto storageIndex = readUInt16(bytecode);
-                VMScope *scope;
-                switch (varStorageType) {
-                    case VST_ARGUMENT:
-                        assert(scopeDepth < stackScopes.size());
-                        scope = stackScopes[scopeDepth];
-                        assert(storageIndex < scope->args.capacity);
-                        stack.push_back(runtime->increase(ctx, scope->args[storageIndex], -1));
-                        break;
-                    case VST_SCOPE_VAR:
-                    case VST_FUNCTION_VAR:
-                        assert(scopeDepth < stackScopes.size());
-                        scope = stackScopes[scopeDepth];
-                        assert(storageIndex < scope->vars.size());
-                        stack.push_back(runtime->increase(ctx, scope->vars[storageIndex], -1));
-                        break;
-                    case VST_GLOBAL_VAR:
-                        if (storageIndex >= runtime->countImmutableGlobalVars) {
-                            stack.push_back(runtime->increase(ctx, runtime->globalScope->vars[storageIndex], -1));
-                        } else {
-                            stack.push_back(jsValueNaN);
-                        }
-                        break;
-                    default:
-                        assert(0);
-                        break;
-                }
+                opIncreaseIdentifier(ctx, runtime, bytecode, stackScopes, -1, true);
                 break;
             }
             case OP_INCREMENT_MEMBER_DOT_PRE: {
                 auto idx = readUInt32(bytecode);
                 auto name = runtime->getStringByIdx(idx, resourcePool);
                 JsValue obj = stack.back(); stack.pop_back();
-                auto value = runtime->increaseMemberDot(ctx, obj, name, 1, false);
+                auto value = increaseMemberDot(ctx, obj, name, 1, false);
                 stack.push_back(value);
                 break;
             }
@@ -1060,7 +990,7 @@ void JsVirtualMachine::call(Function *function, VMContext *ctx, VecVMStackScopes
                 auto idx = readUInt32(bytecode);
                 auto name = runtime->getStringByIdx(idx, resourcePool);
                 JsValue obj = stack.back(); stack.pop_back();
-                auto value = runtime->increaseMemberDot(ctx, obj, name, 1, true);
+                auto value = increaseMemberDot(ctx, obj, name, 1, true);
                 stack.push_back(value);
                 break;
             }
@@ -1068,7 +998,7 @@ void JsVirtualMachine::call(Function *function, VMContext *ctx, VecVMStackScopes
                 auto idx = readUInt32(bytecode);
                 auto name = runtime->getStringByIdx(idx, resourcePool);
                 JsValue obj = stack.back(); stack.pop_back();
-                auto value = runtime->increaseMemberDot(ctx, obj, name, -1, false);
+                auto value = increaseMemberDot(ctx, obj, name, -1, false);
                 stack.push_back(value);
                 break;
             }
@@ -1076,24 +1006,36 @@ void JsVirtualMachine::call(Function *function, VMContext *ctx, VecVMStackScopes
                 auto idx = readUInt32(bytecode);
                 auto name = runtime->getStringByIdx(idx, resourcePool);
                 JsValue obj = stack.back(); stack.pop_back();
-                auto value = runtime->increaseMemberDot(ctx, obj, name, -1, true);
+                auto value = increaseMemberDot(ctx, obj, name, -1, true);
                 stack.push_back(value);
                 break;
             }
             case OP_INCREMENT_MEMBER_INDEX_PRE: {
-                assert(0);
+                JsValue index = stack.back(); stack.pop_back();
+                JsValue obj = stack.back();
+                auto value = increaseMemberIndex(ctx, obj, index, 1, false);
+                stack.back() = value;
                 break;
             }
             case OP_INCREMENT_MEMBER_INDEX_POST: {
-                assert(0);
+                JsValue index = stack.back(); stack.pop_back();
+                JsValue obj = stack.back();
+                auto value = increaseMemberIndex(ctx, obj, index, 1, true);
+                stack.back() = value;
                 break;
             }
             case OP_DECREMENT_MEMBER_INDEX_PRE: {
-                assert(0);
+                JsValue index = stack.back(); stack.pop_back();
+                JsValue obj = stack.back();
+                auto value = increaseMemberIndex(ctx, obj, index, -1, false);
+                stack.back() = value;
                 break;
             }
             case OP_DECREMENT_MEMBER_INDEX_POST: {
-                assert(0);
+                JsValue index = stack.back(); stack.pop_back();
+                JsValue obj = stack.back();
+                auto value = increaseMemberIndex(ctx, obj, index, -1, true);
+                stack.back() = value;
                 break;
             }
             case OP_ADD: {
@@ -1264,7 +1206,21 @@ void JsVirtualMachine::call(Function *function, VMContext *ctx, VecVMStackScopes
                 break;
             }
             case OP_IN: {
-                assert(0);
+                JsValue right = stack.back(); stack.pop_back();
+                JsValue left = stack.back(); stack.pop_back();
+                if (right.type < JDT_OBJECT) {
+                    string buf1, buf2;
+                    auto s1 = runtime->toSizedString(ctx, left, buf1);
+                    auto s2 = runtime->toSizedString(ctx, right, buf2);
+                    ctx->throwException(PE_TYPE_ERROR, "Cannot use 'in' operator to search for '%.*s' in %.*s",
+                        (int)s1.len, s1.data, (int)s2.len, s2.data);
+                    break;
+                }
+
+                auto pobj = runtime->getObject(right);
+                JsNativeFunction funcGetterTmp = nullptr;
+                auto prop = pobj->getRaw(ctx, left, funcGetterTmp, true);
+                stack.push_back(JsValue(JDT_BOOL, prop != nullptr));
                 break;
             }
             case OP_INSTANCE_OF: {
@@ -1449,20 +1405,73 @@ void JsVirtualMachine::call(Function *function, VMContext *ctx, VecVMStackScopes
                 assert(0);
                 break;
             }
-            case OP_ITERATOR_CREATE: {
-                assert(0);
+            case OP_ITERATOR_IN_CREATE:
+            case OP_ITERATOR_OF_CREATE: {
+                auto obj = stack.back(); stack.pop_back();
+                IJsIterator *it = nullptr;
+                if (obj.type <= JDT_NUMBER) {
+                    string buf;
+                    auto s = runtime->toSizedString(ctx, obj, buf);
+                    ctx->throwException(PE_TYPE_ERROR, "%.*s is not iterable", s.len, s.data);
+                    break;
+                } else if (obj.type == JDT_SYMBOL) {
+                    if (code == OP_ITERATOR_OF_CREATE) {
+                        string buf;
+                        auto s = runtime->toSizedString(ctx, obj, buf);
+                        ctx->throwException(PE_TYPE_ERROR, "%.*s is not iterable", s.len, s.data);
+                        break;
+                    }
+                    it = new EmptyJsIterator();
+                } else if (obj.type == JDT_CHAR || obj.type == JDT_STRING) {
+                    it = newJsStringIterator(runtime, obj);
+                } else {
+                    auto pobj = runtime->getObject(obj);
+                    if (code == OP_ITERATOR_OF_CREATE && !pobj->isOfIterable()) {
+                        string buf;
+                        auto s = runtime->toSizedString(ctx, obj, buf);
+                        ctx->throwException(PE_TYPE_ERROR, "%.*s is not iterable", s.len, s.data);
+                        break;
+                    } else {
+                        assert(pobj);
+                        it = pobj->getIteratorObject(ctx);
+                    }
+                }
+                assert(it);
+                stack.push_back(runtime->pushJsIterator(it));
                 break;
             }
             case OP_ITERATOR_NEXT_KEY: {
-                assert(0);
+                auto addrEnd = readUInt32(bytecode);
+                auto it = stack.back();
+                auto pit = runtime->getJsIterator(it);
+                assert(pit);
+                JsValue key;
+                if (pit->nextKey(key)) {
+                    stack.push_back(key);
+                } else {
+                    // 遍历完成
+                    bytecode = function->bytecode + addrEnd;
+
+                    // 弹出 it
+                    stack.pop_back();
+                }
                 break;
             }
             case OP_ITERATOR_NEXT_VALUE: {
-                assert(0);
-                break;
-            }
-            case OP_ITERATOR_NEXT_KEY_VALUE: {
-                assert(0);
+                auto addrEnd = readUInt32(bytecode);
+                auto it = stack.back();
+                auto pit = runtime->getJsIterator(it);
+                assert(pit);
+                JsValue key;
+                if (pit->nextValue(key)) {
+                    stack.push_back(key);
+                } else {
+                    // 遍历完成
+                    bytecode = function->bytecode + addrEnd;
+
+                    // 弹出 it
+                    stack.pop_back();
+                }
                 break;
             }
             case OP_SPREAD_ARGS: {

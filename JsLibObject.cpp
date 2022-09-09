@@ -28,6 +28,7 @@ JsLibObject::JsLibObject(VMRuntimeCommon *rt, JsLibProperty *libProps, int count
     type = JDT_LIB_OBJECT;
     _obj = nullptr;
     _modified = false;
+    _isOfIterable = false;
 
     for (auto p = _libProps; p != _libPropsEnd; p++) {
         if (p->function) {
@@ -50,6 +51,7 @@ JsLibObject::JsLibObject(JsLibObject *from) {
     _libProps = from->_libProps;
     _libPropsEnd = from->_libPropsEnd;
     _modified = false;
+    _isOfIterable = from->_isOfIterable;
 }
 
 JsLibObject::~JsLibObject() {
@@ -276,9 +278,11 @@ IJsObject *JsLibObject::clone() {
 }
 
 IJsIterator *JsLibObject::getIteratorObject(VMContext *ctx) {
-    // auto it = new JsObjectIterator(ctx, this);
-    // return it;
-    return nullptr;
+    if (_obj) {
+        return _obj->getIteratorObject(ctx);
+    }
+
+    return new EmptyJsIterator();
 }
 
 /**

@@ -1,5 +1,4 @@
-
-
+// Index: 0
 // 测试修改 String.prototype
 function f2() {
     var a = 'abc';
@@ -28,15 +27,17 @@ get
 undefined
 set 3
 function (a) {
-    console.log('y', a);
-}
+            console.log('y', a);
+        }
 */
 
+
+// Index: 1
 // function 的 prototype.__proto__ 和 Object.prototype 相同
 function f21() {
     function g() { this.a = 1; }
 
-    console.log(g.prototype.__proto__);
+    console.log(g.prototype.__proto__.toString());
     console.log(g.prototype.__proto__ === Object.prototype);
 }
 f21();
@@ -45,6 +46,8 @@ f21();
 true
 */
 
+
+// Index: 2
 // 重新定义 g.prototype.__proto__
 function f3() {
     function g() { this.a = 1; this.x = 5; }
@@ -76,6 +79,8 @@ set y via prototype:  3
 x y
 */
 
+
+// Index: 3
 // 本身有属性，会优先修改本身的，再往 prototype 链上查找
 function f31() {
     var proto1 = {
@@ -108,6 +113,8 @@ set y via prototype:  3
 2 y
 */
 
+
+// Index: 4
 // proto 只有 getter，无 setter，设置 obj 属性: 不会创建新的属性
 function f32() {
     var proto = {
@@ -131,6 +138,7 @@ y y
 */
 
 
+// Index: 5
 // defineProperty: 如果一个描述符同时拥有 value 或 writable 和 get 或 set 键，则会产生一个异常。
 function f4a(p) {
     var o = {};
@@ -179,7 +187,7 @@ function f4a(p) {
             });
         }
     } catch (error) {
-        console.log(error);
+        console.log(error.name + ': ' + error.message);
     }
 }
 f4a(1);
@@ -200,6 +208,8 @@ TypeError: Invalid property descriptor. Cannot both specify accessors and a valu
 TypeError: Invalid property descriptor. Cannot both specify accessors and a value or writable attribute, #<Object>
 */
 
+
+// Index: 6
 // 测试 defineProperty， setter, getter的有效性
 function f4b(p) {
     console.log(p);
@@ -231,7 +241,7 @@ function f4b(p) {
             });
         }
     } catch (error) {
-        console.log(error);
+        console.log(error.name + ': ' + error.message);
     }
 }
 f4b(1);
@@ -253,6 +263,8 @@ TypeError: Getter must be a function: null
 6
 */
 
+
+// Index: 7
 // defineProperty: 的各种属性
 function f4() {
     function g() {
@@ -302,7 +314,7 @@ function f4() {
     } catch (error) {
         // 不同的值抛出异常
         // TypeError: Cannot redefine property: c
-        console.log(10, error);
+        console.log(10, error.toString());
     }
 
     console.log(11, delete o.a); // 可以删除
@@ -329,6 +341,8 @@ f4();
 14 undefined 3 4
 */
 
+
+// Index: 8
 // 测试 prototype 的修改
 function f8() {
     function g() {
@@ -362,10 +376,11 @@ false
 true
 1
 true
-[error] Uncaught TypeError: Cannot redefine property: prototype
+Uncaught TypeError: Cannot redefine property: prototype
 */
 
 
+// Index: 9
 // prototype 的 configurable: false, writable: false. 继承的 obj 不能 set 值，可以通过 defineProperty 定义同名的属性
 function f81() {
     var proto = {};
@@ -399,6 +414,7 @@ f81();
 */
 
 
+// Index: 10
 // prototype 的 configurable: false, writable: false. 继承的 obj 不能 set 值，可以通过 defineProperty 定义同名的属性
 function f82(a) {
     Object.defineProperty(arguments, '0', {
@@ -438,6 +454,7 @@ f82(0);
 */
 
 
+// Index: 11
 // 测试 prototype 上定义的属性修改
 function f9() {
     function g() {
@@ -472,6 +489,8 @@ f9();
 6 x
 */
 
+
+// Index: 12
 // Object.defineProperty 删除 setter.
 function f10(p) {
     function g() {
@@ -519,7 +538,7 @@ f10(2);
 */
 
 
-
+// Index: 13
 // 测试 Object.defineProperty 先 write prototype 上的 unconfigurable && writable 属性,
 // 再 config 此属性
 function f11() {
@@ -554,6 +573,7 @@ px
 */
 
 
+// Index: 14
 // Object.defineProperty 先定义 getter，再定义setter
 // 结论：用新的部分值覆盖旧的，但是新的未定义的，还是使用老的
 function f12() {
@@ -594,6 +614,7 @@ set x3
 */
 
 
+// Index: 15
 // Object.defineProperty 不带 value，和 value 为 undefined 情况
 function f13() {
     var o = {  x: 1 };
@@ -621,6 +642,7 @@ f13();
 */
 
 
+// Index: 16
 // Object.defineProperty 会不会修改之前的 writable
 function f14() {
     var o = {  x: 1 };
@@ -641,13 +663,14 @@ function f14() {
 }
 f14();
 /* OUTPUT
-{value: 1, writable: true, enumerable: true, configurable: true}
+{ value: 1, writable: true, enumerable: true, configurable: true }
 1 1
-{value: 1, writable: false, enumerable: true, configurable: true}
+{ value: 1, writable: false, enumerable: true, configurable: true }
 2 1
 */
 
 
+// Index: 17
 //
 // 测试 Array 的 Object.defineProperty
 function f6() {
@@ -680,6 +703,8 @@ x undefined
 set y 3
 */
 
+
+// Index: 18
 // 测试 Arguments 的 Object.defineProperty
 function f61(a, b, c) {
     Object.defineProperty(arguments, 1, {
@@ -708,5 +733,4 @@ get 1
 x undefined 2
 set y 3
 */
-
 

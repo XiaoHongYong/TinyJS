@@ -11,6 +11,26 @@ import subprocess
 '''
 此脚本用于自动在 Chrome 中运行 check_output 中的 JavaScript 文件，并生成 /* OUTPUT */ 中的 console 输出
 用于 RunJavaScript.outputCheck 的 Unittest 对比输出内容.
+
+例如，文件 test.js 的内容
+function f() {
+    console.log('xyz');
+}
+f();
+/* OUTPUT
+xyz
+*/
+
+
+// 这段测试代码不会在 chrome 中运行，因为其使用了 OUTPUT-FIXED
+function f() {
+    console.log('abc');
+}
+f();
+/* OUTPUT-FIXED
+abc
+*/
+
 '''
 
 HELP_MESSAGE = '''Usage: {} [-a] [filename]'''.format(os.path.basename(__file__))
@@ -184,6 +204,10 @@ def args_to_string(args):
             if subtype == 'null':
                 a.append('null')
                 continue
+            elif subtype == 'error':
+                message = arg.get('description').partition('\n')[0]
+                a.append(message)
+                continue
             className = arg.get('className')
             if className == 'RegExp':
                 # { "description": "/a/", "className": "RegExp", "type": "object" }
@@ -255,39 +279,34 @@ class ChromeRunner(object):
             if msg is None:
                 break
             method = msg.get('method')
-            # print method
+            print('method:' + method)
             if method == 'Runtime.consoleAPICalled':
-                print json.dumps(msg, indent=1)
-                # print '\n'.join(logs)
+                # print(json.dumps(msg, indent=1))
+                # print('\n'.join(logs))
                 args = msg['params']['args']
                 line = []
                 line.append(args_to_string(args))
                 logs.append(' '.join(line))
             elif method == 'Page.frameStoppedLoading':
-                print 'Got Page.frameStoppedLoading'
+                break
+            elif method == 'Runtime.exceptionThrown':
+                # print(json.dumps(msg, indent=1))
+                exception = msg['params']['exceptionDetails']['exception']
+                message = exception['description'].partition('\n')[0]
+                logs.append('Uncaught ' + message)
                 break
         logs = '\n'.join(logs)
         # print logs
         return logs
 
-
-
-def run_js(chrome, snipets):
-    outputs = []
-
-    for i in range(len(snipets)):
-        code = snipets[i]
-        print(' Run code: {} '.format(i).center(70, '='))
-        print(code[:100])
-        output = chrome.run_code_with_logs(code)
-        print(output[:100])
-
-        outputs.append(output)
-
-    return outputs
+def unicode_to_utf8(a):
+    for i in range(len(a)):
+        s = a[i]
+        if type(s) is unicode:
+            a[i] = s.encode('utf-8')
 
 def generate_output_of_file(chrome, fn):
-    snipets = []
+    content_org = ''
 
     cur_dir = os.path.abspath(os.path.dirname(__file__)) + os.path.sep
     relative_fn = fn
@@ -296,45 +315,54 @@ def generate_output_of_file(chrome, fn):
 
     print(' Generate output for file: {} '.format(relative_fn).center(80, '='))
 
+    a = []
+
     # 拆分为小的代码片段
     with open(fn, 'rb') as fp:
         content = fp.read()
+        content_org = content
 
+        i = 0
         while content:
-            left, _, right = content.partition('/* OUTPUT\n')
-            if not right:
+            code, _, remains = content.partition('/* OUTPUT')
+            if not remains:
                 raise Exception('NO /*OUTPUT */ string to split code: ' + content)
-            left = left.strip()
-            snipets.append(left)
+            code = code.strip()
 
-            _, _, content = right.partition('\n*/')
+            output, _, content = remains.partition('\n*/')
             content = content.strip()
 
-    outputs = run_js(chrome, snipets)
+            if output.startswith('-FIXED'):
+                # 不运行
+                print(' NO Run code: {} '.format(i).center(70, '='))
+                output = '/* OUTPUT' + output.strip() + '\n*/'
+            else:
+                # 在 chrome 中运行，获取 output
+                print(' Run code: {} '.format(i).center(70, '='))
+                print(code[:100])
+                output = chrome.run_code_with_logs(code)
+                print(output[:100])
+
+                output = '/* OUTPUT\n' + output.strip() + '\n*/'
+
+            if code.startswith('// Index:'):
+                _, _, code = code.partition('\n')
+            code = '// Index: {}\n'.format(i) + code
+
+            a.append(code)
+            a.append(output)
+            a.append('\n')
+            i += 1
 
     print(' Save output for file: {} '.format(relative_fn).center(80, '='))
 
     # 生成新的文件内容
-    assert(len(outputs) == len(snipets))
-    a = []
-    for i in range(len(snipets)):
-        code = snipets[i].strip()
-        if code.startswith('// Index:'):
-            _, _, code = code.partition('\n')
-        code = '// Index: {}\n'.format(i) + code
+    unicode_to_utf8(a)
 
-        a.append(code)
-        a.append('/* OUTPUT')
-        a.append(outputs[i])
-        a.append('*/\n\n')
-
-    for i in range(len(a)):
-        s = a[i]
-        if type(s) is unicode:
-            a[i] = s.encode('utf-8')
     content = '\n'.join(a)
-    with open(fn, 'wb') as fp:
-        fp.write(content)
+    if content_org != content:
+        with open(fn, 'wb') as fp:
+            fp.write(content)
 
     print('Done saving.')
 

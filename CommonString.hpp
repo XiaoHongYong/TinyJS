@@ -23,6 +23,7 @@ class NumberToSizedString : public SizedString {
 public:
     NumberToSizedString(uint32_t n);
 
+    void set(uint32_t n);
     const SizedString &str() const { return *this; }
     
 protected:
@@ -38,11 +39,13 @@ public:
     SizedStringWrapper(double n);
     SizedStringWrapper(const JsValue &v);
 
+    void clear();
+
     bool append(const JsValue &v);
     bool append(const SizedString &s);
 
     const SizedString &str() const { return *this; }
-
+    
     enum {
         MAX_SIZE = 128,
     };

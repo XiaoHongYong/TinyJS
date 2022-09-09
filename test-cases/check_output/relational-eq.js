@@ -4,8 +4,8 @@ var obj2 = { toString() { return 1; }}
 function g() { }
 
 // 测试 ==
-function f1(r, p) {
-    console.log('round: ', r);
+function f1(r, p, noPrint) {
+    console.log('round: ', r, noPrint ? '' : p);
 
     console.log('1', p == undefined);
     console.log('2', p == null);
@@ -68,13 +68,13 @@ f1('20', '0.0');
 f1('21', '1.0');
 f1('22', 'true');
 f1('23', 'false');
-f1('24', g);
-f1('25', obj1);
-f1('26', obj2);
+f1('24', g, 1);
+f1('25', obj1, 1);
+f1('26', obj2, 1);
 f1('27', /a/);
 f1('28', Symbol());
 /* OUTPUT
-round:  1
+round:  1 undefined
 1 true
 2 true
 3 false
@@ -105,7 +105,7 @@ round:  1
 28 false
 29 false
 false
-round:  2
+round:  2 null
 1 true
 2 true
 3 false
@@ -136,7 +136,7 @@ round:  2
 28 false
 29 false
 false
-round:  3
+round:  3 NaN
 1 false
 2 false
 3 false
@@ -167,7 +167,7 @@ round:  3
 28 false
 29 false
 false
-round:  4
+round:  4 Infinity
 1 false
 2 false
 3 false
@@ -198,7 +198,7 @@ round:  4
 28 false
 29 false
 false
-round:  5
+round:  5 -Infinity
 1 false
 2 false
 3 false
@@ -229,7 +229,7 @@ round:  5
 28 false
 29 false
 false
-round:  6
+round:  6 0
 1 false
 2 false
 3 false
@@ -260,7 +260,7 @@ round:  6
 28 false
 29 false
 false
-round:  7
+round:  7 0
 1 false
 2 false
 3 false
@@ -291,7 +291,7 @@ round:  7
 28 false
 29 false
 false
-round:  8
+round:  8 1
 1 false
 2 false
 3 false
@@ -322,7 +322,7 @@ round:  8
 28 true
 29 false
 false
-round:  9
+round:  9 -1
 1 false
 2 false
 3 false
@@ -353,7 +353,7 @@ round:  9
 28 false
 29 false
 false
-round:  10
+round:  10 -2
 1 false
 2 false
 3 false
@@ -384,7 +384,7 @@ round:  10
 28 false
 29 false
 false
-round:  11
+round:  11 -2
 1 false
 2 false
 3 false
@@ -415,7 +415,7 @@ round:  11
 28 false
 29 false
 false
-round:  12
+round:  12 2
 1 false
 2 false
 3 false
@@ -446,7 +446,7 @@ round:  12
 28 false
 29 false
 false
-round:  13
+round:  13 2
 1 false
 2 false
 3 false
@@ -477,7 +477,7 @@ round:  13
 28 false
 29 false
 false
-round:  14
+round:  14 -1
 1 false
 2 false
 3 false
@@ -508,7 +508,7 @@ round:  14
 28 false
 29 false
 false
-round:  15
+round:  15 true
 1 false
 2 false
 3 false
@@ -539,7 +539,7 @@ round:  15
 28 true
 29 false
 false
-round:  16
+round:  16 false
 1 false
 2 false
 3 false
@@ -570,7 +570,7 @@ round:  16
 28 false
 29 false
 false
-round:  17
+round:  17 
 1 false
 2 false
 3 false
@@ -601,7 +601,7 @@ round:  17
 28 false
 29 false
 false
-round:  18
+round:  18 0
 1 false
 2 false
 3 false
@@ -632,7 +632,7 @@ round:  18
 28 false
 29 false
 false
-round:  19
+round:  19 1
 1 false
 2 false
 3 false
@@ -663,7 +663,7 @@ round:  19
 28 true
 29 false
 false
-round:  9
+round:  9 undefined
 1 true
 2 true
 3 false
@@ -694,7 +694,7 @@ round:  9
 28 false
 29 false
 false
-round:  20
+round:  20 0.0
 1 false
 2 false
 3 false
@@ -725,7 +725,7 @@ round:  20
 28 false
 29 false
 false
-round:  21
+round:  21 1.0
 1 false
 2 false
 3 false
@@ -756,7 +756,7 @@ round:  21
 28 true
 29 false
 false
-round:  22
+round:  22 true
 1 false
 2 false
 3 false
@@ -787,7 +787,7 @@ round:  22
 28 false
 29 false
 false
-round:  23
+round:  23 false
 1 false
 2 false
 3 false
@@ -818,7 +818,7 @@ round:  23
 28 false
 29 false
 false
-round:  24
+round:  24 
 1 false
 2 false
 3 false
@@ -849,7 +849,7 @@ round:  24
 28 false
 29 false
 false
-round:  25
+round:  25 
 1 false
 2 false
 3 false
@@ -880,7 +880,7 @@ round:  25
 28 false
 29 false
 false
-round:  26
+round:  26 
 1 false
 2 false
 3 false
@@ -911,7 +911,7 @@ round:  26
 28 true
 29 false
 false
-round:  27
+round:  27 /a/
 1 false
 2 false
 3 false
@@ -942,7 +942,7 @@ round:  27
 28 false
 29 false
 false
-round:  28
+round:  28 Symbol()
 1 false
 2 false
 3 false

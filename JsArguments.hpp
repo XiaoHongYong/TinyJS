@@ -37,11 +37,14 @@ public:
     virtual bool removeBySymbol(VMContext *ctx, uint32_t index) override;
 
     virtual IJsObject *clone() override;
+    virtual bool isOfIterable() override { return true; }
     virtual IJsIterator *getIteratorObject(VMContext *ctx) override;
 
 protected:
     void _newObject();
 
+    friend class JsArgumentsIterator;
+    
 protected:
     VMScope                     *_scope;
     Arguments                   *_args;

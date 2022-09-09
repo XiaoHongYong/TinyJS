@@ -235,9 +235,11 @@ IJsObject *JsObjectFunction::clone() {
 }
 
 IJsIterator *JsObjectFunction::getIteratorObject(VMContext *ctx) {
-    // auto it = new JsObjectIterator(ctx, this);
-    // return it;
-    return nullptr;
+    if (_obj) {
+        return _obj->getIteratorObject(ctx);
+    }
+
+    return new EmptyJsIterator();
 }
 
 void JsObjectFunction::_newObject() {

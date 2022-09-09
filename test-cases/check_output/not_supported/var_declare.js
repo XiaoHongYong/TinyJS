@@ -1,3 +1,4 @@
+// Index: 0
 var [a, b=a=1] = [3,];
 console.log(a, b); // 1, 1
 
@@ -20,13 +21,20 @@ function f2() {
 }
 f2();
 /* OUTPUT
+1 1
+1 2 3 4
 1 2
- */
+*/
 
 
+// Index: 1
 // SyntaxError: Missing initializer in destructuring declaration
 function $f1() {
     var [a, [c, [e, f]]];
     console.log(a, c, e, f);
 }
 $f1();
+/* OUTPUT
+Uncaught SyntaxError: Missing initializer in destructuring declaration
+*/
+

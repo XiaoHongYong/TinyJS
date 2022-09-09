@@ -57,13 +57,18 @@ enum JsNodeType : uint8_t {
     NT_NEW_TARGET,
 
     // Expression 的类型
-    NT_COMMA_EXPRESSION,
     NT_BOOLEAN,
     NT_NULL,
     NT_STRING,
     NT_INT32,
     NT_NUMBER,
     NT_REGEXP,
+
+    // 常量类型的 expression 结束位置
+    _NT_CONST_EXPR_END,
+    
+    NT_COMMA_EXPRESSION,
+    NT_PAREN_EXPRESSION,
 
     NT_IDENTIFIER,
     NT_MEMBER_INDEX,
@@ -121,6 +126,11 @@ public:
     virtual void setBeingAssigned() { throw ParseException(PE_SYNTAX_ERROR, "Invalid destructuring assignment target"); }
 
     virtual void convertToByteCode(ByteCodeStream &stream) { }
+
+    // 正常情况下，各个 Assignable 需要实现自己的此函数
+    // 目前只有实现了 setBeingAssigned 的才应该实现此函数，但是并非所有的都需要实现.
+    // valueOpt 可以为 null，表示需要从前一个指令返回的栈顶获取值.
+    virtual void convertAssignableToByteCode(IJsNode *valueOpt, ByteCodeStream &stream) { assert(0 && "Should NOT enter here!"); }
 
     JsNodeType                  type;
     JsDataType                  dataType;
@@ -383,8 +393,14 @@ public:
     }
 
     virtual void convertToByteCode(ByteCodeStream &stream) {
+        assert(!isBeingAssigned);
         stream.writeOpCode(OP_REST_PARAMETER);
         stream.writeUint16(index);
+    }
+
+    virtual void convertAssignableToByteCode(IJsNode *valueOpt, ByteCodeStream &stream) {
+        assert(isBeingAssigned);
+        assert(0 && "TBD");
     }
 
 protected:
@@ -406,10 +422,11 @@ public:
     }
 
     virtual void convertToByteCode(ByteCodeStream &stream) {
+        assert(!isBeingAssigned);
         stream.writeOpCode(OP_PUSH_ID_LOCAL_ARGUMENT);
         stream.writeUint16(index);
 
-        target->convertToByteCode(stream);
+        target->convertAssignableToByteCode(nullptr, stream);
 
         stream.writeOpCode(OP_POP_STACK_TOP);
     }
@@ -438,12 +455,11 @@ public:
 
         stream.writeUint8(OP_JUMP_IF_NOT_NULL_UNDEFINED_KEEP_VALID);
         auto addrEnd = stream.writeReservedAddress();
-
         // 插入缺省值表达式的执行代码.
         defVal->convertToByteCode(stream);
-        left->convertToByteCode(stream);
-
         *addrEnd = stream.address();
+
+        left->convertAssignableToByteCode(nullptr, stream);
     }
 
 protected:
@@ -479,32 +495,8 @@ class JsStmtForIn : public IJsNode {
 public:
     JsStmtForIn(IJsNode *var, IJsNode *obj, IJsNode *stmt, bool isIn, Scope *scope) : IJsNode(NT_FOR_IN), var(var), obj(obj), stmt(stmt), isIn(isIn), scope(scope) { }
 
-    virtual void convertToByteCode(ByteCodeStream &stream) {
-        writeEnterScope(scope, stream);
-
-        obj->convertToByteCode(stream);
-        stream.writeOpCode(OP_ITERATOR_CREATE);
-
-        auto addrLoopStart = stream.address();
-        if (isIn) {
-            stream.writeOpCode(OP_ITERATOR_NEXT_KEY);
-        } else {
-            stream.writeOpCode(OP_ITERATOR_NEXT_VALUE);
-        }
-        auto addrLoopEnd = stream.writeReservedAddress();
-
-        var->convertToByteCode(stream);
-
-        if (stmt)
-            stmt->convertToByteCode(stream);
-
-        stream.writeOpCode(OP_JUMP);
-        stream.writeAddress(addrLoopStart);
-        *addrLoopEnd = stream.address();
-
-        writeLeaveScope(scope, stream);
-    }
-
+    void convertToByteCode(ByteCodeStream &stream) override;
+    
     IJsNode                     *var, *obj, *stmt;
     bool                        isIn;
     Scope                       *scope;
@@ -528,8 +520,8 @@ public:
 
         uint32_t *addrLoopEnd = nullptr;
         auto addrLoopStart = stream.address();
-        if (init) {
-            init->convertToByteCode(stream);
+        if (cond) {
+            cond->convertToByteCode(stream);
             stream.writeOpCode(OP_JUMP_IF_FALSE);
             addrLoopEnd = stream.writeReservedAddress();
         }

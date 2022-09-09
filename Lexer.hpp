@@ -113,6 +113,7 @@ enum TokenType : uint8_t {
 
 enum JsErrorType {
     PE_OK                   = 0,
+    PE_ERROR,
     PE_SYNTAX_ERROR,
     PE_TYPE_ERROR,
     PE_RANGE_ERROR,
@@ -128,7 +129,7 @@ class ParseException : public std::exception {
 public:
     ParseException(JsErrorType err, cstr_t format, ...);
 
-    JsErrorType              error;
+    JsErrorType             error;
     string                  message;
     
 };

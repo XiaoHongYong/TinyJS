@@ -148,6 +148,27 @@ static JsLibProperty stringPrototypeFunctions[] = {
     makeJsLibPropertyGetter("length", stringPrototypeLength),
 };
 
+class StringPrototypeObject : public JsLibObject {
+public:
+    JsProperty *getRawByName(VMContext *ctx, const SizedString &name, JsNativeFunction &funcGetterOut, bool includeProtoProp) {
+        if (name.len > 0 && isDigit(name.data[0])) {
+            bool successful = false;
+            auto n = name.atoi(successful);
+            if (successful) {
+                return getRawByIndex(ctx, (uint32_t)n, includeProtoProp);
+            }
+        }
+
+        return nullptr;
+    }
+
+    JsProperty *getRawByIndex(VMContext *ctx, uint32_t index, bool includeProtoProp) {
+        static JsProperty propIndex;
+        return &propIndex;
+    }
+
+};
+
 void registerString(VMRuntimeCommon *rt) {
     auto prototypeObj = new JsLibObject(rt, stringPrototypeFunctions, CountOf(stringPrototypeFunctions));
     rt->objPrototypeString = prototypeObj;

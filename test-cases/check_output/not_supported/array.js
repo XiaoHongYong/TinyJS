@@ -1,3 +1,4 @@
+// Index: 0
 function f1() {
     var a = [];
     Object.defineProperty(a, 'length', {
@@ -7,5 +8,6 @@ function f1() {
 }
 f1();
 /* OUTPUT
-[error] Uncaught TypeError: Cannot redefine property: length
+Uncaught TypeError: Cannot redefine property: length
 */
+

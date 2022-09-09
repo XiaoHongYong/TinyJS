@@ -33,6 +33,106 @@ inline uint32_t roundIndexToBlock(uint32_t index) {
     return index;
 }
 
+/**
+ * 遍历 Array
+ */
+class JsArrayIterator : public IJsIterator {
+public:
+    JsArrayIterator(VMContext *ctx, JsArray *arr) : _keyBuf(0) {
+        _ctx = ctx;
+        _arr = arr;
+        _pos = 0;
+        _itObj = nullptr;
+    }
+
+    inline uint32_t _len() { return _arr->_length; }
+
+    virtual bool nextKey(SizedString &keyOut) override {
+        if (_pos >= _len()) {
+            if (_itObj == nullptr) {
+                if (!_arr->_obj) return false;
+                _itObj = _arr->_obj->getIteratorObject(_ctx);
+            }
+            return _itObj->nextKey(keyOut);
+        }
+
+        _keyBuf.set(_pos);
+        keyOut = _keyBuf.str();
+        _pos++;
+        return true;
+    }
+
+    virtual bool nextKey(JsValue &keyOut) override {
+        if (_pos >= _len()) {
+            if (_itObj == nullptr) {
+                if (!_arr->_obj) return false;
+                _itObj = _arr->_obj->getIteratorObject(_ctx);
+            }
+            return _itObj->nextKey(keyOut);
+        }
+
+        _keyBuf.set(_pos);
+        keyOut = _ctx->runtime->pushString(_keyBuf.str());
+        _pos++;
+        return true;
+    }
+
+    virtual bool nextValue(JsValue &valueOut) override {
+        if (_pos >= _len()) {
+            return false;
+        }
+
+        valueOut = _arr->getByIndex(_ctx, _arr->self, _pos);
+
+        _pos++;
+        return true;
+    }
+
+    virtual bool next(JsValue &keyOut, JsValue &valueOut) override {
+        if (_pos >= _len()) {
+            if (_itObj == nullptr) {
+                if (!_arr->_obj) return false;
+                _itObj = _arr->_obj->getIteratorObject(_ctx);
+            }
+            return _itObj->next(keyOut, valueOut);
+        }
+
+        _keyBuf.set(_pos);
+        keyOut = _ctx->runtime->pushString(_keyBuf.str());
+        valueOut = _arr->getByIndex(_ctx, _arr->self, _pos);
+
+        _pos++;
+        return true;
+    }
+
+    virtual bool next(SizedString &keyOut, JsValue &valueOut) override {
+        if (_pos >= _len()) {
+            if (_itObj == nullptr) {
+                if (!_arr->_obj) return false;
+                _itObj = _arr->_obj->getIteratorObject(_ctx);
+            }
+            return _itObj->next(keyOut, valueOut);
+        }
+
+        _keyBuf.set(_pos);
+        keyOut = _keyBuf.str();
+        valueOut = _arr->getByIndex(_ctx, _arr->self, _pos);
+
+        _pos++;
+        return true;
+    }
+
+protected:
+    VMContext                       *_ctx;
+    JsArray                         *_arr;
+    uint32_t                        _pos;
+    NumberToSizedString             _keyBuf;
+
+    IJsIterator                     *_itObj;
+
+};
+
+
 JsArray::JsArray(uint32_t length) {
     if (length > 0) {
         reserveSize(length);
@@ -307,9 +407,7 @@ IJsObject *JsArray::clone() {
 }
 
 IJsIterator *JsArray::getIteratorObject(VMContext *ctx) {
-    // auto it = new JsObjectIterator(ctx, this);
-    // return it;
-    return nullptr;
+    return new JsArrayIterator(ctx, this);
 }
 
 void JsArray::push(VMContext *ctx, const JsValue &value) {

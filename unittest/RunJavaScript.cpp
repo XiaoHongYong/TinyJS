@@ -20,19 +20,16 @@ public:
     }
 
     virtual void info(const SizedString &message) override {
-        stream.write("[info] ");
         stream.write(message);
         stream.writeUint8('\n');
     }
     
     virtual void warn(const SizedString &message) override {
-        stream.write("[warn] ");
         stream.write(message);
         stream.writeUint8('\n');
     }
     
     virtual void error(const SizedString &message) override {
-        stream.write("[error] ");
         stream.write(message);
         stream.writeUint8('\n');
     }
@@ -67,7 +64,7 @@ bool compareTextIgnoreSpace(const char *left, const char *right) {
     }
 
     if (*left != *right) {
-        printf("NOT EQUAL, at:\nCurrent(%d):  %.30s\nExpected(%d): %.30s\n", (int)(left - orgLeft), left, (int)(right - orgRight), right);
+        printf("NOT EQUAL, at:\nCurrent(%d):  %.100s\nExpected(%d): %.100s\n", (int)(left - orgLeft), left, (int)(right - orgRight), right);
     }
 
     return *left == *right;
@@ -94,6 +91,10 @@ void splitTestCodeAndOutput(string text, VecStrings &vCodeOut, VecStrings &vOutp
         string left, right;
         if (strSplit(text.c_str(), "/* OUTPUT", left, right)) {
             vCodeOut.push_back(left);
+
+            if (startsWith(right.c_str(), "-FIXED")) {
+                right.erase(right.begin(), right.begin() + 6);
+            }
             if (!strSplit(right.c_str(), "*/", left, right)) {
                 throw "Invalid output format";
             }
@@ -147,10 +148,16 @@ TEST(RunJavaScript, outputCheck) {
 
                 runJavascript(code.c_str(), output);
 
+                // printf("   Current:   %s\n", output.c_str());
+                // printf("   Expected: %s\n", outputExpected.c_str());
+
                 printf("   Code(%d): %.*s\n", (int)i, (int)70, removeNewLine(code).c_str());
                 printf("   Current:   %.*s\n", (int)60, removeNewLine(output).c_str());
                 printf("   Expected: %.*s\n", (int)60, removeNewLine(outputExpected).c_str());
-                ASSERT_TRUE(compareTextIgnoreSpace(output.c_str(), outputExpected.c_str()));
+                auto result = compareTextIgnoreSpace(output.c_str(), outputExpected.c_str());
+                if (!result) {
+                    FAIL() << "File: " + fn;
+                }
                 printf("   Part: %d Passed\n", (int)i);
             }
 

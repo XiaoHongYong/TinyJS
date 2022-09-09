@@ -1,3 +1,4 @@
+// Index: 0
 function f1() {
     var obj = { toString() { return '1.0'; }}
     function g() { }
@@ -26,7 +27,7 @@ function f1() {
     try {
         obj[index] = Symbol();         console.log(obj[index]++);
     } catch (e) {
-        console.log(e);
+        console.log(e.name + ': ' + e.message);
     }
 }
 f1();
@@ -55,9 +56,11 @@ TypeError: Cannot convert a Symbol value to a number
 */
 
 
+// Index: 1
 function f2() {
     var obj = { toString() { return '1.0'; }}
     function g() { }
+    var index = 'ax';
 
     obj[index] = undefined;        console.log(obj[index]--, obj[index]);
     obj[index] = null;             console.log(obj[index]--, obj[index]);
@@ -82,7 +85,7 @@ function f2() {
     try {
         obj[index] = Symbol();         console.log(obj[index]--);
     } catch (e) {
-        console.log(e);
+        console.log(e.name + ': ' + e.message);
     }
 }
 f2();
@@ -111,9 +114,11 @@ TypeError: Cannot convert a Symbol value to a number
 */
 
 
+// Index: 2
 function f3() {
     var obj = { toString() { return '1.0'; }}
     function g() { }
+    var index = 'ax';
 
     obj[index] = undefined;        console.log(--obj[index], obj[index]);
     obj[index] = null;             console.log(--obj[index], obj[index]);
@@ -138,7 +143,7 @@ function f3() {
     try {
         obj[index] = Symbol();         console.log(--obj[index]);
     } catch (e) {
-        console.log(e);
+        console.log(e.name + ': ' + e.message);
     }
 }
 f3();
@@ -167,9 +172,11 @@ TypeError: Cannot convert a Symbol value to a number
 */
 
 
+// Index: 3
 function f4() {
     var obj = { toString() { return '1.0'; }}
     function g() { }
+    var index = 'ax';
 
     obj[index] = undefined;        console.log(++obj[index], obj[index]);
     obj[index] = null;             console.log(++obj[index], obj[index]);
@@ -194,7 +201,7 @@ function f4() {
     try {
         obj[index] = Symbol();         console.log(++obj[index]);
     } catch (e) {
-        console.log(e);
+        console.log(e.name + ': ' + e.message);
     }
 }
 f4();
@@ -221,3 +228,4 @@ NaN NaN
 NaN NaN
 TypeError: Cannot convert a Symbol value to a number
 */
+

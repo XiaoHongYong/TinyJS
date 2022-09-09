@@ -143,11 +143,11 @@ public:
     bool                        isReturnedForTry; // 如果 return 在 try 中，并且有 fainaly 会设置此标志
     JsValue                     retValue; // 函数的返回值
 
-    JsErrorType                  errorInTry;
+    JsErrorType                 errorInTry;
     JsValue                     errorMessageInTry;
 
     JsValue                     errorMessage;
-    JsErrorType                  error;
+    JsErrorType                 error;
 
 };
 

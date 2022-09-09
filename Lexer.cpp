@@ -219,6 +219,7 @@ struct KeywordCompareLess {
 
 static cstr_t PARSE_ERROR_NAMES[] = {
     "PE_OK",
+    "Error: ",
     "SyntaxError: ",
     "TypeError: ",
     "RangeError: ",
@@ -242,8 +243,7 @@ ParseException::ParseException(JsErrorType err, cstr_t format, ...) {
     va_end(args);
 
     assert(err > 0 && err < CountOf(PARSE_ERROR_NAMES));
-    message = PARSE_ERROR_NAMES[err];
-    message.append(strf.c_str());
+    message.assign(strf.c_str());
 }
 
 JSLexer::JSLexer(ResourcePool *resPool, const char *buf, size_t len) : _resPool(resPool), _pool(resPool->pool) {

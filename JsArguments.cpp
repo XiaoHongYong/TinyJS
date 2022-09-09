@@ -8,6 +8,105 @@
 #include "JsArguments.hpp"
 
 
+/**
+ * 遍历 Array
+ */
+class JsArgumentsIterator : public IJsIterator {
+public:
+    JsArgumentsIterator(VMContext *ctx, JsArguments *args) : _keyBuf(0) {
+        _ctx = ctx;
+        _args = args;
+        _pos = 0;
+        _itObj = nullptr;
+    }
+
+    inline uint32_t _len() { return _args->_args->count; }
+
+    virtual bool nextKey(SizedString &keyOut) override {
+        if (_pos >= _len()) {
+            if (_itObj == nullptr) {
+                if (!_args->_obj) return false;
+                _itObj = _args->_obj->getIteratorObject(_ctx);
+            }
+            return _itObj->nextKey(keyOut);
+        }
+
+        _keyBuf.set(_pos);
+        keyOut = _keyBuf.str();
+        _pos++;
+        return true;
+    }
+
+    virtual bool nextKey(JsValue &keyOut) override {
+        if (_pos >= _len()) {
+            if (_itObj == nullptr) {
+                if (!_args->_obj) return false;
+                _itObj = _args->_obj->getIteratorObject(_ctx);
+            }
+            return _itObj->nextKey(keyOut);
+        }
+
+        _keyBuf.set(_pos);
+        keyOut = _ctx->runtime->pushString(_keyBuf.str());
+        _pos++;
+        return true;
+    }
+
+    virtual bool nextValue(JsValue &valueOut) override {
+        if (_pos >= _len()) {
+            return false;
+        }
+
+        valueOut = _args->_args->data[_pos];
+
+        _pos++;
+        return true;
+    }
+
+    virtual bool next(JsValue &keyOut, JsValue &valueOut) override {
+        if (_pos >= _len()) {
+            if (_itObj == nullptr) {
+                if (!_args->_obj) return false;
+                _itObj = _args->_obj->getIteratorObject(_ctx);
+            }
+            return _itObj->next(keyOut, valueOut);
+        }
+
+        _keyBuf.set(_pos);
+        keyOut = _ctx->runtime->pushString(_keyBuf.str());
+        valueOut = _args->_args->data[_pos];
+
+        _pos++;
+        return true;
+    }
+
+    virtual bool next(SizedString &keyOut, JsValue &valueOut) override {
+        if (_pos >= _len()) {
+            if (_itObj == nullptr) {
+                if (!_args->_obj) return false;
+                _itObj = _args->_obj->getIteratorObject(_ctx);
+            }
+            return _itObj->next(keyOut, valueOut);
+        }
+
+        _keyBuf.set(_pos);
+        keyOut = _keyBuf.str();
+        valueOut = _args->_args->data[_pos];
+
+        _pos++;
+        return true;
+    }
+
+protected:
+    VMContext                       *_ctx;
+    JsArguments                     *_args;
+    uint32_t                        _pos;
+    NumberToSizedString             _keyBuf;
+
+    IJsIterator                     *_itObj;
+
+};
+
 JsArguments::JsArguments(VMScope *scope, Arguments *args) {
     _scope = scope;
     _args = args;
@@ -184,6 +283,11 @@ JsProperty *JsArguments::getRawByName(VMContext *ctx, const SizedString &name, J
         return _obj->getRawByName(ctx, name, funcGetterOut, includeProtoProp);
     }
 
+    if (includeProtoProp) {
+        // 缺省的 Object.prototype
+        return ctx->runtime->objPrototypeObject->getRawByName(ctx, name, funcGetterOut, includeProtoProp);
+    }
+
     return nullptr;
 }
 
@@ -258,9 +362,7 @@ IJsObject *JsArguments::clone() {
 }
 
 IJsIterator *JsArguments::getIteratorObject(VMContext *ctx) {
-    // auto it = new JsObjectIterator(ctx, this);
-    // return it;
-    return nullptr;
+    return new JsArgumentsIterator(ctx, this);
 }
 
 void JsArguments::_newObject() {

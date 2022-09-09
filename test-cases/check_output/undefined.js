@@ -1,4 +1,27 @@
 // Index: 0
+var NaN = 1;
+console.log(NaN);
+var Infinity = 2;
+console.log(Infinity);
+var undefined = 2;
+console.log(undefined);
+/* OUTPUT
+NaN
+Infinity
+undefined
+*/
+
+
+// Index: 1
+function NaN() {
+}
+console.log(NaN);
+/* OUTPUT
+Uncaught SyntaxError: Identifier 'NaN' has already been declared
+*/
+
+
+// Index: 2
 function f1() {
     var undefined = 1;
     console.log(undefined);
@@ -20,7 +43,7 @@ f1();
 */
 
 
-// Index: 1
+// Index: 3
 function f2() {
     var NaN = 1;
     console.log(NaN);
@@ -41,7 +64,7 @@ NaN
 */
 
 
-// Index: 2
+// Index: 4
 function f3() {
     var a = NaN;
     console.log(a * 10);
@@ -59,7 +82,7 @@ NaN
 */
 
 
-// Index: 3
+// Index: 5
 function f4(undefined) {
     console.log(undefined);
     undefined = 4;
@@ -72,7 +95,7 @@ f4(1);
 */
 
 
-// Index: 4
+// Index: 6
 function f5() {
     function undefined() {}
     console.log(undefined);
@@ -80,8 +103,11 @@ function f5() {
     console.log(undefined);
 }
 f5();
+    1 + Symbol()
+    console.log(error);
 /* OUTPUT
 function undefined() {}
 2
+Uncaught TypeError: Cannot convert a Symbol value to a number
 */
 

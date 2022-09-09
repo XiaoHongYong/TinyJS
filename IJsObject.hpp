@@ -27,6 +27,16 @@ public:
 
 };
 
+class EmptyJsIterator : public IJsIterator {
+public:
+    virtual bool nextKey(SizedString &keyOut) override { return false; }
+    virtual bool nextKey(JsValue &keyOut) override { return false; }
+    virtual bool nextValue(JsValue &valueOut) override { return false; }
+    virtual bool next(JsValue &keyOut, JsValue &valueOut) override { return false; }
+    virtual bool next(SizedString &keyOut, JsValue &valueOut) override { return false; }
+
+};
+
 inline JsValue getPropertyValue(VMContext *ctx, const JsProperty *prop, const JsValue &thiz) {
     if (prop->isGSetter && prop->value.type >= JDT_FUNCTION) {
         ctx->vm->callMember(ctx, thiz, prop->value, Arguments());
@@ -64,7 +74,8 @@ public:
     bool getOwnPropertyDescriptor(VMContext *ctx, const JsValue &name, JsProperty &descriptorOut);
 
     JsValue get(VMContext *ctx, const JsValue &thiz, const JsValue &name, const JsValue &defVal = jsValueUndefined);
-    void set(VMContext *ctx, const JsValue &thiz, const JsValue &name, const JsValue &value);
+    JsProperty *getRaw(VMContext *ctx, const JsValue &name, JsNativeFunction &funcGetterOut, bool includeProtoProp = true);
+     void set(VMContext *ctx, const JsValue &thiz, const JsValue &name, const JsValue &value);
     JsValue increase(VMContext *ctx, const JsValue &thiz, const JsValue &name, int n, bool isPost);
     bool remove(VMContext *ctx, const JsValue &name);
 
@@ -90,8 +101,8 @@ public:
 
     virtual IJsObject *clone() = 0;
 
+    virtual bool isOfIterable() { return false; }
     virtual IJsIterator *getIteratorObject(VMContext *ctx) = 0;
-    virtual JsValue getIterator(VMContext *ctx);
 
     bool getOwnPropertyDescriptorByName(VMContext *ctx, const SizedString &name, JsProperty &descriptorOut) {
         JsNativeFunction funcGetter = nullptr;

@@ -297,19 +297,37 @@ IJsNode *JSParser::_tryForInStatment() {
         return varOrg;
     }
     isIn = _curToken.type == TK_IN;
+    _readToken();
 
     // for in/of
     if (countVars > 1) {
-        _parseError(PE_SYNTAX_ERROR, "Invalid left-hand side in for-in loop: Must have a single binding");
+        if (isIn) {
+            _parseError(PE_SYNTAX_ERROR, "Invalid left-hand side in for-in loop: Must have a single binding");
+        } else {
+            _parseError(PE_SYNTAX_ERROR, "Invalid left-hand side in for-loop");
+        }
     }
 
-    if (var->type == NT_ASSIGN) {
-        _parseError(PE_SYNTAX_ERROR, "for-of loop variable declaration may not have an initializer");
+    if (var->type == NT_ASSIGN ||
+        (var->type == NT_ASSIGN_WITH_STACK_TOP && ((JsExprAssignWithStackTop *)var)->defaultValue())) {
+        _parseError(PE_SYNTAX_ERROR, "for-of loop variable declaration may not have an initializer.");
     }
 
-    var->setBeingAssigned();
+    switch (var->type) {
+        case NT_ASSIGN_WITH_STACK_TOP:
+        case NT_IDENTIFIER:
+        case NT_MEMBER_DOT:
+        case NT_MEMBER_INDEX:
+        case NT_ARRAY:
+        case NT_OBJECT:
+            var->setBeingAssigned();
+            break;
+        default:
+            _parseError(PE_SYNTAX_ERROR, "Invalid left-hand side in for-loop");
+            break;
+    }
 
-    auto obj = _expectExpression(PRED_NONE, true);
+    auto obj = _expectMultipleExpression();
     _expectToken(TK_CLOSE_PAREN);
 
     _allowRegexp();
@@ -1190,8 +1208,19 @@ IJsNode *JSParser::_expectArrowFunction(IJsNode *parenExpr) {
 }
 
 IJsNode *JSParser::_expectParenExpression() {
-    assert(0);
-    return nullptr;
+    _expectToken(TK_OPEN_PAREN);
+
+    auto parenExpr = PoolNew(_pool, JsParenExpr)();
+
+    parenExpr->push(_expectExpression());
+
+    while (_curToken.type != TK_CLOSE_PAREN) {
+        _expectToken(TK_COMMA);
+        parenExpr->push(_expectExpression());
+    }
+    _expectToken(TK_CLOSE_PAREN);
+
+    return parenExpr;
 }
 
 IJsNode *JSParser::_expectObjectLiteralExpression() {
@@ -1407,12 +1436,23 @@ void JSParser::_relocateIdentifierInParentFunction(Function *codeBlock, Function
         token.buf = item.first.data;
         token.len = item.first.len;
 
-        if (!item.second->isScopeVar) {
+        auto curId = item.second;
+        if (!curId->isScopeVar) {
             // var 变量，分配变量地址
             auto id = functionScope->addVarDeclaration(token);
-            item.second->varStorageType = id->varStorageType = storageType;
-            item.second->storageIndex = id->storageIndex = functionScope->countLocalVars++;
-            item.second->scope = id->scope;
+            if (id->varStorageType == VST_NOT_SET) {
+                id->varStorageType = storageType;
+                id->storageIndex = functionScope->countLocalVars++;
+            } else if (curId->isFuncName && functionScope->parent == nullptr
+                       && id->storageIndex < _runtimeCommon->countImmutableGlobalVars) {
+                // 不能出现同名的函数
+                _parseError(PE_SYNTAX_ERROR, "Identifier '%.*s' has already been declared",
+                            (int)item.first.len, item.first.data);
+            }
+
+            curId->varStorageType = id->varStorageType;
+            curId->storageIndex = id->storageIndex;
+            curId->scope = id->scope;
         }
     }
 

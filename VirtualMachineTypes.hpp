@@ -41,6 +41,7 @@ class VMContext;
     OP_ITEM(OP_LEAVE_SCOPE, ""), \
     \
     OP_ITEM(OP_POP_STACK_TOP, ""), \
+    OP_ITEM(OP_POP_STACK_TOP_N, "count:u16"), \
     OP_ITEM(OP_PUSH_STACK_TOP, ""), \
     \
     OP_ITEM(OP_PUSH_UNDFINED, ""), \
@@ -77,6 +78,8 @@ class VMContext;
     OP_ITEM(OP_ASSIGN_LOCAL_ARGUMENT, "argument_idx:u16"), \
     OP_ITEM(OP_ASSIGN_MEMBER_INDEX, ""), \
     OP_ITEM(OP_ASSIGN_MEMBER_DOT, "property_string_idx:u32"), \
+    OP_ITEM(OP_ASSIGN_VALUE_AHEAD_MEMBER_INDEX, ""), \
+    OP_ITEM(OP_ASSIGN_VALUE_AHEAD_MEMBER_DOT, "property_string_idx:u32"), \
     OP_ITEM(OP_INCREMENT_ID_PRE, "identifier_storage_type:varStorageType, scope_depth:u8, var_index:u16"), \
     OP_ITEM(OP_INCREMENT_ID_POST, "identifier_storage_type:varStorageType, scope_depth:u8, var_index:u16"), \
     OP_ITEM(OP_DECREMENT_ID_PRE, "identifier_storage_type:varStorageType, scope_depth:u8, var_index:u16"), \
@@ -150,10 +153,10 @@ class VMContext;
     OP_ITEM(OP_ARRAY_ASSIGN_PUSH_VALUE, ""), \
     OP_ITEM(OP_ARRAY_ASSIGN_PUSH_UNDEFINED_VALUE, ""), \
     \
-    OP_ITEM(OP_ITERATOR_CREATE, ""), \
-    OP_ITEM(OP_ITERATOR_NEXT_KEY, ""), \
-    OP_ITEM(OP_ITERATOR_NEXT_VALUE, ""), \
-    OP_ITEM(OP_ITERATOR_NEXT_KEY_VALUE, ""), \
+    OP_ITEM(OP_ITERATOR_IN_CREATE, ""), \
+    OP_ITEM(OP_ITERATOR_OF_CREATE, ""), \
+    OP_ITEM(OP_ITERATOR_NEXT_KEY, "address_end_loop:u32"), \
+    OP_ITEM(OP_ITERATOR_NEXT_VALUE, "address_end_loop:u32"), \
     \
     OP_ITEM(OP_SPREAD_ARGS, ""), \
     OP_ITEM(OP_REST_PARAMETER, "index:u16"), \
@@ -185,6 +188,9 @@ enum JsDataType : uint8_t {
     JDT_SYMBOL,
     JDT_CHAR, // 单个字符的 String
     JDT_STRING,
+
+    // Iterator 仅仅在虚拟机内部的 OP_ITERATOR_NEXT_XX 等几个指令使用
+    JDT_ITERATOR,
 
     // Object 开始
     JDT_OBJECT,

@@ -652,8 +652,8 @@ bool relationalStrictEqual(VMRuntime *rt, const JsValue &left, const JsValue &ri
         auto len1 = rt->getStringLength(left);
         if (right.type == JDT_CHAR) {
             if (len1 == 1) {
-                auto s2 = rt->getString(right);
-                return s2.data[0] == left.value.n32;
+                auto s1 = rt->getString(left);
+                return s1.data[0] == left.value.n32;
             }
         } else if (right.type == JDT_STRING) {
             auto len2 = rt->getStringLength(right);
@@ -663,9 +663,41 @@ bool relationalStrictEqual(VMRuntime *rt, const JsValue &left, const JsValue &ri
                 return s1.equal(s2);
             }
         }
+    } else if (left.type == JDT_INT32) {
+        if (right.type == JDT_NUMBER) {
+            auto d = rt->getDouble(right);
+            return left.value.n32 == d;
+        }
+    } else if (left.type == JDT_NUMBER) {
+        if (right.type == JDT_INT32) {
+            auto d1 = rt->getDouble(left);
+            return d1 == right.value.n32;
+        } else if (right.type == JDT_NUMBER) {
+            auto d1 = rt->getDouble(left);
+            auto d2 = rt->getDouble(right);
+            return d1 == d2;
+        }
     }
 
     return false;
+}
+
+inline void assignMemberIndexOperation(VMContext *ctx, VMRuntime *runtime, const JsValue &obj, JsValue index, const JsValue &value) {
+    if (obj.type < JDT_OBJECT) {
+        // Primitive 类型都不能设置属性
+        return;
+    }
+
+    if (index.type >= JDT_OBJECT) {
+        ctx->vm->callMember(ctx, obj, "toString", Arguments());
+        if (ctx->error != PE_OK) {
+            return;
+        }
+        index = ctx->retValue;
+    }
+
+    auto pobj = runtime->getObject(obj);
+    pobj->set(ctx, obj, index, value);
 }
 
 #endif /* BinaryOperation_hpp */

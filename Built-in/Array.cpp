@@ -67,6 +67,7 @@ static JsLibProperty arrayPrototypeFunctions[] = {
 
 void registerArray(VMRuntimeCommon *rt) {
     auto prototypeObj = new JsLibObject(rt, arrayPrototypeFunctions, CountOf(arrayPrototypeFunctions));
+    prototypeObj->setOfIteratorTrue();
 
     rt->objPrototypeArray = prototypeObj;
     auto prototype = rt->pushObjValue(JDT_LIB_OBJECT, prototypeObj);
