@@ -8,7 +8,7 @@
 #include "Parser.hpp"
 #include "VirtualMachine.hpp"
 #include "VMRuntime.hpp"
-#include "../Utils/unittest.h"
+#include "utils/unittest.h"
 
 
 void test() {

@@ -17,7 +17,7 @@ HEADER_TEMPLATE = '''/**
 
 {}
 
-enum JsValueStringIndex {{
+enum jsStringValueIndex {{
     __JS_STRING_IDX_INVALID__,
 {}
 }};
@@ -97,7 +97,7 @@ def write_file_cmp(fn, content):
 def build():
     EXTERN_SS_XXS = []
     SS_XXS = []
-    enum_JsValueStringIndices = []
+    enum_jsStringValueIndices = []
     jsStringValues = []
     pushConstStringValues = []
     names = set()
@@ -110,8 +110,8 @@ def build():
 
         EXTERN_SS_XXS.append('extern SizedString SS_{};'.format(upper_name));
         SS_XXS.append('SizedString SS_{} = makeCommonString("{}");'.format(upper_name, value));
-        enum_JsValueStringIndices.append('    JS_STRING_IDX_{},'.format(upper_name));
-        jsStringValues.append('const JsValue JsStringValue{} = JsValue(JDT_STRING, JS_STRING_IDX_{});'.format(name, upper_name))
+        enum_jsStringValueIndices.append('    JS_STRING_IDX_{},'.format(upper_name));
+        jsStringValues.append('const JsValue jsStringValue{} = JsValue(JDT_STRING, JS_STRING_IDX_{});'.format(name, upper_name))
 
         pushConstStringValues.append('    tmp = rtc->pushStringValue(SS_{}); assert(tmp.value.index == JS_STRING_IDX_{});'.format(upper_name, upper_name))
 
@@ -123,7 +123,7 @@ def build():
 
     write_file_cmp(fn_header, HEADER_TEMPLATE.format(this_py_file,
         '\n'.join(EXTERN_SS_XXS),
-        '\n'.join(enum_JsValueStringIndices),
+        '\n'.join(enum_jsStringValueIndices),
         '\n'.join(jsStringValues)))
 
     write_file_cmp(fn_cpp, CPP_TEMPLATE.format(this_py_file,

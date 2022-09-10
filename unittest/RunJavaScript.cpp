@@ -5,40 +5,40 @@
 //  Created by henry_xiao on 2022/8/8.
 //
 
-#include "../VirtualMachine.hpp"
+#include "interpreter/VirtualMachine.hpp"
 
 
 #if UNIT_TEST
 
-#include "../../Utils/unittest.h"
+#include "utils/unittest.h"
 
 class StringStreamConsole : public IConsole {
 public:
     virtual void log(const SizedString &message) override {
         stream.write(message);
-        stream.writeUint8('\n');
+        stream.writeUInt8('\n');
     }
 
     virtual void info(const SizedString &message) override {
         stream.write(message);
-        stream.writeUint8('\n');
+        stream.writeUInt8('\n');
     }
-    
+
     virtual void warn(const SizedString &message) override {
         stream.write(message);
-        stream.writeUint8('\n');
+        stream.writeUInt8('\n');
     }
-    
+
     virtual void error(const SizedString &message) override {
         stream.write(message);
-        stream.writeUint8('\n');
+        stream.writeUInt8('\n');
     }
 
     SizedString getOutput() { return stream.toSizedString(); }
 
 protected:
     BinaryOutputStream          stream;
-    
+
 };
 
 const char *ignoreSpace(const char *text) {
@@ -82,7 +82,7 @@ bool runJavascript(const string &code, string &output) {
 
     auto msg = console->getOutput();
     output.assign((const char *)msg.data, msg.len);
-    
+
     return true;
 }
 
