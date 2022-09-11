@@ -13,14 +13,14 @@
 
 inline void writeEnterScope(Scope *scope, ByteCodeStream &stream) {
     if (scope->countLocalVars > 0) {
-        stream.writeUInt8(OP_ENTER_SCOPE);
+        stream.writeOpCode(OP_ENTER_SCOPE);
         stream.writeUInt16(scope->index);
     }
 }
 
 inline void writeLeaveScope(Scope *scope, ByteCodeStream &stream) {
     if (scope->countLocalVars > 0) {
-        stream.writeUInt8(OP_LEAVE_SCOPE);
+        stream.writeOpCode(OP_LEAVE_SCOPE);
     }
 }
 
@@ -133,7 +133,7 @@ public:
         stream.writeOpCode(OP_PUSH_ID_LOCAL_ARGUMENT);
         stream.writeUInt16(index);
 
-        stream.writeUInt8(OP_JUMP_IF_NOT_NULL_UNDEFINED_KEEP_VALID);
+        stream.writeOpCode(OP_JUMP_IF_NOT_NULL_UNDEFINED_KEEP_VALID);
         auto addrEnd = stream.writeReservedAddress();
         // 插入缺省值表达式的执行代码.
         defVal->convertToByteCode(stream);
@@ -206,7 +206,9 @@ public:
             addrLoopEnd = stream.writeReservedAddress();
         }
 
+        stream.enterBreakContinueArea();
         stmt->convertToByteCode(stream);
+        stream.leaveBreakContinueArea();
 
         if (finalExpr)
             finalExpr->convertToByteCode(stream);
@@ -231,7 +233,9 @@ public:
 
     virtual void convertToByteCode(ByteCodeStream &stream) {
         auto begin = stream.address();
+        stream.enterBreakContinueArea();
         stmt->convertToByteCode(stream);
+        stream.leaveBreakContinueArea();
 
         cond->convertToByteCode(stream);
         stream.writeOpCode(OP_JUMP_IF_TRUE);
@@ -252,7 +256,9 @@ public:
         stream.writeOpCode(OP_JUMP_IF_FALSE);
         auto addrEnd = stream.writeReservedAddress();
 
+        stream.enterBreakContinueArea();
         stmt->convertToByteCode(stream);
+        stream.leaveBreakContinueArea();
 
         stream.writeOpCode(OP_JUMP);
         stream.writeAddress(begin);
@@ -261,6 +267,28 @@ public:
     }
 
     IJsNode                     *cond, *stmt;
+
+};
+
+class JsStmtBreak : public IJsNode {
+public:
+    JsStmtBreak() : IJsNode(NT_BREAK) { }
+
+    virtual void convertToByteCode(ByteCodeStream &stream) {
+        stream.writeOpCode(OP_JUMP);
+        stream.writeBreakAddress();
+    }
+
+};
+
+class JsStmtContinue : public IJsNode {
+public:
+    JsStmtContinue() : IJsNode(NT_CONTINUE) { }
+
+    virtual void convertToByteCode(ByteCodeStream &stream) {
+        stream.writeOpCode(OP_JUMP);
+        stream.writeContinueAddress();
+    }
 
 };
 
@@ -301,6 +329,42 @@ public:
     }
 
     IJsNode                     *cond, *stmtTrue, *stmtFalse;
+
+};
+
+class JsSwitchBranch : public JsNodes {
+public:
+    JsSwitchBranch(IJsNode *exprCase) : JsNodes(NT_SWITCH_BRANCH), exprCase(exprCase), addrBranch(nullptr) { }
+
+    virtual void convertToByteCode(ByteCodeStream &stream) {
+        // expr 已经在 JsStmtSwitch 中调用，不在此调用
+
+        JsNodes::convertToByteCode(stream);
+    }
+
+    // 如果为 null，则表示此分支为 default
+    IJsNode                     *exprCase;
+
+    // 此分支的 statement 的执行跳转地址
+    VMAddress                   *addrBranch;
+
+};
+
+class JsStmtSwitch : public IJsNode {
+public:
+    JsStmtSwitch(ResourcePool *resPool, IJsNode *cond) : IJsNode(NT_SWITCH), resPool(resPool), cond(cond), defBranch(nullptr) { }
+
+    virtual void convertToByteCode(ByteCodeStream &stream);
+
+    void buildCaseJumps(VMRuntime *runtime, uint16_t poolIndex, SwitchJump *switchJump);
+
+    void push(JsSwitchBranch *node) { branches.push_back(node); }
+
+    vector<JsSwitchBranch *>    branches;
+
+    ResourcePool                *resPool;
+    IJsNode                     *cond;
+    JsSwitchBranch              *defBranch;
 
 };
 

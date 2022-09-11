@@ -208,6 +208,10 @@ public:
         return pool->strings[index];
     }
 
+    const SwitchJump &getSwitchJumpInResourcePool(uint32_t index, const ResourcePool *pool) {
+        return pool->switchCaseJumps[index];
+    }
+
     JsValue stringIdxToJsValue(uint16_t poolIndex, uint32_t index) {
         if (index < countCommonStrings) {
             return JsValue(JDT_STRING, index);

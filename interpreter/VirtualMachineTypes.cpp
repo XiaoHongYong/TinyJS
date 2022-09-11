@@ -65,6 +65,7 @@ bool decodeParameters(uint8_t *&bytecode, uint8_t *end, const OpCodeDesc &desc, 
         if (p == nullptr) {
             // assert(strcmp(params, "not_used"))
             printf("OpCode shoud not be used, or parameter description is INCORRECT: %s\n", desc.name);
+            printf("%.*s\n", (int)100, stream.toLinkedString()->data + stream.toLinkedString()->len - 100);
             assert(0);
             return false;
         }

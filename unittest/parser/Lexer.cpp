@@ -10,7 +10,7 @@
 
 #if UNIT_TEST
 
-#include "Utils/unittest.h"
+#include "utils/unittest.h"
 
 SizedString makeParseNumberString(const char *str) {
     static uint8_t buf[256];

@@ -65,7 +65,8 @@ protected:
     IJsNode *_expectExpressionStmt();
     IJsNode *_expectLabelStmt();
     IJsNode *_expectBlock();
-    IJsNode *_expectBreakContinue(TokenType type);
+    IJsNode *_expectBreak();
+    IJsNode *_expectContinue();
     IJsNode *_expectForStatment();
     IJsNode *_tryForInStatment();
     IJsNode *_expectSwitchStmt();
@@ -117,7 +118,10 @@ protected:
     void _leaveScope();
 
     // 检查 {x=y} 这样的不合乎语法的表达式
-    void checkExpressionObjects();
+    void _checkExpressionObjects();
+
+    void _enterBreakContinueArea(bool allowContinue = true);
+    void _leaveBreakContinueArea();
 
 protected:
     using MapStringToIdx = std::unordered_map<SizedString, int, SizedStringHash, SizedStrCmpEqual>;
@@ -129,7 +133,7 @@ protected:
     // 保存了被引用到的 Identifier 实例，声明的不能添加到此列表中
     JsExprIdentifier            *_headIdRefs;
 
-    vector<JsExprObject *>        _checkingExprObjs;
+    vector<JsExprObject *>      _checkingExprObjs;
 
     MapStringToIdx              _strings;
     MapDoubleToIdx              _doubles;
@@ -141,6 +145,8 @@ protected:
     Function                    *_curFunction;
     Scope                       *_curFuncScope;
     Scope                       *_curScope;
+
+    list<bool>                  _stackBreakContinueAreas;
 
 };
 

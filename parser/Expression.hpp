@@ -63,7 +63,7 @@ public:
 
 class JsExprBoolTrue : public IJsNode {
 public:
-    JsExprBoolTrue() : IJsNode(NT_STRING) { }
+    JsExprBoolTrue() : IJsNode(NT_BOOLEAN_TRUE) { }
 
     virtual void convertToByteCode(ByteCodeStream &stream) {
         stream.writeOpCode(OP_PUSH_TRUE);
@@ -73,7 +73,7 @@ public:
 
 class JsExprBoolFalse : public IJsNode {
 public:
-    JsExprBoolFalse() : IJsNode(NT_STRING) { }
+    JsExprBoolFalse() : IJsNode(NT_BOOLEAN_FALSE) { }
 
     virtual void convertToByteCode(ByteCodeStream &stream) {
         stream.writeOpCode(OP_PUSH_FALSE);
@@ -89,9 +89,6 @@ public:
         stream.writeOpCode(OP_PUSH_NULL);
     }
 
-protected:
-    bool                        value;
-
 };
 
 class JsExprString : public IJsNode {
@@ -103,7 +100,6 @@ public:
         stream.writeUInt32(stringIdx);
     }
 
-protected:
     uint32_t                    stringIdx;
 
 };
@@ -132,7 +128,6 @@ public:
         stream.writeUInt32(value);
     }
 
-protected:
     int32_t                     value;
 
 };
@@ -147,7 +142,6 @@ public:
         stream.writeUInt32(index);
     }
 
-protected:
     uint32_t                    index;
 
 };
@@ -191,36 +185,36 @@ public:
         // 将 identifier 压栈，根据不同的类型，优化使用不同的指令
         if (declare->varStorageType == VST_ARGUMENT) {
             if (declare->scope->function == scope->function) {
-                stream.writeUInt8(OP_PUSH_ID_LOCAL_ARGUMENT);
+                stream.writeOpCode(OP_PUSH_ID_LOCAL_ARGUMENT);
             } else {
-                stream.writeUInt8(OP_PUSH_ID_PARENT_ARGUMENT);
+                stream.writeOpCode(OP_PUSH_ID_PARENT_ARGUMENT);
                 stream.writeUInt8(declare->scope->depth);
                 assert(declare->scope->isFunctionScope);
             }
             stream.writeUInt16(declare->storageIndex);
         } else if (declare->varStorageType == VST_SCOPE_VAR || declare->varStorageType == VST_FUNCTION_VAR) {
             if (scope == declare->scope) {
-                stream.writeUInt8(OP_PUSH_ID_LOCAL_SCOPE);
+                stream.writeOpCode(OP_PUSH_ID_LOCAL_SCOPE);
             } else {
                 if (declare->scope->depth == 0) {
-                    stream.writeUInt8(OP_PUSH_ID_GLOBAL);
+                    stream.writeOpCode(OP_PUSH_ID_GLOBAL);
                 } else {
-                    stream.writeUInt8(OP_PUSH_ID_PARENT_SCOPE);
+                    stream.writeOpCode(OP_PUSH_ID_PARENT_SCOPE);
                     stream.writeUInt8(declare->scope->depth);
                 }
             }
             stream.writeUInt16(declare->storageIndex);
         } else if (declare->varStorageType == VST_GLOBAL_VAR) {
-            stream.writeUInt8(OP_PUSH_ID_GLOBAL);
+            stream.writeOpCode(OP_PUSH_ID_GLOBAL);
             stream.writeUInt16(declare->storageIndex);
         } else {
             assert(declare->varStorageType == VST_NOT_SET);
             assert(declare->isFuncName);
             if (declare->isFuncName) {
                 if (scope == declare->scope) {
-                    stream.writeUInt8(OP_PUSH_ID_LOCAL_FUNCTION);
+                    stream.writeOpCode(OP_PUSH_ID_LOCAL_FUNCTION);
                 } else {
-                    stream.writeUInt8(OP_PUSH_ID_PARENT_FUNCTION);
+                    stream.writeOpCode(OP_PUSH_ID_PARENT_FUNCTION);
                     stream.writeUInt8(declare->scope->depth);
                 }
             }
@@ -234,7 +228,7 @@ public:
             valueOpt->convertToByteCode(stream);
         }
 
-        stream.writeUInt8(OP_ASSIGN_IDENTIFIER);
+        stream.writeOpCode(OP_ASSIGN_IDENTIFIER);
         writeAddress(stream);
     }
 
@@ -452,9 +446,9 @@ public:
 
         if (declare->varStorageType == VST_ARGUMENT) {
             if (declare->scope->function == functionName->scope->function) {
-                stream.writeUInt8(OP_PUSH_ID_LOCAL_ARGUMENT);
+                stream.writeOpCode(OP_PUSH_ID_LOCAL_ARGUMENT);
             } else {
-                stream.writeUInt8(OP_PUSH_ID_PARENT_ARGUMENT);
+                stream.writeOpCode(OP_PUSH_ID_PARENT_ARGUMENT);
                 stream.writeUInt8(declare->scope->depth);
                 assert(declare->scope->isFunctionScope);
             }
@@ -463,13 +457,13 @@ public:
             // 调用的函数未被修改，并且是函数名，减少创建函数对象和压栈的操作.
             isDirectFunctionCall = true;
         } else {
-            // stream.writeUInt8(OP_PUSH_IDENTIFIER);
+            // stream.writeOpCode(OP_PUSH_IDENTIFIER);
             if (declare->scope->parent == nullptr || declare->varStorageType == VST_GLOBAL_VAR) {
-                stream.writeUInt8(OP_PUSH_ID_GLOBAL);
+                stream.writeOpCode(OP_PUSH_ID_GLOBAL);
             } else if (functionName->scope == declare->scope) {
-                stream.writeUInt8(OP_PUSH_ID_LOCAL_SCOPE);
+                stream.writeOpCode(OP_PUSH_ID_LOCAL_SCOPE);
             } else {
-                stream.writeUInt8(OP_PUSH_ID_PARENT_SCOPE);
+                stream.writeOpCode(OP_PUSH_ID_PARENT_SCOPE);
                 stream.writeUInt8(declare->scope->depth);
             }
             stream.writeUInt16(declare->storageIndex);
@@ -481,11 +475,11 @@ public:
             auto function = functionName->declare->value.function;
             auto parent = function->scope->parent->function;
 
-            stream.writeUInt8(OP_DIRECT_FUNCTION_CALL);
+            stream.writeOpCode(OP_DIRECT_FUNCTION_CALL);
             stream.writeUInt8(parent->scope->depth);
             stream.writeUInt16(function->index);
         } else {
-            stream.writeUInt8(OP_FUNCTION_CALL);
+            stream.writeOpCode(OP_FUNCTION_CALL);
         }
 
         stream.writeUInt16((uint16_t)args.size());
@@ -503,11 +497,11 @@ public:
                 e->obj->convertToByteCode(stream);
                 e->index->convertToByteCode(stream);
 
-                stream.writeUInt8(OP_PUSH_THIS_MEMBER_INDEX);
+                stream.writeOpCode(OP_PUSH_THIS_MEMBER_INDEX);
 
                 pushArgs(stream);
 
-                stream.writeUInt8(OP_MEMBER_FUNCTION_CALL);
+                stream.writeOpCode(OP_MEMBER_FUNCTION_CALL);
                 stream.writeUInt16((uint16_t)args.size());
                 break;
             }
@@ -516,15 +510,15 @@ public:
                 e->obj->convertToByteCode(stream);
 
                 if (e->isOptional) {
-                    stream.writeUInt8(OP_PUSH_THIS_MEMBER_DOT_OPTIONAL);
+                    stream.writeOpCode(OP_PUSH_THIS_MEMBER_DOT_OPTIONAL);
                 } else {
-                    stream.writeUInt8(OP_PUSH_THIS_MEMBER_DOT);
+                    stream.writeOpCode(OP_PUSH_THIS_MEMBER_DOT);
                 }
                 stream.writeUInt32(e->stringIdx);
 
                 pushArgs(stream);
 
-                stream.writeUInt8(OP_MEMBER_FUNCTION_CALL);
+                stream.writeOpCode(OP_MEMBER_FUNCTION_CALL);
                 stream.writeUInt16((uint16_t)args.size());
                 break;
             }
@@ -532,7 +526,7 @@ public:
                 func->convertToByteCode(stream);
                 pushArgs(stream);
 
-                stream.writeUInt8(OP_FUNCTION_CALL);
+                stream.writeOpCode(OP_FUNCTION_CALL);
                 stream.writeUInt16((uint16_t)args.size());
                 break;
         }
@@ -600,7 +594,7 @@ public:
     JsFunctionExpr(Function *func) : IJsNode(NT_FUNCTION_EXPR), function(func) { }
 
     virtual void convertToByteCode(ByteCodeStream &stream) {
-        stream.writeUInt8(OP_PUSH_FUNCTION_EXPR);
+        stream.writeOpCode(OP_PUSH_FUNCTION_EXPR);
         stream.writeUInt8(function->scope->parent->function->scope->depth);
         stream.writeUInt16((uint16_t)function->index);
     }
@@ -624,7 +618,7 @@ public:
         assert(!isBeingAssigned);
 
         expr->convertToByteCode(stream);
-        stream.writeUInt8(OP_ARRAY_PUSH_VALUE);
+        stream.writeOpCode(OP_ARRAY_PUSH_VALUE);
     }
 
     virtual void convertAssignableToByteCode(IJsNode *valueOpt, ByteCodeStream &stream);
@@ -650,12 +644,12 @@ public:
     virtual void convertToByteCode(ByteCodeStream &stream) {
         assert(!isBeingAssigned);
         expr->convertToByteCode(stream);
-        stream.writeUInt8(OP_ARRAY_SPREAD_VALUE);
+        stream.writeOpCode(OP_ARRAY_SPREAD_VALUE);
     }
 
     virtual void convertAssignableToByteCode(IJsNode *valueOpt, ByteCodeStream &stream) {
         assert(isBeingAssigned);
-        stream.writeUInt8(OP_ARRAY_ASSIGN_REST_VALUE);
+        stream.writeOpCode(OP_ARRAY_ASSIGN_REST_VALUE);
     }
 
 protected:
@@ -675,7 +669,7 @@ public:
 
     virtual void convertToByteCode(ByteCodeStream &stream) {
         assert(!isBeingAssigned);
-        stream.writeUInt8(OP_ARRAY_PUSH_UNDEFINED_VALUE);
+        stream.writeOpCode(OP_ARRAY_PUSH_UNDEFINED_VALUE);
     }
 
     virtual void convertAssignableToByteCode(IJsNode *valueOpt, ByteCodeStream &stream) {
@@ -751,7 +745,7 @@ public:
     virtual void convertToByteCode(ByteCodeStream &stream) {
         assert(!isBeingAssigned);
         expr->convertToByteCode(stream);
-        stream.writeUInt8(OP_OBJ_SET_PROPERTY);
+        stream.writeOpCode(OP_OBJ_SET_PROPERTY);
         stream.writeUInt32(nameIdx);
     }
 
@@ -820,7 +814,7 @@ public:
 
     virtual void convertToByteCode(ByteCodeStream &stream) {
         expr->convertToByteCode(stream);
-        stream.writeUInt8(OP_OBJ_SET_GETTER);
+        stream.writeOpCode(OP_OBJ_SET_GETTER);
         stream.writeUInt32(nameIdx);
     }
 
@@ -836,7 +830,7 @@ public:
 
     virtual void convertToByteCode(ByteCodeStream &stream) {
         expr->convertToByteCode(stream);
-        stream.writeUInt8(OP_OBJ_SET_SETTER);
+        stream.writeOpCode(OP_OBJ_SET_SETTER);
         stream.writeUInt32(nameIdx);
     }
 
@@ -863,7 +857,7 @@ public:
         assert(!isBeingAssigned);
         name->convertToByteCode(stream);
         value->convertToByteCode(stream);
-        stream.writeUInt8(OP_OBJ_SET_COMPUTED_PROPERTY);
+        stream.writeOpCode(OP_OBJ_SET_COMPUTED_PROPERTY);
     }
 
     virtual void convertAssignableToByteCode(IJsNode *valueOpt, ByteCodeStream &stream) {
@@ -895,7 +889,7 @@ public:
     virtual void convertToByteCode(ByteCodeStream &stream) {
         assert(!isBeingAssigned);
         expr->convertToByteCode(stream);
-        stream.writeUInt8(OP_OBJ_SPREAD_PROPERTY);
+        stream.writeOpCode(OP_OBJ_SPREAD_PROPERTY);
     }
 
     virtual void convertAssignableToByteCode(IJsNode *valueOpt, ByteCodeStream &stream) {
@@ -976,7 +970,7 @@ public:
         assert(isBeingAssigned);
         if (defVal) {
             // 如果栈顶的值为 undefined，则使用缺省值，否则使用栈顶值
-            stream.writeUInt8(OP_JUMP_IF_NOT_NULL_UNDEFINED_KEEP_VALID);
+            stream.writeOpCode(OP_JUMP_IF_NOT_NULL_UNDEFINED_KEEP_VALID);
             auto addrEnd = stream.writeReservedAddress();
 
             // 插入缺省值表达式的执行代码.
@@ -1164,5 +1158,7 @@ public:
     }
 
 };
+
+JsValue convertConstExprToJsValue(VMRuntime *rt, uint16_t poolIndex, IJsNode *node);
 
 #endif /* Expression_hpp */

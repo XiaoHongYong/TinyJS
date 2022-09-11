@@ -623,7 +623,7 @@ inline bool relationalOperate(VMContext *ctx, VMRuntime *rt, const JsValue &left
     }
 }
 
-bool relationalEqual(VMContext *ctx, VMRuntime *rt, const JsValue &left, const JsValue &right) {
+inline bool relationalEqual(VMContext *ctx, VMRuntime *rt, const JsValue &left, const JsValue &right) {
     if (left.equal(right)) {
         // TODO: 需要检查 JsValue 在 runtime->doubleValues 的值是否为 NaN
         return !left.equal(jsValueNaN);
@@ -638,7 +638,7 @@ bool relationalEqual(VMContext *ctx, VMRuntime *rt, const JsValue &left, const J
 
 }
 
-bool relationalStrictEqual(VMRuntime *rt, const JsValue &left, const JsValue &right) {
+inline bool relationalStrictEqual(VMRuntime *rt, const JsValue &left, const JsValue &right) {
     if (left.equal(right) && !left.equal(jsValueNaN)) {
         return true;
     }

@@ -9,6 +9,9 @@
 #include "generated/ConstStrings.hpp"
 #include "Expression.hpp"
 #include "Statement.hpp"
+#include "interpreter/VirtualMachine.hpp"
+#include "objects/IJsObject.hpp"
+#include "interpreter/BinaryOperation.hpp"
 
 
 const char *varStorageTypeToString(VarStorageType type) {
@@ -306,11 +309,11 @@ void Function::generateByteCode() {
     if (!isCodeBlock) {
         if (!isArrowFunction) {
             if (scope->isThisUsed) {
-                stream.writeUInt8(OP_PREPARE_VAR_THIS);
+                stream.writeOpCode(OP_PREPARE_VAR_THIS);
             }
 
             if (scope->isArgumentsUsed) {
-                stream.writeUInt8(OP_PREPARE_VAR_ARGUMENTS);
+                stream.writeOpCode(OP_PREPARE_VAR_ARGUMENTS);
             }
         }
     }
@@ -320,19 +323,26 @@ void Function::generateByteCode() {
     }
 
     if (!scope->functionDecls.empty()) {
-        stream.writeUInt8(OP_INIT_FUNCTION_TO_VARS);
+        stream.writeOpCode(OP_INIT_FUNCTION_TO_VARS);
     }
 
     if (scope->functionArgs) {
-        stream.writeUInt8(OP_INIT_FUNCTION_TO_ARGS);
+        stream.writeOpCode(OP_INIT_FUNCTION_TO_ARGS);
     }
 
     for (auto item : astNodes) {
         item->convertToByteCode(stream);
     }
-    auto data = stream.sizedStringStartNew();
-    bytecode = resourcePool->pool.duplicate(data.data, data.len);
-    lenByteCode = (int)data.len;
+
+    LinkedString *data = stream.startNew();
+    if (data) {
+        auto bc = resourcePool->pool.duplicate(data);
+        bytecode = bc.data;
+        lenByteCode = (int)bc.len;
+    } else {
+        bytecode = nullptr;
+        lenByteCode = 0;
+    }
 }
 
 void Function::dump(BinaryOutputStream &stream) {
@@ -408,27 +418,49 @@ void ResourcePool::dump(BinaryOutputStream &stream) {
     stream.write("  ]\n");
 }
 
-void JsStmtForIn::convertToByteCode(ByteCodeStream &stream) {
-    writeEnterScope(scope, stream);
+bool jsValueStrictLessThan(VMRuntime *runtime, const JsValue &left, const JsValue &right);
 
-    obj->convertToByteCode(stream);
-    stream.writeOpCode(isIn ? OP_ITERATOR_IN_CREATE : OP_ITERATOR_OF_CREATE);
+struct CaseJumpLessCmp {
+    CaseJumpLessCmp(VMRuntime *runtime) : runtime(runtime) {}
 
-    auto addrLoopStart = stream.address();
-    stream.writeOpCode(isIn ? OP_ITERATOR_NEXT_KEY : OP_ITERATOR_NEXT_VALUE);
-    auto addrLoopEnd = stream.writeReservedAddress();
+    bool operator()(const CaseJump &a, const CaseJump &b) const {
+        return jsValueStrictLessThan(runtime, a.caseConds, b.caseConds);
+    }
 
-    // var 需要转换为从堆栈上的赋值
-    var->convertAssignableToByteCode(nullptr, stream);
+    bool operator()(const CaseJump &a, const JsValue &b) const {
+        return jsValueStrictLessThan(runtime, a.caseConds, b);
+    }
 
-    stream.writeOpCode(OP_POP_STACK_TOP);
+    VMRuntime               *runtime;
 
-    if (stmt)
-        stmt->convertToByteCode(stream);
+};
 
-    stream.writeOpCode(OP_JUMP);
-    stream.writeAddress(addrLoopStart);
-    *addrLoopEnd = stream.address();
+struct CaseJumpEqualCmp {
+    CaseJumpEqualCmp(VMRuntime *runtime) : runtime(runtime) {}
 
-    writeLeaveScope(scope, stream);
+    bool operator()(const CaseJump &a, const JsValue &b) const {
+        return relationalStrictEqual(runtime, a.caseConds, b);
+    }
+
+    VMRuntime               *runtime;
+
+};
+
+VMAddress SwitchJump::findAddress(VMRuntime *runtime, uint16_t poolIndex, const JsValue &cond) {
+    if (stmtSwitch) {
+        // 需要转换地址
+        stmtSwitch->buildCaseJumps(runtime, poolIndex, this);
+        stmtSwitch = nullptr;
+
+        sort(caseJumps, caseJumpsEnd, CaseJumpLessCmp(runtime));
+    }
+
+    auto caseJump = lower_bound(caseJumps, caseJumpsEnd, cond, CaseJumpLessCmp(runtime));
+    if (caseJump != caseJumpsEnd) {
+        if (relationalStrictEqual(runtime, cond, caseJump->caseConds)) {
+            return caseJump->addr;
+        }
+    }
+
+    return defaultAddr;
 }

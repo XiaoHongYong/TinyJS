@@ -586,7 +586,6 @@ TEST(FileApi, testFileNameStr) {
     cstr_t        SZ_DIR_CMP[] = { "/tmp/folder", "/tmp/folder/", "" };
     cstr_t        SZ_DIR_CMP_OK[] = { "/tmp/folder/", "/tmp/folder/", "" };
 #endif
-    char szDir[MAX_PATH];
     string strDir;
 
     assert(CountOf(SZ_DIR_CMP) == CountOf(SZ_DIR_CMP_OK));

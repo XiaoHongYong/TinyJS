@@ -44,6 +44,63 @@ uint32_t makeTryCatchPointFlags(Function *function, VMScope *scope) {
     return (n & 0xFFFFFFFF) ^ (n >> 32);
 }
 
+bool jsValueStrictLessThan(VMRuntime *runtime, const JsValue &left, const JsValue &right) {
+    switch (left.type) {
+        case JDT_NOT_INITIALIZED:
+        case JDT_UNDEFINED:
+        case JDT_NULL:
+            return left.type < right.type;
+        case JDT_BOOL:
+            if (left.type < right.type) return true;
+            else if (left.type == right.type) return left.value.n32 < right.value.n32;
+            return false;
+        case JDT_INT32:
+            if (right.type == JDT_INT32) return left.value.n32 < right.value.n32;
+            else if (right.type == JDT_NUMBER) {
+                auto d = runtime->getDouble(right);
+                return left.value.n32 < d;
+            } else return left.type < right.type;
+        case JDT_NUMBER:
+            if (right.type == JDT_INT32) {
+                auto d = runtime->getDouble(right);
+                return left.value.n32 < d;
+            } else if (right.type == JDT_NUMBER) {
+                auto d1 = runtime->getDouble(left);
+                auto d2 = runtime->getDouble(right);
+                return d1 < d2;
+            } else {
+                return left.type < right.type;
+            }
+        case JDT_CHAR: {
+            if (right.type == JDT_CHAR) {
+                return left.value.n32 < right.value.n32;
+            } else if (right.type == JDT_STRING) {
+                SizedStringWrapper s1(left);
+                auto s2 = runtime->getString(right);
+                return s1.cmp(s2) < 0;
+            } else {
+                return left.type < right.type;
+            }
+        }
+        case JDT_STRING: {
+            if (right.type == JDT_CHAR) {
+                auto s1 = runtime->getString(left);
+                SizedStringWrapper s2(right);
+                return s1.cmp(s2) < 0;
+            } else if (right.type == JDT_STRING) {
+                auto s1 = runtime->getString(left);
+                auto s2 = runtime->getString(right);
+                return s1.cmp(s2) < 0;
+            } else {
+                return left.type < right.type;
+            }
+        }
+        default:
+            // 只接受以上的几种基本类型的比较
+            return false;
+    }
+}
+
 Arguments::Arguments(const Arguments &other) {
     if (other.needFree) {
         copy(other);
@@ -564,6 +621,26 @@ void JsVirtualMachine::call(Function *function, VMContext *ctx, VecVMStackScopes
                     // condition 为 null/undefined，删除栈顶值
                     stack.pop_back();
                 }
+                break;
+            }
+            case OP_SWITCH_CASE_CMP_JUMP: {
+                auto pos = readUInt32(bytecode);
+                auto caseCond = stack.back(); stack.pop_back();
+                auto switchCond = stack.back();
+                if (relationalStrictEqual(runtime, caseCond, switchCond)) {
+                    // 找到了相同的跳转条件
+                    stack.pop_back(); // 不再比较 switchCond 了
+                    bytecode = function->bytecode + pos;
+                }
+                break;
+            }
+            case OP_SWITCH_CASE_FAST_CMP_JUMP: {
+                auto idx = readUInt16(bytecode);
+                auto switchJump = runtime->getSwitchJumpInResourcePool(idx, resourcePool);
+                auto switchCond = stack.back(); stack.pop_back();
+
+                VMAddress addr = switchJump.findAddress(runtime, resourcePool->index, switchCond);
+                bytecode = function->bytecode + addr;
                 break;
             }
             case OP_PREPARE_RAW_STRING_TEMPLATE_CALL: {
@@ -1251,7 +1328,7 @@ void JsVirtualMachine::call(Function *function, VMContext *ctx, VecVMStackScopes
                 break;
             }
             case OP_DELETE: {
-                auto value = stack.back(); stack.pop_back();
+                stack.pop_back();
                 stack.push_back(jsValueTrue);
                 break;
             }

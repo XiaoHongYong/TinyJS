@@ -13,6 +13,9 @@
 #include <cstdint>
 
 
+/**
+ * LinkedString 只能被作为指针使用，data 会被扩展超过 4 个字节的
+ */
 struct LinkedString {
     LinkedString                    *next;
     uint32_t                        len;

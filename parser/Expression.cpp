@@ -7,6 +7,7 @@
 
 #include "Expression.hpp"
 #include "Parser.hpp"
+#include "interpreter/VMRuntime.hpp"
 
 
 void JsExprArrayItem::convertAssignableToByteCode(IJsNode *valueOpt, ByteCodeStream &stream) {
@@ -26,7 +27,7 @@ void JsExprArrayItem::convertAssignableToByteCode(IJsNode *valueOpt, ByteCodeStr
             auto assign = (JsExprAssign *)expr;
 
             // 如果栈顶的值为 undefined，则使用缺省值，否则使用栈顶值
-            stream.writeUInt8(OP_JUMP_IF_NOT_NULL_UNDEFINED_KEEP_VALID);
+            stream.writeOpCode(OP_JUMP_IF_NOT_NULL_UNDEFINED_KEEP_VALID);
             auto addrEnd = stream.writeReservedAddress();
 
             // 插入缺省值表达式的执行代码.
@@ -41,5 +42,17 @@ void JsExprArrayItem::convertAssignableToByteCode(IJsNode *valueOpt, ByteCodeStr
         default:
             assert(0 && "NOT supported for array assignable.");
             break;
+    }
+}
+
+JsValue convertConstExprToJsValue(VMRuntime *rt, uint16_t poolIndex, IJsNode *node) {
+    switch (node->type) {
+        case NT_BOOLEAN_TRUE: return jsValueTrue;
+        case NT_BOOLEAN_FALSE: return jsValueFalse;
+        case NT_NULL: return jsValueNull;
+        case NT_STRING: return rt->stringIdxToJsValue(poolIndex, ((JsExprString *)node)->stringIdx);
+        case NT_INT32: return JsValue(JDT_INT32, ((JsExprInt32 *)node)->value);
+        case NT_NUMBER: return rt->numberIdxToJsValue(poolIndex, ((JsExprString *)node)->stringIdx);
+        default: assert(0); return jsValueNull;
     }
 }

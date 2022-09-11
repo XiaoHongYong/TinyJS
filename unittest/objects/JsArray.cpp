@@ -14,7 +14,6 @@
 
 const uint32_t ARRAY_BLOCK_SIZE = 1024 * 32; // 32768
 const uint32_t ARRAY_RESERVE_MAX_SIZE = ARRAY_BLOCK_SIZE * 10; // 327680 个
-const uint32_t ARRAY_MAX_INDEX = 4294967294; // 2 ** 32 - 2
 
 
 class JsArrayTestable : public JsArray {

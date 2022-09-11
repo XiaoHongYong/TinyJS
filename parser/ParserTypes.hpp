@@ -19,6 +19,8 @@ class Scope;
 class ResourcePool;
 class IJsNode;
 class JsNodeParameters;
+class JsStmtSwitch;
+class VMRuntime;
 
 using MapNameToIdentifiers = map<SizedString, IdentifierDeclare *, SizedStrCmpLess, Allocator<pair<const SizedString, IdentifierDeclare *> > >;
 using VecScopes = vector<Scope *>;
@@ -31,30 +33,10 @@ using VecJsNodes = vector<IJsNode *>;
  */
 enum JsNodeType : uint8_t {
     NT_NOT_SET,
-    NT_VAR_DECLARTION_LIST,
-    NT_PARAMETERS,
-    NT_SPREAD_ARGUMENT,
-    NT_REST_PARAMETER,
-    NT_FUNCTION,
-
-    NT_IF,
-    NT_FOR,
-    NT_FOR_IN,
-    NT_DO_WHILE,
-    NT_WHILE,
-    NT_SWITCH,
-    NT_TRY,
-    NT_RETURN,
-    NT_RETURN_VALUE,
-    NT_BLOCK,
-    NT_EMPTY_STMT,
-    NT_THROW,
-    NT_WITH,
-    NT_EXPR_STMT,
-    NT_DEBUGGER,
 
     // Expression 的类型
-    NT_BOOLEAN,
+    NT_BOOLEAN_TRUE,
+    NT_BOOLEAN_FALSE,
     NT_NULL,
     NT_STRING,
     NT_INT32,
@@ -106,6 +88,33 @@ enum JsNodeType : uint8_t {
     NT_ASSIGN_WITH_STACK_TOP,
     NT_ASSIGN_WITH_PARAMETER,
     NT_USE_DEFAULT_PARAMETER,
+
+    // Statement 或者相关依赖的 NodeType
+    NT_VAR_DECLARTION_LIST,
+    NT_PARAMETERS,
+    NT_SPREAD_ARGUMENT,
+    NT_REST_PARAMETER,
+    NT_FUNCTION,
+
+    NT_IF,
+    NT_FOR,
+    NT_FOR_IN,
+    NT_DO_WHILE,
+    NT_WHILE,
+    NT_SWITCH,
+    NT_SWITCH_BRANCH, // case or default
+    NT_DEFAULT,
+    NT_BREAK,
+    NT_CONTINUE,
+    NT_TRY,
+    NT_RETURN,
+    NT_RETURN_VALUE,
+    NT_BLOCK,
+    NT_EMPTY_STMT,
+    NT_THROW,
+    NT_WITH,
+    NT_EXPR_STMT,
+    NT_DEBUGGER,
 };
 
 /**
@@ -325,9 +334,25 @@ public:
     void push(IJsNode *node) { nodes.push_back(node); }
     size_t count() { return nodes.size(); }
 
-    VecJsNodes                  nodes;
+    VecJsNodes              nodes;
 
 };
+
+
+struct CaseJump {
+    JsValue                 caseConds;
+    uint32_t                addr;
+};
+
+struct SwitchJump {
+    JsStmtSwitch            *stmtSwitch;
+    CaseJump                *caseJumps, *caseJumpsEnd;
+    uint32_t                defaultAddr;
+
+    VMAddress findAddress(VMRuntime *runtime, uint16_t poolIndex, const JsValue &cond);
+};
+
+using VecSwitchJumps = vector<SwitchJump>;
 
 /**
  * 负责在解析阶段的内存分配
@@ -339,6 +364,7 @@ public:
     AllocatorPool           pool;
     VecSizedStrings         strings;
     vector<double>          doubles;
+    VecSwitchJumps          switchCaseJumps;
 
 public:
     ResourcePool();

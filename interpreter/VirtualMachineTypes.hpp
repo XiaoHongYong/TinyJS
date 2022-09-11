@@ -32,6 +32,9 @@ class VMContext;
     OP_ITEM(OP_JUMP_IF_NULL_UNDEFINED, "address:u32"), \
     OP_ITEM(OP_JUMP_IF_NOT_NULL_UNDEFINED, "address:u32"), \
     OP_ITEM(OP_JUMP_IF_NOT_NULL_UNDEFINED_KEEP_VALID, "address:u32"), \
+    OP_ITEM(OP_SWITCH_CASE_CMP_JUMP, "address:u32"), \
+    OP_ITEM(OP_SWITCH_CASE_FAST_CMP_JUMP, "switch_jump_idx:u16"), \
+    \
     OP_ITEM(OP_PREPARE_RAW_STRING_TEMPLATE_CALL, "raw_string_idx:u16, count_exprs:u16"), \
     OP_ITEM(OP_FUNCTION_CALL, "count_args:u16"), \
     OP_ITEM(OP_MEMBER_FUNCTION_CALL, "count_args:u16"), \
@@ -205,6 +208,8 @@ enum JsDataType : uint8_t {
 
 const char *jsDataTypeToString(JsDataType type);
 
+using VMAddress = uint32_t;
+const VMAddress addressInvalid = (VMAddress)-1;
 
 inline uint32_t makeResourceIndex(uint16_t poolIdx, uint16_t resIdx) { return (poolIdx << 16) | resIdx; }
 inline uint16_t getPoolIndexOfResource(uint32_t resIndex) { return resIndex >> 16; }

@@ -61,7 +61,7 @@ Function *JSParser::parse(Scope *parent, bool isExpr) {
         }
     }
 
-    checkExpressionObjects();
+    _checkExpressionObjects();
 
     _leaveFunction();
 
@@ -82,7 +82,7 @@ Function *JSParser::parse(Scope *parent, bool isExpr) {
 }
 
 IJsNode *JSParser::_expectStatment() {
-    checkExpressionObjects();
+    _checkExpressionObjects();
 
     switch (_curToken.type) {
         case TK_STRING: {
@@ -116,11 +116,11 @@ IJsNode *JSParser::_expectStatment() {
 
         case TK_BREAK:
             _readToken();
-            return _expectBreakContinue(TK_BREAK);
+            return _expectBreak();
 
         case TK_CONTINUE:
             _readToken();
-            return _expectBreakContinue(TK_CONTINUE);
+            return _expectContinue();
 
         case TK_DEBUGGER: {
             _readToken();
@@ -130,7 +130,9 @@ IJsNode *JSParser::_expectStatment() {
 
         case TK_DO: {
             _readToken();
+            _enterBreakContinueArea();
             auto stmt = _expectStatment();
+            _leaveBreakContinueArea();
             _expectToken(TK_WHILE);
             auto cond = _expectParenCondition();
             _expectSemiColon();
@@ -139,7 +141,9 @@ IJsNode *JSParser::_expectStatment() {
         case TK_WHILE: {
             _readToken();
             auto cond = _expectParenCondition();
+            _enterBreakContinueArea();
             auto stmt = _expectStatment();
+            _leaveBreakContinueArea();
             return PoolNew(_pool, JsStmtWhile)(cond, stmt);
         }
         case TK_FOR:
@@ -261,9 +265,23 @@ IJsNode *JSParser::_expectBlock() {
     return stms;
 }
 
-IJsNode *JSParser::_expectBreakContinue(TokenType type) {
-    assert(0);
-    return nullptr;
+IJsNode *JSParser::_expectBreak() {
+    if (_stackBreakContinueAreas.empty()) {
+        _parseError(PE_SYNTAX_ERROR, "Illegal break statement");
+    }
+
+    return PoolNew(_pool, JsStmtBreak);
+}
+
+IJsNode *JSParser::_expectContinue() {
+    if (_stackBreakContinueAreas.empty()) {
+        _parseError(PE_SYNTAX_ERROR, "Illegal break statement");
+    }
+
+    if (!_stackBreakContinueAreas.back()) {
+        _parseError(PE_SYNTAX_ERROR, "Illegal continue statement: no surrounding iteration statement");
+    }
+    return PoolNew(_pool, JsStmtContinue);
 }
 
 IJsNode *JSParser::_tryForInStatment() {
@@ -368,7 +386,9 @@ IJsNode *JSParser::_expectForStatment() {
     _expectToken(TK_CLOSE_PAREN);
 
     _allowRegexp();
+    _enterBreakContinueArea();
     auto stmt = _expectStatment();
+    _leaveBreakContinueArea();
 
     stmt = PoolNew(_pool, JsStmtFor)(init, cond, finalExpr, stmt, _curScope);
     _leaveScope();
@@ -377,8 +397,45 @@ IJsNode *JSParser::_expectForStatment() {
 }
 
 IJsNode *JSParser::_expectSwitchStmt() {
-    assert(0);
-    return nullptr;
+    auto cond = _expectParenCondition();
+    _enterScope();
+
+    auto stmt = PoolNew(_pool, JsStmtSwitch)(_resPool, cond);
+    JsSwitchBranch *curBranch = nullptr;
+
+    _enterBreakContinueArea(false);
+
+    _expectToken(TK_OPEN_BRACE);
+    while (_curToken.type != TK_CLOSE_BRACE) {
+        if (_curToken.type == TK_EOF) {
+            _parseError(PE_SYNTAX_ERROR, "Unexpected token: %d", _curToken.type);
+        }
+
+        if (_curToken.type == TK_CASE) {
+            _readToken();
+            auto expr = _expectMultipleExpression();
+            _expectToken(TK_COLON);
+
+            curBranch = PoolNew(_pool, JsSwitchBranch)(expr);
+            stmt->push(curBranch);
+        } else if (_curToken.type == TK_DEFAULT) {
+            _readToken();
+            _expectToken(TK_COLON);
+
+            if (stmt->defBranch) {
+                _parseError(PE_SYNTAX_ERROR, "More than one default clause in switch statement");
+            }
+            curBranch = stmt->defBranch = PoolNew(_pool, JsSwitchBranch)(nullptr);
+            stmt->push(curBranch);
+        } else {
+            curBranch->push(_expectStatment());
+        }
+    }
+    _readToken(); // '}'
+
+    _leaveBreakContinueArea();
+    _leaveScope();
+    return stmt;
 }
 
 IJsNode *JSParser::_expectTryStmt() {
@@ -1642,7 +1699,7 @@ void JSParser::_leaveScope() {
     _curScope = _stackScopes.back(); _stackScopes.pop_back();
 }
 
-void JSParser::checkExpressionObjects() {
+void JSParser::_checkExpressionObjects() {
     if (!_checkingExprObjs.empty()) {
         for (auto item : _checkingExprObjs) {
             item->checkCanBeExpression();
@@ -1651,4 +1708,12 @@ void JSParser::checkExpressionObjects() {
         // 检查过的都删除
         _checkingExprObjs.clear();
     }
+}
+
+void JSParser::_enterBreakContinueArea(bool allowContinue) {
+    _stackBreakContinueAreas.push_back(allowContinue);
+}
+
+void JSParser::_leaveBreakContinueArea() {
+    _stackBreakContinueAreas.pop_back();
 }

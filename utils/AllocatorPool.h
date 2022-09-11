@@ -6,6 +6,7 @@
 #define __AllocatorPool__
 
 #include "UtilsTypes.h"
+#include "LinkedString.hpp"
 
 
 #define alignPtr(p, a)  (uint8_t *) (((uintptr_t) (p) + ((uintptr_t)(a) - 1)) & ~((uintptr_t)(a) - 1))
@@ -70,6 +71,30 @@ public:
         memcpy(p, s.data, s.len);
 
         return SizedString(p, s.len);
+    }
+
+    SizedString duplicate(const LinkedString *s) {
+        assert(s != nullptr);
+
+        // 计算长度
+        uint32_t len = 0;
+        auto ps = s;
+        do {
+            len += ps->len;
+            ps = ps->next;
+        } while (ps);
+
+        // 复制
+        uint8_t *data = (uint8_t *)allocate(len);
+        auto p = data;
+        ps = s;
+        do {
+            memcpy(p, ps->data, ps->len);
+            p += ps->len;
+            ps = ps->next;
+        } while (ps);
+
+        return SizedString(data, len);
     }
 
     char *duplicate(const char *s) {
