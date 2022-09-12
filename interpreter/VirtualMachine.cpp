@@ -1185,8 +1185,22 @@ void JsVirtualMachine::call(Function *function, VMContext *ctx, VecVMStackScopes
                 stack.back() = arithmeticBinaryOperation(ctx, runtime, left, right, BinaryOpBitAnd());
                 break;
             }
-            case OP_SHIFT: {
-                assert(0);
+            case OP_LEFT_SHIFT: {
+                JsValue right = stack.back(); stack.pop_back();
+                JsValue left = stack.back();
+                stack.back() = arithmeticBinaryOperation(ctx, runtime, left, right, BinaryOpLeftShift());
+                break;
+            }
+            case OP_RIGHT_SHIFT: {
+                JsValue right = stack.back(); stack.pop_back();
+                JsValue left = stack.back();
+                stack.back() = arithmeticBinaryOperation(ctx, runtime, left, right, BinaryOpRightShift());
+                break;
+            }
+            case OP_UNSIGNED_RIGHT_SHIFT: {
+                JsValue right = stack.back(); stack.pop_back();
+                JsValue left = stack.back();
+                stack.back() = arithmeticBinaryOperation(ctx, runtime, left, right, BinaryOpUnsignedRightShift());
                 break;
             }
             case OP_UNARY: {
@@ -1219,18 +1233,6 @@ void JsVirtualMachine::call(Function *function, VMContext *ctx, VecVMStackScopes
                 break;
             }
             case OP_BIT_NOT: {
-                assert(0);
-                break;
-            }
-            case OP_LEFT_SHIFT: {
-                assert(0);
-                break;
-            }
-            case OP_RIGHT_SHIFT: {
-                assert(0);
-                break;
-            }
-            case OP_UNSIGNED_RIGHT_SHIFT: {
                 assert(0);
                 break;
             }

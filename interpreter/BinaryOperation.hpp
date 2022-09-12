@@ -172,145 +172,154 @@ struct BinaryOpExp {
     }
 };
 
-inline bool isBitOpInvalidDouble(double v) {
-    return !isnormal(v);
+inline int32_t doubleToInt32(double v) {
+    return isnormal(v) ? (uint32_t(v) & 0xffffffff) : 0;
 }
 
 struct BinaryOpBitXor {
-
-    inline JsValue toInteger(VMRuntime *rt, double v) const {
-        auto r = (int64_t)v;
-        if (r == (int32_t)r) {
-            return JsValue(JDT_INT32, (int32_t)r);
-        } else {
-            return rt->pushDoubleValue(r);
-        }
-    }
 
     JsValue operator()(VMRuntime *rt, int32_t a, int32_t b) const {
         auto r = a ^ b;
         return JsValue(JDT_INT32, r);
     }
 
-    JsValue operator()(VMRuntime *rt, double a, int32_t b) const {
-        if (isBitOpInvalidDouble(a)) {
-            return JsValue(JDT_INT32, b);
-        }
-
-        auto r = (int64_t)a ^ b;
-        if (r == (int32_t)r) {
-            return JsValue(JDT_INT32, (int32_t)r);
-        } else {
-            return rt->pushDoubleValue(r);
-        }
+    JsValue operator()(VMRuntime *rt, double da, int32_t b) const {
+        auto a = doubleToInt32(da);
+        auto r = a ^ b;
+        return JsValue(JDT_INT32, r);
     }
 
-    JsValue operator()(VMRuntime *rt, int32_t a, double b) const {
-        if (isBitOpInvalidDouble(b)) {
-            return JsValue(JDT_INT32, a);
-        }
-
-        auto r = a ^ (int64_t)b;
-        if (r == (int32_t)r) {
-            return JsValue(JDT_INT32, (int32_t)r);
-        } else {
-            return rt->pushDoubleValue(r);
-        }
+    JsValue operator()(VMRuntime *rt, int32_t a, double db) const {
+        auto b = doubleToInt32(db);
+        auto r = a ^ b;
+        return JsValue(JDT_INT32, r);
     }
 
-    JsValue operator()(VMRuntime *rt, double a, double b) const {
-        if (isBitOpInvalidDouble(a)) {
-            if (isBitOpInvalidDouble(b)) {
-                return JsValue(JDT_INT32, 0);
-            } else {
-                return toInteger(rt, b);
-            }
-        } else if (isBitOpInvalidDouble(b)) {
-            return toInteger(rt, a);
-        }
-
-        auto r = (int64_t)a ^ (int64_t)b;
-        if (r == (int32_t)r) {
-            return JsValue(JDT_INT32, (int32_t)r);
-        } else {
-            return rt->pushDoubleValue(r);
-        }
+    JsValue operator()(VMRuntime *rt, double da, double db) const {
+        auto a = doubleToInt32(da);
+        auto b = doubleToInt32(db);
+        auto r = a ^ b;
+        return JsValue(JDT_INT32, r);
     }
 };
 
 struct BinaryOpBitOr {
-
-    inline JsValue toInteger(VMRuntime *rt, double v) const {
-        auto r = (int64_t)v;
-        if (r == (int32_t)r) {
-            return JsValue(JDT_INT32, (int32_t)r);
-        } else {
-            return rt->pushDoubleValue(r);
-        }
-    }
 
     JsValue operator()(VMRuntime *rt, int32_t a, int32_t b) const {
         auto r = a | b;
         return JsValue(JDT_INT32, r);
     }
 
-    JsValue operator()(VMRuntime *rt, double a, int32_t b) const {
-        if (isBitOpInvalidDouble(a)) {
-            return JsValue(JDT_INT32, b);
-        }
-
-        auto r = (int64_t)a | b;
-        if (r == (int32_t)r) {
-            return JsValue(JDT_INT32, (int32_t)r);
-        } else {
-            return rt->pushDoubleValue(r);
-        }
+    JsValue operator()(VMRuntime *rt, double da, int32_t b) const {
+        auto a = doubleToInt32(da);
+        auto r = a | b;
+        return JsValue(JDT_INT32, r);
     }
 
-    JsValue operator()(VMRuntime *rt, int32_t a, double b) const {
-        if (isBitOpInvalidDouble(b)) {
-            return JsValue(JDT_INT32, a);
-        }
-
-        auto r = a | (int64_t)b;
-        if (r == (int32_t)r) {
-            return JsValue(JDT_INT32, (int32_t)r);
-        } else {
-            return rt->pushDoubleValue(r);
-        }
+    JsValue operator()(VMRuntime *rt, int32_t a, double db) const {
+        auto b = doubleToInt32(db);
+        auto r = a | b;
+        return JsValue(JDT_INT32, r);
     }
 
-    JsValue operator()(VMRuntime *rt, double a, double b) const {
-        if (isBitOpInvalidDouble(a)) {
-            if (isBitOpInvalidDouble(b)) {
-                return JsValue(JDT_INT32, 0);
-            } else {
-                return toInteger(rt, b);
-            }
-        } else if (isBitOpInvalidDouble(b)) {
-            return toInteger(rt, a);
-        }
-
-        auto r = (int64_t)a | (int64_t)b;
-        if (r == (int32_t)r) {
-            return JsValue(JDT_INT32, (int32_t)r);
-        } else {
-            return rt->pushDoubleValue(r);
-        }
+    JsValue operator()(VMRuntime *rt, double da, double db) const {
+        auto a = doubleToInt32(da);
+        auto b = doubleToInt32(db);
+        auto r = a | b;
+        return JsValue(JDT_INT32, r);
     }
 };
 
 struct BinaryOpBitAnd {
+
     JsValue operator()(VMRuntime *rt, int32_t a, int32_t b) const {
         auto r = a & b;
         return JsValue(JDT_INT32, r);
     }
 
-    JsValue operator()(VMRuntime *rt, double a, int32_t b) const {
-        if (isBitOpInvalidDouble(a))
-            return JsValue(JDT_INT32, 0);
+    JsValue operator()(VMRuntime *rt, double da, int32_t b) const {
+        auto a = doubleToInt32(da);
+        auto r = a & b;
+        return JsValue(JDT_INT32, r);
+    }
 
-        auto r = (int64_t)a & b;
+    JsValue operator()(VMRuntime *rt, int32_t a, double db) const {
+        auto b = doubleToInt32(db);
+        auto r = a & b;
+        return JsValue(JDT_INT32, r);
+    }
+
+    JsValue operator()(VMRuntime *rt, double da, double db) const {
+        auto a = doubleToInt32(da);
+        auto b = doubleToInt32(db);
+        auto r = a & b;
+        return JsValue(JDT_INT32, r);
+    }
+};
+
+inline int32_t roundShiftSecondOp(int32_t b) {
+    // 在 JavaScript 中，移位数量要转换为 unsigned，再对 32 取模.
+    return (int32_t(b) & 0xffffffff) % 32;
+}
+
+struct BinaryOpLeftShift {
+
+    JsValue operator()(VMRuntime *rt, int32_t a, int32_t b) const {
+        auto r = a << roundShiftSecondOp(b);
+        return JsValue(JDT_INT32, r);
+    }
+
+    JsValue operator()(VMRuntime *rt, double da, int32_t b) const {
+        auto a = doubleToInt32(da);
+        auto r = a << roundShiftSecondOp(b);
+        return JsValue(JDT_INT32, r);
+    }
+
+    JsValue operator()(VMRuntime *rt, int32_t a, double db) const {
+        auto b = doubleToInt32(db);
+        auto r = a << roundShiftSecondOp(b);
+        return JsValue(JDT_INT32, r);
+    }
+
+    JsValue operator()(VMRuntime *rt, double da, double db) const {
+        auto a = doubleToInt32(da);
+        auto b = doubleToInt32(db);
+        auto r = a << roundShiftSecondOp(b);
+        return JsValue(JDT_INT32, r);
+    }
+};
+
+struct BinaryOpRightShift {
+
+    JsValue operator()(VMRuntime *rt, int32_t a, int32_t b) const {
+        auto r = a >> roundShiftSecondOp(b);
+        return JsValue(JDT_INT32, r);
+    }
+
+    JsValue operator()(VMRuntime *rt, double da, int32_t b) const {
+        auto a = doubleToInt32(da);
+        auto r = a >> roundShiftSecondOp(b);
+        return JsValue(JDT_INT32, r);
+    }
+
+    JsValue operator()(VMRuntime *rt, int32_t a, double db) const {
+        auto b = doubleToInt32(db);
+        auto r = a >> roundShiftSecondOp(b);
+        return JsValue(JDT_INT32, r);
+    }
+
+    JsValue operator()(VMRuntime *rt, double da, double db) const {
+        auto a = doubleToInt32(da);
+        auto b = doubleToInt32(db);
+        auto r = a >> roundShiftSecondOp(b);
+        return JsValue(JDT_INT32, r);
+    }
+};
+
+struct BinaryOpUnsignedRightShift {
+
+    inline JsValue rightShift(VMRuntime *rt, uint32_t a, uint32_t b) const {
+        int64_t r = a >> roundShiftSecondOp(b);
         if (r == (int32_t)r) {
             return JsValue(JDT_INT32, (int32_t)r);
         } else {
@@ -318,28 +327,24 @@ struct BinaryOpBitAnd {
         }
     }
 
-    JsValue operator()(VMRuntime *rt, int32_t a, double b) const {
-        if (isBitOpInvalidDouble(b))
-            return JsValue(JDT_INT32, 0);
-
-        auto r = a & (int64_t)b;
-        if (r == (int32_t)r) {
-            return JsValue(JDT_INT32, (int32_t)r);
-        } else {
-            return rt->pushDoubleValue(r);
-        }
+    JsValue operator()(VMRuntime *rt, int32_t a, int32_t b) const {
+        return rightShift(rt, a, b);
     }
 
-    JsValue operator()(VMRuntime *rt, double a, double b) const {
-        if (isBitOpInvalidDouble(a) || isBitOpInvalidDouble(b))
-            return JsValue(JDT_INT32, 0);
+    JsValue operator()(VMRuntime *rt, double da, int32_t b) const {
+        auto a = doubleToInt32(da);
+        return rightShift(rt, uint32_t(a), b);
+    }
 
-        auto r = (int64_t)a & (int64_t)b;
-        if (r == (int32_t)r) {
-            return JsValue(JDT_INT32, (int32_t)r);
-        } else {
-            return rt->pushDoubleValue(r);
-        }
+    JsValue operator()(VMRuntime *rt, int32_t a, double db) const {
+        auto b = doubleToInt32(db);
+        return rightShift(rt, a, uint32_t(b));
+    }
+
+    JsValue operator()(VMRuntime *rt, double da, double db) const {
+        auto a = doubleToInt32(da);
+        auto b = doubleToInt32(db);
+        return rightShift(rt, uint32_t(a), uint32_t(b));
     }
 };
 

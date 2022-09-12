@@ -478,6 +478,7 @@ void JSLexer::_readToken() {
                     _curToken.type = TK_ASSIGN_X;
                     _curToken.opr = OP_RIGHT_SHIFT;
                 } else if (code == '>') {
+                    _bufPos++;
                     if (*_bufPos == '=') {
                         // >>>=
                         _bufPos++;

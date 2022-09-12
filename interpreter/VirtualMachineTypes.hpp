@@ -107,13 +107,6 @@ class VMContext;
     OP_ITEM(OP_BIT_OR, ""), \
     OP_ITEM(OP_BIT_XOR, ""), \
     OP_ITEM(OP_BIT_AND, ""), \
-    OP_ITEM(OP_SHIFT, ""), \
-    OP_ITEM(OP_UNARY, ""), \
-    OP_ITEM(OP_POST_FIX, ""), \
-    OP_ITEM(OP_PREFIX_NEGATE, ""), \
-    \
-    OP_ITEM(OP_LOGICAL_NOT, ""), \
-    OP_ITEM(OP_BIT_NOT, ""), \
     OP_ITEM(OP_LEFT_SHIFT, ""), \
     OP_ITEM(OP_RIGHT_SHIFT, ""), \
     OP_ITEM(OP_UNSIGNED_RIGHT_SHIFT, ""), \
@@ -127,6 +120,13 @@ class VMContext;
     OP_ITEM(OP_GREATER_EQUAL_THAN, ""), \
     OP_ITEM(OP_IN, ""), \
     OP_ITEM(OP_INSTANCE_OF, ""), \
+    \
+    OP_ITEM(OP_UNARY, ""), \
+    OP_ITEM(OP_POST_FIX, ""), \
+    OP_ITEM(OP_PREFIX_NEGATE, ""), \
+    \
+    OP_ITEM(OP_LOGICAL_NOT, ""), \
+    OP_ITEM(OP_BIT_NOT, ""), \
     OP_ITEM(OP_DELETE_MEMBER_DOT, "property_string_idx:u32"), \
     OP_ITEM(OP_DELETE_MEMBER_INDEX, ""), \
     OP_ITEM(OP_DELETE, ""), \
