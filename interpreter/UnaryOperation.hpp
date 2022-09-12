@@ -15,9 +15,9 @@ JsValue increaseJsValue(VMContext *ctx, JsValue &v, int inc, bool isPost) {
 
     switch (v.type) {
         case JDT_NOT_INITIALIZED:
-        case JDT_UNDEFINED: v = jsValueNaN; break;;
-        case JDT_NULL: org = JsValue(JDT_INT32, 0); v = JsValue(JDT_INT32, inc); break;;
-        case JDT_BOOL: org = JsValue(JDT_INT32, v.value.n32); v = JsValue(JDT_INT32, v.value.n32 + inc); break;;
+        case JDT_UNDEFINED: v = jsValueNaN; break;
+        case JDT_NULL: org = JsValue(JDT_INT32, 0); v = JsValue(JDT_INT32, inc); break;
+        case JDT_BOOL: org = JsValue(JDT_INT32, v.value.n32); v = JsValue(JDT_INT32, v.value.n32 + inc); break;
         case JDT_INT32: {
             org = v;
             int64_t n = v.value.n32;
@@ -36,7 +36,7 @@ JsValue increaseJsValue(VMContext *ctx, JsValue &v, int inc, bool isPost) {
         }
         case JDT_SYMBOL: {
             ctx->throwException(PE_TYPE_ERROR, " Cannot convert a Symbol value to a number");
-            break;;
+            break;
         }
         case JDT_CHAR: {
             if (isdigit(v.value.n32)) {
@@ -133,5 +133,39 @@ inline JsValue increaseMemberIndex(VMContext *ctx, const JsValue &obj, JsValue &
 
     return jsValueUndefined;
 }
+
+JsValue bitNotOperation(VMContext *ctx, JsValue &v) {
+    if (v.type == JDT_INT32) {
+        return JsValue(JDT_INT32, ~v.value.n32);
+    }
+
+    auto runtime = ctx->runtime;
+    int32_t n = 0;
+
+    switch (v.type) {
+        case JDT_NOT_INITIALIZED:
+        case JDT_UNDEFINED:
+        case JDT_NULL:
+            break;
+        case JDT_BOOL: n = v.value.n32; break;
+            break;
+        case JDT_NUMBER: n = doubleToInt32(runtime->getDouble(v)); break;
+        case JDT_SYMBOL:
+            ctx->throwException(PE_TYPE_ERROR, " Cannot convert a Symbol value to a number");
+            break;
+        default: {
+            double d;
+            if (runtime->toNumber(ctx, v, d)) {
+                n = doubleToInt32(d);
+            } else {
+                n = 0;
+            }
+            break;
+        }
+    }
+
+    return JsValue(JDT_INT32, ~n);
+}
+
 
 #endif /* UnaryOperation_hpp */

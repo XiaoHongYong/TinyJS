@@ -762,12 +762,10 @@ SizedString VMRuntime::toSizedString(VMContext *ctx, const JsValue &v, string &b
 
 bool VMRuntime::isEmptyString(const JsValue &v) {
     assert(v.type == JDT_STRING);
-    if (v.value.index == JS_STRING_IDX_EMPTY) {
-        return true;
-    }
-
     if (v.isInResourcePool) {
         return getStringInResourcePool(v.value.index).len == 0;
+    } else if (v.value.index == JS_STRING_IDX_EMPTY) {
+        return true;
     }
 
     auto js = stringValues[v.value.index];

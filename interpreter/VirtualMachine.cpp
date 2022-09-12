@@ -1203,14 +1203,6 @@ void JsVirtualMachine::call(Function *function, VMContext *ctx, VecVMStackScopes
                 stack.back() = arithmeticBinaryOperation(ctx, runtime, left, right, BinaryOpUnsignedRightShift());
                 break;
             }
-            case OP_UNARY: {
-                assert(0);
-                break;
-            }
-            case OP_POST_FIX: {
-                assert(0);
-                break;
-            }
             case OP_PREFIX_NEGATE: {
                 JsValue &v = stack.back();
                 if (v.type == JDT_INT32) {
@@ -1229,11 +1221,12 @@ void JsVirtualMachine::call(Function *function, VMContext *ctx, VecVMStackScopes
                 break;
             }
             case OP_LOGICAL_NOT: {
-                assert(0);
+                JsValue right = stack.back();
+                stack.back() = JsValue(JDT_BOOL, !runtime->testTrue(right));
                 break;
             }
             case OP_BIT_NOT: {
-                assert(0);
+                stack.back() = bitNotOperation(ctx, stack.back());
                 break;
             }
             case OP_INEQUAL_STRICT: {

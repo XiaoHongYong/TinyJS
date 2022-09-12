@@ -121,8 +121,6 @@ class VMContext;
     OP_ITEM(OP_IN, ""), \
     OP_ITEM(OP_INSTANCE_OF, ""), \
     \
-    OP_ITEM(OP_UNARY, ""), \
-    OP_ITEM(OP_POST_FIX, ""), \
     OP_ITEM(OP_PREFIX_NEGATE, ""), \
     \
     OP_ITEM(OP_LOGICAL_NOT, ""), \

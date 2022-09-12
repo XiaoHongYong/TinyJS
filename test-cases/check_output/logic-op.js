@@ -193,3 +193,56 @@ Infinity
 Infinity
 */
 
+
+// Index: 2
+// !
+var obj = {};
+function g() {}
+
+console.log(!2);
+console.log(!null);
+console.log(!undefined);
+console.log(!'');
+console.log(!'abc');
+console.log(!Symbol());
+console.log(!NaN);
+console.log(!obj);
+console.log(!g);
+console.log(!Infinity);
+
+function f(p) {
+    console.log(!p);
+}
+f(2);
+f(null);
+f(undefined);
+f('');
+f('abc');
+f(Symbol());
+f(obj);
+f(g);
+f(NaN);
+f(Infinity);
+/* OUTPUT
+false
+true
+true
+true
+false
+false
+true
+false
+false
+false
+false
+true
+true
+true
+false
+false
+false
+false
+true
+false
+*/
+
