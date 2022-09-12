@@ -585,6 +585,16 @@ void JsVirtualMachine::call(Function *function, VMContext *ctx, VecVMStackScopes
                 stack.pop_back();
                 break;
             }
+            case OP_JUMP_IF_TRUE_KEEP_VALID: {
+                auto pos = readUInt32(bytecode);
+                auto condition = stack.back();
+                if (runtime->testTrue(condition)) {
+                    bytecode = function->bytecode + pos;
+                } else {
+                    stack.pop_back();
+                }
+                break;
+            }
             case OP_JUMP_IF_FALSE: {
                 auto pos = readUInt32(bytecode);
                 auto condition = stack.back();
@@ -592,6 +602,17 @@ void JsVirtualMachine::call(Function *function, VMContext *ctx, VecVMStackScopes
                     bytecode = function->bytecode + pos;
                 }
                 stack.pop_back();
+                break;
+            }
+            case OP_JUMP_IF_FALSE_KEEP_COND: {
+                auto pos = readUInt32(bytecode);
+                auto condition = stack.back();
+                if (runtime->testTrue(condition)) {
+                    stack.pop_back();
+                } else {
+                    // false, jump
+                    bytecode = function->bytecode + pos;
+                }
                 break;
             }
             case OP_JUMP_IF_NULL_UNDEFINED: {
@@ -856,10 +877,6 @@ void JsVirtualMachine::call(Function *function, VMContext *ctx, VecVMStackScopes
             case OP_PUSH_STRING: {
                 auto idx = readUInt32(bytecode);
                 stack.push_back(runtime->stringIdxToJsValue(function->resourcePool->index, idx));
-                break;
-            }
-            case OP_PUSH_COMMON_STRING: {
-                assert(0);
                 break;
             }
             case OP_PUSH_REGEXP: {
@@ -1150,32 +1167,22 @@ void JsVirtualMachine::call(Function *function, VMContext *ctx, VecVMStackScopes
                 stack.back() = arithmeticBinaryOperation(ctx, runtime, left, right, BinaryOpExp());
                 break;
             }
-            case OP_NULLISH: {
-                assert(0);
-                break;
-            }
-            case OP_LOGICAL_OR: {
-                assert(0);
-                break;
-            }
-            case OP_LOGICAL_AND: {
-                assert(0);
-                break;
-            }
             case OP_BIT_OR: {
-                assert(0);
+                JsValue right = stack.back(); stack.pop_back();
+                JsValue left = stack.back();
+                stack.back() = arithmeticBinaryOperation(ctx, runtime, left, right, BinaryOpBitOr());
                 break;
             }
             case OP_BIT_XOR: {
-                assert(0);
+                JsValue right = stack.back(); stack.pop_back();
+                JsValue left = stack.back();
+                stack.back() = arithmeticBinaryOperation(ctx, runtime, left, right, BinaryOpBitXor());
                 break;
             }
             case OP_BIT_AND: {
-                assert(0);
-                break;
-            }
-            case OP_RATIONAL: {
-                assert(0);
+                JsValue right = stack.back(); stack.pop_back();
+                JsValue left = stack.back();
+                stack.back() = arithmeticBinaryOperation(ctx, runtime, left, right, BinaryOpBitAnd());
                 break;
             }
             case OP_SHIFT: {

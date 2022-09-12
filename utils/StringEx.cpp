@@ -577,7 +577,7 @@ uint32_t floatToString(double value, char *buf) {
         return i;
     }
 
-    value -= (int64_t)value;
+    value -= (uint64_t)value;
 
     // zeroPos 用于记录最后一个非 0 的位置
     uint32_t zeroPos = i;
@@ -903,6 +903,9 @@ TEST(StringEx, floatToString) {
     // 1.7976931348623157e+308
     len = floatToString(1.7976931348623157e+308, buf);
     ASSERT_TRUE(SizedString(buf, len).equal("1.797693134862314e+308"));
+
+    len = floatToString(-9.2233720368547758E+18, buf);
+    ASSERT_TRUE(SizedString(buf, len).equal("-9223372036854775808"));
 
     len = floatToString(1 / 3.0, buf);
     ASSERT_TRUE(SizedString(buf, len).equal("0.3333333333333333"));

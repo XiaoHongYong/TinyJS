@@ -371,7 +371,6 @@ void JSLexer::_readToken() {
                 // &&
                 _bufPos++;
                 _curToken.type = TK_LOGICAL_AND;
-                _curToken.opr = OP_LOGICAL_AND;
             } else if (code == '=') {
                 // &=
                 _bufPos++;
@@ -533,6 +532,10 @@ void JSLexer::_readToken() {
                 // ?.
                 _bufPos++;
                 _curToken.type = TK_OPTIONAL_DOT;
+            } else if (*_bufPos == '?') {
+                // ??
+                _bufPos++;
+                _curToken.type = TK_NULLISH;
             } else {
                 // ?
                 _curToken.type = TK_CONDITIONAL;
@@ -561,7 +564,6 @@ void JSLexer::_readToken() {
                     // ||
                     _bufPos++;
                     _curToken.type = TK_LOGICAL_OR;
-                    _curToken.opr = OP_LOGICAL_OR;
                 } else { // |
                     _curToken.type = TK_BIT_OR;
                     _curToken.opr = OP_BIT_OR;

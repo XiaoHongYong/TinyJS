@@ -812,7 +812,7 @@ bool VMRuntime::testTrue(const JsValue &value) {
             return value.value.n32 != 0;
         case JDT_NUMBER: {
             auto f = getDouble(value);
-            return f != 0;
+            return f != 0 && !isnan(f);
         }
         case JDT_CHAR:
             return true;

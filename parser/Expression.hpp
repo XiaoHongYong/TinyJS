@@ -1094,8 +1094,11 @@ public:
     JsExprNullish(IJsNode *expr, IJsNode *exprIfNull) : IJsNode(NT_NULLISH), expr(expr), exprIfNull(exprIfNull) { }
 
     virtual void convertToByteCode(ByteCodeStream &stream) {
-        // writer.writeOpCode(OP_NULLISH);
-        assert(0);
+        expr->convertToByteCode(stream);
+        stream.writeOpCode(OP_JUMP_IF_NOT_NULL_UNDEFINED_KEEP_VALID);
+        auto addrEnd = stream.writeReservedAddress();
+        exprIfNull->convertToByteCode(stream);
+        *addrEnd = stream.address();
     }
 
 protected:
@@ -1109,8 +1112,10 @@ public:
 
     virtual void convertToByteCode(ByteCodeStream &stream) {
         left->convertToByteCode(stream);
+        stream.writeOpCode(OP_JUMP_IF_TRUE_KEEP_VALID);
+        auto addrEnd = stream.writeReservedAddress();
         right->convertToByteCode(stream);
-        stream.writeOpCode(OP_LOGICAL_OR);
+        *addrEnd = stream.address();
     }
 
 protected:
@@ -1124,8 +1129,10 @@ public:
 
     virtual void convertToByteCode(ByteCodeStream &stream) {
         left->convertToByteCode(stream);
+        stream.writeOpCode(OP_JUMP_IF_FALSE_KEEP_COND);
+        auto addrEnd = stream.writeReservedAddress();
         right->convertToByteCode(stream);
-        stream.writeOpCode(OP_LOGICAL_AND);
+        *addrEnd = stream.address();
     }
 
 protected:

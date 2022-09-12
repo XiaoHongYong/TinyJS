@@ -28,7 +28,9 @@ class VMContext;
     OP_ITEM(OP_THROW, ""), \
     OP_ITEM(OP_JUMP, "address:u32"), \
     OP_ITEM(OP_JUMP_IF_TRUE, "address:u32"), \
+    OP_ITEM(OP_JUMP_IF_TRUE_KEEP_VALID, "address:u32"), \
     OP_ITEM(OP_JUMP_IF_FALSE, "address:u32"), \
+    OP_ITEM(OP_JUMP_IF_FALSE_KEEP_COND, "address:u32"), \
     OP_ITEM(OP_JUMP_IF_NULL_UNDEFINED, "address:u32"), \
     OP_ITEM(OP_JUMP_IF_NOT_NULL_UNDEFINED, "address:u32"), \
     OP_ITEM(OP_JUMP_IF_NOT_NULL_UNDEFINED_KEEP_VALID, "address:u32"), \
@@ -60,7 +62,6 @@ class VMContext;
     OP_ITEM(OP_PUSH_ID_LOCAL_FUNCTION, "function_idx:u16"), \
     OP_ITEM(OP_PUSH_ID_PARENT_FUNCTION, "scope_depth:u8, function_idx:u16"), \
     OP_ITEM(OP_PUSH_STRING, "string_idx:u32"), \
-    OP_ITEM(OP_PUSH_COMMON_STRING, "string_idx:u16"), /*系统常用的 string，不会涉及资源回收*/\
     OP_ITEM(OP_PUSH_REGEXP, "string_idx:u32"), \
     OP_ITEM(OP_PUSH_INT32, "int_number:i32"), \
     OP_ITEM(OP_PUSH_DOUBLE, "value_idx:u32"), \
@@ -103,13 +104,9 @@ class VMContext;
     OP_ITEM(OP_MOD, ""), \
     OP_ITEM(OP_EXP, ""), \
     \
-    OP_ITEM(OP_NULLISH, ""), \
-    OP_ITEM(OP_LOGICAL_OR, ""), \
-    OP_ITEM(OP_LOGICAL_AND, ""), \
     OP_ITEM(OP_BIT_OR, ""), \
     OP_ITEM(OP_BIT_XOR, ""), \
     OP_ITEM(OP_BIT_AND, ""), \
-    OP_ITEM(OP_RATIONAL, ""), \
     OP_ITEM(OP_SHIFT, ""), \
     OP_ITEM(OP_UNARY, ""), \
     OP_ITEM(OP_POST_FIX, ""), \

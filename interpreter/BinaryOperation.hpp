@@ -172,6 +172,177 @@ struct BinaryOpExp {
     }
 };
 
+inline bool isBitOpInvalidDouble(double v) {
+    return !isnormal(v);
+}
+
+struct BinaryOpBitXor {
+
+    inline JsValue toInteger(VMRuntime *rt, double v) const {
+        auto r = (int64_t)v;
+        if (r == (int32_t)r) {
+            return JsValue(JDT_INT32, (int32_t)r);
+        } else {
+            return rt->pushDoubleValue(r);
+        }
+    }
+
+    JsValue operator()(VMRuntime *rt, int32_t a, int32_t b) const {
+        auto r = a ^ b;
+        return JsValue(JDT_INT32, r);
+    }
+
+    JsValue operator()(VMRuntime *rt, double a, int32_t b) const {
+        if (isBitOpInvalidDouble(a)) {
+            return JsValue(JDT_INT32, b);
+        }
+
+        auto r = (int64_t)a ^ b;
+        if (r == (int32_t)r) {
+            return JsValue(JDT_INT32, (int32_t)r);
+        } else {
+            return rt->pushDoubleValue(r);
+        }
+    }
+
+    JsValue operator()(VMRuntime *rt, int32_t a, double b) const {
+        if (isBitOpInvalidDouble(b)) {
+            return JsValue(JDT_INT32, a);
+        }
+
+        auto r = a ^ (int64_t)b;
+        if (r == (int32_t)r) {
+            return JsValue(JDT_INT32, (int32_t)r);
+        } else {
+            return rt->pushDoubleValue(r);
+        }
+    }
+
+    JsValue operator()(VMRuntime *rt, double a, double b) const {
+        if (isBitOpInvalidDouble(a)) {
+            if (isBitOpInvalidDouble(b)) {
+                return JsValue(JDT_INT32, 0);
+            } else {
+                return toInteger(rt, b);
+            }
+        } else if (isBitOpInvalidDouble(b)) {
+            return toInteger(rt, a);
+        }
+
+        auto r = (int64_t)a ^ (int64_t)b;
+        if (r == (int32_t)r) {
+            return JsValue(JDT_INT32, (int32_t)r);
+        } else {
+            return rt->pushDoubleValue(r);
+        }
+    }
+};
+
+struct BinaryOpBitOr {
+
+    inline JsValue toInteger(VMRuntime *rt, double v) const {
+        auto r = (int64_t)v;
+        if (r == (int32_t)r) {
+            return JsValue(JDT_INT32, (int32_t)r);
+        } else {
+            return rt->pushDoubleValue(r);
+        }
+    }
+
+    JsValue operator()(VMRuntime *rt, int32_t a, int32_t b) const {
+        auto r = a | b;
+        return JsValue(JDT_INT32, r);
+    }
+
+    JsValue operator()(VMRuntime *rt, double a, int32_t b) const {
+        if (isBitOpInvalidDouble(a)) {
+            return JsValue(JDT_INT32, b);
+        }
+
+        auto r = (int64_t)a | b;
+        if (r == (int32_t)r) {
+            return JsValue(JDT_INT32, (int32_t)r);
+        } else {
+            return rt->pushDoubleValue(r);
+        }
+    }
+
+    JsValue operator()(VMRuntime *rt, int32_t a, double b) const {
+        if (isBitOpInvalidDouble(b)) {
+            return JsValue(JDT_INT32, a);
+        }
+
+        auto r = a | (int64_t)b;
+        if (r == (int32_t)r) {
+            return JsValue(JDT_INT32, (int32_t)r);
+        } else {
+            return rt->pushDoubleValue(r);
+        }
+    }
+
+    JsValue operator()(VMRuntime *rt, double a, double b) const {
+        if (isBitOpInvalidDouble(a)) {
+            if (isBitOpInvalidDouble(b)) {
+                return JsValue(JDT_INT32, 0);
+            } else {
+                return toInteger(rt, b);
+            }
+        } else if (isBitOpInvalidDouble(b)) {
+            return toInteger(rt, a);
+        }
+
+        auto r = (int64_t)a | (int64_t)b;
+        if (r == (int32_t)r) {
+            return JsValue(JDT_INT32, (int32_t)r);
+        } else {
+            return rt->pushDoubleValue(r);
+        }
+    }
+};
+
+struct BinaryOpBitAnd {
+    JsValue operator()(VMRuntime *rt, int32_t a, int32_t b) const {
+        auto r = a & b;
+        return JsValue(JDT_INT32, r);
+    }
+
+    JsValue operator()(VMRuntime *rt, double a, int32_t b) const {
+        if (isBitOpInvalidDouble(a))
+            return JsValue(JDT_INT32, 0);
+
+        auto r = (int64_t)a & b;
+        if (r == (int32_t)r) {
+            return JsValue(JDT_INT32, (int32_t)r);
+        } else {
+            return rt->pushDoubleValue(r);
+        }
+    }
+
+    JsValue operator()(VMRuntime *rt, int32_t a, double b) const {
+        if (isBitOpInvalidDouble(b))
+            return JsValue(JDT_INT32, 0);
+
+        auto r = a & (int64_t)b;
+        if (r == (int32_t)r) {
+            return JsValue(JDT_INT32, (int32_t)r);
+        } else {
+            return rt->pushDoubleValue(r);
+        }
+    }
+
+    JsValue operator()(VMRuntime *rt, double a, double b) const {
+        if (isBitOpInvalidDouble(a) || isBitOpInvalidDouble(b))
+            return JsValue(JDT_INT32, 0);
+
+        auto r = (int64_t)a & (int64_t)b;
+        if (r == (int32_t)r) {
+            return JsValue(JDT_INT32, (int32_t)r);
+        } else {
+            return rt->pushDoubleValue(r);
+        }
+    }
+};
+
 
 // 除了加法之外的其他数学运算
 template<typename Operator>
