@@ -5,6 +5,8 @@
 *.suo
 *.pyc
 *.xcuserdatad
+*.xcscheme
+xcuserdata/
 *.tmp
 *.zip
 Release
