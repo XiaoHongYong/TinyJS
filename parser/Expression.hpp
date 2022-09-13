@@ -104,6 +104,19 @@ public:
 
 };
 
+class JsExprChar : public IJsNode {
+public:
+    JsExprChar(uint32_t ch) : IJsNode(NT_CHAR), ch(ch) { }
+
+    virtual void convertToByteCode(ByteCodeStream &stream) {
+        stream.writeOpCode(OP_PUSH_CHAR);
+        stream.writeUInt16(ch);
+    }
+
+    uint32_t                    ch;
+
+};
+
 class JsExprRegExp : public IJsNode {
 public:
     JsExprRegExp(uint32_t stringIdx) : IJsNode(NT_REGEXP), stringIdx(stringIdx) { }
@@ -573,6 +586,10 @@ public:
 
     virtual void convertToByteCode(ByteCodeStream &stream) {
         obj->convertToByteCode(stream);
+
+        for (auto item : args) {
+            item->convertToByteCode(stream);
+        }
 
         stream.writeOpCode(OP_NEW);
         stream.writeUInt16((uint16_t)args.size());

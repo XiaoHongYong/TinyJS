@@ -62,6 +62,7 @@ class VMContext;
     OP_ITEM(OP_PUSH_ID_LOCAL_FUNCTION, "function_idx:u16"), \
     OP_ITEM(OP_PUSH_ID_PARENT_FUNCTION, "scope_depth:u8, function_idx:u16"), \
     OP_ITEM(OP_PUSH_STRING, "string_idx:u32"), \
+    OP_ITEM(OP_PUSH_CHAR, "char:u16"), \
     OP_ITEM(OP_PUSH_REGEXP, "string_idx:u32"), \
     OP_ITEM(OP_PUSH_INT32, "int_number:i32"), \
     OP_ITEM(OP_PUSH_DOUBLE, "value_idx:u32"), \
@@ -194,6 +195,9 @@ enum JsDataType : uint8_t {
     JDT_OBJECT,
     JDT_REGEX,
     JDT_ARRAY,
+    JDT_OBJ_BOOL,
+    JDT_OBJ_NUMBER,
+    JDT_OBJ_STRING,
 
     // 函数 开始
     JDT_FUNCTION,

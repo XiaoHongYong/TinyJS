@@ -43,6 +43,7 @@ public:
 
     bool append(const JsValue &v);
     bool append(const SizedString &s);
+    bool append(double v);
 
     const SizedString &str() const { return *this; }
 

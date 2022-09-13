@@ -879,6 +879,11 @@ void JsVirtualMachine::call(Function *function, VMContext *ctx, VecVMStackScopes
                 stack.push_back(runtime->stringIdxToJsValue(function->resourcePool->index, idx));
                 break;
             }
+            case OP_PUSH_CHAR: {
+                auto ch = readUInt16(bytecode);
+                stack.push_back(JsValue(JDT_CHAR, ch));
+                break;
+            }
             case OP_PUSH_REGEXP: {
                 auto idx = readUInt32(bytecode);
                 auto str = runtime->getStringByIdx(idx, resourcePool);
@@ -1302,7 +1307,9 @@ void JsVirtualMachine::call(Function *function, VMContext *ctx, VecVMStackScopes
                 break;
             }
             case OP_INSTANCE_OF: {
-                assert(0);
+                JsValue right = stack.back(); stack.pop_back();
+                JsValue left = stack.back();
+                stack.back() = JsValue(JDT_BOOL, instanceOf(ctx, runtime, left, right));
                 break;
             }
             case OP_DELETE_MEMBER_DOT: {
@@ -1358,27 +1365,49 @@ void JsVirtualMachine::call(Function *function, VMContext *ctx, VecVMStackScopes
                 auto posStack = stack.size() - countArgs - 1;
                 JsValue func = stack.at(posStack);
                 Arguments args(stack.data() + stack.size() - countArgs, countArgs);
+                JsValue thizVal = jsValueUndefined;
+
                 switch (func.type) {
                     case JDT_FUNCTION: {
                         auto obj = (JsObjectFunction *)runtime->getObject(func);
                         assert(obj->type == JDT_FUNCTION);
                         if (obj->function->isMemberFunction) {
                             ctx->throwException(PE_TYPE_ERROR, "? is not a constructor");
+                            break;
                         }
 
                         auto prototype = obj->getByName(ctx, func, SS_PROTOTYPE);
                         if (prototype.type < JDT_OBJECT) {
                             prototype = jsValuePrototypeObject;
                         }
-                        auto thizVal = runtime->pushObjValue(JDT_OBJECT, new JsObject(prototype));
+                        thizVal = runtime->pushObjValue(JDT_OBJECT, new JsObject(prototype));
                         call(obj->function, ctx, obj->stackScopes, thizVal, args);
-                        stack.resize(posStack);
-                        stack.push_back(thizVal);
                         break;
                     }
+                    case JDT_LIB_OBJECT: {
+                        auto obj = (JsLibObject *)runtime->getObject(func);
+                        assert(obj->type == JDT_LIB_OBJECT);
+                        if (!obj->getFunction()) {
+                            ctx->throwException(PE_TYPE_ERROR, "? is not a constructor");
+                            break;
+                        }
+
+                        obj->getFunction()(ctx, jsValueNotInitialized, args);
+                        thizVal = ctx->retValue;
+                        break;
+                    }
+                    case JDT_NATIVE_FUNCTION: {
+                        auto f = runtime->getNativeFunction(func.value.index);
+                        f(ctx, jsValueNotInitialized, args);
+                        thizVal = ctx->retValue;
+                    }
                     default:
+                        ctx->throwException(PE_TYPE_ERROR, "? is not a constructor");
                         break;
                 }
+
+                stack.resize(posStack);
+                stack.push_back(thizVal);
                 break;
             }
             case OP_NEW_TARGET: {

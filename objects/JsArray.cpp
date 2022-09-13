@@ -327,6 +327,11 @@ JsProperty *JsArray::getRawByName(VMContext *ctx, const SizedString &name, JsNat
         return _obj->getRawByName(ctx, name, funcGetterOut, includeProtoProp);
     }
 
+    if (name.equal(SS___PROTO__)) {
+        static JsProperty prop(jsValuePrototypeArray, false, false, false, true);
+        return &prop;
+    }
+
     if (includeProtoProp) {
         return ctx->runtime->objPrototypeArray->getRawByName(ctx, name, funcGetterOut, true);
     }

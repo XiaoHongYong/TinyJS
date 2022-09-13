@@ -97,14 +97,16 @@ SizedStringWrapper::SizedStringWrapper(const JsValue &v) {
         } else {
         }
     } else if (v.type == JDT_UNDEFINED) {
-        append(jsStringValueUndefined);
+        append(SS_UNDEFINED);
     } else if (v.type == JDT_NULL) {
-        append(jsStringValueNull);
+        append(SS_NULL);
     } else if (v.type == JDT_BOOL) {
-        append(v.value.n32 ? jsStringValueTrue : jsStringValueFalse);
+        append(v.value.n32 ? SS_TRUE : SS_FALSE);
     } else if (v.type == JDT_INT32) {
         SizedStringWrapper s2(v.value.n32);
         append(s2.str());
+    } else {
+        assert(0);
     }
 }
 
@@ -120,17 +122,20 @@ bool SizedStringWrapper::append(const JsValue &v) {
             len++;
             return true;
         } else {
+            assert(0);
             return false;
         }
     } else if (v.type == JDT_UNDEFINED) {
-        return append(jsStringValueUndefined);
+        return append(SS_UNDEFINED);
     } else if (v.type == JDT_NULL) {
-        return append(jsStringValueNull);
+        return append(SS_NULL);
     } else if (v.type == JDT_BOOL) {
-        return append(v.value.n32 ? jsStringValueTrue : jsStringValueFalse);
+        return append(v.value.n32 ? SS_TRUE : SS_FALSE);
     } else if (v.type == JDT_INT32) {
         SizedStringWrapper s2(v.value.n32);
         return append(s2.str());
+    } else {
+        assert(0);
     }
 
     return false;
@@ -142,6 +147,17 @@ bool SizedStringWrapper::append(const SizedString &s) {
         len += s.len;
         return true;
     } else {
+        assert(0);
+        return false;
+    }
+}
+
+bool SizedStringWrapper::append(double v) {
+    if (len + 32 < CountOf(_buf)) {
+        len += floatToString(v, (char *)_buf + len);
+        return true;
+    } else {
+        assert(0);
         return false;
     }
 }

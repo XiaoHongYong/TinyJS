@@ -30,6 +30,9 @@ SizedString objectPrototypeToSizedString(const JsValue &thiz) {
         case JDT_STRING: return SizedString("[object String]");
         case JDT_OBJECT: return SizedString("[object Object]");
         case JDT_REGEX: return SizedString("[object RegExp]");
+        case JDT_OBJ_BOOL: return SizedString("[object Boolean]");
+        case JDT_OBJ_NUMBER: return SizedString("[object Number]");
+        case JDT_OBJ_STRING: return SizedString("[object String]");
         case JDT_ARRAY: return SizedString("[object Array]");
         case JDT_LIB_OBJECT: return SizedString("[object Object]");
         case JDT_NATIVE_FUNCTION:

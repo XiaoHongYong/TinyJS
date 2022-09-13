@@ -54,8 +54,7 @@ protected:
     JsProperty                  _caller;
     JsProperty                  _arguments;
 
-    JsValue                     __proto__;
-    JsObject                    *_obj__Proto__;
+    JsProperty                  __proto__;
 
     JsObject                    *_obj;
 

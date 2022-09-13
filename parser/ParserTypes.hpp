@@ -39,6 +39,7 @@ enum JsNodeType : uint8_t {
     NT_BOOLEAN_FALSE,
     NT_NULL,
     NT_STRING,
+    NT_CHAR,
     NT_INT32,
     NT_NUMBER,
     NT_REGEXP,

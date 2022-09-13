@@ -11,3 +11,17 @@ f1();
 Uncaught TypeError: Cannot redefine property: length
 */
 
+
+// Index: 1
+function f() {
+    var a = [1, 2];
+    a.__proto__ = { x : 'x1'};
+    console.log(a.x);
+    console.log(a[0]);
+}
+f();
+/* OUTPUT
+x1
+1
+*/
+

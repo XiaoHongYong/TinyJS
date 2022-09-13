@@ -6,15 +6,22 @@
 //
 
 #include "BuiltIn.hpp"
+#include "objects/JsPrimaryObject.hpp"
 
 
 void booleanConstructor(VMContext *ctx, const JsValue &thiz, const Arguments &args) {
-    bool value = false;
+    JsValue value = jsValueFalse;
     if (args.count > 0) {
-        value = ctx->runtime->testTrue(args[0]);
+        value = JsValue(JDT_BOOL, ctx->runtime->testTrue(args[0]));
     }
 
-    ctx->retValue = JsValue(JDT_BOOL, value);
+    if (thiz.type == JDT_NOT_INITIALIZED) {
+        // New
+        auto obj = new JsBooleanObject(value);
+        ctx->retValue = ctx->runtime->pushObjValue(JDT_OBJ_BOOL, obj);
+    } else {
+        ctx->retValue = value;
+    }
 }
 
 static JsLibProperty booleanFunctions[] = {
@@ -24,13 +31,25 @@ static JsLibProperty booleanFunctions[] = {
 };
 
 
+inline JsValue convertBoolToJsValue(VMContext *ctx, const JsValue &thiz, const char *funcName) {
+    if (thiz.type == JDT_BOOL) {
+        return thiz;
+    } else if (thiz.type == JDT_OBJ_BOOL) {
+        auto obj = (JsBooleanObject *)ctx->runtime->getObject(thiz);
+        return obj->value();
+    }
+
+    ctx->throwException(PE_TYPE_ERROR, "Boolean.prototype.%s requires that 'this' be a Boolean", funcName);
+    return jsValueNotInitialized;
+}
+
 void booleanPrototypeToString(VMContext *ctx, const JsValue &thiz, const Arguments &args) {
-    if (thiz.type != JDT_BOOL) {
-        ctx->throwException(PE_TYPE_ERROR, "Boolean.prototype.toString requires that 'this' be a Boolean");
+    auto value = convertBoolToJsValue(ctx, thiz, "toString");
+    if (!value.isValid()) {
         return;
     }
 
-    ctx->retValue = thiz.value.n32 ? jsStringValueTrue : jsStringValueFalse;
+    ctx->retValue = value.value.n32 ? jsStringValueTrue : jsStringValueFalse;
 }
 
 static JsLibProperty booleanPrototypeFunctions[] = {

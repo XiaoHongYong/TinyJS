@@ -511,7 +511,7 @@ inline JsValue plusOperate(VMContext *ctx, VMRuntime *rt, const JsValue &left, c
                 }
                 case JDT_NUMBER: {
                     SizedStringWrapper str(left);
-                    str.append(right);
+                    str.append(rt->getDouble(right));
                     return rt->pushString(str.str());
                 }
                 case JDT_SYMBOL:
@@ -874,6 +874,39 @@ inline void assignMemberIndexOperation(VMContext *ctx, VMRuntime *runtime, const
 
     auto pobj = runtime->getObject(obj);
     pobj->set(ctx, obj, index, value);
+}
+
+inline bool instanceOf(VMContext *ctx, VMRuntime *rt, const JsValue &left, const JsValue &right) {
+    if (right.type < JDT_OBJECT) {
+        ctx->throwException(PE_TYPE_ERROR, "Right-hand side of 'instanceof' is not an object");
+        return false;
+    }
+
+    if (right.type < JDT_FUNCTION) {
+        ctx->throwException(PE_TYPE_ERROR, "Right-hand side of 'instanceof' is not callable");
+        return false;
+    }
+
+    if (left.type < JDT_OBJECT) {
+        return false;
+    }
+
+    auto prototype = rt->getObject(right)->getByName(ctx, right, SS_PROTOTYPE);
+    if (prototype.type < JDT_OBJECT) {
+        return false;
+    }
+
+    auto proto = left;
+
+    do {
+        auto obj = rt->getObject(proto);
+        proto = obj->getByName(ctx, proto, SS___PROTO__);
+        if (proto == prototype) {
+            return true;
+        }
+    } while (proto.type >= JDT_OBJECT);
+
+    return false;
 }
 
 #endif /* BinaryOperation_hpp */

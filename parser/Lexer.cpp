@@ -594,7 +594,7 @@ void JSLexer::_readToken() {
                 }
             }
 
-            _parseError(PE_SYNTAX_ERROR, "Template string is NOT closed.");
+            _parseError("Template string is NOT closed.");
             break;
         case '~':
             _curToken.type = TK_UNARY_PREFIX;
@@ -630,7 +630,7 @@ void JSLexer::_readToken() {
                     _curToken.type = TK_EOF;
                     return;
                 }
-                _parseError(PE_SYNTAX_ERROR,  "Invalid or unexpected token: %d(%c)", code, code);
+                _parseError( "Invalid or unexpected token: %d(%c)", code, code);
             }
             break;
     }
@@ -665,7 +665,7 @@ void JSLexer::_readString(uint8_t quote) {
     do {
         c = *_bufPos++;
         if (c == '\n') { // \n
-            _parseError(PE_SYNTAX_ERROR, "Invalid or unexpected token");
+            _parseError("Invalid or unexpected token");
             return;
         } if (c == '\\') {  // '\\'
             // Escape next char.
@@ -691,7 +691,7 @@ void JSLexer::_readNumber() {
     _curToken.type = TK_NUMBER;
 
     if (isIdentifierStart(*_bufPos))
-        _parseError(PE_SYNTAX_ERROR, "unexpected number ending.");
+        _parseError("unexpected number ending.");
 }
 
 void JSLexer::_readRegexp() {
@@ -701,7 +701,7 @@ void JSLexer::_readRegexp() {
     do {
         ch = *_bufPos++;
         if (!ch || ch == '\n') {
-            _parseError(PE_SYNTAX_ERROR, "Invalid regular expression: missing /");
+            _parseError("Invalid regular expression: missing /");
             return;
         }
         if (ch == '[') {
@@ -755,7 +755,7 @@ void JSLexer::_readInTemplateMid() {
         }
     }
 
-    _parseError(PE_SYNTAX_ERROR, "Unexpected template string ending.");
+    _parseError("Unexpected template string ending.");
 }
 
 void JSLexer::_skipLineComment() {
@@ -814,12 +814,12 @@ SizedString JSLexer::_escapeString(const SizedString &str) {
     return SizedString(out, size_t(po - out));
 }
 
-void JSLexer::_parseError(JsErrorType err, cstr_t format, ...) {
+void JSLexer::_parseError(cstr_t format, ...) {
     va_list        args;
 
     va_start(args, format);
     auto message = stringPrintf(format, args);
     va_end(args);
 
-    throw ParseException(err, "%s", message.c_str());
+    throw ParseException(PE_SYNTAX_ERROR, "%s", message.c_str());
 }

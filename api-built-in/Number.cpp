@@ -6,24 +6,32 @@
 //
 
 #include "BuiltIn.hpp"
+#include "objects/JsPrimaryObject.hpp"
 
 
 void numberConstructor(VMContext *ctx, const JsValue &thiz, const Arguments &args) {
+    JsValue value;
     if (args.count == 0) {
-        ctx->retValue = JsValue(JDT_INT32, 0);
+        value = JsValue(JDT_INT32, 0);
     } else {
-        auto v = args[0];
-        if (v.type == JDT_NUMBER || v.type == JDT_INT32) {
-            ctx->retValue = v;
-        } else {
+        value = args[0];
+        if (value.type != JDT_NUMBER && value.type == JDT_INT32) {
             auto runtime = ctx->runtime;
-            auto n = runtime->toNumber(ctx, v);
+            auto n = runtime->toNumber(ctx, value);
             if (n == (int32_t)n) {
-                ctx->retValue = JsValue(JDT_INT32, n);
+                value = JsValue(JDT_INT32, n);
             } else {
-                ctx->retValue = runtime->pushDoubleValue(n);
+                value = runtime->pushDoubleValue(n);
             }
         }
+    }
+
+    if (thiz.type == JDT_NOT_INITIALIZED) {
+        // New
+        auto obj = new JsNumberObject(value);
+        ctx->retValue = ctx->runtime->pushObjValue(JDT_OBJ_NUMBER, obj);
+    } else {
+        ctx->retValue = value;
     }
 }
 
@@ -40,9 +48,21 @@ static JsLibProperty numberFunctions[] = {
 };
 
 
+inline JsValue convertNumberToJsValue(VMContext *ctx, const JsValue &thiz, const char *funcName) {
+    if (thiz.type == JDT_NUMBER) {
+        return thiz;
+    } else if (thiz.type == JDT_OBJ_NUMBER) {
+        auto obj = (JsNumberObject *)ctx->runtime->getObject(thiz);
+        return obj->value();
+    }
+
+    ctx->throwException(PE_TYPE_ERROR, "Number.prototype.%s requires that 'this' be a Number", funcName);
+    return jsValueNotInitialized;
+}
+
 void numberPrototypeToString(VMContext *ctx, const JsValue &thiz, const Arguments &args) {
-    if (thiz.type != JDT_INT32 && thiz.type != JDT_NUMBER) {
-        ctx->throwException(PE_TYPE_ERROR, "Number.prototype.toString requires that 'this' be a Number");
+    auto value = convertNumberToJsValue(ctx, thiz, "toString");
+    if (!value.isValid()) {
         return;
     }
 
@@ -59,10 +79,10 @@ void numberPrototypeToString(VMContext *ctx, const JsValue &thiz, const Argument
 
     char buf[64];
     size_t size;
-    if (thiz.type == JDT_INT32) {
-        size = itoa(thiz.value.n32, buf, radix);
+    if (value.type == JDT_INT32) {
+        size = itoa(value.value.n32, buf, radix);
     } else {
-        auto v = runtime->getDouble(thiz);
+        auto v = runtime->getDouble(value);
         size = floatToString(v, buf, radix);
     }
 

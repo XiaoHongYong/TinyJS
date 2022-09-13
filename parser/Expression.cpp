@@ -50,9 +50,10 @@ JsValue convertConstExprToJsValue(VMRuntime *rt, uint16_t poolIndex, IJsNode *no
         case NT_BOOLEAN_TRUE: return jsValueTrue;
         case NT_BOOLEAN_FALSE: return jsValueFalse;
         case NT_NULL: return jsValueNull;
+        case NT_CHAR: return JsValue(JDT_CHAR, ((JsExprChar *)node)->ch);
         case NT_STRING: return rt->stringIdxToJsValue(poolIndex, ((JsExprString *)node)->stringIdx);
         case NT_INT32: return JsValue(JDT_INT32, ((JsExprInt32 *)node)->value);
-        case NT_NUMBER: return rt->numberIdxToJsValue(poolIndex, ((JsExprString *)node)->stringIdx);
+        case NT_NUMBER: return rt->numberIdxToJsValue(poolIndex, ((JsExprNumber *)node)->index);
         default: assert(0); return jsValueNull;
     }
 }

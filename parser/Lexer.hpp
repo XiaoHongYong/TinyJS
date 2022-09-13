@@ -193,7 +193,7 @@ protected:
 
     SizedString _escapeString(const SizedString &str);
 
-    void _parseError(JsErrorType err, cstr_t format, ...);
+    void _parseError(cstr_t format, ...);
 
 protected:
     ResourcePool            *_resPool;

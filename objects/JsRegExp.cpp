@@ -9,6 +9,7 @@
 
 
 JsRegExp::JsRegExp(const SizedString &re) : JsObject(jsValuePrototypeRegExp),  _strRe((cstr_t)re.data, re.len), _re(_strRe.c_str()) {
+    type = JDT_ARRAY;
 }
 
 JsRegExp::~JsRegExp() {

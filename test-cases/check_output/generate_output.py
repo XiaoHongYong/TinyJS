@@ -4,6 +4,8 @@ import os
 import json
 import sys
 import time
+from tokenize import Number
+from xmlrpc.client import Boolean
 import requests
 import subprocess
 
@@ -174,6 +176,12 @@ class ChromeInterface(object):
         self.__setattr__(attr, genericelement)
         return genericelement
 
+def python_value_to_js_string(v):
+    if type(v) is Boolean:
+        return 'true' if v else 'false'
+    else:
+        return str(v)
+
 def args_to_string(args):
     a = []
     for arg in args:
@@ -216,9 +224,11 @@ def args_to_string(args):
                 # { "type": "object", "className": "Array", "preview": { "properties": [{ "type": "number", "name": "3", "value": "NaN" } ] } }
                 preview = arg.get('preview')
                 properties = preview.get('properties')
-                a.append('[')
                 a.append(', '.join([prop.get('value', '##') for prop in properties]))
-                a.append(']')
+            elif className in ['Boolean', 'String', 'Number']:
+                preview = arg.get('preview')
+                properties = preview.get('properties')
+                a.append(properties[0]['value'])
             else:
                 # if className == 'Object'
                 # { "type": "object",  "className": "Object", "preview": {"properties": [{ "type": "number", "name": "1", "value": "NaN" }] }}

@@ -8,7 +8,7 @@
 #include "JsObjectFunction.hpp"
 
 
-JsObjectFunction::JsObjectFunction(const VecVMStackScopes &stackScopes, Function *function) : stackScopes(stackScopes), function(function) {
+JsObjectFunction::JsObjectFunction(const VecVMStackScopes &stackScopes, Function *function) : stackScopes(stackScopes), function(function), __proto__(jsValuePrototypeFunction, false, false, false, true) {
     type = JDT_FUNCTION;
 
     // isGSetter, isConfigurable, isEnumerable, isWritable
@@ -18,8 +18,6 @@ JsObjectFunction::JsObjectFunction(const VecVMStackScopes &stackScopes, Function
     _caller = JsProperty(jsValueNull, false, false, false, false);
     _arguments = JsProperty(jsValueNull, false, false, false, false);
 
-    __proto__ = jsValueNotInitialized;
-    _obj__Proto__ = nullptr;
     _obj = nullptr;
 }
 
@@ -160,13 +158,17 @@ JsProperty *JsObjectFunction::getRawByName(VMContext *ctx, const SizedString &na
         return _obj->getRawByName(ctx, name, funcGetterOut, includeProtoProp);
     }
 
+    if (name.equal(SS___PROTO__)) {
+        return &__proto__;
+    }
+
     if (includeProtoProp) {
         // 查找 __proto__ 的属性
-        if (__proto__.type == JDT_NOT_INITIALIZED) {
+        if (__proto__.value.equal(jsValuePrototypeFunction)) {
             // 缺省的 Function.prototype
             return ctx->runtime->objPrototypeFunction->getRawByName(ctx, name, funcGetterOut, true);
-        } else if (__proto__.type >= JDT_OBJECT) {
-            auto obj = ctx->runtime->getObject(__proto__);
+        } else if (__proto__.value.type >= JDT_OBJECT) {
+            auto obj = ctx->runtime->getObject(__proto__.value);
             assert(obj);
             return obj->getRawByName(ctx, name, funcGetterOut, true);
         }
@@ -227,7 +229,6 @@ IJsObject *JsObjectFunction::clone() {
     auto obj = new JsObjectFunction(stackScopes, function);
 
     obj->__proto__ = __proto__;
-    obj->_obj__Proto__ = _obj__Proto__;
 
     if (_obj) { obj->_obj = (JsObject *)_obj->clone(); }
 
@@ -245,5 +246,5 @@ IJsIterator *JsObjectFunction::getIteratorObject(VMContext *ctx) {
 void JsObjectFunction::_newObject() {
     assert(_obj == nullptr);
 
-    _obj = new JsObject(__proto__);
+    _obj = new JsObject(__proto__.value);
 }

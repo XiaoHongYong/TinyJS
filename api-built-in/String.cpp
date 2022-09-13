@@ -6,6 +6,7 @@
 //
 
 #include "BuiltIn.hpp"
+#include "objects/JsPrimaryObject.hpp"
 
 
 void ucs2ToUtf8(uint16_t code, string &out) {
@@ -24,11 +25,16 @@ void ucs2ToUtf8(uint16_t code, string &out) {
 static void stringConstructor(VMContext *ctx, const JsValue &thiz, const Arguments &args) {
     auto runtime = ctx->runtime;
 
-    if (args.count > 0) {
-        ctx->retValue = runtime->toString(ctx, args[0]);
-    } else {
-        ctx->retValue = jsStringValueEmpty;
+    JsValue str = args.count > 0 ? runtime->toString(ctx, args[0]) : jsStringValueEmpty;
+
+    if (thiz.type != JDT_NOT_INITIALIZED) {
+        ctx->retValue = str;
+        return;
     }
+
+    // New
+    auto obj = new JsStringObject(str);
+    ctx->retValue = runtime->pushObjValue(JDT_OBJ_STRING, obj);
 }
 
 void stringFromCharCode(VMContext *ctx, const JsValue &thiz, const Arguments &args) {
@@ -67,19 +73,31 @@ static JsLibProperty stringFunctions[] = {
 };
 
 
+inline JsValue convertStringToJsValue(VMContext *ctx, const JsValue &thiz, const char *funcName) {
+    if (thiz.type == JDT_STRING || thiz.type == JDT_CHAR) {
+        return thiz;
+    } else if (thiz.type == JDT_OBJ_STRING) {
+        auto obj = (JsStringObject *)ctx->runtime->getObject(thiz);
+        return obj->value();
+    }
+
+    ctx->throwException(PE_TYPE_ERROR, "String.prototype.%s requires that 'this' be a String", funcName);
+    return jsValueNotInitialized;
+}
+
 void stringPrototypeAt(VMContext *ctx, const JsValue &thiz, const Arguments &args) {
     auto runtime = ctx->runtime;
-    if (thiz.type != JDT_STRING && thiz.type != JDT_CHAR) {
-        ctx->throwException(PE_TYPE_ERROR, "String.prototype.at requires that 'this' be a String");
+    auto strValue = convertStringToJsValue(ctx, thiz, "at");
+    if (!strValue.isValid()) {
         return;
     }
 
     SizedString str;
     uint8_t buf[32];
-    if (thiz.type == JDT_STRING) {
-        str = runtime->getString(thiz);
+    if (strValue.type == JDT_STRING) {
+        str = runtime->getString(strValue);
     } else {
-        buf[0] = thiz.value.n32;
+        buf[0] = strValue.value.n32;
         str = SizedString(buf, 1);
     }
 
@@ -105,17 +123,17 @@ void stringPrototypeAt(VMContext *ctx, const JsValue &thiz, const Arguments &arg
 
 void stringPrototypeCharAt(VMContext *ctx, const JsValue &thiz, const Arguments &args) {
     auto runtime = ctx->runtime;
-    if (thiz.type != JDT_STRING && thiz.type != JDT_CHAR) {
-        ctx->throwException(PE_TYPE_ERROR, "String.prototype.at requires that 'this' be a String");
+    auto strValue = convertStringToJsValue(ctx, thiz, "charAt");
+    if (!strValue.isValid()) {
         return;
     }
 
     SizedString str;
     uint8_t buf[32];
-    if (thiz.type == JDT_STRING) {
-        str = runtime->getString(thiz);
+    if (strValue.type == JDT_STRING) {
+        str = runtime->getString(strValue);
     } else {
-        buf[0] = thiz.value.n32;
+        buf[0] = strValue.value.n32;
         str = SizedString(buf, 1);
     }
 
@@ -132,19 +150,29 @@ void stringPrototypeCharAt(VMContext *ctx, const JsValue &thiz, const Arguments 
     ctx->retValue = JsValue(JDT_CHAR, str.data[index]);
 }
 
-void stringPrototypeLength(VMContext *ctx, const JsValue &thiz, const Arguments &args) {
-    auto runtime = ctx->runtime;
-    if (thiz.type != JDT_STRING && thiz.type != JDT_CHAR) {
-        ctx->throwException(PE_TYPE_ERROR, "String.prototype.length requires that 'this' be a String");
+void stringPrototypeToString(VMContext *ctx, const JsValue &thiz, const Arguments &args) {
+    auto value = convertStringToJsValue(ctx, thiz, "toString");
+    if (!value.isValid()) {
         return;
     }
 
-    ctx->retValue = JsValue(JDT_INT32, runtime->getStringLength(thiz));
+    ctx->retValue = value;
+}
+
+void stringPrototypeLength(VMContext *ctx, const JsValue &thiz, const Arguments &args) {
+    auto runtime = ctx->runtime;
+    auto strValue = convertStringToJsValue(ctx, thiz, "length");
+    if (!strValue.isValid()) {
+        return;
+    }
+
+    ctx->retValue = JsValue(JDT_INT32, runtime->getStringLength(strValue));
 }
 
 static JsLibProperty stringPrototypeFunctions[] = {
     { "at", stringPrototypeAt },
     { "charAt", stringPrototypeCharAt },
+    { "toString", stringPrototypeToString },
     makeJsLibPropertyGetter("length", stringPrototypeLength),
 };
 

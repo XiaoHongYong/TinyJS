@@ -580,12 +580,12 @@ JsValue JsObject::increaseBySymbol(VMContext *ctx, const JsValue &thiz, uint32_t
 }
 
 JsProperty *JsObject::getRawByName(VMContext *ctx, const SizedString &name, JsNativeFunction &funcGetterOut, bool includeProtoProp) {
-    if (name.equal(SS___PROTO__)) {
-        return &__proto__;
-    }
-
     auto it = _props.find(name);
     if (it == _props.end()) {
+        if (name.equal(SS___PROTO__)) {
+            return &__proto__;
+        }
+
         if (includeProtoProp) {
             auto &proto = __proto__.value;
             if (proto.type == JDT_NOT_INITIALIZED) {
@@ -611,20 +611,20 @@ JsProperty *JsObject::getRawByIndex(VMContext *ctx, uint32_t index, bool include
 }
 
 JsProperty *JsObject::getRawBySymbol(VMContext *ctx, uint32_t index, bool includeProtoProp) {
-    includeProtoProp = true;
-    if (_symbolProps) {
-        auto it = _symbolProps->find(index);
-        if (it == _symbolProps->end()) {
-            if (__proto__.value.type >= JDT_OBJECT) {
-                auto obj = ctx->runtime->getObject(__proto__.value);
-                assert(obj);
-                auto ret = obj->getRawBySymbol(ctx, index, includeProtoProp);
-                includeProtoProp = false;
-                return ret;
-            }
-        } else {
-            return &(*it).second;
+    if (!_symbolProps) {
+        return nullptr;
+    }
+
+    auto it = _symbolProps->find(index);
+    if (it == _symbolProps->end()) {
+        if (includeProtoProp && __proto__.value.type >= JDT_OBJECT) {
+            auto obj = ctx->runtime->getObject(__proto__.value);
+            assert(obj);
+            auto ret = obj->getRawBySymbol(ctx, index, includeProtoProp);
+            return ret;
         }
+    } else {
+        return &(*it).second;
     }
 
     return nullptr;

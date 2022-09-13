@@ -52,6 +52,7 @@ JsLibObject::JsLibObject(JsLibObject *from) {
     _libPropsEnd = from->_libPropsEnd;
     _modified = false;
     _isOfIterable = from->_isOfIterable;
+    __proto__ = from->__proto__;
 }
 
 JsLibObject::~JsLibObject() {
@@ -203,7 +204,13 @@ JsProperty *JsLibObject::getRawByName(VMContext *ctx, const SizedString &name, J
 
     if (_obj) {
         return _obj->getRawByName(ctx, name, funcGetterOut, includeProtoProp);
-    } else {
+    }
+
+    if (name.equal(SS___PROTO__)) {
+        return &__proto__;
+    }
+
+    if (includeProtoProp) {
         // 查找 prototye 的属性
         auto &proto = __proto__.value;
         JsNativeFunction funcGetter = nullptr;
@@ -222,7 +229,6 @@ JsProperty *JsLibObject::getRawByName(VMContext *ctx, const SizedString &name, J
 
 JsProperty *JsLibObject::getRawByIndex(VMContext *ctx, uint32_t index, bool includeProtoProp) {
     if (_obj) {
-        includeProtoProp = true;
         return _obj->getRawByIndex(ctx, index, includeProtoProp);
     }
 
@@ -231,7 +237,6 @@ JsProperty *JsLibObject::getRawByIndex(VMContext *ctx, uint32_t index, bool incl
 
 JsProperty *JsLibObject::getRawBySymbol(VMContext *ctx, uint32_t index, bool includeProtoProp) {
     if (_obj) {
-        includeProtoProp = true;
         return _obj->getRawBySymbol(ctx, index, includeProtoProp);
     }
 

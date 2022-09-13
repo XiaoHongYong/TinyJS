@@ -187,7 +187,7 @@ IJsNode *JSParser::_expectStatment() {
         case TK_THROW: {
             _readToken();
             if (_curToken.newLineBefore) {
-                _parseError(PE_SYNTAX_ERROR, "Illegal newline after throw");
+                _parseError("Illegal newline after throw");
             }
             auto expr = _expectMultipleExpression();
             _expectSemiColon();
@@ -252,7 +252,7 @@ IJsNode *JSParser::_expectBlock() {
 
     while (_curToken.type != TK_CLOSE_BRACE) {
         if (_curToken.type == TK_EOF) {
-            _parseError(PE_SYNTAX_ERROR, "Unexpected end of input");
+            _parseError("Unexpected end of input");
             break;
         }
 
@@ -267,7 +267,7 @@ IJsNode *JSParser::_expectBlock() {
 
 IJsNode *JSParser::_expectBreak() {
     if (_stackBreakContinueAreas.empty()) {
-        _parseError(PE_SYNTAX_ERROR, "Illegal break statement");
+        _parseError("Illegal break statement");
     }
 
     return PoolNew(_pool, JsStmtBreak);
@@ -275,11 +275,11 @@ IJsNode *JSParser::_expectBreak() {
 
 IJsNode *JSParser::_expectContinue() {
     if (_stackBreakContinueAreas.empty()) {
-        _parseError(PE_SYNTAX_ERROR, "Illegal break statement");
+        _parseError("Illegal break statement");
     }
 
     if (!_stackBreakContinueAreas.back()) {
-        _parseError(PE_SYNTAX_ERROR, "Illegal continue statement: no surrounding iteration statement");
+        _parseError("Illegal continue statement: no surrounding iteration statement");
     }
     return PoolNew(_pool, JsStmtContinue);
 }
@@ -321,15 +321,15 @@ IJsNode *JSParser::_tryForInStatment() {
     // for in/of
     if (countVars > 1) {
         if (isIn) {
-            _parseError(PE_SYNTAX_ERROR, "Invalid left-hand side in for-in loop: Must have a single binding");
+            _parseError("Invalid left-hand side in for-in loop: Must have a single binding");
         } else {
-            _parseError(PE_SYNTAX_ERROR, "Invalid left-hand side in for-loop");
+            _parseError("Invalid left-hand side in for-loop");
         }
     }
 
     if (var->type == NT_ASSIGN ||
         (var->type == NT_ASSIGN_WITH_STACK_TOP && ((JsExprAssignWithStackTop *)var)->defaultValue())) {
-        _parseError(PE_SYNTAX_ERROR, "for-of loop variable declaration may not have an initializer.");
+        _parseError("for-of loop variable declaration may not have an initializer.");
     }
 
     switch (var->type) {
@@ -342,7 +342,7 @@ IJsNode *JSParser::_tryForInStatment() {
             var->setBeingAssigned();
             break;
         default:
-            _parseError(PE_SYNTAX_ERROR, "Invalid left-hand side in for-loop");
+            _parseError("Invalid left-hand side in for-loop");
             break;
     }
 
@@ -408,7 +408,7 @@ IJsNode *JSParser::_expectSwitchStmt() {
     _expectToken(TK_OPEN_BRACE);
     while (_curToken.type != TK_CLOSE_BRACE) {
         if (_curToken.type == TK_EOF) {
-            _parseError(PE_SYNTAX_ERROR, "Unexpected token: %d", _curToken.type);
+            _parseError("Unexpected token: %d", _curToken.type);
         }
 
         if (_curToken.type == TK_CASE) {
@@ -423,7 +423,7 @@ IJsNode *JSParser::_expectSwitchStmt() {
             _expectToken(TK_COLON);
 
             if (stmt->defBranch) {
-                _parseError(PE_SYNTAX_ERROR, "More than one default clause in switch statement");
+                _parseError("More than one default clause in switch statement");
             }
             curBranch = stmt->defBranch = PoolNew(_pool, JsSwitchBranch)(nullptr);
             stmt->push(curBranch);
@@ -470,7 +470,7 @@ IJsNode *JSParser::_expectTryStmt() {
     }
 
     if (!stmtCatch && !stmtFinal) {
-        _parseError(PE_SYNTAX_ERROR, "Missing catch or finally after try");
+        _parseError("Missing catch or finally after try");
     }
 
     return PoolNew(_pool, JsStmtTry)(stmtTry, exprCatch, stmtCatch, scopeCatch, stmtFinal);
@@ -570,7 +570,7 @@ IJsNode *JSParser::_expectVariableDeclaration(TokenType declareType, bool initFr
     }
 
     if (declareType == TK_CONST && !(initFromStackTop || hasInitExpr)) {
-        _parseError(PE_SYNTAX_ERROR, "Missing initializer in const declaration");
+        _parseError("Missing initializer in const declaration");
     }
 
     if (initFromStackTop) {
@@ -623,7 +623,7 @@ IJsNode *JSParser::_expectObjectAssignable(TokenType declareType) {
 
 void JSParser::_expectToken(TokenType expected) {
     if (_curToken.type != expected) {
-        _parseError(PE_SYNTAX_ERROR, "Unexpected token: %d, expected: %d.", _curToken.type, expected);
+        _parseError("Unexpected token: %d, expected: %d.", _curToken.type, expected);
     } else {
         _readToken();
     }
@@ -633,7 +633,7 @@ void JSParser::_expectSemiColon() {
     if (_curToken.type == TK_SEMI_COLON) {
         _readToken();
     } else if (!_canInsertSemicolon()) {
-        _parseError(PE_SYNTAX_ERROR, "SemiColon is expected, unexpected token: %d", _curToken.type);
+        _parseError("SemiColon is expected, unexpected token: %d", _curToken.type);
     }
 }
 
@@ -662,7 +662,7 @@ IJsNode *JSParser::_expectFunctionDeclaration() {
     _expectToken(TK_OPEN_BRACE);
     while (_curToken.type != TK_CLOSE_BRACE) {
         if (_curToken.type == TK_EOF) {
-            _parseError(PE_SYNTAX_ERROR, "Unexpected end of input");
+            _parseError("Unexpected end of input");
             break;
         }
 
@@ -710,10 +710,10 @@ IJsNode *JSParser::_expectFunctionExpression(uint32_t functionFlags, bool ignore
     child->params = _expectFormalParameters();
     auto count = child->params ? child->params->count() : 0;
     if ((functionFlags & FT_GETTER) && count > 0) {
-        _parseError(PE_SYNTAX_ERROR, "Getter must not have any formal parameters.");
+        _parseError("Getter must not have any formal parameters.");
         return child;
     } else if ((functionFlags & FT_SETTER) && count != 1) {
-        _parseError(PE_SYNTAX_ERROR, "Setter must have exactly one formal parameter.");
+        _parseError("Setter must have exactly one formal parameter.");
         return child;
     }
 
@@ -721,7 +721,7 @@ IJsNode *JSParser::_expectFunctionExpression(uint32_t functionFlags, bool ignore
     _expectToken(TK_OPEN_BRACE);
     while (_curToken.type != TK_CLOSE_BRACE) {
         if (_curToken.type == TK_EOF) {
-            _parseError(PE_SYNTAX_ERROR, "Unexpected end of input");
+            _parseError("Unexpected end of input");
             break;
         }
 
@@ -758,7 +758,7 @@ JsNodeParameters *JSParser::_expectFormalParameters() {
             _curFuncScope->addVarDeclaration(_curToken);
             _readToken();
             if (_curToken.type != TK_CLOSE_PAREN) {
-                _parseError(PE_SYNTAX_ERROR, "SyntaxError: Rest parameter must be last formal parameter");
+                _parseError("SyntaxError: Rest parameter must be last formal parameter");
             }
             break;
         } else {
@@ -864,7 +864,11 @@ IJsNode *JSParser::_expectExpression(Precedence pred, bool enableIn) {
             break;
         case TK_TEMPLATE_NO_SUBSTITUTION:
         case TK_STRING: {
-            expr = PoolNew(_pool, JsExprString)(_getStringIndex(_curToken));
+            if (_curToken.len == 1) {
+                expr = PoolNew(_pool, JsExprChar)(_curToken.buf[0]);
+            } else {
+                expr = PoolNew(_pool, JsExprString)(_getStringIndex(_curToken));
+            }
             _readToken();
             break;
         }
@@ -911,7 +915,7 @@ IJsNode *JSParser::_expectExpression(Precedence pred, bool enableIn) {
                 if (isTokenNameEqual(_curToken, NAME_TARGET)) {
                     expr = PoolNew(_pool, JsExprNewTarget);
                 } else {
-                    _parseError(PE_SYNTAX_ERROR, "Unexpected token.");
+                    _parseError("Unexpected token.");
                 }
                 break;
             }
@@ -966,7 +970,7 @@ IJsNode *JSParser::_expectExpression(Precedence pred, bool enableIn) {
             // templateLiteral(stream);
             break;
         default:
-            _parseError(PE_SYNTAX_ERROR, "Unexpected token: %.*s", _curToken.len, _curToken.buf);
+            _parseError("Unexpected token: %.*s", _curToken.len, _curToken.buf);
             break;
     }
 
@@ -1311,7 +1315,7 @@ IJsNode *JSParser::_expectObjectLiteralExpression() {
         } else if (type == TK_NAME && (_nextToken.type != TK_COLON && _nextToken.type != TK_OPEN_PAREN) && (name == "get" || name == "set")) {
             // getter, setter
             if (!canTokenBeMemberName(_nextToken.type)) {
-                _parseError(PE_SYNTAX_ERROR, "Unexpected token: %.*s", _curToken.len, _curToken.buf);
+                _parseError("Unexpected token: %.*s", _curToken.len, _curToken.buf);
                 return nullptr;
             }
 
@@ -1370,7 +1374,7 @@ IJsNode *JSParser::_expectObjectLiteralExpression() {
                 _expectToken(TK_CLOSE_BRACKET);
             } else {
                 if (!canTokenBeMemberName(type)) {
-                    _parseError(PE_SYNTAX_ERROR, "Unexpected token: %.*s", _curToken.len, _curToken.buf);
+                    _parseError("Unexpected token: %.*s", _curToken.len, _curToken.buf);
                     return nullptr;
                 }
                 nameIdx = _getStringIndex(_curToken);
@@ -1504,7 +1508,7 @@ void JSParser::_relocateIdentifierInParentFunction(Function *codeBlock, Function
             } else if (curId->isFuncName && functionScope->parent == nullptr
                        && id->storageIndex < _runtimeCommon->countImmutableGlobalVars) {
                 // 不能出现同名的函数
-                _parseError(PE_SYNTAX_ERROR, "Identifier '%.*s' has already been declared",
+                _parseError("Identifier '%.*s' has already been declared",
                             (int)item.first.len, item.first.data);
             }
 
