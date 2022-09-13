@@ -236,10 +236,18 @@ public:
     void addImplicitVarDeclaration(JsExprIdentifier *id);
     void addFunctionDeclaration(const Token &name, Function *child);
     IdentifierDeclare *getVarDeclarationByIndex(int index);
+    IdentifierDeclare *getVarDeclarationByName(const SizedString &name) {
+        auto it = varDeclares.find(name);
+        if (it == varDeclares.end()) {
+            return nullptr;
+        }
+        return (*it).second;
+    }
 
     void addVarReference(JsExprIdentifier *id);
 
     bool isAllocateFunctionVar() { return !isFunctionScope || hasEval || hasWith; }
+    bool isNeeded() const { return countLocalVars > 0 || hasEval || hasWith; }
 
     void setHasEval() {
         if (!hasEval) {

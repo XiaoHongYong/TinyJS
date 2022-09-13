@@ -87,6 +87,9 @@ public:
 
     Arguments                   args;
 
+    // 当使用 with 语句，在执行时会在 'withValue' 的 member 中查找标识符
+    JsValue                     withValue;
+
 };
 
 /**
@@ -166,7 +169,7 @@ public:
     void callMember(VMContext *ctx, const JsValue &thiz, const char *memberName, const Arguments &args);
     void callMember(VMContext *ctx, const JsValue &thiz, const JsValue &memberFunc, const Arguments &args);
 
-    JsValue getMemberDot(VMContext *ctx, const JsValue &thiz, const SizedString &name);
+    JsValue getMemberDot(VMContext *ctx, const JsValue &thiz, const SizedString &name, const JsValue &defVal = jsValueUndefined);
     void setMemberDot(VMContext *ctx, const JsValue &thiz, const SizedString &name, const JsValue &value);
 
     JsValue getMemberIndex(VMContext *ctx, const JsValue &thiz, const JsValue &prop);

@@ -297,7 +297,7 @@ void JsVirtualMachine::callMember(VMContext *ctx, const JsValue &thiz, const JsV
     }
 }
 
-JsValue JsVirtualMachine::getMemberDot(VMContext *ctx, const JsValue &thiz, const SizedString &name) {
+JsValue JsVirtualMachine::getMemberDot(VMContext *ctx, const JsValue &thiz, const SizedString &name, const JsValue &defVal) {
     auto runtime = ctx->runtime;
     switch (thiz.type) {
         case JDT_NOT_INITIALIZED:
@@ -308,24 +308,32 @@ JsValue JsVirtualMachine::getMemberDot(VMContext *ctx, const JsValue &thiz, cons
             break;
         case JDT_NULL:
             ctx->throwException(PE_TYPE_ERROR, "Cannot read properties of null (reading '%.*s')", (int)name.len, name.data);
+            break;
         case JDT_BOOL:
-            return runtime->objPrototypeBoolean->getByName(ctx, thiz, name);
+            return runtime->objPrototypeBoolean->getByName(ctx, thiz, name, defVal);
         case JDT_INT32:
-            return runtime->objPrototypeNumber->getByName(ctx, thiz, name);
+            return runtime->objPrototypeNumber->getByName(ctx, thiz, name, defVal);
         case JDT_NUMBER:
-            return runtime->objPrototypeNumber->getByName(ctx, thiz, name);
+            return runtime->objPrototypeNumber->getByName(ctx, thiz, name, defVal);
         case JDT_CHAR:
+            if (name.equal(SS_LENGTH)) {
+                return JsValue(JDT_INT32, 1);
+            }
+            return runtime->objPrototypeString->getByName(ctx, thiz, name, defVal);
         case JDT_STRING:
-            return runtime->objPrototypeString->getByName(ctx, thiz, name);
+            if (name.equal(SS_LENGTH)) {
+                return JsValue(JDT_INT32, runtime->getStringLength(thiz));
+            }
+            return runtime->objPrototypeString->getByName(ctx, thiz, name, defVal);
         case JDT_SYMBOL:
-            return runtime->objPrototypeSymbol->getByName(ctx, thiz, name);
+            return runtime->objPrototypeSymbol->getByName(ctx, thiz, name, defVal);
         default: {
             auto jsthiz = runtime->getObject(thiz);
-            return jsthiz->getByName(ctx, thiz, name);
+            return jsthiz->getByName(ctx, thiz, name, defVal);
         }
     }
 
-    return jsValueUndefined;
+    return defVal;
 }
 
 void JsVirtualMachine::setMemberDot(VMContext *ctx, const JsValue &thiz, const SizedString &name, const JsValue &value) {
@@ -454,6 +462,31 @@ inline void opIncreaseIdentifier(VMContext *ctx, VMRuntime *runtime, uint8_t *&b
     }
 
     ctx->stack.push_back(value);
+}
+
+JsValue searchIdentifierByName(VMContext *ctx, VecVMStackScopes &stackScopes, const SizedString &name) {
+    for (auto it = stackScopes.rbegin(); it != stackScopes.rend(); ++it) {
+        auto scope = *it;
+        auto id = scope->scopeDsc->getVarDeclarationByName(name);
+        if (id) {
+            if (id->varStorageType == VST_ARGUMENT) {
+                return scope->args[id->storageIndex];
+            } else {
+                assert (id->varStorageType == VST_SCOPE_VAR || id->varStorageType == VST_GLOBAL_VAR || id->varStorageType == VST_FUNCTION_VAR);
+                return scope->vars[id->storageIndex];
+            }
+        }
+
+        if (scope->withValue.isValid()) {
+            auto value = ctx->vm->getMemberDot(ctx, scope->withValue, name, jsValueNotInitialized);
+            if (value.isValid()) {
+                return value;
+            }
+        }
+    }
+
+    ctx->throwException(PE_REFERECNE_ERROR, "%.*s is not defined", (int)name.len, name.data);
+    return jsValueUndefined;
 }
 
 void JsVirtualMachine::call(Function *function, VMContext *ctx, VecVMStackScopes &stackScopes, const JsValue &thiz, const Arguments &args) {
@@ -664,6 +697,15 @@ void JsVirtualMachine::call(Function *function, VMContext *ctx, VecVMStackScopes
                 bytecode = function->bytecode + addr;
                 break;
             }
+            case OP_SET_WITH_OBJ: {
+                auto obj = stack.back(); stack.pop_back();
+                if (obj.type <= JDT_NULL) {
+                    ctx->throwException(PE_TYPE_ERROR, "Cannot convert undefined or null to object");
+                    break;
+                }
+                scopeLocal->withValue = obj;
+                break;
+            }
             case OP_PREPARE_RAW_STRING_TEMPLATE_CALL: {
                 assert(0);
                 break;
@@ -799,10 +841,6 @@ void JsVirtualMachine::call(Function *function, VMContext *ctx, VecVMStackScopes
                 stack.pop_back();
                 break;
             }
-            case OP_PUSH_STACK_TOP: {
-                assert(0);
-                break;
-            }
             case OP_PUSH_UNDFINED: {
                 stack.push_back(jsValueUndefined);
                 break;
@@ -817,6 +855,13 @@ void JsVirtualMachine::call(Function *function, VMContext *ctx, VecVMStackScopes
             }
             case OP_PUSH_NULL: {
                 stack.push_back(jsValueNull);
+                break;
+            }
+            case OP_PUSH_ID_BY_NAME: {
+                auto idx = readUInt32(bytecode);
+                auto name = runtime->getStringByIdx(idx, resourcePool);
+                auto value = searchIdentifierByName(ctx, stackScopes, name);
+                stack.push_back(value);
                 break;
             }
             case OP_PUSH_ID_GLOBAL: {
@@ -867,11 +912,20 @@ void JsVirtualMachine::call(Function *function, VMContext *ctx, VecVMStackScopes
                 break;
             }
             case OP_PUSH_ID_LOCAL_FUNCTION: {
-                assert(0);
+                auto funcIdx = readUInt16(bytecode);
+                assert(funcIdx < scopeLocal->scopeDsc->function->functions.size());
+                auto v = runtime->pushObjValue(JDT_FUNCTION, new JsObjectFunction(stackScopes, scopeLocal->scopeDsc->function->functions[funcIdx]));
+                stack.push_back(v);
                 break;
             }
             case OP_PUSH_ID_PARENT_FUNCTION: {
-                assert(0);
+                auto scopeIdx = readUInt8(bytecode);
+                auto funcIdx = readUInt16(bytecode);
+                assert(scopeIdx < stackScopes.size());
+                auto scope = stackScopes[scopeIdx];
+                assert(funcIdx < scope->scopeDsc->function->functions.size());
+                auto v = runtime->pushObjValue(JDT_FUNCTION, new JsObjectFunction(stackScopes, scope->scopeDsc->function->functions[funcIdx]));
+                stack.push_back(v);
                 break;
             }
             case OP_PUSH_STRING: {

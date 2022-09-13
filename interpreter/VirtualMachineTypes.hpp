@@ -36,6 +36,7 @@ class VMContext;
     OP_ITEM(OP_JUMP_IF_NOT_NULL_UNDEFINED_KEEP_VALID, "address:u32"), \
     OP_ITEM(OP_SWITCH_CASE_CMP_JUMP, "address:u32"), \
     OP_ITEM(OP_SWITCH_CASE_FAST_CMP_JUMP, "switch_jump_idx:u16"), \
+    OP_ITEM(OP_SET_WITH_OBJ, ""), \
     \
     OP_ITEM(OP_PREPARE_RAW_STRING_TEMPLATE_CALL, "raw_string_idx:u16, count_exprs:u16"), \
     OP_ITEM(OP_FUNCTION_CALL, "count_args:u16"), \
@@ -47,12 +48,12 @@ class VMContext;
     \
     OP_ITEM(OP_POP_STACK_TOP, ""), \
     OP_ITEM(OP_POP_STACK_TOP_N, "count:u16"), \
-    OP_ITEM(OP_PUSH_STACK_TOP, ""), \
     \
     OP_ITEM(OP_PUSH_UNDFINED, ""), \
     OP_ITEM(OP_PUSH_NULL, ""), \
     OP_ITEM(OP_PUSH_TRUE, ""), \
     OP_ITEM(OP_PUSH_FALSE, ""), \
+    OP_ITEM(OP_PUSH_ID_BY_NAME, "name_idx:u32"), /* 根据名字逐层查找标识符，压栈 */ \
     OP_ITEM(OP_PUSH_ID_LOCAL_SCOPE, "var_idx:u16"), \
     OP_ITEM(OP_PUSH_ID_LOCAL_ARGUMENT, "argument_idx:u16"), \
     OP_ITEM(OP_PUSH_ID_PARENT_ARGUMENT, "scope_depth:u8, argument_idx:u16"), \

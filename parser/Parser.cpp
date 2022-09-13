@@ -218,10 +218,13 @@ IJsNode *JSParser::_expectStatment() {
 
         case TK_WITH: {
             _readToken();
-            auto expr = _expectParenCondition();
+            // enterScope 必须要包含 expr, 因为其 with 的表达式会优先在此 scope 中搜索
             _enterScope();
+
+            auto expr = _expectParenCondition();
             _curScope->hasWith = true;
             auto stmt = PoolNew(_pool, JsStmtWith)(expr, _expectStatment(), _curScope);
+
             _leaveScope();
             return stmt;
         }
@@ -1455,14 +1458,15 @@ void _reduceScopeLevels(Scope *scope, Scope *validParent) {
         _reduceScopeLevels(scope->sibling, validParent);
     }
 
-    if (!scope->varDeclares.empty()) {
+    bool keepScope = !scope->varDeclares.empty() || scope->isFunctionScope || scope->hasWith || scope->hasEval;
+    if (keepScope) {
         // 重新添加到 parent
         scope->sibling = validParent->child;
         validParent->child = scope;
     }
 
     if (scope->child) {
-        if (!scope->varDeclares.empty() || scope->isFunctionScope) {
+        if (keepScope) {
             validParent = scope;
         }
 
@@ -1527,6 +1531,9 @@ void JSParser::_relocateIdentifierInParentFunction(Function *codeBlock, Function
 void JSParser::_buildExprIdentifiers() {
     for (auto p = _headIdRefs; p; p = p->next) {
         p->scope->addVarReference(p);
+        if (p->nameStringIdx == 0) {
+            p->nameStringIdx = _getStringIndex(p->name);
+        }
     }
 }
 

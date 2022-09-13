@@ -12,14 +12,14 @@
 
 
 inline void writeEnterScope(Scope *scope, ByteCodeStream &stream) {
-    if (scope->countLocalVars > 0) {
+    if (scope->isNeeded()) {
         stream.writeOpCode(OP_ENTER_SCOPE);
         stream.writeUInt16(scope->index);
     }
 }
 
 inline void writeLeaveScope(Scope *scope, ByteCodeStream &stream) {
-    if (scope->countLocalVars > 0) {
+    if (scope->isNeeded()) {
         stream.writeOpCode(OP_LEAVE_SCOPE);
     }
 }
@@ -414,8 +414,9 @@ public:
         writeEnterScope(scope, stream);
 
         expr->convertToByteCode(stream);
+        stream.writeOpCode(OP_SET_WITH_OBJ);
 
-        // TODO: ...
+        stmt->convertToByteCode(stream);
 
         writeLeaveScope(scope, stream);
     }

@@ -165,6 +165,7 @@ public:
 class JsExprIdentifier : public IJsNode {
 public:
     JsExprIdentifier(const Token &name, Scope *scope) : IJsNode(NT_IDENTIFIER), name(tokenToSizedString(name)), scope(scope) {
+        nameStringIdx = -1;
         isModified = false;
         isUsedNotAsFunctionCall = true;
         declare = nullptr;
@@ -194,6 +195,12 @@ public:
         }
 
         assert(!isBeingAssigned);
+
+        if (nameStringIdx != -1) {
+            stream.writeOpCode(OP_PUSH_ID_BY_NAME);
+            stream.writeUInt32(nameStringIdx);
+            return;
+        }
 
         // 将 identifier 压栈，根据不同的类型，优化使用不同的指令
         if (declare->varStorageType == VST_ARGUMENT) {
@@ -246,6 +253,9 @@ public:
     }
 
     SizedString             name;
+
+    // 当在有 eval/with 的 scope 时才有效
+    uint32_t                nameStringIdx;
 
     // 是否被修改了
     bool                    isModified;
@@ -454,6 +464,17 @@ public:
     }
 
     void functionCall(JsExprIdentifier *functionName, ByteCodeStream &stream) {
+        if (functionName->nameStringIdx != -1) {
+            stream.writeOpCode(OP_PUSH_ID_BY_NAME);
+            stream.writeUInt32(functionName->nameStringIdx);
+
+            pushArgs(stream);
+
+            stream.writeOpCode(OP_FUNCTION_CALL);
+            stream.writeUInt16((uint16_t)args.size());
+            return;
+        }
+
         bool isDirectFunctionCall = false;
         auto declare = functionName->declare;
 

@@ -218,6 +218,12 @@ void Scope::addVarReference(JsExprIdentifier *id) {
     auto it = varDeclares.find(id->name);
     if (it == varDeclares.end()) {
         // 找不到
+        if (hasWith || hasEval) {
+            // 这一层有 eval，with，只能根据名字在运行时查找变量名
+            id->nameStringIdx = 0;
+            return;
+        }
+
         if (parent) {
             parent->addVarReference(id);
         } else {
