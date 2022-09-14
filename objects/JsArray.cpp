@@ -319,7 +319,8 @@ JsProperty *JsArray::getRawByName(VMContext *ctx, const SizedString &name, JsNat
     }
 
     if (name.equal(SS_LENGTH)) {
-        static JsProperty prop(JsValue(JDT_INT32, _length), false, false);
+        static JsProperty prop;
+        prop = JsProperty(JsValue(JDT_INT32, _length), false, false);
         return &prop;
     }
 
@@ -328,7 +329,8 @@ JsProperty *JsArray::getRawByName(VMContext *ctx, const SizedString &name, JsNat
     }
 
     if (name.equal(SS___PROTO__)) {
-        static JsProperty prop(jsValuePrototypeArray, false, false, false, true);
+        static JsProperty prop;
+        prop = JsProperty(jsValuePrototypeArray, false, false, false, true);
         return &prop;
     }
 

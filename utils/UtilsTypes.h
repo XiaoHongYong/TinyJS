@@ -50,7 +50,7 @@ private:
 #define LOBYTE(w)           ((uint8_t)((w) & 0xff))
 #define HIBYTE(w)           ((uint8_t)((w) >> 8))
 
-inline uint32_t RGB(uint8_t r, uint8_t g, uint8_t b) { return r | (g << 8) | (b << 16) | (0xFF000000); }
+inline uint32_t RGB(uint8_t r, uint8_t g, uint8_t b) { return r | (g << 8) | (b << 16); }
 
 #define MAX_PATH            260
 #endif
