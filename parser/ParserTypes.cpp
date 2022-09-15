@@ -47,7 +47,7 @@ void writeIndent(BinaryOutputStream &stream, SizedString str, const SizedString 
     }
 }
 
-Scope::Scope(Function *function, Scope *parent) : function(function), parent(parent), varDeclares(function->resourcePool->pool) {
+Scope::Scope(ResourcePool *resourcePool, Function *function, Scope *parent) : function(function), parent(parent), varDeclares(function->resourcePool->pool) {
     child = sibling = nullptr;
     functionArgs = nullptr;
     depth = 0;
@@ -70,6 +70,8 @@ Scope::Scope(Function *function, Scope *parent) : function(function), parent(par
 
         depth = parent->depth + 1;
     }
+
+    resourcePool->needDestructScope(this);
 }
 
 void Scope::dump(BinaryOutputStream &stream) {
@@ -290,7 +292,7 @@ void IdentifierDeclare::dump(BinaryOutputStream &stream) {
 }
 
 Function::Function(ResourcePool *resourcePool, Scope *parent, uint16_t index, bool isCodeBlock, bool isArrowFunction) : IJsNode(NT_FUNCTION), index(index), resourcePool(resourcePool), isCodeBlock(isCodeBlock), isArrowFunction(isArrowFunction) {
-    scope = PoolNew(resourcePool->pool, Scope)(this, parent);
+    scope = PoolNew(resourcePool->pool, Scope)(resourcePool, this, parent);
     scope->isFunctionScope = true;
 
     params = nullptr;
@@ -306,6 +308,8 @@ Function::Function(ResourcePool *resourcePool, Scope *parent, uint16_t index, bo
 
     line = 0;
     col = 0;
+
+    resourcePool->needDestructJsNode(this);
 }
 
 void Function::generateByteCode() {
@@ -399,9 +403,23 @@ void Function::dump(BinaryOutputStream &stream) {
     }
 }
 
+JsNodes::JsNodes(ResourcePool *resourcePool, JsNodeType type) : IJsNode(type) {
+    resourcePool->needDestructJsNode(this);
+}
+
 ResourcePool::ResourcePool() {
     index = 0;
     referIdx = 0;
+}
+
+ResourcePool::~ResourcePool() {
+    for (auto item : toDestructNodes) {
+        item->~IJsNode();
+    }
+
+    for (auto item : toDestructScopes) {
+        item->~Scope();
+    }
 }
 
 void ResourcePool::dump(BinaryOutputStream &stream) {

@@ -8,6 +8,7 @@
 #ifndef ParserTypes_hpp
 #define ParserTypes_hpp
 
+#include <deque>
 #include "Lexer.hpp"
 #include "ByteCodeStream.hpp"
 
@@ -27,6 +28,8 @@ using VecScopes = vector<Scope *>;
 using VecFunctions = vector<Function *>;
 using VecResourcePools = vector<ResourcePool *>;
 using VecJsNodes = vector<IJsNode *>;
+using DequeJsNodes = deque<IJsNode *>;
+using DequeScopes = deque<Scope *>;
 
 /**
  * 语法树结点的类型定义
@@ -227,7 +230,7 @@ public:
     uint8_t                 isThisUsed : 1; // 是否 'this' 被使用了
     uint8_t                 isArgumentsUsed : 1; // 是否 'arguments' 被使用了
 
-    Scope(Function *function, Scope *parent);
+    Scope(ResourcePool *resourcePool, Function *function, Scope *parent);
 
     void dump(BinaryOutputStream &stream);
 
@@ -319,7 +322,7 @@ public:
 
 class JsNodes : public IJsNode {
 public:
-    JsNodes(JsNodeType type) : IJsNode(type) { }
+    JsNodes(ResourcePool *resourcePool, JsNodeType type);
 
     virtual bool canBeExpression() {
         for (auto item : nodes) {
@@ -375,8 +378,16 @@ public:
     vector<double>          doubles;
     VecSwitchJumps          switchCaseJumps;
 
+    // 当 ResourcePool 被释放时，需要调用 toDestructNodes, toDestructScopes 的析构函数
+    DequeJsNodes            toDestructNodes;
+    DequeScopes             toDestructScopes;
+
 public:
     ResourcePool();
+    ~ResourcePool();
+
+    inline void needDestructJsNode(IJsNode *node) { toDestructNodes.push_back(node); }
+    inline void needDestructScope(Scope *scope) { toDestructScopes.push_back(scope); }
 
     void dump(BinaryOutputStream &stream);
 

@@ -41,6 +41,9 @@ enum Precedence {
 
 /**
  * JSParser 负责解析 JavaScript 代码为线性语法树结构.
+ *
+ * JsParser 是一个临时对象，只在语法分析阶段有效。
+ * 需要运行时使用的对象放在 Function 对象中，或者 ResourcePool 中。
  */
 class JSParser : public JSLexer {
 public:

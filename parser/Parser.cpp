@@ -251,7 +251,7 @@ IJsNode *JSParser::_expectBlock() {
 
     _expectToken(TK_OPEN_BRACE);
 
-    auto stms = PoolNew(_pool, JsStmtBlock)(_curScope);
+    auto stms = PoolNew(_pool, JsStmtBlock)(_resPool, _curScope);
 
     while (_curToken.type != TK_CLOSE_BRACE) {
         if (_curToken.type == TK_EOF) {
@@ -419,7 +419,7 @@ IJsNode *JSParser::_expectSwitchStmt() {
             auto expr = _expectMultipleExpression();
             _expectToken(TK_COLON);
 
-            curBranch = PoolNew(_pool, JsSwitchBranch)(expr);
+            curBranch = PoolNew(_pool, JsSwitchBranch)(_resPool, expr);
             stmt->push(curBranch);
         } else if (_curToken.type == TK_DEFAULT) {
             _readToken();
@@ -428,7 +428,7 @@ IJsNode *JSParser::_expectSwitchStmt() {
             if (stmt->defBranch) {
                 _parseError("More than one default clause in switch statement");
             }
-            curBranch = stmt->defBranch = PoolNew(_pool, JsSwitchBranch)(nullptr);
+            curBranch = stmt->defBranch = PoolNew(_pool, JsSwitchBranch)(_resPool, nullptr);
             stmt->push(curBranch);
         } else {
             curBranch->push(_expectStatment());
@@ -516,7 +516,7 @@ void JSParser::_expectArgumentsList(VecJsNodes &args) {
  *   var [a, b] = []; // initFromStackTop 为 true
  */
 JsNodeVarDeclarationList *JSParser::_expectVariableDeclarationList(TokenType declareType, bool initFromStackTop) {
-    auto expr = PoolNew(_pool, JsNodeVarDeclarationList);
+    auto expr = PoolNew(_pool, JsNodeVarDeclarationList)(_resPool);
 
     while (true) {
         auto node = _expectVariableDeclaration(declareType, initFromStackTop);
@@ -595,7 +595,7 @@ IJsNode *JSParser::_expectVariableDeclaration(TokenType declareType, bool initFr
 }
 
 IJsNode *JSParser::_expectArrayAssignable(TokenType declareType) {
-    auto arr = PoolNew(_pool, JsExprArray)();
+    auto arr = PoolNew(_pool, JsExprArray)(_resPool);
 
     int index = 0;
     while (true) {
@@ -745,7 +745,7 @@ IJsNode *JSParser::_expectClassDeclaration(bool isClassExpr) {
 JsNodeParameters *JSParser::_expectFormalParameters() {
     _expectToken(TK_OPEN_PAREN);
 
-    auto params = PoolNew(_pool, JsNodeParameters)();
+    auto params = PoolNew(_pool, JsNodeParameters)(_resPool);
     int index = 0;
     while (_curToken.type != TK_CLOSE_PAREN) {
         if (index > 0)
@@ -923,7 +923,7 @@ IJsNode *JSParser::_expectExpression(Precedence pred, bool enableIn) {
                 break;
             }
 
-            auto exprNew = PoolNew(_pool, JsExprNew)(_expectExpression(PRED_LEFT_HAND_EXPR));
+            auto exprNew = PoolNew(_pool, JsExprNew)(_resPool, _expectExpression(PRED_LEFT_HAND_EXPR));
             if (_curToken.type == TK_OPEN_PAREN) {
                 _expectArgumentsList(exprNew->args);
             }
@@ -1020,7 +1020,7 @@ IJsNode *JSParser::_expectExpression(Precedence pred, bool enableIn) {
                     _curScope->setHasEval();
                 }
 
-                auto funcCall = PoolNew(_pool, JsExprFunctionCall)(expr);
+                auto funcCall = PoolNew(_pool, JsExprFunctionCall)(_resPool, expr);
                 _expectArgumentsList(funcCall->args);
                 expr = funcCall;
                 break;
@@ -1034,7 +1034,7 @@ IJsNode *JSParser::_expectExpression(Precedence pred, bool enableIn) {
                 indices.push_back(_getStringIndex(_curToken));
                 indices.push_back(_getStringIndex(_escapeString(tokenToSizedString(_curToken))));
 
-                expr = PoolNew(_pool, JsExprTemplateFunctionCall)(expr, _getRawStringsIndex(indices));
+                expr = PoolNew(_pool, JsExprTemplateFunctionCall)(_resPool, expr, _getRawStringsIndex(indices));
                 break;
             }
             case TK_TEMPLATE_HEAD: {
@@ -1212,7 +1212,7 @@ IJsNode *JSParser::_expectMultipleExpression(bool enableIn) {
         return e;
     }
 
-    auto expr = PoolNew(_pool, JsCommaExprs)();
+    auto expr = PoolNew(_pool, JsCommaExprs)(_resPool);
     expr->push(e);
 
     do {
@@ -1240,7 +1240,7 @@ IJsNode *JSParser::_expectRawTemplateCall(IJsNode *func) {
     indices.push_back(_getStringIndex(_escapeString(tokenToSizedString(_curToken))));
 
     auto rawStringIdx = _getRawStringsIndex(indices);
-    auto expr = PoolNew(_pool, JsExprTemplateFunctionCall)(func, rawStringIdx);
+    auto expr = PoolNew(_pool, JsExprTemplateFunctionCall)(_resPool, func, rawStringIdx);
 
     while (true) {
         expr->args.push_back(_expectMultipleExpression());
@@ -1275,7 +1275,7 @@ IJsNode *JSParser::_expectArrowFunction(IJsNode *parenExpr) {
 IJsNode *JSParser::_expectParenExpression() {
     _expectToken(TK_OPEN_PAREN);
 
-    auto parenExpr = PoolNew(_pool, JsParenExpr)();
+    auto parenExpr = PoolNew(_pool, JsParenExpr)(_resPool);
 
     parenExpr->push(_expectExpression());
 
@@ -1292,7 +1292,7 @@ IJsNode *JSParser::_expectObjectLiteralExpression() {
     _expectToken(TK_OPEN_BRACE);
     bool first = true;
 
-    auto obj = PoolNew(_pool, JsExprObject)();
+    auto obj = PoolNew(_pool, JsExprObject)(_resPool);
 
     while (_curToken.type != TK_CLOSE_BRACE) {
         if (first) {
@@ -1411,7 +1411,7 @@ IJsNode *JSParser::_expectArrayLiteralExpression() {
     _expectToken(TK_OPEN_BRACKET);
 
     bool first = true;
-    auto *arr = PoolNew(_pool, JsExprArray);
+    auto *arr = PoolNew(_pool, JsExprArray)(_resPool);
     int index = 0;
 
     while (_curToken.type != TK_CLOSE_BRACKET) {
@@ -1701,7 +1701,7 @@ void JSParser::_leaveFunction() {
 
 void JSParser::_enterScope() {
     _stackScopes.push_back(_curScope);
-    _curScope = PoolNew(_resPool->pool, Scope)(_curFunction, _curScope);
+    _curScope = PoolNew(_resPool->pool, Scope)(_resPool, _curFunction, _curScope);
     // writer.writeEnterScope(_curScope);
 }
 

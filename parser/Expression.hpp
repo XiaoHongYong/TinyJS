@@ -17,7 +17,7 @@ class IJsNode;
 
 class JsCommaExprs : public JsNodes {
 public:
-    JsCommaExprs(JsNodeType type = NT_COMMA_EXPRESSION) : JsNodes(type) { }
+    JsCommaExprs(ResourcePool *resourcePool, JsNodeType type = NT_COMMA_EXPRESSION) : JsNodes(resourcePool, type) { }
 
     virtual void convertToByteCode(ByteCodeStream &stream) {
         assert(!nodes.empty());
@@ -57,7 +57,7 @@ public:
 
 class JsParenExpr : public JsCommaExprs {
 public:
-    JsParenExpr() : JsCommaExprs(NT_PAREN_EXPRESSION) { }
+    JsParenExpr(ResourcePool *resourcePool) : JsCommaExprs(resourcePool, NT_PAREN_EXPRESSION) { }
 
 };
 
@@ -450,7 +450,9 @@ protected:
 
 class JsExprFunctionCall : public IJsNode {
 public:
-    JsExprFunctionCall(IJsNode *func, JsNodeType type = NT_FUNCTION_CALL) : IJsNode(type), func(func) {
+    JsExprFunctionCall(ResourcePool *resourcePool, IJsNode *func, JsNodeType type = NT_FUNCTION_CALL) : IJsNode(type), func(func) {
+        resourcePool->needDestructJsNode(this);
+
         if (func->type == NT_IDENTIFIER) {
             auto id = (JsExprIdentifier *)func;
             id->isUsedNotAsFunctionCall = false;
@@ -591,7 +593,7 @@ protected:
 
 class JsExprTemplateFunctionCall : public JsExprFunctionCall {
 public:
-    JsExprTemplateFunctionCall(IJsNode *func, uint32_t rawStringIdx) : JsExprFunctionCall(func, NT_TEMPLATE_FUNCTION_CALL), parepareTemplate(rawStringIdx) {
+    JsExprTemplateFunctionCall(ResourcePool *resourcePool, IJsNode *func, uint32_t rawStringIdx) : JsExprFunctionCall(resourcePool, func, NT_TEMPLATE_FUNCTION_CALL), parepareTemplate(rawStringIdx) {
 
         args.push_back(&parepareTemplate);
     }
@@ -603,7 +605,9 @@ protected:
 
 class JsExprNew : public IJsNode {
 public:
-    JsExprNew(IJsNode *obj) : IJsNode(NT_NEW), obj(obj) { }
+    JsExprNew(ResourcePool *resourcePool, IJsNode *obj) : IJsNode(NT_NEW), obj(obj) {
+        resourcePool->needDestructJsNode(this);
+    }
 
     virtual void convertToByteCode(ByteCodeStream &stream) {
         obj->convertToByteCode(stream);
@@ -722,7 +726,7 @@ public:
  */
 class JsExprArray : public JsNodes {
 public:
-    JsExprArray() : JsNodes(NT_ARRAY) {
+    JsExprArray(ResourcePool *resourcePool) : JsNodes(resourcePool, NT_ARRAY) {
     }
 
     virtual void setBeingAssigned() {
@@ -945,7 +949,7 @@ protected:
  */
 class JsExprObject : public JsNodes {
 public:
-    JsExprObject() : JsNodes(NT_OBJECT) { }
+    JsExprObject(ResourcePool *resourcePool) : JsNodes(resourcePool, NT_OBJECT) { }
 
     void checkCanBeExpression() {
         if (!isBeingAssigned && !canBeExpression()) {

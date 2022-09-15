@@ -26,13 +26,13 @@ inline void writeLeaveScope(Scope *scope, ByteCodeStream &stream) {
 
 class JsNodeVarDeclarationList : public JsNodes {
 public:
-    JsNodeVarDeclarationList() : JsNodes(NT_VAR_DECLARTION_LIST) { }
+    JsNodeVarDeclarationList(ResourcePool *resourcePool) : JsNodes(resourcePool, NT_VAR_DECLARTION_LIST) { }
 
 };
 
 class JsStmtBlock : public JsNodes {
 public:
-    JsStmtBlock(Scope *scope) : JsNodes(NT_BLOCK), scope(scope) { }
+    JsStmtBlock(ResourcePool *resourcePool, Scope *scope) : JsNodes(resourcePool, NT_BLOCK), scope(scope) { }
 
     virtual void convertToByteCode(ByteCodeStream &stream) {
         writeEnterScope(scope, stream);
@@ -153,7 +153,7 @@ protected:
  */
 class JsNodeParameters : public JsNodes {
 public:
-    JsNodeParameters() : JsNodes(NT_PARAMETERS) { }
+    JsNodeParameters(ResourcePool *resourcePool) : JsNodes(resourcePool, NT_PARAMETERS) { }
 
     virtual void convertToByteCode(ByteCodeStream &stream) {
         for (auto item : nodes) {
@@ -334,7 +334,7 @@ public:
 
 class JsSwitchBranch : public JsNodes {
 public:
-    JsSwitchBranch(IJsNode *exprCase) : JsNodes(NT_SWITCH_BRANCH), exprCase(exprCase), addrBranch(nullptr) { }
+    JsSwitchBranch(ResourcePool *resourcePool, IJsNode *exprCase) : JsNodes(resourcePool, NT_SWITCH_BRANCH), exprCase(exprCase), addrBranch(nullptr) { }
 
     virtual void convertToByteCode(ByteCodeStream &stream) {
         // expr 已经在 JsStmtSwitch 中调用，不在此调用
@@ -352,7 +352,9 @@ public:
 
 class JsStmtSwitch : public IJsNode {
 public:
-    JsStmtSwitch(ResourcePool *resPool, IJsNode *cond) : IJsNode(NT_SWITCH), resPool(resPool), cond(cond), defBranch(nullptr) { }
+    JsStmtSwitch(ResourcePool *resPool, IJsNode *cond) : IJsNode(NT_SWITCH), resPool(resPool), cond(cond), defBranch(nullptr) {
+        resPool->needDestructJsNode(this);
+    }
 
     virtual void convertToByteCode(ByteCodeStream &stream);
 
