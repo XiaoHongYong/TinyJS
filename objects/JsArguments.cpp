@@ -20,6 +20,12 @@ public:
         _itObj = nullptr;
     }
 
+    ~JsArgumentsIterator() {
+        if (_itObj) {
+            delete _itObj;
+        }
+    }
+
     inline uint32_t _len() { return _args->_args->count; }
 
     virtual bool nextKey(SizedString &keyOut) override {

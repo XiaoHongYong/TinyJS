@@ -74,6 +74,12 @@ Scope::Scope(ResourcePool *resourcePool, Function *function, Scope *parent) : fu
     resourcePool->needDestructScope(this);
 }
 
+Scope::~Scope() {
+    if (functionArgs) {
+        functionArgs->~VecFunctions();
+    }
+}
+
 void Scope::dump(BinaryOutputStream &stream) {
     stream.writeFormat("----- Scope: %d, %llx -----\n", index, this);
     stream.writeFormat("CountLocalVars: %d\n", countLocalVars);

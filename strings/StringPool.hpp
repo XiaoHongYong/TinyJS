@@ -14,6 +14,7 @@
 class StringPool {
 public:
     StringPool(uint16_t id, uint32_t size);
+    virtual ~StringPool();
 
     uint8_t *copy(const SizedString &str);
     uint8_t *ptr() { return _last; }

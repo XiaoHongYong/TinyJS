@@ -173,7 +173,7 @@ struct BinaryOpExp {
 };
 
 inline int32_t doubleToInt32(double v) {
-    return isnormal(v) ? (uint32_t(v) & 0xffffffff) : 0;
+    return isnormal(v) ? (int64_t(v) & 0xffffffff) : 0;
 }
 
 struct BinaryOpBitXor {

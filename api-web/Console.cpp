@@ -24,7 +24,7 @@ void dumpObject(VMContext *ctx, const JsValue &obj,string &out, SetUInts &histor
     auto runtime = ctx->runtime;
 
     IJsObject *pobj = runtime->getObject(obj);
-    auto it = pobj->getIteratorObject(ctx);
+    std::shared_ptr<IJsIterator> it(pobj->getIteratorObject(ctx));
 
     out.append("{");
 

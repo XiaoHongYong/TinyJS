@@ -231,6 +231,7 @@ public:
     uint8_t                 isArgumentsUsed : 1; // 是否 'arguments' 被使用了
 
     Scope(ResourcePool *resourcePool, Function *function, Scope *parent);
+    ~Scope();
 
     void dump(BinaryOutputStream &stream);
 

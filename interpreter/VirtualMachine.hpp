@@ -21,10 +21,11 @@ class JsVirtualMachine;
 class Arguments;
 
 
+using VMFunctionFramePtr = std::shared_ptr<VMFunctionFrame>;
 using VecVMScopes = std::vector<VMScope *>;
 using VecVMStackScopes = std::vector<VMScope *>;
-using VecVMStackFrames = std::vector<VMFunctionFrame *>;
 using StackJsValues = std::vector<JsValue>;
+using VecVMStackFrames = std::vector<VMFunctionFramePtr>;
 
 void registerGlobalValue(VMContext *ctx, VMScope *globalScope, const char *name, const JsValue &value);
 void registerGlobalObject(VMContext *ctx, VMScope *globalScope, const char *name, IJsObject *obj);
@@ -76,9 +77,17 @@ public:
  */
 class VMScope {
 public:
-    VMScope(Scope *scopeDsc) : scopeDsc(scopeDsc) { vars.resize(scopeDsc->countLocalVars); }
+    VMScope(Scope *scopeDsc) : scopeDsc(scopeDsc) {
+        referIdx = 0;
+        nextFreeIdx = 0;
+
+        vars.resize(scopeDsc->countLocalVars);
+    }
 
     void dump(BinaryOutputStream &stream);
+
+    int8_t                      referIdx;
+    uint32_t                    nextFreeIdx;
 
     Scope                       *scopeDsc;
 
@@ -162,6 +171,7 @@ private:
 
 public:
     JsVirtualMachine();
+    virtual ~JsVirtualMachine();
 
     void run(cstr_t code, size_t len, VMRuntime *runtime = nullptr);
 
@@ -178,15 +188,15 @@ public:
     void dump(cstr_t code, size_t len, BinaryOutputStream &stream);
     void dump(BinaryOutputStream &stream);
 
-    VMRuntime *defaultRuntime() { return _runtime; }
+    VMRuntime *defaultRuntime() { return &_runtime; }
 
 protected:
     void call(Function *function, VMContext *ctx, VecVMStackScopes &stackScopes, const JsValue &thiz, const Arguments &args);
 
 protected:
-    VMRuntimeCommon             *_runtimeCommon;
+    VMRuntimeCommon             _runtimeCommon;
 
-    VMRuntime                   *_runtime;
+    VMRuntime                   _runtime;
 
 };
 

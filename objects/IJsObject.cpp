@@ -636,7 +636,13 @@ bool JsObject::removeByName(VMContext *ctx, const SizedString &name) {
         auto &prop = (*it).second;
         if (prop.isConfigurable) {
             // 删除自己的属性
-            _props.erase(name);
+            auto key = (*it).first;
+            if (!key.isStable()) {
+                // 释放 Key 的内存
+                delete [] key.data;
+            }
+
+            _props.erase(it);
             return true;
         } else {
             return false;
@@ -672,6 +678,13 @@ bool JsObject::removeBySymbol(VMContext *ctx, uint32_t index) {
 
 IJsObject *JsObject::clone() {
     auto obj = new JsObject(__proto__.value);
+
+    for (auto &item : _props) {
+        auto &key = item.first;
+        if (!key.isStable()) {
+            delete [] key.data;
+        }
+    }
 
     obj->_props = _props;
     if (_symbolProps) { obj->_symbolProps = new MapSymbolToJsProperty; *obj->_symbolProps = *_symbolProps; }

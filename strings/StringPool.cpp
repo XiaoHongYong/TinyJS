@@ -16,6 +16,9 @@ StringPool::StringPool(uint16_t id, uint32_t size) {
     _end = _buf + size;
 }
 
+StringPool::~StringPool() {
+    delete _buf;
+}
 
 StringPoolList::StringPoolList() {
     _head = nullptr;

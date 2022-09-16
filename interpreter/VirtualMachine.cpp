@@ -128,10 +128,13 @@ Arguments & Arguments::operator = (const Arguments &other) {
 }
 
 void Arguments::copy(const Arguments &other, uint32_t minSize) {
+    assert(!needFree);
+
     capacity = std::max(other.count, minSize);
     data = new JsValue[capacity];
     memcpy((void *)data, other.data, sizeof(data[0]) * other.count);
     count = other.count;
+    needFree = true;
 
     // 将额外的位置赋值为 Undefined.
     while (minSize > count) {
@@ -183,15 +186,15 @@ void VMContext::throwException(JsErrorType err, JsValue errorMessage) {
 
 
 JsVirtualMachine::JsVirtualMachine() {
-    _runtimeCommon = new VMRuntimeCommon();
-    _runtime = new VMRuntime();
+    _runtime.init(this, &_runtimeCommon);
+}
 
-    _runtime->init(this, _runtimeCommon);
+JsVirtualMachine::~JsVirtualMachine() {
 }
 
 void JsVirtualMachine::run(cstr_t code, size_t len, VMRuntime *runtime) {
     if (runtime == nullptr) {
-        runtime = _runtime;
+        runtime = &_runtime;
     }
 
     VecVMStackScopes stackScopes;
@@ -220,7 +223,7 @@ void JsVirtualMachine::eval(cstr_t code, size_t len, VMContext *vmctx, VecVMStac
     memset(p + len, 0, 4);
     code = p;
 
-    JSParser parser(_runtimeCommon, resPool, code, len);
+    JSParser parser(&_runtimeCommon, resPool, code, len);
 
     Function *func = nullptr;
     try {
@@ -249,12 +252,12 @@ void JsVirtualMachine::eval(cstr_t code, size_t len, VMContext *vmctx, VecVMStac
 }
 
 void JsVirtualMachine::dump(cstr_t code, size_t len, BinaryOutputStream &stream) {
-    ResourcePool *resPool = new ResourcePool();
-    resPool->index = 0;
+    ResourcePool resPool;
+    resPool.index = 0;
 
-    JSParser paser(_runtimeCommon, resPool, code, strlen(code));
+    JSParser paser(&_runtimeCommon, &resPool, code, strlen(code));
 
-    Function *rootFunc = new Function(resPool, nullptr, 0);
+    Function *rootFunc = PoolNew(resPool.pool, Function)(&resPool, nullptr, 0);
     auto func = paser.parse(rootFunc->scope, false);
 
     func->dump(stream);
@@ -262,7 +265,7 @@ void JsVirtualMachine::dump(cstr_t code, size_t len, BinaryOutputStream &stream)
 
 void JsVirtualMachine::dump(BinaryOutputStream &stream) {
     BinaryOutputStream os;
-    _runtime->dump(os);
+    _runtime.dump(os);
     stream.write("== VMRuntime ==\n");
     writeIndent(stream, os.sizedStringStartNew(), SizedString("  "));
 }
@@ -507,7 +510,8 @@ void JsVirtualMachine::call(Function *function, VMContext *ctx, VecVMStackScopes
 
     VMScope *functionScope, *scopeLocal;
     scopeLocal = new VMScope(function->scope);
-    ctx->stackFrames.push_back(new VMFunctionFrame(scopeLocal, function));
+    runtime->pushScope(scopeLocal);
+    ctx->stackFrames.push_back(std::make_shared<VMFunctionFrame>(scopeLocal, function));
 
     if (function->isCodeBlock) {
         assert(!stackScopes.empty());
@@ -809,6 +813,7 @@ void JsVirtualMachine::call(Function *function, VMContext *ctx, VecVMStackScopes
                 auto scopeIdx = readUInt16(bytecode);
                 auto childScope = function->scopes[scopeIdx];
                 scopeLocal = new VMScope(childScope);
+                runtime->pushScope(scopeLocal);
                 stackScopes.push_back(scopeLocal);
 
                 // 将当前 scope 的 functionDecls 添加到 functionScope 中

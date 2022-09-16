@@ -24,6 +24,7 @@ class IJsIterator;
 
 
 using VecJsIterators = vector<IJsIterator *>;
+using VecVMScopes = vector<VMScope *>;
 
 typedef void (*JsNativeFunction)(VMContext *ctx, const JsValue &thiz, const Arguments &args);
 
@@ -42,6 +43,8 @@ using VecJsNativeFunction = std::vector<JsNativeFunctionObject>;
 
 class IConsole {
 public:
+    virtual ~IConsole() { }
+
     virtual void log(const SizedString &message) = 0;
     virtual void info(const SizedString &message) = 0;
     virtual void warn(const SizedString &message) = 0;
@@ -59,6 +62,7 @@ private:
 
 public:
     VMRuntimeCommon();
+    virtual ~VMRuntimeCommon();
 
     void dump(BinaryOutputStream &stream);
 
@@ -97,11 +101,13 @@ public:
     IJsObject                   *objPrototypeArray;
     IJsObject                   *objPrototypeFunction;
 
-
     VMScope                     *globalScope;
 
     // 全局变量的前 countImmutableGlobalVars 是不能被修改的
     uint32_t                    countImmutableGlobalVars;
+
+protected:
+    ResourcePool                _resourcePool;
 
 };
 
@@ -115,10 +121,11 @@ private:
 
 public:
     VMRuntime();
+    virtual ~VMRuntime();
 
     void init(JsVirtualMachine *vm, VMRuntimeCommon *rtCommon);
 
-    void setConsole(IConsole *console) { this->console = console; }
+    void setConsole(IConsole *console) { if (this->console) { delete this->console; } this->console = console; }
 
     void dump(BinaryOutputStream &stream);
 
@@ -129,6 +136,8 @@ public:
     JsValue pushSymbolValue(JsSymbol &value) { uint32_t n = (uint32_t)symbolValues.size(); symbolValues.push_back(value); return JsValue(JDT_SYMBOL, n); }
     JsValue pushString(const JsString &str) { uint32_t n = (uint32_t)stringValues.size(); stringValues.push_back(str); return JsValue(JDT_STRING, n); }
     JsValue pushString(const SizedString &str);
+
+    void pushScope(VMScope *scope) { vmScopes.push_back(scope); }
 
     JsNativeFunction getNativeFunction(uint32_t i) {
         assert(i < nativeFunctions.size());
@@ -279,6 +288,7 @@ public:
     VecJsStrings                stringValues;
     VecJsIterators              iteratorValues;
     VecJsObjects                objValues;
+    VecVMScopes                 vmScopes;
     VecJsNativeFunction         nativeFunctions;
     VecJsNativeFunction         nativeFunctionsModified; // 为了提高 GC 的性能，被修改的函数会被加入到此
     VecResourcePools            resourcePools;

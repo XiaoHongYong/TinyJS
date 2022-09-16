@@ -53,7 +53,7 @@ JsValue increaseJsValue(VMContext *ctx, JsValue &v, int inc, bool isPost) {
                 n += inc;
                 if (n == (int32_t)n) {
                     org = JsValue(JDT_INT32, (int32_t)n - inc);
-                    v = JsValue(JDT_INT32, n);
+                    v = JsValue(JDT_INT32, (int32_t)n);
                 } else {
                     org = runtime->pushDoubleValue(n - inc);
                     v = runtime->pushDoubleValue(n);

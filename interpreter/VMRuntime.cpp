@@ -71,8 +71,7 @@ VMRuntimeCommon::VMRuntimeCommon() {
     idx = pushDoubleValue(INFINITY);
     assert(idx.value.index == jsValueInf.value.index);
 
-    auto resourcePool = new ResourcePool();
-    Function *rootFunc = new Function(resourcePool, nullptr, 0);
+    Function *rootFunc = PoolNew(_resourcePool.pool, Function)(&_resourcePool, nullptr, 0);
     globalScope = new VMScope(rootFunc->scope);
 
     // 添加不能被修改的全局变量
@@ -87,6 +86,14 @@ VMRuntimeCommon::VMRuntimeCommon() {
 
     registerBuiltIns(this);
     registerWebAPIs(this);
+}
+
+VMRuntimeCommon::~VMRuntimeCommon() {
+    for (auto obj : objValues) {
+        delete obj;
+    }
+
+    delete globalScope;
 }
 
 void VMRuntimeCommon::dump(BinaryOutputStream &stream) {
@@ -211,7 +218,37 @@ VMRuntime::VMRuntime() {
     firstFreeObjIdx = 0;
 
     // 第一个 string pool 是保留不用的: POOL_STRING_IDX_INVALID
-    stringPools.push_back(nullptr);
+    stringPools.push_back(new StringPool(0, 4));
+}
+
+VMRuntime::~VMRuntime() {
+    for (auto item : iteratorValues) {
+        delete item;
+    }
+
+    for (auto item : objValues) {
+        delete item;
+    }
+
+    for (auto item : vmScopes) {
+        delete item;
+    }
+
+    for (auto item : stringPools) {
+        delete item;
+    }
+
+    for (auto item : resourcePools) {
+        delete item;
+    }
+
+    if (console) {
+        delete console;
+    }
+
+    if (mainVmCtx) {
+        delete mainVmCtx;
+    }
 }
 
 void VMRuntime::init(JsVirtualMachine *vm, VMRuntimeCommon *rtCommon) {
@@ -749,7 +786,7 @@ SizedString VMRuntime::toSizedString(VMContext *ctx, const JsValue &v, string &b
         case JDT_SYMBOL: {
             auto index = val.value.n32;
             assert(index < symbolValues.size());
-            buf = symbolValues[index].toString();
+            buf.assign(symbolValues[index].toString());
             return SizedString(buf);
         }
         default: {

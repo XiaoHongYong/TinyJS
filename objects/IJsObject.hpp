@@ -17,6 +17,10 @@ using DequeJsValue = std::deque<JsValue>;
 
 class IJsIterator {
 public:
+    IJsIterator() {
+        referIdx = 0;
+        nextFreeIdx = 0;
+    }
     virtual ~IJsIterator() {}
 
     virtual bool nextKey(SizedString &keyOut) = 0;
@@ -24,6 +28,9 @@ public:
     virtual bool nextValue(JsValue &valueOut) = 0;
     virtual bool next(JsValue &keyOut, JsValue &valueOut) = 0;
     virtual bool next(SizedString &keyOut, JsValue &valueOut) = 0;
+
+    int8_t                      referIdx;
+    uint32_t                    nextFreeIdx;
 
 };
 
@@ -210,7 +217,7 @@ protected:
 
     inline JsValue increase(VMContext *ctx, JsValue &v, int x) {
         if (v.type == JDT_INT32) {
-            int64_t n = v.value.n32 + x;
+            int64_t n = v.value.n32 + (int64_t)x;
             if (n == (int32_t)n) {
                 return JsValue(JDT_INT32, (int32_t)n);
             }
@@ -235,7 +242,7 @@ protected:
         d += x;
         int32_t n = (int32_t)d;
         if (n == d) {
-            return JsValue(JDT_INT32, d);
+            return JsValue(JDT_INT32, n);
         }
         return JsValue(JDT_NUMBER, d);
     }

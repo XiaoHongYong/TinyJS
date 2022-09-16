@@ -45,6 +45,12 @@ public:
         _itObj = nullptr;
     }
 
+    ~JsArrayIterator() {
+        if (_itObj) {
+            delete _itObj;
+        }
+    }
+
     inline uint32_t _len() { return _arr->_length; }
 
     virtual bool nextKey(SizedString &keyOut) override {

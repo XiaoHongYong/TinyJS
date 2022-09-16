@@ -21,7 +21,7 @@ class SizedString {
 public:
     SizedString() { auto p = (uint64_t *)this; p[0] = 0; p[1] = 0; }
     SizedString(const char *data);
-    SizedString(const string s) : data((uint8_t *)s.c_str()), len((uint32_t)s.size()), _isStable(false) { }
+    SizedString(const string &s) : data((uint8_t *)s.c_str()), len((uint32_t)s.size()), _isStable(false) { }
     SizedString(const void *data, size_t len) : data((uint8_t *)data), len((uint32_t)len), _isStable(false) { }
     SizedString(size_t len, const void *data) : data((uint8_t *)data), len((uint32_t)len), _isStable(false) { }
     SizedString(const uint8_t *data, size_t len) : data((uint8_t *)data), len((uint32_t)len), _isStable(false) { }
