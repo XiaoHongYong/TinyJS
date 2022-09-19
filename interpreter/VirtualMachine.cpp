@@ -928,7 +928,7 @@ void JsVirtualMachine::call(Function *function, VMContext *ctx, VecVMStackScopes
                 assert(scopeDepth < stackScopes.size());
                 auto scope = stackScopes[scopeDepth];
                 assert(idx < scope->args.capacity);
-                stack.push_back(scope->vars[idx]);
+                stack.push_back(scope->args[idx]);
                 break;
             }
             case OP_PUSH_ID_PARENT_SCOPE: {
@@ -1308,6 +1308,23 @@ void JsVirtualMachine::call(Function *function, VMContext *ctx, VecVMStackScopes
                         v = jsValueNaN;
                     } else {
                         v = runtime->pushDoubleValue(-d);
+                    }
+                }
+                break;
+            }
+            case OP_PREFIX_PLUS: {
+                JsValue &v = stack.back();
+                if (v.type == JDT_INT32 || v.type == JDT_NUMBER) {
+                    // 不做任何修改
+                } else {
+                    auto d = runtime->toNumber(ctx, v);
+                    int32_t n = (int32_t)d;
+                    if (n == d) {
+                        v = JsValue(JDT_INT32, n);
+                    } else if (isnan(d)) {
+                        v = jsValueNaN;
+                    } else {
+                        v = runtime->pushDoubleValue(d);
                     }
                 }
                 break;

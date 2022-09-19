@@ -966,6 +966,8 @@ IJsNode *JSParser::_expectExpression(Precedence pred, bool enableIn) {
             expr = _expectExpression(PRED_UNARY_PREFIX);
             if (isNegative) {
                 expr = PoolNew(_pool, JsExprUnaryPrefix)(expr, OP_PREFIX_NEGATE);
+            } else {
+                expr = PoolNew(_pool, JsExprUnaryPrefix)(expr, OP_PREFIX_PLUS);
             }
             break;
         }
