@@ -48,6 +48,8 @@ public:
     Arguments(JsValue *args, uint32_t count) : data(args), count(count), capacity(count) { needFree = false; }
     ~Arguments();
 
+    void free();
+
     Arguments &operator = (const Arguments &other);
     JsValue &operator[](uint32_t n) const { assert(n < capacity); return data[n]; }
 
@@ -85,6 +87,8 @@ public:
     }
 
     void dump(BinaryOutputStream &stream);
+
+    void free();
 
     int8_t                      referIdx;
     uint32_t                    nextFreeIdx;

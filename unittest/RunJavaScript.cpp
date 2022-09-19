@@ -46,6 +46,29 @@ const char *ignoreSpace(const char *text) {
     return text;
 }
 
+/**
+ * 找到字符串 [pos, len] 能在 orgRight 中唯一出现一次的长度. 用于打印出错的位置.
+ */
+uint32_t uniqueLen(const char *orgRight, const char *pos) {
+    if (pos - orgRight < 100) {
+        return 100;
+    }
+
+    uint32_t len = 100;
+    SizedString org(orgRight);
+    for (int i = 0; i < 10; i++) {
+        SizedString pt(pos, min((uint32_t)strlen(pos), len));
+        auto n = org.strStr(pos);
+        if (n == -1) break;
+        org.shrink(n + (int)len);
+        n = org.strStr(pos);
+        if (n == -1) break;
+        len += 30;
+    }
+
+    return len;
+}
+
 bool compareTextIgnoreSpace(const char *left, const char *right) {
     auto orgLeft = left, orgRight = right;
 
@@ -64,7 +87,8 @@ bool compareTextIgnoreSpace(const char *left, const char *right) {
     }
 
     if (*left != *right) {
-        printf("NOT EQUAL, at:\nCurrent(%d):  %.100s\nExpected(%d): %.100s\n", (int)(left - orgLeft), left, (int)(right - orgRight), right);
+        auto len = uniqueLen(orgRight, right);
+        printf("NOT EQUAL, at:\nCurrent(%d):  %.100s\nExpected(%d): %.*s\n", (int)(left - orgLeft), left, (int)(right - orgRight), len, right);
     }
 
     return *left == *right;
@@ -82,6 +106,13 @@ bool runJavascript(const string &code, string &output) {
 
     auto msg = console->getOutput();
     output.assign((const char *)msg.data, msg.len);
+
+    auto countAllocated = runtime->countAllocated();
+    auto countFreed = runtime->garbageCollect();
+    printf("** CountFreed: %d, CountAllocated: %d\n", countFreed, countAllocated);
+    if (countAllocated != countFreed) {
+        printf("** NOT FREED **\n");
+    }
 
     return true;
 }

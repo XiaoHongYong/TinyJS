@@ -62,8 +62,12 @@ public:
     virtual bool isOfIterable() override { return _isOfIterable; }
     virtual IJsIterator *getIteratorObject(VMContext *ctx) override;
 
+    virtual void markReferIdx(VMRuntime *rt) override;
+
     JsNativeFunction getFunction() const { return _function; }
     void setOfIteratorTrue() { _isOfIterable = true; }
+
+    bool isModified() const { return _modified || _obj; }
 
 protected:
     virtual void _newObject();

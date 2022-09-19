@@ -130,14 +130,14 @@ public:
     void dump(BinaryOutputStream &stream);
 
     JsValue pushObjValue(JsDataType type, IJsObject *value);
-    JsValue pushJsIterator(IJsIterator *it) { uint32_t n = (uint32_t)iteratorValues.size(); iteratorValues.push_back(it); return JsValue(JDT_ITERATOR, n); }
-    JsValue pushDoubleValue(double value) { uint32_t n = (uint32_t)doubleValues.size(); doubleValues.push_back(JsDouble(value)); return JsValue(JDT_NUMBER, n); }
-    uint32_t pushResourcePool(ResourcePool *pool) { uint32_t n = (uint32_t)resourcePools.size(); resourcePools.push_back(pool); return n; }
-    JsValue pushSymbolValue(JsSymbol &value) { uint32_t n = (uint32_t)symbolValues.size(); symbolValues.push_back(value); return JsValue(JDT_SYMBOL, n); }
-    JsValue pushString(const JsString &str) { uint32_t n = (uint32_t)stringValues.size(); stringValues.push_back(str); return JsValue(JDT_STRING, n); }
+    JsValue pushJsIterator(IJsIterator *it);
+    JsValue pushDoubleValue(double value);
+    JsValue pushSymbolValue(JsSymbol &value);
+    JsValue pushString(const JsString &str);
     JsValue pushString(const SizedString &str);
 
-    void pushScope(VMScope *scope) { vmScopes.push_back(scope); }
+    VMScope *newScope(Scope *scope);
+    ResourcePool *newResourcePool();
 
     JsNativeFunction getNativeFunction(uint32_t i) {
         assert(i < nativeFunctions.size());
@@ -184,7 +184,7 @@ public:
                 joinString(js);
             }
 
-            return js.value.poolString.value;
+            return js.value.str;
         }
     }
 
@@ -210,7 +210,7 @@ public:
 
     SizedString getStringByIdx(uint32_t index, const ResourcePool *pool) {
         if (index < countCommonStrings) {
-            return stringValues[index].value.poolString.value;
+            return stringValues[index].value.str;
         }
 
         index -= countCommonStrings;
@@ -244,7 +244,9 @@ public:
     JsValue addString(const SizedString &s1, const JsValue &s2);
     JsValue addString(const JsValue &s1, const SizedString &s2);
     JsValue addString(const JsValue &s1, const JsValue &s2);
-    JsPoolString allocString(uint32_t size);
+
+    inline SizedString allocString(uint32_t size) { return SizedString(new uint8_t[size], size); }
+    inline void freeString(const SizedString &s) { delete [] s.data; }
 
     double toNumber(VMContext *ctx, const JsValue &v);
     bool toNumber(VMContext *ctx, const JsValue &v, double &out);
@@ -259,8 +261,44 @@ public:
 
     void extendObject(const JsValue &dst, const JsValue &src);
 
-protected:
-    StringPool *newStringPool(uint32_t size);
+public:
+    //
+    // 和 Garbage Collect 有关的函数
+    //
+
+    uint32_t countAllocated() const ;
+
+    uint32_t garbageCollect();
+    bool shouldGarbageCollect() { return _newAllocatedCount >= _gcAllocatedCountThreshold; }
+    void setGarbageCollectThreshold(uint32_t count) { _gcAllocatedCountThreshold = count; }
+
+    uint8_t nextReferIdx() const { return _nextRefIdx; }
+
+    void markReferIdx(const JsValue &val);
+    void markReferIdx(VMScope *scope);
+
+    inline void markReferIdx(const JsProperty &prop) {
+        if (prop.setter.type >= JDT_NUMBER) {
+            markReferIdx(prop.setter);
+        }
+
+        if (prop.value.type >= JDT_NUMBER) {
+            markReferIdx(prop.value);
+        }
+    }
+
+    inline void markReferIdx(ResourcePool *pool) {
+        pool->referIdx = _nextRefIdx;
+    }
+
+    inline void markResourcePoolReferIdx(uint32_t index) {
+        uint16_t poolIndex = getPoolIndexOfResource(index);
+        assert(poolIndex < resourcePools.size());
+        auto rp = resourcePools[poolIndex];
+        rp->referIdx = _nextRefIdx;
+    }
+
+    void markJoinedStringReferIdx(const JsJoinedString &joinedString);
 
 protected:
     VMRuntimeCommon             *rtCommon;
@@ -294,12 +332,12 @@ public:
     VecResourcePools            resourcePools;
 
     uint32_t                    firstFreeDoubleIdx;
+    uint32_t                    firstFreeSymbolIdx;
+    uint32_t                    firstFreeStringIdx;
+    uint32_t                    firstFreeIteratorIdx;
     uint32_t                    firstFreeObjIdx;
-
-    VecStringPools              stringPools;
-    StringPoolList              smallStringPools;
-    StringPoolList              midStringPools;
-    StringPoolList              largeStringPools;
+    uint32_t                    firstFreeVMScopeIdx;
+    uint32_t                    firstFreeResourcePoolIdx;
 
     IJsObject                   *objPrototypeString;
     IJsObject                   *objPrototypeNumber;
@@ -309,6 +347,10 @@ public:
     IJsObject                   *objPrototypeObject;
     IJsObject                   *objPrototypeArray;
     IJsObject                   *objPrototypeFunction;
+
+    uint8_t                     _nextRefIdx;
+    uint32_t                    _newAllocatedCount;
+    uint32_t                    _gcAllocatedCountThreshold;
 
 };
 

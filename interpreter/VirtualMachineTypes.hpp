@@ -183,10 +183,12 @@ enum JsDataType : uint8_t {
     JDT_UNDEFINED,
     JDT_NULL,
     JDT_BOOL,
+    JDT_CHAR, // 单个字符的 String
     JDT_INT32,
+
+    // 下面的类型都要参与到 gc 中
     JDT_NUMBER,
     JDT_SYMBOL,
-    JDT_CHAR, // 单个字符的 String
     JDT_STRING,
 
     // Iterator 仅仅在虚拟机内部的 OP_ITERATOR_NEXT_XX 等几个指令使用
@@ -273,21 +275,6 @@ struct JsSymbol {
     string                      name;
 };
 
-//
-// 为了压缩 JsString 的存储空间，因此改为 2 字节对齐。
-// 后续增加成员时，需仔细考虑对齐
-//
-#pragma pack(push)
-#pragma pack(2)
-
-/**
- * 存储 pool string 类型的值
- */
-struct JsPoolString {
-    uint8_t                     reserved;
-    uint8_t                     poolIdx; // 为此字符串分配内存的 Pool 是哪个
-    SizedString                 value;
-};
 
 /**
  * 存储 joined string 类型的值
@@ -321,22 +308,22 @@ struct JsJoinedString {
  */
 struct JsString {
     JsString() { referIdx = 0; nextFreeIdx = 0; isJoinedString = false; }
-    JsString(const JsPoolString &poolString) { referIdx = 0; nextFreeIdx = 0; isJoinedString = false; value.poolString = poolString; }
+    JsString(const SizedString &str) { referIdx = 0; nextFreeIdx = 0; isJoinedString = false; value.str = str; }
     JsString(const JsJoinedString &joinedString) { referIdx = 0; nextFreeIdx = 0; isJoinedString = true; value.joinedString = joinedString; }
 
     uint32_t                    nextFreeIdx; // 下一个空闲的索引位置
     int8_t                      referIdx; // 用于资源回收时所用
     bool                        isJoinedString;
+    uint8_t                     reserved[2];
+
     union Value {
         Value() { }
         JsJoinedString          joinedString;
-        JsPoolString            poolString;
+        SizedString             str;
     } value;
 };
 
-static_assert(sizeof(JsString) == 24, "JsPoolString should be 24 bytes long.");
-
-#pragma pack(pop)
+static_assert(sizeof(JsString) == 24, "JsString should be 24 bytes long.");
 
 /**
  * JsProperty 定义了 Object 的基本属性

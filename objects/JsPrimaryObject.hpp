@@ -19,6 +19,12 @@ public:
         type = JDT_OBJ_BOOL;
     }
 
+    virtual void markReferIdx(VMRuntime *rt) override {
+        rt->markReferIdx(_value);
+
+        JsObject::markReferIdx(rt);
+    }
+
     JsValue value() { return _value; }
 
 protected:
@@ -35,6 +41,12 @@ public:
 
     JsValue value() { return _value; }
 
+    virtual void markReferIdx(VMRuntime *rt) override {
+        rt->markReferIdx(_value);
+
+        JsObject::markReferIdx(rt);
+    }
+
 protected:
     JsValue                     _value;
 
@@ -48,6 +60,12 @@ public:
     }
 
     JsValue value() { return _value; }
+
+    virtual void markReferIdx(VMRuntime *rt) override {
+        rt->markReferIdx(_value);
+
+        JsObject::markReferIdx(rt);
+    }
 
 protected:
     JsValue                     _value;

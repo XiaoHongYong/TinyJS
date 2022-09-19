@@ -371,6 +371,28 @@ IJsIterator *JsArguments::getIteratorObject(VMContext *ctx) {
     return new JsArgumentsIterator(ctx, this);
 }
 
+void JsArguments::markReferIdx(VMRuntime *rt) {
+    assert(referIdx == rt->nextReferIdx());
+
+    for (uint32_t i = 0; i < _args->count; i++) {
+        auto val = _args->data[i];
+        rt->markReferIdx(val);
+    }
+
+    if (_argsDescriptors) {
+        for (auto &prop : *_argsDescriptors) {
+            rt->markReferIdx(prop);
+        }
+    }
+
+    if (_obj) {
+        _obj->referIdx = rt->nextReferIdx();
+        _obj->markReferIdx(rt);
+    }
+
+    rt->markReferIdx(_length);
+}
+
 void JsArguments::_newObject() {
     assert(_obj == nullptr);
     _obj = new JsObject();

@@ -111,9 +111,18 @@ Arguments::Arguments(const Arguments &other) {
 }
 
 Arguments::~Arguments() {
+    free();
+}
+
+void Arguments::free() {
     if (needFree) {
         delete [] data;
+        needFree = false;
+        data = nullptr;
     }
+
+    count = 0;
+    capacity = 0;
 }
 
 Arguments & Arguments::operator = (const Arguments &other) {
@@ -140,6 +149,16 @@ void Arguments::copy(const Arguments &other, uint32_t minSize) {
     while (minSize > count) {
         data[--minSize] = jsValueUndefined;
     }
+}
+
+void VMScope::free() {
+    scopeDsc = nullptr;
+
+    vars.clear();
+    vars.shrink_to_fit();
+
+    args.free();
+    withValue = jsValueUndefined;
 }
 
 VMContext::VMContext(VMRuntime *runtime) : runtime(runtime) {
@@ -210,13 +229,24 @@ void JsVirtualMachine::run(cstr_t code, size_t len, VMRuntime *runtime) {
         auto message = runtime->toSizedString(ctx, ctx->errorMessage, buf);
         runtime->console->error(stringPrintf("Uncaught %.*s\n", message.len, message.data).c_str());
     }
+
+    if (runtime->shouldGarbageCollect()) {
+#if DEBUG
+        auto countAllocated = runtime->countAllocated();
+        auto countFreed = runtime->garbageCollect();
+        printf("** CountFreed: %d, CountAllocated: %d\n", countFreed, countAllocated);
+        if (countAllocated != countFreed) {
+            printf("** NOT FREED **\n");
+        }
+#else
+        runtime->gc();
+#endif
+    }
 }
 
 void JsVirtualMachine::eval(cstr_t code, size_t len, VMContext *vmctx, VecVMStackScopes &stackScopes, const Arguments &args) {
     auto runtime = vmctx->runtime;
-    ResourcePool *resPool = new ResourcePool();
-    resPool->index = (uint32_t)runtime->resourcePools.size();
-    runtime->resourcePools.push_back(resPool);
+    ResourcePool *resPool = runtime->newResourcePool();
 
     auto p = (char *)resPool->pool.allocate(len + 4);
     memcpy(p, code, len);
@@ -509,8 +539,7 @@ void JsVirtualMachine::call(Function *function, VMContext *ctx, VecVMStackScopes
     auto retValue = jsValueUndefined;
 
     VMScope *functionScope, *scopeLocal;
-    scopeLocal = new VMScope(function->scope);
-    runtime->pushScope(scopeLocal);
+    scopeLocal = runtime->newScope(function->scope);
     ctx->stackFrames.push_back(std::make_shared<VMFunctionFrame>(scopeLocal, function));
 
     if (function->isCodeBlock) {
@@ -812,8 +841,7 @@ void JsVirtualMachine::call(Function *function, VMContext *ctx, VecVMStackScopes
             case OP_ENTER_SCOPE: {
                 auto scopeIdx = readUInt16(bytecode);
                 auto childScope = function->scopes[scopeIdx];
-                scopeLocal = new VMScope(childScope);
-                runtime->pushScope(scopeLocal);
+                scopeLocal = runtime->newScope(childScope);
                 stackScopes.push_back(scopeLocal);
 
                 // 将当前 scope 的 functionDecls 添加到 functionScope 中
@@ -1575,7 +1603,9 @@ void JsVirtualMachine::call(Function *function, VMContext *ctx, VecVMStackScopes
             case OP_ITERATOR_OF_CREATE: {
                 auto obj = stack.back(); stack.pop_back();
                 IJsIterator *it = nullptr;
-                if (obj.type <= JDT_NUMBER) {
+                if (obj.type == JDT_CHAR || obj.type == JDT_STRING) {
+                    it = newJsStringIterator(runtime, obj);
+                } else if (obj.type <= JDT_NUMBER) {
                     string buf;
                     auto s = runtime->toSizedString(ctx, obj, buf);
                     ctx->throwException(PE_TYPE_ERROR, "%.*s is not iterable", s.len, s.data);
@@ -1588,8 +1618,6 @@ void JsVirtualMachine::call(Function *function, VMContext *ctx, VecVMStackScopes
                         break;
                     }
                     it = new EmptyJsIterator();
-                } else if (obj.type == JDT_CHAR || obj.type == JDT_STRING) {
-                    it = newJsStringIterator(runtime, obj);
                 } else {
                     auto pobj = runtime->getObject(obj);
                     if (code == OP_ITERATOR_OF_CREATE && !pobj->isOfIterable()) {

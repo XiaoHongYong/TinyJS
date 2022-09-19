@@ -40,6 +40,8 @@ public:
     virtual bool isOfIterable() override { return true; }
     virtual IJsIterator *getIteratorObject(VMContext *ctx) override;
 
+    virtual void markReferIdx(VMRuntime *rt) override;
+
 protected:
     void _newObject();
 

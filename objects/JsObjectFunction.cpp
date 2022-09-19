@@ -243,6 +243,29 @@ IJsIterator *JsObjectFunction::getIteratorObject(VMContext *ctx) {
     return new EmptyJsIterator();
 }
 
+void JsObjectFunction::markReferIdx(VMRuntime *rt) {
+    assert(referIdx == rt->nextReferIdx());
+
+    for (auto scope : stackScopes) {
+        rt->markReferIdx(scope);
+    }
+
+    assert(function != nullptr);
+    rt->markReferIdx(function->resourcePool);
+
+    rt->markReferIdx(_prototype);
+    rt->markReferIdx(_name);
+    rt->markReferIdx(_length);
+    rt->markReferIdx(_caller);
+    rt->markReferIdx(_arguments);
+    rt->markReferIdx(__proto__);
+
+    if (_obj) {
+        _obj->referIdx = rt->nextReferIdx();
+        _obj->markReferIdx(rt);
+    }
+}
+
 void JsObjectFunction::_newObject() {
     assert(_obj == nullptr);
 

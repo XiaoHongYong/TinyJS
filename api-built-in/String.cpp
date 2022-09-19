@@ -55,9 +55,9 @@ void stringFromCharCode(VMContext *ctx, const JsValue &thiz, const Arguments &ar
         ucs2ToUtf8((uint16_t)f, str);
     }
 
-    auto poolStr = runtime->allocString((uint32_t)str.size());
-    memcpy(poolStr.value.data, str.c_str(), str.size());
-    ctx->retValue = runtime->pushString(JsString(poolStr));
+    auto tmp = runtime->allocString((uint32_t)str.size());
+    memcpy(tmp.data, str.c_str(), str.size());
+    ctx->retValue = runtime->pushString(JsString(tmp));
 }
 
 void stringFromCodePoint(VMContext *ctx, const JsValue &thiz, const Arguments &args) {

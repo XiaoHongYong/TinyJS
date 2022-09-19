@@ -65,9 +65,6 @@ public:
     void trim();
 
     void shrink(int startShrinkSize, int endShrinkSize = 0);
-    inline void shrink(size_t startShrinkSize, size_t endShrinkSize = 0) {
-        shrink((int)startShrinkSize, (int)endShrinkSize);
-    }
 
     SizedString subStr(size_t offset, size_t size) const;
 
@@ -128,6 +125,8 @@ private:
 using VecSizedStrings = std::vector<SizedString>;
 
 #define MAKE_STABLE_STR(s)       SizedString(s, sizeof(s) - 1, true)
+
+inline SizedString makeStableStr(const char *str) { return SizedString(str, (uint32_t)strlen(str), true); }
 
 const SizedString sizedStringNull(nullptr, 0, true);
 

@@ -374,6 +374,8 @@ class ResourcePool {
 public:
     uint32_t                index; // 在 VMRuntime 中的索引
     int8_t                  referIdx; // 用于资源回收时所用
+    uint32_t                nextFreeIdx; // 下一个空闲的索引位置
+
     AllocatorPool           pool;
     VecSizedStrings         strings;
     vector<double>          doubles;
@@ -384,13 +386,15 @@ public:
     DequeScopes             toDestructScopes;
 
 public:
-    ResourcePool();
+    ResourcePool(uint32_t index = 0);
     ~ResourcePool();
 
     inline void needDestructJsNode(IJsNode *node) { toDestructNodes.push_back(node); }
     inline void needDestructScope(Scope *scope) { toDestructScopes.push_back(scope); }
 
     void dump(BinaryOutputStream &stream);
+
+    void free();
 
 };
 

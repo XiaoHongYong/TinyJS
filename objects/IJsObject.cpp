@@ -696,3 +696,11 @@ IJsIterator *JsObject::getIteratorObject(VMContext *ctx) {
     auto it = new JsObjectIterator(ctx, this);
     return it;
 }
+
+void JsObject::markReferIdx(VMRuntime *rt) {
+    assert(referIdx == rt->nextReferIdx());
+
+    for (auto &item : _props) {
+        rt->markReferIdx(item.second);
+    }
+}

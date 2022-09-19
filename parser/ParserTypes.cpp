@@ -413,19 +413,13 @@ JsNodes::JsNodes(ResourcePool *resourcePool, JsNodeType type) : IJsNode(type) {
     resourcePool->needDestructJsNode(this);
 }
 
-ResourcePool::ResourcePool() {
-    index = 0;
+ResourcePool::ResourcePool(uint32_t index) : index(index) {
     referIdx = 0;
+    nextFreeIdx = 0;
 }
 
 ResourcePool::~ResourcePool() {
-    for (auto item : toDestructNodes) {
-        item->~IJsNode();
-    }
-
-    for (auto item : toDestructScopes) {
-        item->~Scope();
-    }
+    free();
 }
 
 void ResourcePool::dump(BinaryOutputStream &stream) {
@@ -446,6 +440,31 @@ void ResourcePool::dump(BinaryOutputStream &stream) {
         stream.writeFormat("    %llf,\n", d);
     }
     stream.write("  ]\n");
+}
+
+void ResourcePool::free() {
+    for (auto item : toDestructNodes) {
+        item->~IJsNode();
+    }
+    toDestructNodes.clear();
+    toDestructNodes.shrink_to_fit();
+
+    for (auto item : toDestructScopes) {
+        item->~Scope();
+    }
+    toDestructScopes.clear();
+    toDestructScopes.shrink_to_fit();
+
+    pool.reset();
+
+    strings.clear();
+    strings.shrink_to_fit();
+
+    doubles.clear();
+    doubles.shrink_to_fit();
+
+    switchCaseJumps.clear();
+    switchCaseJumps.shrink_to_fit();
 }
 
 bool jsValueStrictLessThan(VMRuntime *runtime, const JsValue &left, const JsValue &right);

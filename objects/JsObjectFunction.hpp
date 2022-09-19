@@ -39,6 +39,8 @@ public:
     virtual IJsObject *clone() override;
     virtual IJsIterator *getIteratorObject(VMContext *ctx) override;
 
+    virtual void markReferIdx(VMRuntime *rt) override;
+
 public:
     VecVMStackScopes            stackScopes;
 

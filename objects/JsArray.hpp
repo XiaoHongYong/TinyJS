@@ -46,6 +46,8 @@ public:
     virtual bool isOfIterable() override { return true; }
     virtual IJsIterator *getIteratorObject(VMContext *ctx) override;
 
+    virtual void markReferIdx(VMRuntime *rt) override;
+
     void push(VMContext *ctx, const JsValue &value);
     void push(VMContext *ctx, const JsValue *first, uint32_t count);
 
@@ -81,7 +83,6 @@ protected:
 
     VecBlocks                   _blocks;
     uint32_t                    _length;
-    bool                        _needGC;
     Block                       *_firstBlock;
     DequeJsProperties           *_firstBlockItems;
     JsObject                    *_obj;

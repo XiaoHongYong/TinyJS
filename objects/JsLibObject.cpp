@@ -35,7 +35,7 @@ JsLibObject::JsLibObject(VMRuntimeCommon *rt, JsLibProperty *libProps, int count
             auto idx = rt->pushNativeFunction(p->function);
             p->prop.value = JsValue(JDT_NATIVE_FUNCTION, idx);
         } else if (p->strValue) {
-            p->prop.value = rt->pushStringValue(p->strValue);
+            p->prop.value = rt->pushStringValue(makeStableStr(p->strValue));
         }
     }
 
@@ -288,6 +288,23 @@ IJsIterator *JsLibObject::getIteratorObject(VMContext *ctx) {
     }
 
     return new EmptyJsIterator();
+}
+
+void JsLibObject::markReferIdx(VMRuntime *rt) {
+    assert(referIdx == rt->nextReferIdx());
+
+    if (_modified) {
+        for (auto p = _libProps; p != _libPropsEnd; p++) {
+            rt->markReferIdx(p->prop);
+        }
+    }
+
+    rt->markReferIdx(__proto__);
+
+    if (_obj) {
+        _obj->referIdx = rt->nextReferIdx();
+        _obj->markReferIdx(rt);
+    }
 }
 
 /**

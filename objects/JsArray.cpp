@@ -148,7 +148,6 @@ JsArray::JsArray(uint32_t length) {
         _length = 0;
     }
 
-    _needGC = false;
     _firstBlock = _blocks.front();
     _firstBlockItems = &_firstBlock->items;
     _obj = nullptr;
@@ -421,6 +420,21 @@ IJsObject *JsArray::clone() {
 
 IJsIterator *JsArray::getIteratorObject(VMContext *ctx) {
     return new JsArrayIterator(ctx, this);
+}
+
+void JsArray::markReferIdx(VMRuntime *rt) {
+    assert(referIdx == rt->nextReferIdx());
+
+    for (auto block : _blocks) {
+        for (auto &prop : block->items) {
+            rt->markReferIdx(prop);
+        }
+    }
+
+    if (_obj) {
+        _obj->referIdx = rt->nextReferIdx();
+        _obj->markReferIdx(rt);
+    }
 }
 
 void JsArray::push(VMContext *ctx, const JsValue &value) {

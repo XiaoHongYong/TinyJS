@@ -24,6 +24,7 @@
 #define SMALL_STRING_POOL_SIZE  (1024 * 64)
 #define MID_STRING_POOL_SIZE    (1024 * 128)
 
+const uint32_t GC_ALLOCATED_COUNT_THRESHOLD = (uint32_t)1e5;
 
 class StdIOConsole : public IConsole {
 public:
@@ -103,7 +104,7 @@ void VMRuntimeCommon::dump(BinaryOutputStream &stream) {
     for (uint32_t i = 0; i < stringValues.size(); i++) {
         auto item = stringValues[i];
         assert(!item.isJoinedString);
-        auto &s = item.value.poolString.value;
+        auto &s = item.value.str;
         stream.writeFormat("  %d: %.*s,\n", i, (int)s.len, s.data);
     }
     stream.write("]\n");
@@ -124,7 +125,7 @@ void VMRuntimeCommon::dump(BinaryOutputStream &stream) {
 }
 
 void VMRuntimeCommon::setGlobalValue(const char *strName, const JsValue &value) {
-    auto name = SizedString(strName);
+    auto name = makeStableStr(strName);
     auto scopeDsc = globalScope->scopeDsc;
 
     auto id = PoolNew(scopeDsc->function->resourcePool->pool, IdentifierDeclare)(name, scopeDsc);
@@ -163,13 +164,14 @@ JsValue VMRuntimeCommon::pushDoubleValue(double value) {
 }
 
 JsValue VMRuntimeCommon::pushStringValue(const SizedString &value) {
+    assert(value.isStable());
+
     auto it = mapStrings.find(value);
     if (it == mapStrings.end()) {
         uint32_t index = (uint32_t)stringValues.size();
         mapStrings[value] = index;
         JsString s;
-        s.value.poolString.value = value;
-        s.value.poolString.poolIdx = POOL_STRING_IDX_INVALID;
+        s.value.str = value;
         stringValues.push_back(s);
         return JsValue(JDT_STRING, index);
     } else {
@@ -215,10 +217,16 @@ VMRuntime::VMRuntime() {
     countCommonObjs = 0;
 
     firstFreeDoubleIdx = 0;
+    firstFreeSymbolIdx = 0;
+    firstFreeStringIdx = 0;
+    firstFreeIteratorIdx = 0;
     firstFreeObjIdx = 0;
+    firstFreeVMScopeIdx = 0;
+    firstFreeResourcePoolIdx = 0;
 
-    // 第一个 string pool 是保留不用的: POOL_STRING_IDX_INVALID
-    stringPools.push_back(new StringPool(0, 4));
+    _nextRefIdx = 1;
+    _newAllocatedCount = 0;
+    _gcAllocatedCountThreshold = GC_ALLOCATED_COUNT_THRESHOLD;
 }
 
 VMRuntime::~VMRuntime() {
@@ -231,10 +239,6 @@ VMRuntime::~VMRuntime() {
     }
 
     for (auto item : vmScopes) {
-        delete item;
-    }
-
-    for (auto item : stringPools) {
         delete item;
     }
 
@@ -280,16 +284,6 @@ void VMRuntime::init(JsVirtualMachine *vm, VMRuntimeCommon *rtCommon) {
     mainVmCtx = new VMContext(this);
     mainVmCtx->stack.reserve(MAX_STACK_SIZE);
 
-    for (int i = 0; i < SMALL_STRING_POOL_COUNT; i++) {
-        auto pool = newStringPool(SMALL_STRING_POOL_SIZE);
-        smallStringPools.append(pool);
-    }
-
-    for (int i = 0; i < MID_STRING_POOL_COUNT; i++) {
-        auto pool = newStringPool(MID_STRING_POOL_SIZE);
-        smallStringPools.append(pool);
-    }
-
     objPrototypeString = objValues[JS_OBJ_PROTOTYPE_IDX_STRING];
     objPrototypeNumber = objValues[JS_OBJ_PROTOTYPE_IDX_NUMBER];
     objPrototypeBoolean = objValues[JS_OBJ_PROTOTYPE_IDX_BOOL];
@@ -334,14 +328,8 @@ void VMRuntime::dump(BinaryOutputStream &stream) {
                 stream.writeFormat("[%d] + ", joinedString.nextStringIdx);
             }
         } else {
-            auto &poolString = item.value.poolString;
-            if (poolString.poolIdx == POOL_STRING_IDX_INVALID) {
-                continue;
-            }
-
             stream.writeFormat("  %d: ReferIdx: %d, ", index, item.referIdx);
-            stream.writeFormat("PoolIdx: %d, ", poolString.poolIdx);
-            stream.writeFormat("Value: %.*s,\n", (int)poolString.value.len, poolString.value.data);
+            stream.writeFormat("Value: %.*s,\n", (int)item.value.str.len, item.value.str.data);
         }
         index++;
     }
@@ -377,15 +365,14 @@ void VMRuntime::joinString(JsString &js) {
     struct Item {
         uint8_t         *p;
         JsJoinedString  *joinedStr;
-        // uint32_t        len;
     };
 
     assert(js.isJoinedString);
 
-    auto poolStr = allocString(js.value.joinedString.len);
+    auto targStr = allocString(js.value.joinedString.len);
 
     std::stack<Item> tasks;
-    tasks.push({ (uint8_t *)poolStr.value.data, &js.value.joinedString });
+    tasks.push({ (uint8_t *)targStr.data, &js.value.joinedString });
 
     while (!tasks.empty()) {
         auto &task = tasks.top();
@@ -415,8 +402,7 @@ void VMRuntime::joinString(JsString &js) {
                             // 添加到 tasks 中
                             tasks.push({tailP, &tail.value.joinedString});
                         } else {
-                            // 是 string pool 类型
-                            auto &ss = tail.value.poolString.value;
+                            auto &ss = tail.value.str;
                             memcpy(tailP, ss.data, ss.len);
                         }
                     }
@@ -425,8 +411,8 @@ void VMRuntime::joinString(JsString &js) {
                     joinedStr = &head.value.joinedString;
                     continue;
                 } else {
-                    // head 是 poolString 类型
-                    auto &ss = head.value.poolString.value;
+                    // head 是 SizedString 类型
+                    auto &ss = head.value.str;
                     memcpy(p, ss.data, ss.len);
                     p += ss.len;
                 }
@@ -444,8 +430,8 @@ void VMRuntime::joinString(JsString &js) {
                     joinedStr = &tail.value.joinedString;
                     continue;
                 } else {
-                    // 是 string pool 类型
-                    auto &ss = tail.value.poolString.value;
+                    // 是 SizedString 类型
+                    auto &ss = tail.value.str;
                     memcpy(p, ss.data, ss.len);
                 }
             }
@@ -455,7 +441,7 @@ void VMRuntime::joinString(JsString &js) {
         }
     }
 
-    js.value.poolString = poolStr;
+    js.value.str = targStr;
 }
 
 JsValue VMRuntime::joinSmallString(const SizedString &sz1, const SizedString &sz2) {
@@ -463,13 +449,13 @@ JsValue VMRuntime::joinSmallString(const SizedString &sz1, const SizedString &sz
         return jsStringValueEmpty;
     }
 
-    JsPoolString js = allocString(sz1.len + sz2.len);
+    auto str = allocString(sz1.len + sz2.len);
 
-    auto p = (uint8_t *)js.value.data;
+    auto p = (uint8_t *)str.data;
     memcpy(p, sz1.data, sz1.len); p += sz1.len;
     memcpy(p, sz2.data, sz2.len);
 
-    return pushString(JsString(js));
+    return pushString(JsString(str));
 }
 
 JsValue VMRuntime::addString(const SizedString &str1, const JsValue &s2) {
@@ -512,7 +498,7 @@ JsValue VMRuntime::addString(const JsValue &s1, const JsValue &s2) {
     } else {
         js1 = stringValues[s1.value.index];
         if (!js1.isJoinedString) {
-            ss1 = js1.value.poolString.value;
+            ss1 = js1.value.str;
         }
     }
 
@@ -521,31 +507,14 @@ JsValue VMRuntime::addString(const JsValue &s1, const JsValue &s2) {
     } else {
         js2 = stringValues[s2.value.index];
         if (!js2.isJoinedString) {
-            ss2 = js2.value.poolString.value;
+            ss2 = js2.value.str;
         }
     }
 
-    if ((!s1.isInResourcePool && js1.isJoinedString) || (!s2.isInResourcePool && js2.isJoinedString)) {
+    if (js1.isJoinedString || js2.isJoinedString) {
         // 任何一个是 JoinedString
         JsJoinedString js(s1, s2);
         return pushString(JsString(js));
-    }
-
-    if (!s1.isInResourcePool && js1.value.poolString.poolIdx != POOL_STRING_IDX_INVALID) {
-        // 看看能否直接扩展 string
-        auto &poolString = js1.value.poolString;
-
-        assert(poolString.poolIdx < stringPools.size());
-        auto pool = stringPools[poolString.poolIdx];
-
-        if (pool->ptr() == poolString.value.data + poolString.value.len && pool->capacity() >= ss2.len) {
-            // poolString 正好是 pool 的最后一个，刚好可以扩展
-            memcpy(pool->ptr(), ss2.data, ss2.len);
-            pool->alloc(ss2.len);
-            JsPoolString poolStr2 = poolString;
-            poolStr2.value.len += ss2.len;
-            return pushString(JsString(poolStr2));
-        }
     }
 
     if (ss1.len + ss2.len >= JOINED_STRING_MIN_SIZE) {
@@ -558,64 +527,88 @@ JsValue VMRuntime::addString(const JsValue &s1, const JsValue &s2) {
     }
 }
 
-JsPoolString VMRuntime::allocString(uint32_t size) {
-    StringPool *pool = nullptr;
-    if (size <= POOL_STRING_SMALL) {
-        while (smallStringPools.count() >= SMALL_STRING_POOL_COUNT) {
-            pool = smallStringPools.front();
-            if (pool != nullptr && pool->capacity() >= size) {
-                break;
-            } else {
-                smallStringPools.remove(pool);
-                pool = nullptr;
-            }
-        }
-
-        if (!pool) {
-            pool = newStringPool(SMALL_STRING_POOL_SIZE);
-            smallStringPools.append(pool);
-        }
-    } else if (size <= POOL_STRING_MID) {
-        pool = midStringPools.front();
-        if (pool != nullptr && pool->capacity() < size) {
-            midStringPools.remove(pool);
-            smallStringPools.append(pool);
-            pool = nullptr;
-        }
-
-        if (!pool) {
-            pool = newStringPool(MID_STRING_POOL_SIZE);
-            midStringPools.append(pool);
-        }
-    } else {
-        // 较大的字符串，分配独立的 pool.
-        pool = newStringPool(size + 1024 * 16);
-        largeStringPools.append(pool);
-    }
-
-    auto p = pool->alloc(size);
-    JsPoolString poolStr;
-    poolStr.value.data = p;
-    poolStr.value.len = size;
-    poolStr.poolIdx = pool->id();
-    return poolStr;
-}
-
-StringPool *VMRuntime::newStringPool(uint32_t size) {
-    if (stringPools.size() + 1 >= 0xFFFF) {
-        throw std::bad_alloc();
-    }
-
-    auto pool = new StringPool((uint16_t)stringPools.size(), size);
-    stringPools.push_back(pool);
-    return pool;
-}
-
 JsValue VMRuntime::pushObjValue(JsDataType type, IJsObject *value) {
-    auto jsv = JsValue(type, (uint32_t)objValues.size());
+    _newAllocatedCount++;
+
+    uint32_t n;
+    if (firstFreeObjIdx) {
+        n = firstFreeObjIdx;
+        firstFreeObjIdx = objValues[firstFreeObjIdx]->nextFreeIdx;
+        delete objValues[firstFreeObjIdx];
+        objValues[firstFreeObjIdx] = value;
+    } else {
+        n = (uint32_t)objValues.size();
+        objValues.push_back(value);
+    }
+
+    auto jsv = JsValue(type, n);
     value->self = jsv;
-    objValues.push_back(value);
     return jsv;
+}
+
+JsValue VMRuntime::pushJsIterator(IJsIterator *it) {
+    _newAllocatedCount++;
+    uint32_t n;
+
+    if (firstFreeIteratorIdx) {
+        n = firstFreeIteratorIdx;
+        firstFreeIteratorIdx = iteratorValues[firstFreeIteratorIdx]->nextFreeIdx;
+        delete iteratorValues[firstFreeIteratorIdx];
+        iteratorValues[firstFreeIteratorIdx] = it;
+    } else {
+        n = (uint32_t)iteratorValues.size();
+        iteratorValues.push_back(it);
+    }
+
+    return JsValue(JDT_ITERATOR, n);
+}
+
+JsValue VMRuntime::pushDoubleValue(double value) {
+    _newAllocatedCount++;
+    uint32_t n;
+
+    if (firstFreeDoubleIdx) {
+        n = firstFreeDoubleIdx;
+        firstFreeDoubleIdx = doubleValues[firstFreeDoubleIdx].nextFreeIdx;
+        doubleValues[firstFreeDoubleIdx] = JsDouble(value);
+    } else {
+        n = (uint32_t)doubleValues.size();
+        doubleValues.push_back(JsDouble(value));
+    }
+
+    return JsValue(JDT_NUMBER, n);
+}
+
+JsValue VMRuntime::pushSymbolValue(JsSymbol &value) {
+    _newAllocatedCount++;
+    uint32_t n;
+
+    if (firstFreeSymbolIdx) {
+        n = firstFreeSymbolIdx;
+        firstFreeSymbolIdx = symbolValues[firstFreeSymbolIdx].nextFreeIdx;
+        symbolValues[firstFreeSymbolIdx] = value;
+    } else {
+        n = (uint32_t)symbolValues.size();
+        symbolValues.push_back(value);
+    }
+
+    return JsValue(JDT_SYMBOL, n);
+}
+
+JsValue VMRuntime::pushString(const JsString &str) {
+    _newAllocatedCount++;
+    uint32_t n;
+
+    if (firstFreeStringIdx) {
+        n = firstFreeStringIdx;
+        firstFreeStringIdx = stringValues[firstFreeStringIdx].nextFreeIdx;
+        stringValues[firstFreeStringIdx] = str;
+    } else {
+        n = (uint32_t)stringValues.size();
+        stringValues.push_back(str);
+    }
+
+    return JsValue(JDT_STRING, n);
 }
 
 JsValue VMRuntime::pushString(const SizedString &str) {
@@ -623,10 +616,44 @@ JsValue VMRuntime::pushString(const SizedString &str) {
         return jsStringValueEmpty;
     }
 
-    JsPoolString js = allocString(str.len);
-    memcpy(js.value.data, str.data, str.len);
+    if (str.isStable()) {
+        return pushString(JsString(str));
+    } else {
+        auto tmp = allocString(str.len);
+        memcpy(tmp.data, str.data, str.len);
+        return pushString(JsString(tmp));
+    }
+}
 
-    return pushString(JsString(js));
+VMScope *VMRuntime::newScope(Scope *scope) {
+    _newAllocatedCount++;
+
+    if (firstFreeVMScopeIdx) {
+        auto vs = vmScopes[firstFreeVMScopeIdx];
+        vs->scopeDsc = scope;
+        firstFreeVMScopeIdx = vs->nextFreeIdx;
+        vs->nextFreeIdx = 0;
+        return vs;
+    } else {
+        auto vs = new VMScope(scope);
+        vmScopes.push_back(vs);
+        return vs;
+    }
+}
+
+ResourcePool *VMRuntime::newResourcePool() {
+    _newAllocatedCount++;
+
+    if (firstFreeResourcePoolIdx) {
+        auto rp = resourcePools[firstFreeResourcePoolIdx];
+        firstFreeResourcePoolIdx = rp->nextFreeIdx;
+        rp->nextFreeIdx = 0;
+        return rp;
+    } else {
+        auto rp = new ResourcePool((uint32_t)resourcePools.size());
+        resourcePools.push_back(rp);
+        return rp;
+    }
 }
 
 double VMRuntime::toNumber(VMContext *ctx, const JsValue &v) {
@@ -809,7 +836,7 @@ bool VMRuntime::isEmptyString(const JsValue &v) {
     if (js.isJoinedString) {
         return js.value.joinedString.len > 0;
     } else {
-        return js.value.poolString.value.len > 0;
+        return js.value.str.len > 0;
     }
 }
 
@@ -828,7 +855,7 @@ uint32_t VMRuntime::getStringLength(const JsValue &value) {
             if (js.isJoinedString) {
                 len = js.value.joinedString.len;
             } else {
-                len = js.value.poolString.value.len;
+                len = js.value.str.len;
             }
         }
     }
@@ -861,4 +888,223 @@ bool VMRuntime::testTrue(const JsValue &value) {
 void VMRuntime::extendObject(const JsValue &dst, const JsValue &src) {
     auto objDst = getObject(dst);
     auto objSrc = getObject(src);
+}
+
+template<typename ARRAY>
+uint32_t freeValues(ARRAY &arr, uint32_t startIdx, uint32_t firstFreeIdx, uint8_t nextRefIdx, uint32_t &countFreedOut) {
+
+    // 将未标记的对象释放了
+    uint32_t size = (uint32_t)arr.size();
+    for (uint32_t i = startIdx; i < size; i++) {
+        auto &item = arr[i];
+        if (item.referIdx != nextRefIdx) {
+            item.nextFreeIdx = firstFreeIdx;
+            firstFreeIdx = i;
+            countFreedOut++;
+        }
+    }
+
+    return firstFreeIdx;
+}
+
+/**
+ * 统计分配的各类存储对象的数量
+ */
+uint32_t VMRuntime::countAllocated() const {
+    return uint32_t(doubleValues.size() - countCommonDobules
+        + symbolValues.size() + stringValues.size() - countCommonStrings
+        + objValues.size() - countCommonObjs + iteratorValues.size()
+        + vmScopes.size() + resourcePools.size());
+}
+
+/**
+ * 返回释放的对象数量
+ */
+uint32_t VMRuntime::garbageCollect() {
+    // 先标记所有的对象
+    for (uint32_t i = 1; i < countCommonObjs; i++) {
+        auto item = objValues[i];
+        item->referIdx = _nextRefIdx;
+        item->markReferIdx(this);
+    }
+
+    //
+    // 释放未标记的对象
+    //
+    uint32_t countFreed = 0;
+
+    firstFreeDoubleIdx = freeValues(doubleValues, countCommonDobules, firstFreeDoubleIdx, _nextRefIdx, countFreed);
+    firstFreeSymbolIdx = freeValues(symbolValues, 0, firstFreeSymbolIdx, _nextRefIdx, countFreed);
+
+    auto size = (uint32_t)stringValues.size();
+    for (uint32_t i = countCommonStrings; i < size; i++) {
+        auto &item = stringValues[i];
+        if (item.referIdx != _nextRefIdx) {
+            item.nextFreeIdx = firstFreeStringIdx;
+            firstFreeStringIdx = i;
+            if (!item.value.str.isStable()) {
+                freeString(item.value.str);
+            }
+            countFreed++;
+        }
+    }
+
+    size = (uint32_t)objValues.size();
+    for (uint32_t i = countCommonObjs; i < size; i++) {
+        auto item = objValues[i];
+        if (item->referIdx != _nextRefIdx) {
+            delete item;
+            objValues[i] = item = new JsDummyObject();
+            item->nextFreeIdx = firstFreeObjIdx;
+            firstFreeObjIdx = i;
+            countFreed++;
+        }
+    }
+
+    size = (uint32_t)iteratorValues.size();
+    for (uint32_t i = 0; i < size; i++) {
+        auto item = iteratorValues[i];
+        if (item->referIdx != _nextRefIdx) {
+            delete item;
+            iteratorValues[i] = item = new EmptyJsIterator();
+            item->nextFreeIdx = firstFreeIteratorIdx;
+            firstFreeIteratorIdx = i;
+            countFreed++;
+        }
+    }
+
+    size = (uint32_t)vmScopes.size();
+    for (uint32_t i = 0; i < size; i++) {
+        auto item = vmScopes[i];
+        if (item->referIdx != _nextRefIdx) {
+            item->free();
+            item->nextFreeIdx = firstFreeVMScopeIdx;
+            firstFreeVMScopeIdx = i;
+            countFreed++;
+        }
+    }
+
+    size = (uint32_t)resourcePools.size();
+    for (uint32_t i = 0; i < size; i++) {
+        auto item = resourcePools[i];
+        if (item->referIdx != _nextRefIdx) {
+            item->free();
+            item->nextFreeIdx = firstFreeResourcePoolIdx;
+            firstFreeResourcePoolIdx = i;
+            countFreed++;
+        }
+    }
+
+    _nextRefIdx++;
+    if (_nextRefIdx == 0) {
+        _nextRefIdx = 1;
+    }
+    return countFreed;
+}
+
+void VMRuntime::markReferIdx(const JsValue &val) {
+    if (val.type < JDT_NUMBER) {
+        return;
+    }
+
+    switch (val.type) {
+        case JDT_NUMBER: {
+            if (val.value.index < countCommonDobules) {
+                if (val.isInResourcePool) {
+                    markResourcePoolReferIdx(val.value.index);
+                } else {
+                    doubleValues[val.value.index].referIdx = _nextRefIdx;
+                }
+            }
+            break;
+        }
+        case JDT_SYMBOL: {
+            assert(val.value.index < symbolValues.size());
+            symbolValues[val.value.index].referIdx = _nextRefIdx;
+            break;
+        }
+        case JDT_STRING: {
+            if (val.value.index < countCommonStrings) {
+                break;
+            }
+
+            if (val.isInResourcePool) {
+                markResourcePoolReferIdx(val.value.index);
+            } else {
+                auto &item = stringValues[val.value.index];
+                if (item.referIdx != _nextRefIdx) {
+                    item.referIdx = _nextRefIdx;
+                    if (item.isJoinedString) {
+                        markJoinedStringReferIdx(item.value.joinedString);
+                    }
+                }
+            }
+            break;
+        }
+        case JDT_ITERATOR: {
+            assert(val.value.index < iteratorValues.size());
+            iteratorValues[val.value.index]->referIdx = _nextRefIdx;
+            break;
+        }
+        default: {
+            if (val.value.index < countCommonObjs) {
+                auto obj = getObject(val);
+                if (obj->referIdx != _nextRefIdx) {
+                    obj->referIdx = _nextRefIdx;
+                    obj->markReferIdx(this);
+                }
+            }
+            break;
+        }
+    }
+}
+
+void VMRuntime::markReferIdx(VMScope *scope) {
+    if (scope->referIdx == _nextRefIdx) {
+        return;
+    }
+
+    scope->referIdx = _nextRefIdx;
+
+}
+
+void VMRuntime::markJoinedStringReferIdx(const JsJoinedString &joinedString) {
+    // 使用 stackStrings 避免函数嵌套调用堆栈溢出
+    vector<int> stackStrings;
+
+    if (joinedString.isStringIdxInResourcePool) {
+        markResourcePoolReferIdx(joinedString.stringIdx);
+    } else {
+        stackStrings.push_back(joinedString.stringIdx);
+    }
+
+    if (joinedString.isNextStringIdxInResourcePool) {
+        markResourcePoolReferIdx(joinedString.nextStringIdx);
+    } else {
+        stackStrings.push_back(joinedString.nextStringIdx);
+    }
+
+    while (!stackStrings.empty()) {
+        int idx = stackStrings.back();
+        stackStrings.pop_back();
+
+        auto &js = stringValues[idx];
+        if (js.referIdx != _nextRefIdx) {
+            js.referIdx = _nextRefIdx;
+            if (js.isJoinedString) {
+                auto &joinedString = js.value.joinedString;
+                if (joinedString.isStringIdxInResourcePool) {
+                    markResourcePoolReferIdx(joinedString.stringIdx);
+                } else {
+                    stackStrings.push_back(joinedString.stringIdx);
+                }
+
+                if (joinedString.isNextStringIdxInResourcePool) {
+                    markResourcePoolReferIdx(joinedString.nextStringIdx);
+                } else {
+                    stackStrings.push_back(joinedString.nextStringIdx);
+                }
+            }
+        }
+    }
 }
