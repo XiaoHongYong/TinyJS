@@ -27,9 +27,6 @@ using VecVMStackScopes = std::vector<VMScope *>;
 using StackJsValues = std::vector<JsValue>;
 using VecVMStackFrames = std::vector<VMFunctionFramePtr>;
 
-void registerGlobalValue(VMContext *ctx, VMScope *globalScope, const char *name, const JsValue &value);
-void registerGlobalObject(VMContext *ctx, VMScope *globalScope, const char *name, IJsObject *obj);
-
 JsValue newJsError(VMContext *ctx, JsErrorType errType, const JsValue &message = jsValueUndefined);
 
 enum VMMiscFlags {
@@ -85,6 +82,7 @@ public:
 
         vars.resize(scopeDsc->countLocalVars);
     }
+    virtual ~VMScope() { }
 
     void dump(BinaryOutputStream &stream);
 
@@ -102,6 +100,20 @@ public:
 
     // 当使用 with 语句，在执行时会在 'withValue' 的 member 中查找标识符
     JsValue                     withValue;
+
+};
+
+class VMGlobalScope : public VMScope {
+public:
+    VMGlobalScope(Scope *scopeDsc) : VMScope(scopeDsc) { }
+
+    // 全局变量对应的属性定义
+    VecJsProperties             varProperties;
+
+    JsValue get(VMContext *ctx, uint32_t index);
+    void set(VMContext *ctx, uint32_t index, const JsValue &value);
+    JsValue increase(VMContext *ctx, uint32_t index, int inc, bool isPost);
+    bool remove(VMContext *ctx, uint32_t index);
 
 };
 

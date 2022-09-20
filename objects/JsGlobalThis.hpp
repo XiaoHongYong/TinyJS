@@ -1,42 +1,30 @@
 //
-//  JsLibObject.hpp
+//  JsGlobalThis.hpp
 //  TinyJS
 //
-//  Created by henry_xiao on 2022/8/2.
+//  Created by henry_xiao on 2022/9/20.
 //
 
-#ifndef JsLibObject_hpp
-#define JsLibObject_hpp
+#ifndef JsGlobalThis_hpp
+#define JsGlobalThis_hpp
 
 #include "IJsObject.hpp"
 
 
-struct JsLibProperty {
-    SizedString                 name;
-    JsNativeFunction            function;
-    const char                  *strValue;
-    JsProperty                  prop;
-
-    JsNativeFunction            functionSet;
-
-};
+class VMGlobalScope;
 
 /**
- * JsLibObject 用于提供统一封装 JavaScript 内置对象，其包含了：
- * - 对象的构造函数
- * - 对象提供的一些方法
- * - prototye 属性的值（另外一个 JsLibObject)
- * - __proto__ 缺省为 Object.prototype, 但是 Object.prototype.__proto__ 是 null
+ * https://developer.mozilla.org/en-US/docs/Web/JavaScript/Reference/Global_Objects/globalThis
+ * 实现
  */
-class JsLibObject : public IJsObject {
+class JsGlobalThis : public IJsObject {
 private:
-    JsLibObject(const JsLibObject &);
-    JsLibObject &operator=(const JsLibObject &);
+    JsGlobalThis(const JsGlobalThis &);
+    JsGlobalThis &operator=(const JsGlobalThis &);
 
 public:
-    JsLibObject(VMRuntimeCommon *rt, JsLibProperty *libProps, int countProps, JsNativeFunction function = nullptr, const JsValue &proto = jsValuePrototypeObject);
-    JsLibObject(JsLibObject *from);
-    ~JsLibObject();
+    JsGlobalThis(VMGlobalScope *globalScope);
+    ~JsGlobalThis();
 
     virtual void definePropertyByName(VMContext *ctx, const SizedString &name, const JsProperty &descriptor) override;
     virtual void definePropertyByIndex(VMContext *ctx, uint32_t index, const JsProperty &descriptor) override;
@@ -59,37 +47,19 @@ public:
     virtual bool removeBySymbol(VMContext *ctx, uint32_t index) override;
 
     virtual IJsObject *clone() override;
-    virtual bool isOfIterable() override { return _isOfIterable; }
     virtual IJsIterator *getIteratorObject(VMContext *ctx) override;
 
     virtual void markReferIdx(VMRuntime *rt) override;
 
-    JsNativeFunction getFunction() const { return _function; }
-    void setOfIteratorTrue() { _isOfIterable = true; }
-
-    bool isModified() const { return _modified || _obj; }
+protected:
+    void _newObject();
 
 protected:
-    virtual void _newObject();
-    void _copyForModify();
+    VMGlobalScope               *_scope;
+    Scope                       *_scopeDesc;
 
-protected:
-    JsLibObject();
-
-    JsProperty                  __proto__;
-
-    JsNativeFunction            _function;
-    bool                        _modified;
-    bool                        _isOfIterable;
-    JsLibProperty               *_libProps, *_libPropsEnd;
     JsObject                    *_obj;
 
 };
 
-JsLibProperty makeJsLibPropertyGetter(const char *name, JsNativeFunction f);
-
-void setPrototype(JsLibProperty *prop, const JsValue &value);
-
-#define SET_PROTOTYPE(props, prototype)     setPrototype(props + CountOf(props) - 1, prototype)
-
-#endif /* JsLibObject_hpp */
+#endif /* JsGlobalThis_hpp */

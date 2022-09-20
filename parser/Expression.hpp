@@ -362,6 +362,20 @@ public:
             target->obj->convertToByteCode(stream);
             target->index->convertToByteCode(stream);
             stream.writeOpCode(OP_DELETE_MEMBER_INDEX);
+        } else if (expr->type == NT_IDENTIFIER) {
+            auto id = (JsExprIdentifier *)expr;
+            if (id->nameStringIdx != -1) {
+                stream.writeOpCode(OP_DELETE_ID_BY_NAME);
+                stream.writeUInt32(id->nameStringIdx);
+            } else {
+                auto declare = id->declare;
+                if (declare->varStorageType == VST_GLOBAL_VAR) {
+                    stream.writeOpCode(OP_DELETE_ID_GLOBAL);
+                    stream.writeUInt16(declare->storageIndex);
+                } else {
+                    stream.writeOpCode(OP_PUSH_TRUE);
+                }
+            }
         } else {
             expr->convertToByteCode(stream);
             stream.writeOpCode(OP_DELETE);

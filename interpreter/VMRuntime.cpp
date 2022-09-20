@@ -11,6 +11,7 @@
 #include "VirtualMachine.hpp"
 #include "api-web/WebAPI.hpp"
 #include "api-built-in/BuiltIn.hpp"
+#include "objects/JsGlobalThis.hpp"
 
 
 #define MAX_STACK_SIZE          (1024 * 1024 / 8)
@@ -60,7 +61,7 @@ VMRuntimeCommon::VMRuntimeCommon() {
     doubleValues.push_back(0);
     stringValues.push_back(JsString());
     objValues.push_back(new JsObject());
-    nativeFunctions.push_back(nullptr);
+    nativeFunctions.push_back(JsNativeFunctionInfo(nullptr, SS_EMPTY));
 
     countImmutableGlobalVars = 0;
 
@@ -73,7 +74,7 @@ VMRuntimeCommon::VMRuntimeCommon() {
     assert(idx.value.index == jsValueInf.value.index);
 
     Function *rootFunc = PoolNew(_resourcePool.pool, Function)(&_resourcePool, nullptr, 0);
-    globalScope = new VMScope(rootFunc->scope);
+    globalScope = new VMGlobalScope(rootFunc->scope);
 
     // 添加不能被修改的全局变量
     setGlobalValue("undefined", jsValueUndefined);
@@ -84,6 +85,15 @@ VMRuntimeCommon::VMRuntimeCommon() {
 
     setGlobalValue("Infinity", jsValueInf);
     countImmutableGlobalVars++; assert(countImmutableGlobalVars == globalScope->vars.size());
+
+    setGlobalValue("globalThis", jsValueGlobalThis);
+    countImmutableGlobalVars++; assert(countImmutableGlobalVars == globalScope->vars.size());
+
+    setGlobalValue("window", jsValueGlobalThis);
+    countImmutableGlobalVars++; assert(countImmutableGlobalVars == globalScope->vars.size());
+
+    // globalThis 的占位
+    objValues.push_back(new JsObject());
 
     registerBuiltIns(this);
     registerWebAPIs(this);
@@ -271,12 +281,14 @@ void VMRuntime::init(JsVirtualMachine *vm, VMRuntimeCommon *rtCommon) {
     stringValues = rtCommon->stringValues;
     nativeFunctions = rtCommon->nativeFunctions;
 
+    globalScope = rtCommon->globalScope;
+    countImmutableGlobalVars = rtCommon->countImmutableGlobalVars;
+
     // 需要将 rtCommon 中的对象都复制一份.
     for (auto item : rtCommon->objValues) {
         objValues.push_back(item->clone());
     }
-    globalScope = rtCommon->globalScope;
-    countImmutableGlobalVars = rtCommon->countImmutableGlobalVars;
+    objValues[JS_OBJ_GLOBAL_THIS_IDX] = new JsGlobalThis(globalScope);
 
     firstFreeDoubleIdx = 0;
     firstFreeObjIdx = 0;
@@ -822,6 +834,30 @@ SizedString VMRuntime::toSizedString(VMContext *ctx, const JsValue &v, string &b
     }
 
     return SizedString();
+}
+
+SizedString VMRuntime::toTypeName(const JsValue &value) {
+    switch (value.type) {
+        case JDT_UNDEFINED: return SS_UNDEFINED;
+        case JDT_NULL: return SS_NULL;
+        case JDT_BOOL: return SS_BOOLEAN;
+        case JDT_INT32:
+        case JDT_NUMBER: return SS_NUMBER;
+        case JDT_SYMBOL: return SS_SYMBOL;
+        case JDT_CHAR:
+        case JDT_STRING: return SS_STRING;
+        case JDT_FUNCTION:
+        case JDT_NATIVE_FUNCTION:
+            return SS_FUNCTION;
+        case JDT_LIB_OBJECT: {
+            auto obj = (JsLibObject *)getObject(value);
+            if (obj->getFunction()) {
+                return SS_FUNCTION;
+            }
+            return SS_OBJECT;
+        }
+        default: return SS_OBJECT;
+    }
 }
 
 bool VMRuntime::isEmptyString(const JsValue &v) {

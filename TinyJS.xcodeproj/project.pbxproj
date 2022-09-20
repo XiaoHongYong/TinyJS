@@ -61,6 +61,7 @@
 		C085984C28D0D54C00577A8E /* ParserTypes.cpp in Sources */ = {isa = PBXBuildFile; fileRef = C085981728D0D54C00577A8E /* ParserTypes.cpp */; };
 		C085984D28D0D54C00577A8E /* Expression.cpp in Sources */ = {isa = PBXBuildFile; fileRef = C085981828D0D54C00577A8E /* Expression.cpp */; };
 		C085984E28D0D54C00577A8E /* Parser.cpp in Sources */ = {isa = PBXBuildFile; fileRef = C085981928D0D54C00577A8E /* Parser.cpp */; };
+		C085985128D9A0A100577A8E /* JsGlobalThis.cpp in Sources */ = {isa = PBXBuildFile; fileRef = C085985028D9A0A100577A8E /* JsGlobalThis.cpp */; };
 /* End PBXBuildFile section */
 
 /* Begin PBXContainerItemProxy section */
@@ -105,7 +106,6 @@
 		C08597B728D0D54C00577A8E /* String.cpp */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = sourcecode.cpp.cpp; path = String.cpp; sourceTree = "<group>"; };
 		C08597B828D0D54C00577A8E /* Function.cpp */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = sourcecode.cpp.cpp; path = Function.cpp; sourceTree = "<group>"; };
 		C08597B928D0D54C00577A8E /* Array.cpp */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = sourcecode.cpp.cpp; path = Array.cpp; sourceTree = "<group>"; };
-		C08597BA28D0D54C00577A8E /* String.hpp */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = sourcecode.cpp.h; path = String.hpp; sourceTree = "<group>"; };
 		C08597BB28D0D54C00577A8E /* BuiltIn.cpp */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = sourcecode.cpp.cpp; path = BuiltIn.cpp; sourceTree = "<group>"; };
 		C08597BC28D0D54C00577A8E /* Boolean.cpp */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = sourcecode.cpp.cpp; path = Boolean.cpp; sourceTree = "<group>"; };
 		C08597BD28D0D54C00577A8E /* eval.cpp */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = sourcecode.cpp.cpp; path = eval.cpp; sourceTree = "<group>"; };
@@ -188,6 +188,8 @@
 		C085981728D0D54C00577A8E /* ParserTypes.cpp */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = sourcecode.cpp.cpp; path = ParserTypes.cpp; sourceTree = "<group>"; };
 		C085981828D0D54C00577A8E /* Expression.cpp */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = sourcecode.cpp.cpp; path = Expression.cpp; sourceTree = "<group>"; };
 		C085981928D0D54C00577A8E /* Parser.cpp */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = sourcecode.cpp.cpp; path = Parser.cpp; sourceTree = "<group>"; };
+		C085984F28D9A08F00577A8E /* JsGlobalThis.hpp */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.cpp.h; path = JsGlobalThis.hpp; sourceTree = "<group>"; };
+		C085985028D9A0A100577A8E /* JsGlobalThis.cpp */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.cpp.cpp; path = JsGlobalThis.cpp; sourceTree = "<group>"; };
 /* End PBXFileReference section */
 
 /* Begin PBXFrameworksBuildPhase section */
@@ -268,7 +270,6 @@
 				C08597B628D0D54C00577A8E /* Object.cpp */,
 				C08597B428D0D54C00577A8E /* RegExp.cpp */,
 				C08597B728D0D54C00577A8E /* String.cpp */,
-				C08597BA28D0D54C00577A8E /* String.hpp */,
 				C08597B328D0D54C00577A8E /* Symbol.cpp */,
 			);
 			path = "api-built-in";
@@ -401,6 +402,8 @@
 				C085980928D0D54C00577A8E /* JsArguments.hpp */,
 				C085980828D0D54C00577A8E /* JsArray.cpp */,
 				C085980328D0D54C00577A8E /* JsArray.hpp */,
+				C085985028D9A0A100577A8E /* JsGlobalThis.cpp */,
+				C085984F28D9A08F00577A8E /* JsGlobalThis.hpp */,
 				C085980A28D0D54C00577A8E /* JsLibObject.cpp */,
 				C085980428D0D54C00577A8E /* JsLibObject.hpp */,
 				C085980628D0D54C00577A8E /* JsObjectFunction.cpp */,
@@ -570,6 +573,7 @@
 				C085981F28D0D54C00577A8E /* String.cpp in Sources */,
 				C085982828D0D54C00577A8E /* Parser.cpp in Sources */,
 				C085982928D0D54C00577A8E /* RunJavaScript.cpp in Sources */,
+				C085985128D9A0A100577A8E /* JsGlobalThis.cpp in Sources */,
 				C085984428D0D54C00577A8E /* JsObjectFunction.cpp in Sources */,
 				C085984C28D0D54C00577A8E /* ParserTypes.cpp in Sources */,
 				C085984A28D0D54C00577A8E /* Lexer.cpp in Sources */,

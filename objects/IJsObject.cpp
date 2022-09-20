@@ -131,16 +131,13 @@ JsProperty *IJsObject::getRaw(VMContext *ctx, const JsValue &name, JsNativeFunct
             char buf[32];
             buf[0] = name.value.n32;
             return getRawByName(ctx, SizedString(buf, 1), funcGetterOut, includeProtoProp);
-            break;
         }
         case JDT_STRING: {
             auto str = ctx->runtime->getString(name);
             return getRawByName(ctx, str, funcGetterOut, includeProtoProp);
-            break;
         }
         case JDT_SYMBOL: {
             return getRawBySymbol(ctx, name.value.index, includeProtoProp);
-            break;
         }
         default: {
             assert(name.type >= JDT_OBJECT);

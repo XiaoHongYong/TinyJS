@@ -11,10 +11,6 @@
 #include "VirtualMachine.hpp"
 
 
-using DequeJsProperties = std::deque<JsProperty>;
-using VecJsProperties = std::vector<JsProperty>;
-using DequeJsValue = std::deque<JsValue>;
-
 class IJsIterator {
 public:
     IJsIterator() {
@@ -217,7 +213,8 @@ protected:
         }
     }
 
-    inline JsValue increase(VMContext *ctx, JsValue &v, int x) {
+public:
+    static inline JsValue increase(VMContext *ctx, JsValue &v, int x) {
         if (v.type == JDT_INT32) {
             int64_t n = v.value.n32 + (int64_t)x;
             if (n == (int32_t)n) {
@@ -249,7 +246,7 @@ protected:
         return JsValue(JDT_NUMBER, d);
     }
 
-    JsValue increase(VMContext *ctx, JsProperty *prop, const JsValue &thiz, int n, bool isPost) {
+    static JsValue increase(VMContext *ctx, JsProperty *prop, const JsValue &thiz, int n, bool isPost) {
         JsValue newValue;
         if (prop->isGSetter) {
             if (prop->value.type >= JDT_FUNCTION) {

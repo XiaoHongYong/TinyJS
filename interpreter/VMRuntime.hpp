@@ -17,6 +17,7 @@
 
 
 class VMScope;
+class VMGlobalScope;
 class VMContext;
 class Arguments;
 class JsVirtualMachine;
@@ -25,21 +26,19 @@ class IJsIterator;
 
 using VecJsIterators = vector<IJsIterator *>;
 using VecVMScopes = vector<VMScope *>;
+using MapIndexToJsObjs = unordered_map<int, IJsObject *>;
 
 typedef void (*JsNativeFunction)(VMContext *ctx, const JsValue &thiz, const Arguments &args);
 
-struct JsNativeFunctionObject {
+struct JsNativeFunctionInfo {
     JsNativeFunction            func;
-    uint32_t                    objIndx;
-    bool                        isAddedToModified;
+    SizedString                 name;
 
-    JsNativeFunctionObject(JsNativeFunction f) : func(f) {
-        objIndx = 0;
-        isAddedToModified = false;
+    JsNativeFunctionInfo(JsNativeFunction f, const SizedString &name) : func(f), name(name) {
     }
 };
 
-using VecJsNativeFunction = std::vector<JsNativeFunctionObject>;
+using VecJsNativeFunction = std::vector<JsNativeFunctionInfo>;
 
 class IConsole {
 public:
@@ -70,7 +69,11 @@ public:
     void setGlobalObject(const char *name, IJsObject *obj);
 
     JsValue pushObjValue(JsDataType type, IJsObject *value);
-    uint32_t pushNativeFunction(JsNativeFunction f) { uint32_t n = (uint32_t)nativeFunctions.size(); nativeFunctions.push_back(JsNativeFunctionObject(f)); return n; }
+    uint32_t pushNativeFunction(JsNativeFunction f, const SizedString &name) {
+        uint32_t n = (uint32_t)nativeFunctions.size();
+        nativeFunctions.push_back(JsNativeFunctionInfo(f, name));
+        return n;
+    }
 
     JsValue pushDoubleValue(double value);
     JsValue pushStringValue(const SizedString &value);
@@ -101,7 +104,7 @@ public:
     IJsObject                   *objPrototypeArray;
     IJsObject                   *objPrototypeFunction;
 
-    VMScope                     *globalScope;
+    VMGlobalScope               *globalScope;
 
     // 全局变量的前 countImmutableGlobalVars 是不能被修改的
     uint32_t                    countImmutableGlobalVars;
@@ -142,6 +145,11 @@ public:
     JsNativeFunction getNativeFunction(uint32_t i) {
         assert(i < nativeFunctions.size());
         return nativeFunctions[i].func;
+    }
+
+    const SizedString &getNativeFunctionName(uint32_t i) {
+        assert(i < nativeFunctions.size());
+        return nativeFunctions[i].name;
     }
 
     double getDouble(const JsValue &val) {
@@ -196,12 +204,8 @@ public:
 
     IJsObject *getObject(const JsValue &val) {
         assert(val.type >= JDT_OBJECT);
-        if (val.isInResourcePool) {
-            // TODO..
-            return nullptr;
-        } else {
-            return objValues[val.value.index];
-        }
+        assert(!val.isInResourcePool);
+        return objValues[val.value.index];
     }
 
     uint32_t findString(const SizedString &str) {
@@ -253,6 +257,7 @@ public:
     JsValue toString(VMContext *ctx, const JsValue &v);
     SizedString toSizedString(VMContext *ctx, const JsValue &v, string &buf);
     JsValue jsObjectToString(VMContext *ctx, const JsValue &v);
+    SizedString toTypeName(const JsValue &v);
 
     bool isEmptyString(const JsValue &v);
     uint32_t getStringLength(const JsValue &v);
@@ -308,7 +313,7 @@ public:
 
     IConsole                    *console;
 
-    VMScope                     *globalScope;
+    VMGlobalScope               *globalScope;
     JsValue                     globalThiz;
 
     // 全局变量的前 countImmutableGlobalVars 是不能被修改的
@@ -328,7 +333,7 @@ public:
     VecJsObjects                objValues;
     VecVMScopes                 vmScopes;
     VecJsNativeFunction         nativeFunctions;
-    VecJsNativeFunction         nativeFunctionsModified; // 为了提高 GC 的性能，被修改的函数会被加入到此
+    MapIndexToJsObjs            nativeFunctionObjs; // 为了提高 GC 的性能，被修改的函数单独存放.
     VecResourcePools            resourcePools;
 
     uint32_t                    firstFreeDoubleIdx;

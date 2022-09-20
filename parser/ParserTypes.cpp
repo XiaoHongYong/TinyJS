@@ -47,7 +47,7 @@ void writeIndent(BinaryOutputStream &stream, SizedString str, const SizedString 
     }
 }
 
-Scope::Scope(ResourcePool *resourcePool, Function *function, Scope *parent) : function(function), parent(parent), varDeclares(function->resourcePool->pool) {
+Scope::Scope(ResourcePool *resourcePool, Function *function, Scope *parent) : function(function), parent(parent) {
     child = sibling = nullptr;
     functionArgs = nullptr;
     depth = 0;
@@ -126,7 +126,7 @@ IdentifierDeclare *Scope::addVarDeclaration(const Token &token, bool isConst, bo
 
     auto it = varDeclares.find(nameStr);
     if (it == varDeclares.end()) {
-        auto &pool = varDeclares.get_allocator().getPool();
+        auto &pool = function->resourcePool->pool;
         auto node = PoolNew(pool, IdentifierDeclare)(token, this);
         node->isConst = isConst;
         node->isScopeVar = isScopeVar;
@@ -151,7 +151,7 @@ void Scope::addArgumentDeclaration(const Token &token, int index) {
 
     auto it = varDeclares.find(tokenToSizedString(token));
     if (it == varDeclares.end()) {
-        auto &pool = varDeclares.get_allocator().getPool();
+        auto &pool = function->resourcePool->pool;
         auto node = PoolNew(pool, IdentifierDeclare)(token, this);
         node->isConst = false;
         node->varStorageType = VST_ARGUMENT;
@@ -172,7 +172,7 @@ void Scope::addArgumentDeclaration(const Token &token, int index) {
 void Scope::addImplicitVarDeclaration(JsExprIdentifier *id) {
     assert(parent == nullptr);
 
-    auto &pool = varDeclares.get_allocator().getPool();
+    auto &pool = function->resourcePool->pool;
     auto node = PoolNew(pool, IdentifierDeclare)(id->name, this);
     node->isConst = false;
     node->isImplicitDeclaration = true;
@@ -192,13 +192,13 @@ void Scope::addFunctionDeclaration(const Token &name, Function *child) {
         if (declare->varStorageType == VST_ARGUMENT) {
             // 声明的函数和参数同名
             if (!functionScope->functionArgs) {
-                auto &pool = functionScope->varDeclares.get_allocator().getPool();
+                auto &pool = functionScope->function->resourcePool->pool;
                 functionScope->functionArgs = PoolNew(pool, VecFunctions);
             }
             functionScope->functionArgs->push_back(child);
         }
     } else {
-        auto &pool = functionScope->varDeclares.get_allocator().getPool();
+        auto &pool = functionScope->function->resourcePool->pool;
         declare = PoolNew(pool, IdentifierDeclare)(name, this);
         declare->isConst = false;
         declare->isScopeVar = false;

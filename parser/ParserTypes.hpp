@@ -9,6 +9,7 @@
 #define ParserTypes_hpp
 
 #include <deque>
+#include <unordered_map>
 #include "Lexer.hpp"
 #include "ByteCodeStream.hpp"
 
@@ -23,7 +24,7 @@ class JsNodeParameters;
 class JsStmtSwitch;
 class VMRuntime;
 
-using MapNameToIdentifiers = map<SizedString, IdentifierDeclare *, SizedStrCmpLess, Allocator<pair<const SizedString, IdentifierDeclare *> > >;
+using MapNameToIdentifiers = unordered_map<SizedString, IdentifierDeclare *, SizedStringHash, SizedStrCmpEqual>;
 using VecScopes = vector<Scope *>;
 using VecFunctions = vector<Function *>;
 using VecResourcePools = vector<ResourcePool *>;

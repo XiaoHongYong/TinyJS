@@ -8,6 +8,7 @@
 #ifndef VirtualMachineTypes_hpp
 #define VirtualMachineTypes_hpp
 
+#include <deque>
 #include "utils/SizedString.h"
 #include "utils/BinaryStream.h"
 
@@ -130,6 +131,8 @@ class VMContext;
     OP_ITEM(OP_BIT_NOT, ""), \
     OP_ITEM(OP_DELETE_MEMBER_DOT, "property_string_idx:u32"), \
     OP_ITEM(OP_DELETE_MEMBER_INDEX, ""), \
+    OP_ITEM(OP_DELETE_ID_BY_NAME, ""), \
+    OP_ITEM(OP_DELETE_ID_GLOBAL, "var_index:u16"), \
     OP_ITEM(OP_DELETE, ""), \
     OP_ITEM(OP_TYPEOF, ""), \
     OP_ITEM(OP_VOID, ""), \
@@ -202,6 +205,7 @@ enum JsDataType : uint8_t {
     JDT_OBJ_BOOL,
     JDT_OBJ_NUMBER,
     JDT_OBJ_STRING,
+    JDT_OBJ_GLOBAL_THIS,
 
     // 函数 开始
     JDT_FUNCTION,
@@ -357,21 +361,23 @@ struct JsProperty {
 
 
 enum JsObjectValueIndex {
-    JS_OBJ_PROTOTYPE_IDX_BOOL               = 1,
-    JS_OBJ_PROTOTYPE_IDX_NUMBER             = 3,
-    JS_OBJ_PROTOTYPE_IDX_STRING             = 5,
-    JS_OBJ_PROTOTYPE_IDX_SYMBOL             = 7,
-    JS_OBJ_PROTOTYPE_IDX_OBJECT             = 9,
-    JS_OBJ_PROTOTYPE_IDX_REGEXP             = 11,
-    JS_OBJ_PROTOTYPE_IDX_ARRAY              = 13,
-    JS_OBJ_PROTOTYPE_IDX_FUNCTION           = 15,
+    JS_OBJ_GLOBAL_THIS_IDX                  = 1,
+    JS_OBJ_PROTOTYPE_IDX_BOOL               = 2,
+    JS_OBJ_PROTOTYPE_IDX_NUMBER             = 4,
+    JS_OBJ_PROTOTYPE_IDX_STRING             = 6,
+    JS_OBJ_PROTOTYPE_IDX_SYMBOL             = 8,
+    JS_OBJ_PROTOTYPE_IDX_OBJECT             = 10,
+    JS_OBJ_PROTOTYPE_IDX_REGEXP             = 12,
+    JS_OBJ_PROTOTYPE_IDX_ARRAY              = 14,
+    JS_OBJ_PROTOTYPE_IDX_FUNCTION           = 16,
 };
 
 enum JsNumberValueIndex {
     JS_NUMBER_IDX_NAN               = 1,
-    JS_NUMBER_IDX_INF             = 2,
+    JS_NUMBER_IDX_INF               = 2,
 };
 
+const JsValue jsValueGlobalThis = JsValue(JDT_OBJ_GLOBAL_THIS, JS_OBJ_GLOBAL_THIS_IDX);
 const JsValue jsValuePrototypeBool = JsValue(JDT_LIB_OBJECT, JS_OBJ_PROTOTYPE_IDX_BOOL);
 const JsValue jsValuePrototypeNumber = JsValue(JDT_LIB_OBJECT, JS_OBJ_PROTOTYPE_IDX_NUMBER);
 const JsValue jsValuePrototypeString = JsValue(JDT_LIB_OBJECT, JS_OBJ_PROTOTYPE_IDX_STRING);
@@ -394,6 +400,9 @@ using VecJsDoubles = std::vector<JsDouble>;
 using VecJsStrings = std::vector<JsString>;
 using VecJsSymbols = std::vector<JsSymbol>;
 using VecJsObjects = std::vector<IJsObject *>;
+using VecJsProperties = std::vector<JsProperty>;
+using DequeJsProperties = std::deque<JsProperty>;
+using DequeJsValue = std::deque<JsValue>;
 
 bool decodeBytecode(uint8_t *bytecode, int lenBytecode, BinaryOutputStream &stream);
 

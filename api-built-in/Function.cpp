@@ -64,7 +64,9 @@ void functionPrototypeToString(VMContext *ctx, const JsValue &thiz, const Argume
         ctx->retValue = function->srcCodeValue;
         return;
     } else if (thiz.type == JDT_NATIVE_FUNCTION) {
-        ctx->retValue = jsStringValueFunctionNativeCode;
+        auto &name = runtime->getNativeFunctionName(thiz.value.index);
+        auto str = stringPrintf("function %.*s() { [native code] }", name.len, name.data);
+        ctx->retValue = runtime->pushString(str);
         return;
     } else if (thiz.type == JDT_LIB_OBJECT) {
         auto obj = (JsLibObject *)runtime->getObject(thiz);

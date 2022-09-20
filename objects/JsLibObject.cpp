@@ -31,8 +31,9 @@ JsLibObject::JsLibObject(VMRuntimeCommon *rt, JsLibProperty *libProps, int count
     _isOfIterable = false;
 
     for (auto p = _libProps; p != _libPropsEnd; p++) {
+        p->name.setStable();
         if (p->function) {
-            auto idx = rt->pushNativeFunction(p->function);
+            auto idx = rt->pushNativeFunction(p->function, p->name);
             p->prop.value = JsValue(JDT_NATIVE_FUNCTION, idx);
         } else if (p->strValue) {
             p->prop.value = rt->pushStringValue(makeStableStr(p->strValue));
@@ -250,10 +251,13 @@ bool JsLibObject::removeByName(VMContext *ctx, const SizedString &name) {
             return false;
         }
 
+        auto posToDelete = first - _libProps;
+
         // 删除现有的属性
         _copyForModify();
 
-        memcpy(first, first + 1, sizeof(*first) * (_libPropsEnd - first - 1));
+        first = _libProps + posToDelete;
+        memmove(first, first + 1, sizeof(*first) * (_libPropsEnd - first - 1));
         _libPropsEnd--;
     }
 
@@ -310,9 +314,9 @@ void JsLibObject::markReferIdx(VMRuntime *rt) {
 /**
  * 约定 prototype 在最后一个位置.
  */
-void setPrototype(JsLibProperty *prop, const JsProperty &value) {
+void setPrototype(JsLibProperty *prop, const JsValue &value) {
     assert(prop->name.equal("prototype"));
-    prop->prop = value;
+    prop->prop = JsProperty(value, false, false, false, false);
 }
 
 void JsLibObject::_newObject() {
