@@ -19,11 +19,12 @@ public:
     }
     virtual ~IJsIterator() {}
 
-    virtual bool nextKey(SizedString &keyOut) = 0;
-    virtual bool nextKey(JsValue &keyOut) = 0;
-    virtual bool nextValue(JsValue &valueOut) = 0;
-    virtual bool next(JsValue &keyOut, JsValue &valueOut) = 0;
-    virtual bool next(SizedString &keyOut, JsValue &valueOut) = 0;
+    virtual bool nextOf(JsValue &valueOut) { return false; }
+    virtual bool next(SizedString *strKeyOut = nullptr, JsValue *keyOut = nullptr, JsValue *valueOut = nullptr) = 0;
+
+    inline bool nextKey(SizedString &keyOut) { return next(&keyOut); }
+    inline bool nextKey(JsValue &keyOut) { return next(nullptr, &keyOut); }
+    inline bool nextValue(JsValue &valueOut) { return next(nullptr, nullptr, &valueOut); }
 
     int8_t                      referIdx;
     uint32_t                    nextFreeIdx;
@@ -32,11 +33,7 @@ public:
 
 class EmptyJsIterator : public IJsIterator {
 public:
-    virtual bool nextKey(SizedString &keyOut) override { return false; }
-    virtual bool nextKey(JsValue &keyOut) override { return false; }
-    virtual bool nextValue(JsValue &valueOut) override { return false; }
-    virtual bool next(JsValue &keyOut, JsValue &valueOut) override { return false; }
-    virtual bool next(SizedString &keyOut, JsValue &valueOut) override { return false; }
+    virtual bool next(SizedString *strKeyOut = nullptr, JsValue *keyOut = nullptr, JsValue *valueOut = nullptr) override { return false; }
 
 };
 
@@ -105,7 +102,7 @@ public:
     virtual IJsObject *clone() = 0;
 
     virtual bool isOfIterable() { return false; }
-    virtual IJsIterator *getIteratorObject(VMContext *ctx) = 0;
+    virtual IJsIterator *getIteratorObject(VMContext *ctx, bool includeProtoProp = true) = 0;
 
     virtual void markReferIdx(VMRuntime *rt) = 0;
 
@@ -314,7 +311,7 @@ public:
     virtual bool removeBySymbol(VMContext *ctx, uint32_t index) override { return false; }
 
     virtual IJsObject *clone() override { return new JsDummyObject(); }
-    virtual IJsIterator *getIteratorObject(VMContext *ctx) override { return nullptr; }
+    virtual IJsIterator *getIteratorObject(VMContext *ctx, bool includeProtoProp = true) override { return nullptr; }
 
     virtual void markReferIdx(VMRuntime *rt) override { }
 
@@ -353,9 +350,23 @@ public:
     virtual bool removeBySymbol(VMContext *ctx, uint32_t index) override;
 
     virtual IJsObject *clone() override;
-    virtual IJsIterator *getIteratorObject(VMContext *ctx) override;
+    virtual IJsIterator *getIteratorObject(VMContext *ctx, bool includeProtoProp = true) override;
 
     virtual void markReferIdx(VMRuntime *rt) override;
+
+    IJsObject *getPrototypeObject(VMContext *ctx) {
+        auto &proto = __proto__.value;
+        JsNativeFunction funcGetter = nullptr;
+        JsProperty *prop = nullptr;
+        if (proto.type == JDT_NOT_INITIALIZED) {
+            // 缺省的 Object.prototype
+            return ctx->runtime->objPrototypeObject;
+        } else if (proto.type >= JDT_OBJECT) {
+            return ctx->runtime->getObject(proto);
+        }
+
+        return nullptr;
+    }
 
 protected:
     friend class JsLibObject;

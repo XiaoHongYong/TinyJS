@@ -318,70 +318,57 @@ bool IJsObject::remove(VMContext *ctx, const JsValue &propOrg) {
  */
 class JsObjectIterator : public IJsIterator {
 public:
-    JsObjectIterator(VMContext *ctx, JsObject *obj) {
+    JsObjectIterator(VMContext *ctx, JsObject *obj, bool includeProtoProp) {
         assert(obj->type == JDT_OBJECT);
         _ctx = ctx;
         _obj = obj;
         _it = obj->_props.begin();
+        _itProto = nullptr;
+        _includeProtoProp = includeProtoProp;
     }
 
-    virtual bool nextKey(SizedString &keyOut) override {
-        if (_it == _obj->_props.end()) {
-            return false;
-        }
-        keyOut = (*_it).first;
-
-        _it++;
-        return true;
-    }
-
-    virtual bool nextKey(JsValue &keyOut) override {
-        if (_it == _obj->_props.end()) {
-            return false;
-        }
-        keyOut = _ctx->runtime->pushString((*_it).first);
-
-        _it++;
-        return true;
-    }
-
-    virtual bool nextValue(JsValue &valueOut) override {
-        if (_it == _obj->_props.end()) {
-            return false;
+    virtual bool next(SizedString *strKeyOut = nullptr, JsValue *keyOut = nullptr, JsValue *valueOut = nullptr) override {
+        if (_itProto) {
+            return _itProto->next(strKeyOut, keyOut, valueOut);
         }
 
-        auto &prop = (*_it).second;
-        valueOut = getPropertyValue(_ctx, prop, _obj->self);
+        while (true) {
+            if (_it == _obj->_props.end()) {
+                if (_includeProtoProp) {
+                    if (_itProto == nullptr) {
+                        auto objProto = _obj->getPrototypeObject(_ctx);
+                        if (objProto) {
+                            _itProto = objProto->getIteratorObject(_ctx, true);
+                        } else {
+                            return false;
+                        }
+                    }
+                    return _itProto->next(strKeyOut, keyOut, valueOut);
+                }
+                return false;
+            }
 
-        _it++;
-        return true;
-    }
-
-    virtual bool next(JsValue &keyOut, JsValue &valueOut) override {
-        if (_it == _obj->_props.end()) {
-            return false;
+            auto &prop = (*_it).second;
+            if (prop.isEnumerable) {
+                break;
+            }
+            _it++;
         }
 
-        keyOut = _ctx->runtime->pushString((*_it).first);
-
-        auto &prop = (*_it).second;
-        valueOut = getPropertyValue(_ctx, prop, _obj->self);
-
-        _it++;
-        return true;
-    }
-
-    virtual bool next(SizedString &keyOut, JsValue &valueOut) override {
-        if (_it == _obj->_props.end()) {
-            return false;
+        if (strKeyOut) {
+            *strKeyOut = (*_it).first;
         }
 
-        keyOut = (*_it).first;
+        if (keyOut) {
+            *keyOut = _ctx->runtime->pushString((*_it).first);
+        }
 
-        auto &prop = (*_it).second;
-        valueOut = getPropertyValue(_ctx, prop, _obj->self);
+        if (valueOut) {
+            *valueOut = getPropertyValue(_ctx, (*_it).second, _obj->self);
+        }
 
         _it++;
+
         return true;
     }
 
@@ -389,6 +376,8 @@ protected:
     VMContext                       *_ctx;
     JsObject                        *_obj;
     MapNameToJsProperty::iterator   _it;
+    IJsIterator                     *_itProto;
+    bool                            _includeProtoProp;
 
 };
 
@@ -459,16 +448,11 @@ void JsObject::setByName(VMContext *ctx, const JsValue &thiz, const SizedString 
         }
 
         // 查找 prototye 的属性
-        auto &proto = __proto__.value;
-        JsNativeFunction funcGetter = nullptr;
         JsProperty *prop = nullptr;
-        if (proto.type == JDT_NOT_INITIALIZED) {
-            // 缺省的 Object.prototype
-            prop = ctx->runtime->objPrototypeObject->getRawByName(ctx, name, funcGetter, true);
-        } else if (proto.type >= JDT_OBJECT) {
-            auto obj = ctx->runtime->getObject(proto);
-            assert(obj);
-            prop = obj->getRawByName(ctx, name, funcGetter, true);
+        JsNativeFunction funcGetter = nullptr;
+        auto objProto = getPrototypeObject(ctx);
+        if (objProto) {
+            prop = objProto->getRawByName(ctx, name, funcGetter, true);
         }
 
         if (prop) {
@@ -518,16 +502,11 @@ JsValue JsObject::increaseByName(VMContext *ctx, const JsValue &thiz, const Size
         }
 
         // 查找 prototye 的属性
-        auto &proto = __proto__.value;
-        JsNativeFunction funcGetter = nullptr;
         JsProperty *prop = nullptr;
-        if (proto.type == JDT_NOT_INITIALIZED) {
-            // 缺省的 Object.prototype
-            prop = ctx->runtime->objPrototypeObject->getRawByName(ctx, name, funcGetter, true);
-        } else if (proto.type >= JDT_OBJECT) {
-            auto obj = ctx->runtime->getObject(proto);
-            assert(obj);
-            prop = obj->getRawByName(ctx, name, funcGetter, true);
+        JsNativeFunction funcGetter = nullptr;
+        auto objProto = getPrototypeObject(ctx);
+        if (objProto) {
+            prop = objProto->getRawByName(ctx, name, funcGetter, true);
         }
 
         if (prop) {
@@ -584,14 +563,9 @@ JsProperty *JsObject::getRawByName(VMContext *ctx, const SizedString &name, JsNa
         }
 
         if (includeProtoProp) {
-            auto &proto = __proto__.value;
-            if (proto.type == JDT_NOT_INITIALIZED) {
-                // 缺省的 Object.prototype
-                return ctx->runtime->objPrototypeObject->getRawByName(ctx, name, funcGetterOut, includeProtoProp);
-            } else if (proto.type >= JDT_OBJECT) {
-                auto obj = ctx->runtime->getObject(proto);
-                assert(obj);
-                return  obj->getRawByName(ctx, name, funcGetterOut, includeProtoProp);
+            auto objProto = getPrototypeObject(ctx);
+            if (objProto) {
+                return objProto->getRawByName(ctx, name, funcGetterOut, includeProtoProp);
             }
         }
     } else {
@@ -614,11 +588,11 @@ JsProperty *JsObject::getRawBySymbol(VMContext *ctx, uint32_t index, bool includ
 
     auto it = _symbolProps->find(index);
     if (it == _symbolProps->end()) {
-        if (includeProtoProp && __proto__.value.type >= JDT_OBJECT) {
-            auto obj = ctx->runtime->getObject(__proto__.value);
-            assert(obj);
-            auto ret = obj->getRawBySymbol(ctx, index, includeProtoProp);
-            return ret;
+        if (includeProtoProp) {
+            auto objProto = getPrototypeObject(ctx);
+            if (objProto) {
+                return objProto->getRawBySymbol(ctx, index, includeProtoProp);
+            }
         }
     } else {
         return &(*it).second;
@@ -689,8 +663,8 @@ IJsObject *JsObject::clone() {
     return obj;
 }
 
-IJsIterator *JsObject::getIteratorObject(VMContext *ctx) {
-    auto it = new JsObjectIterator(ctx, this);
+IJsIterator *JsObject::getIteratorObject(VMContext *ctx, bool includeProtoProp) {
+    auto it = new JsObjectIterator(ctx, this, includeProtoProp);
     return it;
 }
 

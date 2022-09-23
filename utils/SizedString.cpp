@@ -48,6 +48,9 @@ int SizedString::strStr(const SizedString &find) const {
     if (len < find.len) {
         return -1;
     }
+    if (find.len == 0) {
+        return 0;
+    }
 
     const uint8_t *last = data + len - find.len;
     const uint8_t *s1 = data, *s2 = find.data;

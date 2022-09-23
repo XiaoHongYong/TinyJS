@@ -60,7 +60,7 @@ public:
 
     virtual IJsObject *clone() override;
     virtual bool isOfIterable() override { return _isOfIterable; }
-    virtual IJsIterator *getIteratorObject(VMContext *ctx) override;
+    virtual IJsIterator *getIteratorObject(VMContext *ctx, bool includeProtoProp = true) override;
 
     virtual void markReferIdx(VMRuntime *rt) override;
 

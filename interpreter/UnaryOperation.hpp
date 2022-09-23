@@ -97,22 +97,16 @@ inline JsValue increaseMemberDot(VMContext *ctx, const JsValue &obj, SizedString
     return jsValueUndefined;
 }
 
-inline void throwReadPropertyException(VMContext *ctx, cstr_t format, const JsValue &index) {
-    string buf;
-    auto name = ctx->runtime->toSizedString(ctx, index, buf);
-    ctx->throwException(PE_TYPE_ERROR, format, (int)name.len, name.data);
-}
-
 inline JsValue increaseMemberIndex(VMContext *ctx, const JsValue &obj, JsValue &index, int inc, bool isPost) {
     auto runtime = ctx->runtime;
 
     switch (obj.type) {
         case JDT_NOT_INITIALIZED:
         case JDT_UNDEFINED:
-            throwReadPropertyException(ctx, "Cannot read properties of undefined (reading '%.*s')", index);
+            ctx->throwExceptionFormatJsValue(PE_TYPE_ERROR, "Cannot read properties of undefined (reading '%.*s')", index);
             return jsValueNaN;
         case JDT_NULL:
-            throwReadPropertyException(ctx, "Cannot read properties of null (reading '%.*s')", index);
+            ctx->throwExceptionFormatJsValue(PE_TYPE_ERROR, "Cannot read properties of null (reading '%.*s')", index);
             return jsValueNaN;
         case JDT_BOOL:
         case JDT_INT32:

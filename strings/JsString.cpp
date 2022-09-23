@@ -13,84 +13,67 @@
  */
 class JsStringIterator : public IJsIterator {
 public:
-    JsStringIterator(VMRuntime *runtime, const JsValue &str) : _keyBuf(0) {
+    JsStringIterator(VMContext *ctx, const JsValue &str, bool includeProtoProp) : _keyBuf(0) {
         assert(str.type == JDT_STRING);
-        _runtime = runtime;
+        _ctx = ctx;
         _str = str;
         _pos = 0;
-        _len = _runtime->getStringLength(str);
+        _itObj = nullptr;
+        _len = _ctx->runtime->getStringLength(str);
+        _includeProtoProp = includeProtoProp;
     }
 
-    virtual bool nextKey(SizedString &keyOut) override {
+    virtual bool nextOf(JsValue &valueOut) override {
         if (_pos >= _len) {
             return false;
         }
 
-        _keyBuf.set(_pos);
-        keyOut = _keyBuf.str();
-        _pos++;
-        return true;
-    }
-
-    virtual bool nextKey(JsValue &keyOut) override {
-        if (_pos >= _len) {
-            return false;
-        }
-
-        _keyBuf.set(_pos);
-        keyOut = _runtime->pushString(_keyBuf.str());
-        _pos++;
-        return true;
-    }
-
-    virtual bool nextValue(JsValue &valueOut) override {
-        if (_pos >= _len) {
-            return false;
-        }
-
-        auto s = _runtime->getString(_str);
+        auto s = _ctx->runtime->getString(_str);
         valueOut = JsValue(JDT_CHAR, s.data[_pos]);
-
         _pos++;
+
         return true;
     }
 
-    virtual bool next(JsValue &keyOut, JsValue &valueOut) override {
+    virtual bool next(SizedString *strKeyOut = nullptr, JsValue *keyOut = nullptr, JsValue *valueOut = nullptr) override {
         if (_pos >= _len) {
+            if (_includeProtoProp) {
+                if (_itObj == nullptr) {
+                    _itObj = _ctx->runtime->objPrototypeString->getIteratorObject(_ctx, true);
+                }
+                return _itObj->next(strKeyOut, keyOut, valueOut);
+            }
             return false;
         }
 
         _keyBuf.set(_pos);
-        keyOut = _runtime->pushString(_keyBuf.str());
-
-        auto s = _runtime->getString(_str);
-        valueOut = JsValue(JDT_CHAR, s.data[_pos]);
-
-        _pos++;
-        return true;
-    }
-
-    virtual bool next(SizedString &keyOut, JsValue &valueOut) override {
-        if (_pos >= _len) {
-            return false;
+        if (strKeyOut) {
+            *strKeyOut = _keyBuf.str();
         }
 
-        _keyBuf.set(_pos);
-        keyOut = _keyBuf.str();
+        if (keyOut) {
+            *keyOut = _ctx->runtime->pushString(_keyBuf.str());
+        }
 
-        auto s = _runtime->getString(_str);
-        valueOut = JsValue(JDT_CHAR, s.data[_pos]);
+        if (valueOut) {
+            auto s = _ctx->runtime->getString(_str);
+            *valueOut = JsValue(JDT_CHAR, s.data[_pos]);
+        }
 
         _pos++;
+
         return true;
     }
 
 protected:
-    VMRuntime                       *_runtime;
+    VMContext                       *_ctx;
     JsValue                         _str;
     uint32_t                        _len;
     uint32_t                        _pos;
     NumberToSizedString             _keyBuf;
+
+    IJsIterator                     *_itObj;
+    bool                            _includeProtoProp;
 
 };
 
@@ -99,78 +82,69 @@ protected:
  */
 class JsCharIterator : public IJsIterator {
 public:
-    JsCharIterator(VMRuntime *runtime, const JsValue &str) : _keyBuf(0) {
+    JsCharIterator(VMContext *ctx, const JsValue &str, bool includeProtoProp) : _keyBuf(0) {
         assert(str.type == JDT_CHAR);
-        _runtime = runtime;
+        _ctx = ctx;
         _str = str;
         _end = false;
+        _itObj = nullptr;
+        _includeProtoProp = includeProtoProp;
     }
 
-    virtual bool nextKey(SizedString &keyOut) override {
+    virtual bool nextOf(JsValue &valueOut) override {
         if (_end) {
             return false;
         }
-        _end = true;
-
-        keyOut = _keyBuf;
-        return true;
-    }
-
-    virtual bool nextKey(JsValue &keyOut) override {
-        if (_end) {
-            return false;
-        }
-        _end = true;
-
-        keyOut = _runtime->pushString(_keyBuf.str());
-        return true;
-    }
-
-    virtual bool nextValue(JsValue &valueOut) override {
-        if (_end) {
-            return false;
-        }
-        _end = true;
 
         valueOut = _str;
+        _end = true;
+
         return true;
     }
 
-    virtual bool next(JsValue &keyOut, JsValue &valueOut) override {
+    virtual bool next(SizedString *strKeyOut = nullptr, JsValue *keyOut = nullptr, JsValue *valueOut = nullptr) override {
         if (_end) {
+            if (_includeProtoProp) {
+                if (_itObj == nullptr) {
+                    _itObj = _ctx->runtime->objPrototypeString->getIteratorObject(_ctx, true);
+                }
+                return _itObj->next(strKeyOut, keyOut, valueOut);
+            }
             return false;
         }
-        _end = true;
 
-        keyOut = _runtime->pushString(_keyBuf.str());
-        valueOut = _str;
-        return true;
-    }
-
-    virtual bool next(SizedString &keyOut, JsValue &valueOut) override {
-        if (_end) {
-            return false;
+        if (strKeyOut) {
+            *strKeyOut = _keyBuf.str();
         }
-        _end = true;
 
-        keyOut = _keyBuf.str();
-        valueOut = _str;
+        if (keyOut) {
+            *keyOut = _ctx->runtime->pushString(_keyBuf.str());
+        }
+
+        if (valueOut) {
+            *valueOut = _str;
+        }
+
+        _end = true;
         return true;
     }
 
 protected:
-    VMRuntime                       *_runtime;
+    VMContext                       *_ctx;
     JsValue                         _str;
     bool                            _end;
     SizedStringWrapper              _keyBuf;
 
+    IJsIterator                     *_itObj;
+    bool                            _includeProtoProp;
+
 };
 
-IJsIterator *newJsStringIterator(VMRuntime *runtime, const JsValue &str) {
+IJsIterator *newJsStringIterator(VMContext *ctx, const JsValue &str, bool includeProtoProps) {
     if (str.type == JDT_STRING) {
-        return new JsStringIterator(runtime, str);
+        return new JsStringIterator(ctx, str, includeProtoProps);
     } else if (str.type == JDT_CHAR) {
-        return new JsCharIterator(runtime, str);
+        return new JsCharIterator(ctx, str, includeProtoProps);
     } else {
         assert(0);
     }

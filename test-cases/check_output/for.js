@@ -383,3 +383,82 @@ TypeError: function () { return 1; } is not iterable
 Round:  18
 */
 
+
+// Index: 13
+//// for of array
+function f() {
+    var a = [1, 3];
+    Array.prototype.x = 'x1';
+    for (var i in a) {
+        console.log(i, a[i]);
+    }
+}
+f();
+/* OUTPUT
+0 1
+1 3
+x x1
+*/
+
+
+// Index: 14
+//// for of array
+function f() {
+    var a = 'str';
+    String.prototype.y = 'y1';
+    for (var i in a) {
+        console.log(i, a[i]);
+    }
+}
+f();
+/* OUTPUT
+0 s
+1 t
+2 r
+y y1
+*/
+
+
+// Index: 15
+//// for of array
+function f() {
+    var proto = [4, 5, 6];
+    var a = [1, 2];
+    a.__proto__ = proto;
+    for (var i of a) {
+        console.log(i);
+    }
+}
+f();
+/* OUTPUT
+1
+2
+*/
+
+
+// Index: 16
+//// for of array
+function f() {
+    var a = [1, 2, 3];
+    Object.defineProperty(a, '2', {
+        value: 'xx',
+        enumerable: false,
+    });
+    for (var i of a) {
+        console.log(i);
+    }
+    console.log('===');
+    for (var i in a) {
+        console.log(i, a[i]);
+    }
+}
+f();
+/* OUTPUT
+1
+2
+xx
+===
+0 1
+1 2
+*/
+

@@ -286,9 +286,9 @@ IJsObject *JsLibObject::clone() {
     return obj;
 }
 
-IJsIterator *JsLibObject::getIteratorObject(VMContext *ctx) {
+IJsIterator *JsLibObject::getIteratorObject(VMContext *ctx, bool includeProtoProp) {
     if (_obj) {
-        return _obj->getIteratorObject(ctx);
+        return _obj->getIteratorObject(ctx, includeProtoProp);
     }
 
     return new EmptyJsIterator();

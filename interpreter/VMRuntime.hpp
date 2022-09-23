@@ -264,7 +264,7 @@ public:
 
     bool testTrue(const JsValue &v);
 
-    void extendObject(const JsValue &dst, const JsValue &src);
+    void extendObject(VMContext *ctx, const JsValue &dst, const JsValue &src, bool includePrototypeProps = true);
 
 public:
     //

@@ -921,9 +921,28 @@ bool VMRuntime::testTrue(const JsValue &value) {
     }
 }
 
-void VMRuntime::extendObject(const JsValue &dst, const JsValue &src) {
+void VMRuntime::extendObject(VMContext *ctx, const JsValue &dst, const JsValue &src, bool includePrototypeProps) {
+    assert(dst.type >= JDT_OBJECT);
+
     auto objDst = getObject(dst);
+
+    if (src.type == JDT_STRING) {
+        auto s = getString(src);
+        for (uint32_t i = 0; i < s.len; i++) {
+            objDst->setByIndex(ctx, dst, i, JsValue(JDT_CHAR, s.data[i]));
+        }
+    } else if (src.type == JDT_CHAR) {
+        objDst->setByIndex(ctx, dst, 0, src);
+    } else if (src.type < JDT_OBJECT) {
+        return;
+    }
+
     auto objSrc = getObject(src);
+    auto it = objSrc->getIteratorObject(ctx, includePrototypeProps);
+    JsValue key, value;
+    while (it->next(nullptr, &key, &value)) {
+        objDst->set(ctx, dst, key, value);
+    }
 }
 
 template<typename ARRAY>

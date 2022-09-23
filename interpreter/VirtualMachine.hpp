@@ -59,15 +59,31 @@ public:
 };
 
 class ArgumentsX : public Arguments {
-public:
-    ArgumentsX(const JsValue &one) {
+protected:
+    ArgumentsX(uint32_t count) {
+        this->count = count;
         data = args;
-        args[0] = one;
-        count = 1;
         needFree = false;
+        capacity = sizeof(args);
     }
 
-    JsValue                     args[1];
+public:
+    ArgumentsX(const JsValue &one) : ArgumentsX(1) {
+        args[0] = one;
+    }
+
+    ArgumentsX(const JsValue &one, const JsValue &two) : ArgumentsX(2) {
+        args[0] = one;
+        args[1] = two;
+    }
+
+    ArgumentsX(const JsValue &one, const JsValue &two, const JsValue &three) : ArgumentsX(3) {
+        args[0] = one;
+        args[1] = two;
+        args[2] = three;
+    }
+
+    JsValue                     args[3];
 
 };
 
@@ -155,6 +171,7 @@ public:
 
     void throwException(JsErrorType err, cstr_t format, ...);
     void throwException(JsErrorType err, JsValue errorMessage);
+    void throwExceptionFormatJsValue(JsErrorType err, cstr_t format, const JsValue &value);
 
     JsVirtualMachine            *vm;
     VMScope                     *curFunctionScope;

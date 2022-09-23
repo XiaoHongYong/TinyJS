@@ -10,11 +10,12 @@
 
 class JsGlobalThisIterator : public IJsIterator {
 public:
-    JsGlobalThisIterator(VMContext *ctx, VMGlobalScope *scope) {
+    JsGlobalThisIterator(VMContext *ctx, VMGlobalScope *scope, bool includeProtoProp) {
         _ctx = ctx;
         _scope = scope;
         _scopeDesc = scope->scopeDsc;
         _itObj = nullptr;
+        _includeProtoProp = includeProtoProp;
     }
 
     ~JsGlobalThisIterator() {
@@ -23,65 +24,50 @@ public:
         }
     }
 
-    virtual bool nextKey(SizedString &keyOut) override {
-//        if (_itObj) {
-//            return _itObj->nextKey(keyOut);
-//        }
-        if (_it == _scopeDesc->varDeclares.end()) {
-            return false;
+    virtual bool next(SizedString *strKeyOut = nullptr, JsValue *keyOut = nullptr, JsValue *valueOut = nullptr) override {
+        while (true) {
+            if (_it == _scopeDesc->varDeclares.end()) {
+                return false;
+            }
+
+            auto index = (*_it).second->storageIndex;
+            if (index < _scope->varProperties.size()) {
+                auto prop = &_scope->varProperties[index];
+                if (!prop->isEnumerable) {
+                    ++_it;
+                    continue;;
+                }
+
+                if (valueOut) {
+                    if (prop->isGSetter) {
+                        prop->value = _scope->vars[index];
+                        if (prop->value.type >= JDT_FUNCTION) {
+                            _ctx->vm->callMember(_ctx, jsValueGlobalThis, prop->value, Arguments());
+                            *valueOut = _ctx->retValue;
+                        } else {
+                            *valueOut = jsValueUndefined;
+                        }
+                    } else {
+                        *valueOut = _scope->vars[index];
+                    }
+                }
+            } else {
+                if (valueOut) {
+                    *valueOut = _scope->vars[index];
+                }
+            }
+
+            if (strKeyOut) {
+                *strKeyOut = (*_it).first;
+            }
+
+            if (keyOut) {
+                *keyOut = _ctx->runtime->pushString((*_it).first);
+            }
+
+            ++_it;
+            return true;
         }
-
-        keyOut = (*_it).first;
-        ++_it;
-        return true;
-    }
-
-    virtual bool nextKey(JsValue &keyOut) override {
-        if (_it == _scopeDesc->varDeclares.end()) {
-            return false;
-        }
-
-        keyOut = _ctx->runtime->pushString((*_it).first);
-        ++_it;
-        return true;
-    }
-
-    virtual bool nextValue(JsValue &valueOut) override {
-        if (_it == _scopeDesc->varDeclares.end()) {
-            return false;
-        }
-
-        auto id = (*_it).second;
-        ++_it;
-
-        valueOut = _scope->vars[id->storageIndex];
-        return true;
-    }
-
-    virtual bool next(JsValue &keyOut, JsValue &valueOut) override {
-        if (_it == _scopeDesc->varDeclares.end()) {
-            return false;
-        }
-
-        auto id = (*_it).second;
-
-        keyOut = _ctx->runtime->pushString((*_it).first);
-        valueOut = _scope->vars[id->storageIndex];
-        ++_it;
-        return true;
-    }
-
-    virtual bool next(SizedString &keyOut, JsValue &valueOut) override {
-        if (_it == _scopeDesc->varDeclares.end()) {
-            return false;
-        }
-
-        auto id = (*_it).second;
-
-        keyOut = (*_it).first;
-        valueOut = _scope->vars[id->storageIndex];
-        ++_it;
-        return true;
     }
 
 protected:
@@ -91,6 +77,7 @@ protected:
     MapNameToIdentifiers::iterator  _it;
 
     IJsIterator                     *_itObj;
+    bool                            _includeProtoProp;
 
 };
 
@@ -276,9 +263,9 @@ IJsObject *JsGlobalThis::clone() {
     return nullptr;
 }
 
-IJsIterator *JsGlobalThis::getIteratorObject(VMContext *ctx) {
+IJsIterator *JsGlobalThis::getIteratorObject(VMContext *ctx, bool includeProtoProp) {
     if (_obj) {
-        return _obj->getIteratorObject(ctx);
+        return _obj->getIteratorObject(ctx, includeProtoProp);
     }
 
     return new EmptyJsIterator();

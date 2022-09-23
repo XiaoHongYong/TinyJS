@@ -6,6 +6,9 @@
 //
 
 #include "BuiltIn.hpp"
+#include "objects/JsPrimaryObject.hpp"
+#include "objects/JsArray.hpp"
+#include "strings/JsString.hpp"
 
 
 static void objectConstructor(VMContext *ctx, const JsValue &thiz, const Arguments &args) {
@@ -106,22 +109,138 @@ void objectDefineProperty(VMContext *ctx, const JsValue &thiz, const Arguments &
     if (enumerable.isValid()) propDescriptor.isEnumerable = runtime->testTrue(enumerable);
     if (writable.isValid()) propDescriptor.isWritable = runtime->testTrue(writable);
 
-    if (get.isValid()) {
+    if (get.isValid() || set.isValid()) {
         propDescriptor.isGSetter = true;
-        propDescriptor.value = get;
+        if (get.isValid()) propDescriptor.value = get;
+        if (set.isValid()) propDescriptor.setter = set;
     } else {
+        propDescriptor.isGSetter = false;
         propDescriptor.value = value;
-    }
-
-    if (set.isValid()) {
-        propDescriptor.isGSetter = true;
-        propDescriptor.setter = set;
     }
 
     auto pObj = runtime->getObject(obj);
     pObj->defineProperty(ctx, prop, propDescriptor);
 
     ctx->retValue = thiz;
+}
+
+// https://developer.mozilla.org/en-US/docs/Web/JavaScript/Reference/Global_Objects/Object/defineProperties
+void objectDefineProperties(VMContext *ctx, const JsValue &thiz, const Arguments &args) {
+    if (args.count == 0 || args[0].type < JDT_OBJECT) {
+        ctx->throwException(PE_TYPE_ERROR, "Object.defineProperties called on non-object");
+        return;
+    }
+
+    if (args.count == 1 || args[1].type <= JDT_NULL) {
+        ctx->throwException(PE_TYPE_ERROR, "Cannot convert undefined or null to object");
+        return;
+    }
+
+    auto runtime = ctx->runtime;
+    if (args[1].type < JDT_OBJECT) {
+        ctx->throwExceptionFormatJsValue(PE_TYPE_ERROR, "Property description must be an object: %.*s", args[1]);
+        return;
+    }
+
+    auto obj = args[0];
+    auto propsObj = runtime->getObject(args[1]);
+    unique_ptr<IJsIterator> it;
+    it.reset(propsObj->getIteratorObject(ctx));
+
+    JsValue key, descriptor;
+    while (it->next(nullptr, &key, &descriptor)) {
+        objectDefineProperty(ctx, thiz, ArgumentsX(obj, key, descriptor));
+    }
+
+    ctx->retValue = args[0];
+}
+
+// https://developer.mozilla.org/zh-CN/docs/Web/JavaScript/Reference/Global_Objects/Object/create
+void objectCreate(VMContext *ctx, const JsValue &thiz, const Arguments &args) {
+    if (args.count == 0) {
+        ctx->throwException(PE_TYPE_ERROR, "Object prototype may only be an Object or null: undefined");
+        return;
+    }
+
+    auto runtime = ctx->runtime;
+    auto proto = args[0];
+    if (proto.type < JDT_OBJECT && proto.type != JDT_NULL) {
+        ctx->throwExceptionFormatJsValue(PE_TYPE_ERROR, "Object prototype may only be an Object or null: %.*s", proto);
+    }
+
+    auto obj = new JsObject(proto);
+    ctx->retValue = runtime->pushObjValue(JDT_OBJECT, obj);
+
+    if (args.count >= 2 && args[1].type > JDT_UNDEFINED) {
+        objectDefineProperties(ctx, thiz, ArgumentsX(ctx->retValue, args[1]));
+    }
+}
+
+void objectAssign(VMContext *ctx, const JsValue &thiz, const Arguments &args) {
+    if (args.count == 0 || args[0].type <= JDT_NULL) {
+        ctx->throwException(PE_TYPE_ERROR, "Cannot convert undefined or null to object");
+        return;
+    }
+
+    auto runtime = ctx->runtime;
+    auto targ = args[0];
+    switch (targ.type) {
+        case JDT_BOOL: targ = runtime->pushObjValue(JDT_OBJ_BOOL, new JsBooleanObject(targ)); break;
+        case JDT_INT32: targ = runtime->pushObjValue(JDT_OBJ_NUMBER, new JsNumberObject(targ)); break;
+        case JDT_NUMBER: targ = runtime->pushObjValue(JDT_OBJ_NUMBER, new JsNumberObject(targ)); break;
+        case JDT_SYMBOL: ctx->throwException(PE_TYPE_ERROR, "Not supported Object.assign for symbol"); return;
+        case JDT_CHAR: targ = runtime->pushObjValue(JDT_OBJ_STRING, new JsStringObject(targ)); break;
+        case JDT_STRING: targ = runtime->pushObjValue(JDT_OBJ_STRING, new JsStringObject(targ)); break;
+        default: break;
+    }
+
+    for (uint32_t i = 1; i < args.count; i++) {
+        runtime->extendObject(ctx, targ, args[i], false);
+    }
+
+    ctx->retValue = targ;
+}
+
+void objectEntries(VMContext *ctx, const JsValue &thiz, const Arguments &args) {
+    if (args.count == 0 || args[0].type <= JDT_NULL) {
+        ctx->throwException(PE_TYPE_ERROR, "Cannot convert undefined or null to object");
+        return;
+    }
+
+    auto runtime = ctx->runtime;
+    auto obj = args[0];
+    IJsIterator *it = nullptr;
+
+    switch (obj.type) {
+        case JDT_BOOL:
+        case JDT_INT32:
+        case JDT_NUMBER:
+        case JDT_SYMBOL:
+            break;
+        case JDT_CHAR:
+        case JDT_STRING:
+            it = newJsStringIterator(ctx, obj, false);
+            break;
+        default: {
+            auto pobj = runtime->getObject(obj);
+            it = pobj->getIteratorObject(ctx, false);
+            break;
+        }
+    }
+
+    auto arr = new JsArray();
+    ctx->retValue = runtime->pushObjValue(JDT_ARRAY, arr);
+
+    if (it) {
+        JsValue key, value;
+        while (it->next(nullptr, &key, &value)) {
+            auto item = new JsArray();
+            item->push(ctx, key);
+            item->push(ctx, value);
+
+            arr->push(ctx, runtime->pushObjValue(JDT_ARRAY, item));
+        }
+    }
 }
 
 void stringPrototypeCharAt(VMContext *ctx, const JsValue &thiz, const Arguments &args);
@@ -251,7 +370,11 @@ void getOwnPropertyDescriptor(VMContext *ctx, const JsValue &thiz, const Argumen
 static JsLibProperty objectFunctions[] = {
     { "name", nullptr, "Object" },
     { "length", nullptr, nullptr, JsValue(JDT_INT32, 1) },
+    { "assign", objectAssign },
+    { "create", objectCreate },
+    { "defineProperties", objectDefineProperties },
     { "defineProperty", objectDefineProperty },
+    { "entries", objectEntries },
     { "getOwnPropertyDescriptor", getOwnPropertyDescriptor },
     { "prototype", nullptr, nullptr, JsValue(JDT_INT32, 1) },
 };

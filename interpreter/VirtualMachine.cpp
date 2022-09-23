@@ -260,6 +260,11 @@ void VMContext::throwException(JsErrorType err, JsValue errorMessage) {
     }
 }
 
+void VMContext::throwExceptionFormatJsValue(JsErrorType err, cstr_t format, const JsValue &value) {
+    string buf;
+    auto s = runtime->toSizedString(this, value, buf);
+    throwException(err, format, s.len, s.data);
+}
 
 JsVirtualMachine::JsVirtualMachine() {
     _runtime.init(this, &_runtimeCommon);
@@ -627,9 +632,9 @@ void JsVirtualMachine::call(Function *function, VMContext *ctx, VecVMStackScopes
 
     while (bytecode < endBytecode) {
         auto code = (OpCode)*bytecode++;
-#ifdef DEBUG
-        printf("    %s\n", opCodeToString(code));
-#endif
+//#ifdef DEBUG
+//        printf("    %s\n", opCodeToString(code));
+//#endif
         switch (code) {
             case OP_INVALID: {
                 assert(0);
@@ -1622,7 +1627,7 @@ void JsVirtualMachine::call(Function *function, VMContext *ctx, VecVMStackScopes
                 auto src = stack.back(); stack.pop_back();
                 auto obj = stack.back();
                 assert(obj.type == JDT_OBJECT);
-                runtime->extendObject(obj, src);
+                runtime->extendObject(ctx, obj, src);
                 break;
             }
             case OP_OBJ_SET_GETTER: {
@@ -1659,7 +1664,7 @@ void JsVirtualMachine::call(Function *function, VMContext *ctx, VecVMStackScopes
             case OP_ARRAY_SPREAD_VALUE: {
                 auto item = stack.back(); stack.pop_back();
                 auto arr = stack.back();
-                runtime->extendObject(arr, item);
+                runtime->extendObject(ctx, arr, item);
                 break;
             }
             case OP_ARRAY_PUSH_VALUE: {
@@ -1698,26 +1703,20 @@ void JsVirtualMachine::call(Function *function, VMContext *ctx, VecVMStackScopes
                 auto obj = stack.back(); stack.pop_back();
                 IJsIterator *it = nullptr;
                 if (obj.type == JDT_CHAR || obj.type == JDT_STRING) {
-                    it = newJsStringIterator(runtime, obj);
+                    it = newJsStringIterator(ctx, obj, true);
                 } else if (obj.type <= JDT_NUMBER) {
-                    string buf;
-                    auto s = runtime->toSizedString(ctx, obj, buf);
-                    ctx->throwException(PE_TYPE_ERROR, "%.*s is not iterable", s.len, s.data);
+                    ctx->throwExceptionFormatJsValue(PE_TYPE_ERROR, "%.*s is not iterable", obj);
                     break;
                 } else if (obj.type == JDT_SYMBOL) {
                     if (code == OP_ITERATOR_OF_CREATE) {
-                        string buf;
-                        auto s = runtime->toSizedString(ctx, obj, buf);
-                        ctx->throwException(PE_TYPE_ERROR, "%.*s is not iterable", s.len, s.data);
+                        ctx->throwExceptionFormatJsValue(PE_TYPE_ERROR, "%.*s is not iterable", obj);
                         break;
                     }
                     it = new EmptyJsIterator();
                 } else {
                     auto pobj = runtime->getObject(obj);
                     if (code == OP_ITERATOR_OF_CREATE && !pobj->isOfIterable()) {
-                        string buf;
-                        auto s = runtime->toSizedString(ctx, obj, buf);
-                        ctx->throwException(PE_TYPE_ERROR, "%.*s is not iterable", s.len, s.data);
+                        ctx->throwExceptionFormatJsValue(PE_TYPE_ERROR, "%.*s is not iterable", obj);
                         break;
                     } else {
                         assert(pobj);
@@ -1750,9 +1749,9 @@ void JsVirtualMachine::call(Function *function, VMContext *ctx, VecVMStackScopes
                 auto it = stack.back();
                 auto pit = runtime->getJsIterator(it);
                 assert(pit);
-                JsValue key;
-                if (pit->nextValue(key)) {
-                    stack.push_back(key);
+                JsValue value;
+                if (pit->nextOf(value)) {
+                    stack.push_back(value);
                 } else {
                     // 遍历完成
                     bytecode = function->bytecode + addrEnd;

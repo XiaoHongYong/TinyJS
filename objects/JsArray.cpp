@@ -38,11 +38,12 @@ inline uint32_t roundIndexToBlock(uint32_t index) {
  */
 class JsArrayIterator : public IJsIterator {
 public:
-    JsArrayIterator(VMContext *ctx, JsArray *arr) : _keyBuf(0) {
+    JsArrayIterator(VMContext *ctx, JsArray *arr, bool includeProtoProp) : _keyBuf(0) {
         _ctx = ctx;
         _arr = arr;
         _pos = 0;
         _itObj = nullptr;
+        _includeProtoProp = includeProtoProp;
     }
 
     ~JsArrayIterator() {
@@ -53,78 +54,62 @@ public:
 
     inline uint32_t _len() { return _arr->_length; }
 
-    virtual bool nextKey(SizedString &keyOut) override {
-        if (_pos >= _len()) {
-            if (_itObj == nullptr) {
-                if (!_arr->_obj) return false;
-                _itObj = _arr->_obj->getIteratorObject(_ctx);
-            }
-            return _itObj->nextKey(keyOut);
-        }
-
-        _keyBuf.set(_pos);
-        keyOut = _keyBuf.str();
-        _pos++;
-        return true;
-    }
-
-    virtual bool nextKey(JsValue &keyOut) override {
-        if (_pos >= _len()) {
-            if (_itObj == nullptr) {
-                if (!_arr->_obj) return false;
-                _itObj = _arr->_obj->getIteratorObject(_ctx);
-            }
-            return _itObj->nextKey(keyOut);
-        }
-
-        _keyBuf.set(_pos);
-        keyOut = _ctx->runtime->pushString(_keyBuf.str());
-        _pos++;
-        return true;
-    }
-
-    virtual bool nextValue(JsValue &valueOut) override {
+    virtual bool nextOf(JsValue &valueOut) override {
         if (_pos >= _len()) {
             return false;
         }
 
         valueOut = _arr->getByIndex(_ctx, _arr->self, _pos);
-
         _pos++;
+
         return true;
     }
 
-    virtual bool next(JsValue &keyOut, JsValue &valueOut) override {
-        if (_pos >= _len()) {
-            if (_itObj == nullptr) {
-                if (!_arr->_obj) return false;
-                _itObj = _arr->_obj->getIteratorObject(_ctx);
+    virtual bool next(SizedString *strKeyOut = nullptr, JsValue *keyOut = nullptr, JsValue *valueOut = nullptr) override {
+        JsProperty *prop = nullptr;
+        while (true) {
+            if (_pos >= _len()) {
+                if (_itObj == nullptr) {
+                    if (_arr->_obj) {
+                        _itObj = _arr->_obj->getIteratorObject(_ctx, _includeProtoProp);
+                    } else {
+                        if (_includeProtoProp) {
+                            // _arr 的 __proto__ 一定没有修改，使用系统的. 如果修改了 __proto__ 就会创建 _obj.
+                            // 使用 proto 的 iterator.
+                            _itObj = _ctx->runtime->objPrototypeArray->getIteratorObject(_ctx);
+                        } else {
+                            return false;
+                        }
+                    }
+                }
+                return _itObj->next(strKeyOut, keyOut, valueOut);
             }
-            return _itObj->next(keyOut, valueOut);
+
+            prop = _arr->getRawByIndex(_ctx, _pos, false);
+            if (prop->isEnumerable) {
+                break;
+            }
+
+            _pos++;
         }
 
-        _keyBuf.set(_pos);
-        keyOut = _ctx->runtime->pushString(_keyBuf.str());
-        valueOut = _arr->getByIndex(_ctx, _arr->self, _pos);
-
-        _pos++;
-        return true;
-    }
-
-    virtual bool next(SizedString &keyOut, JsValue &valueOut) override {
-        if (_pos >= _len()) {
-            if (_itObj == nullptr) {
-                if (!_arr->_obj) return false;
-                _itObj = _arr->_obj->getIteratorObject(_ctx);
+        if (strKeyOut || keyOut) {
+            _keyBuf.set(_pos);
+            if (strKeyOut) {
+                *strKeyOut = _keyBuf.str();
             }
-            return _itObj->next(keyOut, valueOut);
+
+            if (keyOut) {
+                *keyOut = _ctx->runtime->pushString(_keyBuf.str());
+            }
         }
 
-        _keyBuf.set(_pos);
-        keyOut = _keyBuf.str();
-        valueOut = _arr->getByIndex(_ctx, _arr->self, _pos);
+        if (valueOut) {
+            *valueOut = getPropertyValue(_ctx, prop, _arr->self);
+        }
 
         _pos++;
+
         return true;
     }
 
@@ -135,6 +120,7 @@ protected:
     NumberToSizedString             _keyBuf;
 
     IJsIterator                     *_itObj;
+    bool                            _includeProtoProp;
 
 };
 
@@ -418,8 +404,8 @@ IJsObject *JsArray::clone() {
     return nullptr;
 }
 
-IJsIterator *JsArray::getIteratorObject(VMContext *ctx) {
-    return new JsArrayIterator(ctx, this);
+IJsIterator *JsArray::getIteratorObject(VMContext *ctx, bool includeProtoProp) {
+    return new JsArrayIterator(ctx, this, includeProtoProp);
 }
 
 void JsArray::markReferIdx(VMRuntime *rt) {

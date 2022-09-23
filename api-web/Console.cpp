@@ -24,7 +24,7 @@ void dumpObject(VMContext *ctx, const JsValue &obj,string &out, SetUInts &histor
     auto runtime = ctx->runtime;
 
     IJsObject *pobj = runtime->getObject(obj);
-    std::shared_ptr<IJsIterator> it(pobj->getIteratorObject(ctx));
+    std::shared_ptr<IJsIterator> it(pobj->getIteratorObject(ctx, false));
 
     out.append("{");
 
@@ -33,7 +33,7 @@ void dumpObject(VMContext *ctx, const JsValue &obj,string &out, SetUInts &histor
     bool first = true;
     string buf;
 
-    while (it->next(key, value)) {
+    while (it->next(&key, nullptr, &value)) {
         if (first) first = false; else out.append(",");
 
         out.append((cstr_t)key.data, key.len);

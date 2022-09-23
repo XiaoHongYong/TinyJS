@@ -50,7 +50,7 @@ const char *ignoreSpace(const char *text) {
  * 找到字符串 [pos, len] 能在 orgRight 中唯一出现一次的长度. 用于打印出错的位置.
  */
 uint32_t uniqueLen(const char *orgRight, const char *pos) {
-    if (pos - orgRight < 100) {
+    if (pos - orgRight < 100 || strlen(pos) == 0) {
         return 100;
     }
 
