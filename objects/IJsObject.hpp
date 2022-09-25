@@ -62,6 +62,7 @@ class IJsObject {
 public:
     IJsObject() {
         type = JDT_NOT_INITIALIZED;
+        isPreventedExtensions = false;
         referIdx = 0;
         nextFreeIdx = 0;
     }
@@ -98,6 +99,9 @@ public:
     virtual bool removeByName(VMContext *ctx, const SizedString &name) = 0;
     virtual bool removeByIndex(VMContext *ctx, uint32_t index) = 0;
     virtual bool removeBySymbol(VMContext *ctx, uint32_t index) = 0;
+
+    virtual void changeAllProperties(VMContext *ctx, int8_t configurable = -1, int8_t writable = -1) = 0;
+    virtual void preventExtensions(VMContext *ctx) { isPreventedExtensions = true; }
 
     virtual IJsObject *clone() = 0;
 
@@ -273,6 +277,8 @@ public:
 
 public:
     JsDataType                  type;
+    bool                        isPreventedExtensions;
+
     int8_t                      referIdx;
     uint32_t                    nextFreeIdx;
 
@@ -309,6 +315,8 @@ public:
     virtual bool removeByName(VMContext *ctx, const SizedString &name) override { return false; }
     virtual bool removeByIndex(VMContext *ctx, uint32_t index) override { return false; }
     virtual bool removeBySymbol(VMContext *ctx, uint32_t index) override { return false; }
+
+    virtual void changeAllProperties(VMContext *ctx, int8_t configurable = -1, int8_t writable = -1) override {}
 
     virtual IJsObject *clone() override { return new JsDummyObject(); }
     virtual IJsIterator *getIteratorObject(VMContext *ctx, bool includeProtoProp = true) override { return nullptr; }
@@ -349,6 +357,8 @@ public:
     virtual bool removeByIndex(VMContext *ctx, uint32_t index) override;
     virtual bool removeBySymbol(VMContext *ctx, uint32_t index) override;
 
+    virtual void changeAllProperties(VMContext *ctx, int8_t configurable = -1, int8_t writable = -1) override;
+
     virtual IJsObject *clone() override;
     virtual IJsIterator *getIteratorObject(VMContext *ctx, bool includeProtoProp = true) override;
 
@@ -356,8 +366,6 @@ public:
 
     IJsObject *getPrototypeObject(VMContext *ctx) {
         auto &proto = __proto__.value;
-        JsNativeFunction funcGetter = nullptr;
-        JsProperty *prop = nullptr;
         if (proto.type == JDT_NOT_INITIALIZED) {
             // 缺省的 Object.prototype
             return ctx->runtime->objPrototypeObject;

@@ -56,6 +56,7 @@ VMRuntimeCommon::VMRuntimeCommon() {
     objPrototypeObject = nullptr;
     objPrototypeArray = nullptr;
     objPrototypeFunction = nullptr;
+    objPrototypeWindow = nullptr;
 
     // 把 0 占用了，0 为非法的位置
     doubleValues.push_back(0);
@@ -92,8 +93,15 @@ VMRuntimeCommon::VMRuntimeCommon() {
     setGlobalValue("window", jsValueGlobalThis);
     countImmutableGlobalVars++; assert(countImmutableGlobalVars == globalScope->vars.size());
 
+    setGlobalValue("__proto__", jsValuePrototypeWindow);
+    countImmutableGlobalVars++; assert(countImmutableGlobalVars == globalScope->vars.size());
+
+    for (int i = 1; i < JS_OBJ_IDX_RESERVED_MAX; i++) {
+        objValues.push_back(nullptr);
+    }
+
     // globalThis 的占位
-    objValues.push_back(new JsObject());
+    objValues[JS_OBJ_GLOBAL_THIS_IDX] = new JsObject();
 
     registerBuiltIns(this);
     registerWebAPIs(this);
@@ -221,6 +229,7 @@ VMRuntime::VMRuntime() {
     objPrototypeObject = nullptr;
     objPrototypeArray = nullptr;
     objPrototypeFunction = nullptr;
+    objPrototypeWindow = nullptr;
 
     countCommonDobules = 0;
     countCommonStrings = 0;
@@ -288,6 +297,7 @@ void VMRuntime::init(JsVirtualMachine *vm, VMRuntimeCommon *rtCommon) {
     for (auto item : rtCommon->objValues) {
         objValues.push_back(item->clone());
     }
+    delete objValues[JS_OBJ_GLOBAL_THIS_IDX];
     objValues[JS_OBJ_GLOBAL_THIS_IDX] = new JsGlobalThis(globalScope);
 
     firstFreeDoubleIdx = 0;
@@ -304,6 +314,7 @@ void VMRuntime::init(JsVirtualMachine *vm, VMRuntimeCommon *rtCommon) {
     objPrototypeObject = objValues[JS_OBJ_PROTOTYPE_IDX_OBJECT];
     objPrototypeArray = objValues[JS_OBJ_PROTOTYPE_IDX_ARRAY];
     objPrototypeFunction = objValues[JS_OBJ_PROTOTYPE_IDX_FUNCTION];
+    objPrototypeWindow = objValues[JS_OBJ_PROTOTYPE_IDX_WINDOW];
 }
 
 void VMRuntime::dump(BinaryOutputStream &stream) {
@@ -816,7 +827,7 @@ SizedString VMRuntime::toSizedString(VMContext *ctx, const JsValue &v, string &b
             return SizedString(buf.data(), len);
         }
         case JDT_CHAR: {
-            buf.push_back(val.value.n32);
+            buf.assign(1, val.value.n32);
             return SizedString(buf.c_str(), 1);
         }
         case JDT_STRING: {

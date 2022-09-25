@@ -167,6 +167,10 @@ void JsArray::definePropertyByName(VMContext *ctx, const SizedString &name, cons
 }
 
 void JsArray::definePropertyByIndex(VMContext *ctx, uint32_t index, const JsProperty &descriptor) {
+    if (isPreventedExtensions && index >= _length) {
+        return;
+    }
+
     auto block = findToModifyBlock(index);
     index -= block->index;
     assert(index < block->items.size());
@@ -211,6 +215,10 @@ void JsArray::setByName(VMContext *ctx, const JsValue &thiz, const SizedString &
 }
 
 void JsArray::setByIndex(VMContext *ctx, const JsValue &thiz, uint32_t index, const JsValue &value) {
+    if (isPreventedExtensions && index >= _length) {
+        return;
+    }
+
     Block *block = nullptr;
     if (index < ARRAY_BLOCK_SIZE) {
         // 大多数情况都是在第一块内
@@ -266,6 +274,10 @@ JsValue JsArray::increaseByName(VMContext *ctx, const JsValue &thiz, const Sized
 }
 
 JsValue JsArray::increaseByIndex(VMContext *ctx, const JsValue &thiz, uint32_t index, int n, bool isPost) {
+    if (isPreventedExtensions && index >= _length) {
+        return jsValueNaN;
+    }
+
     Block *block = nullptr;
     if (index < ARRAY_BLOCK_SIZE) {
         // 大多数情况都是在第一块内
@@ -398,6 +410,26 @@ bool JsArray::removeBySymbol(VMContext *ctx, uint32_t index) {
     return true;
 }
 
+void JsArray::changeAllProperties(VMContext *ctx, int8_t configurable, int8_t writable) {
+    for (auto block : _blocks) {
+        for (auto &item : block->items) {
+            item.changeProperty(configurable, writable);
+        }
+    }
+
+    if (_obj) {
+        _obj->changeAllProperties(ctx, configurable, writable);
+    }
+}
+
+void JsArray::preventExtensions(VMContext *ctx) {
+    IJsObject::preventExtensions(ctx);
+
+    if (_obj) {
+        _obj->preventExtensions(ctx);
+    }
+}
+
 IJsObject *JsArray::clone() {
     assert(0 && "NOT supported.");
 
@@ -512,6 +544,10 @@ void JsArray::setLength(uint32_t length) {
 void JsArray::_newObject(VMContext *ctx) {
     assert(_obj == nullptr);
     _obj = new JsObject(jsValuePrototypeArray);
+
+    if (isPreventedExtensions) {
+        _obj->preventExtensions(ctx);
+    }
 }
 
 JsArray::Block *JsArray::findBlock(uint32_t index) {

@@ -357,19 +357,30 @@ struct JsProperty {
         if (isWritable == -1) ret.isWritable = false;
         return ret;
     }
+
+    inline void changeProperty(int8_t configurable = -1, int8_t writable = -1) {
+        if (configurable != -1) {
+            isConfigurable = configurable;
+        }
+        if (writable != -1) {
+            isWritable = writable;
+        }
+    }
 };
 
 
 enum JsObjectValueIndex {
     JS_OBJ_GLOBAL_THIS_IDX                  = 1,
     JS_OBJ_PROTOTYPE_IDX_BOOL               = 2,
-    JS_OBJ_PROTOTYPE_IDX_NUMBER             = 4,
-    JS_OBJ_PROTOTYPE_IDX_STRING             = 6,
-    JS_OBJ_PROTOTYPE_IDX_SYMBOL             = 8,
-    JS_OBJ_PROTOTYPE_IDX_OBJECT             = 10,
-    JS_OBJ_PROTOTYPE_IDX_REGEXP             = 12,
-    JS_OBJ_PROTOTYPE_IDX_ARRAY              = 14,
-    JS_OBJ_PROTOTYPE_IDX_FUNCTION           = 16,
+    JS_OBJ_PROTOTYPE_IDX_NUMBER             = 3,
+    JS_OBJ_PROTOTYPE_IDX_STRING             = 4,
+    JS_OBJ_PROTOTYPE_IDX_SYMBOL             = 5,
+    JS_OBJ_PROTOTYPE_IDX_OBJECT             = 6,
+    JS_OBJ_PROTOTYPE_IDX_REGEXP             = 7,
+    JS_OBJ_PROTOTYPE_IDX_ARRAY              = 8,
+    JS_OBJ_PROTOTYPE_IDX_FUNCTION           = 9,
+    JS_OBJ_PROTOTYPE_IDX_WINDOW             = 10,
+    JS_OBJ_IDX_RESERVED_MAX,
 };
 
 enum JsNumberValueIndex {
@@ -386,6 +397,7 @@ const JsValue jsValuePrototypeObject = JsValue(JDT_LIB_OBJECT, JS_OBJ_PROTOTYPE_
 const JsValue jsValuePrototypeRegExp = JsValue(JDT_LIB_OBJECT, JS_OBJ_PROTOTYPE_IDX_REGEXP);
 const JsValue jsValuePrototypeArray = JsValue(JDT_LIB_OBJECT, JS_OBJ_PROTOTYPE_IDX_ARRAY);
 const JsValue jsValuePrototypeFunction = JsValue(JDT_LIB_OBJECT, JS_OBJ_PROTOTYPE_IDX_FUNCTION);
+const JsValue jsValuePrototypeWindow = JsValue(JDT_LIB_OBJECT, JS_OBJ_PROTOTYPE_IDX_WINDOW);
 
 const JsValue jsValueNotInitialized = JsValue();
 const JsValue jsValueNull = JsValue(JDT_NULL, 0);

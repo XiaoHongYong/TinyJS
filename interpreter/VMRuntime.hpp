@@ -68,6 +68,13 @@ public:
     void setGlobalValue(const char *name, const JsValue &value);
     void setGlobalObject(const char *name, IJsObject *obj);
 
+    void setPrototypeObject(const JsValue &jsVal, IJsObject *obj) {
+        assert(jsVal.type == JDT_LIB_OBJECT);
+        auto index = jsVal.value.index;
+        assert(objValues[index] == nullptr);
+        objValues[index] = obj;
+    }
+
     JsValue pushObjValue(JsDataType type, IJsObject *value);
     uint32_t pushNativeFunction(JsNativeFunction f, const SizedString &name) {
         uint32_t n = (uint32_t)nativeFunctions.size();
@@ -103,6 +110,7 @@ public:
     IJsObject                   *objPrototypeObject;
     IJsObject                   *objPrototypeArray;
     IJsObject                   *objPrototypeFunction;
+    IJsObject                   *objPrototypeWindow;
 
     VMGlobalScope               *globalScope;
 
@@ -352,6 +360,7 @@ public:
     IJsObject                   *objPrototypeObject;
     IJsObject                   *objPrototypeArray;
     IJsObject                   *objPrototypeFunction;
+    IJsObject                   *objPrototypeWindow;
 
     uint8_t                     _nextRefIdx;
     uint32_t                    _newAllocatedCount;

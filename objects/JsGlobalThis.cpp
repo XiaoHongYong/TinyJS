@@ -128,7 +128,7 @@ void JsGlobalThis::definePropertyByIndex(VMContext *ctx, uint32_t index, const J
 
 void JsGlobalThis::definePropertyBySymbol(VMContext *ctx, uint32_t index, const JsProperty &descriptor) {
     if (!_obj) {
-        _newObject();
+        _newObject(ctx);
     }
 
     _obj->definePropertyBySymbol(ctx, index, descriptor);
@@ -136,16 +136,35 @@ void JsGlobalThis::definePropertyBySymbol(VMContext *ctx, uint32_t index, const 
 
 void JsGlobalThis::setByName(VMContext *ctx, const JsValue &thiz, const SizedString &name, const JsValue &value) {
     auto declare = _scopeDesc->getVarDeclarationByName(name);
-    if (!declare) {
-        declare = PoolNew(_scopeDesc->function->resourcePool->pool, IdentifierDeclare)(name, _scopeDesc);
-        declare->storageIndex = _scopeDesc->countLocalVars++;
-        declare->varStorageType = VST_GLOBAL_VAR;
-        declare->isReferredByChild = true;
-
-        _scope->vars.resize(_scopeDesc->countLocalVars, jsValueUndefined);
+    if (declare) {
+        _scope->set(ctx, declare->storageIndex, value);
+        return;
     }
 
-    _scope->set(ctx, declare->storageIndex, value);
+    // 查找 prototye 的属性
+    JsProperty *prop = nullptr;
+    JsNativeFunction funcGetter = nullptr;
+    auto objProto = getPrototypeObject(ctx);
+    if (objProto) {
+        prop = objProto->getRawByName(ctx, name, funcGetter, true);
+    }
+
+    if (prop) {
+        if (prop->isGSetter) {
+            if (prop->setter.isValid()) {
+                // prototype 带 setter 的可以直接返回用于修改调用
+                set(ctx, prop, thiz, value);
+            }
+            return;
+        } else if (!prop->isWritable) {
+            return;
+        }
+    }
+
+    auto index = _newIdentifier(name);
+
+    _scope->vars.resize(_scopeDesc->countLocalVars, jsValueUndefined);
+    _scope->set(ctx, index, value);
 }
 
 void JsGlobalThis::setByIndex(VMContext *ctx, const JsValue &thiz, uint32_t index, const JsValue &value) {
@@ -154,26 +173,59 @@ void JsGlobalThis::setByIndex(VMContext *ctx, const JsValue &thiz, uint32_t inde
 
 void JsGlobalThis::setBySymbol(VMContext *ctx, const JsValue &thiz, uint32_t index, const JsValue &value) {
     if (!_obj) {
-        _newObject();
+        _newObject(ctx);
     }
     _obj->setBySymbol(ctx, thiz, index, value);
 }
 
 JsValue JsGlobalThis::increaseByName(VMContext *ctx, const JsValue &thiz, const SizedString &name, int n, bool isPost) {
     auto declare = _scopeDesc->getVarDeclarationByName(name);
-    if (!declare) {
-        auto &pool = _scopeDesc->function->resourcePool->pool;
-        auto nameNew = pool.duplicate(name);
-        declare = PoolNew(_scopeDesc->function->resourcePool->pool, IdentifierDeclare)(nameNew, _scopeDesc);
-        declare->storageIndex = _scopeDesc->countLocalVars++;
-        declare->varStorageType = VST_GLOBAL_VAR;
-        declare->isReferredByChild = true;
-        _scopeDesc->varDeclares[nameNew] = declare;
-
-        _scope->vars.resize(_scopeDesc->countLocalVars, jsValueUndefined);
+    if (declare) {
+        return _scope->increase(ctx, declare->storageIndex, n, isPost);
     }
 
-    return _scope->increase(ctx, declare->storageIndex, n, isPost);
+    // 查找 prototye 的属性
+    JsProperty *prop = nullptr;
+    JsNativeFunction funcGetter = nullptr;
+    auto objProto = getPrototypeObject(ctx);
+    if (objProto) {
+        prop = objProto->getRawByName(ctx, name, funcGetter, true);
+    }
+
+    if (prop) {
+        if (prop->isGSetter) {
+            // prototype 带 getter/setter
+            return increase(ctx, prop, thiz, n, isPost);
+        }
+
+        // 不能修改到 proto，所以先复制到 temp，再添加
+        JsProperty tmp = *prop;
+        auto ret = increase(ctx, &tmp, thiz, n, isPost);
+
+        if (prop->isWritable) {
+            // 添加新属性
+            _scope->set(ctx, _newIdentifier(name), tmp.value);
+        }
+        return ret;
+    }
+
+    auto idx = _newIdentifier(name);
+    _scope->vars.resize(_scopeDesc->countLocalVars, jsValueUndefined);
+    return _scope->increase(ctx, idx, n, isPost);
+}
+
+uint32_t JsGlobalThis::_newIdentifier(const SizedString &name) {
+    auto &pool = _scopeDesc->function->resourcePool->pool;
+    auto nameNew = pool.duplicate(name);
+    auto declare = PoolNew(_scopeDesc->function->resourcePool->pool, IdentifierDeclare)(nameNew, _scopeDesc);
+    declare->storageIndex = _scopeDesc->countLocalVars++;
+    declare->varStorageType = VST_GLOBAL_VAR;
+    declare->isReferredByChild = true;
+
+    assert(_scopeDesc->varDeclares.find(nameNew) == _scopeDesc->varDeclares.end());
+    _scopeDesc->varDeclares[nameNew] = declare;
+
+    return declare->storageIndex;
 }
 
 JsValue JsGlobalThis::increaseByIndex(VMContext *ctx, const JsValue &thiz, uint32_t index, int n, bool isPost) {
@@ -182,7 +234,7 @@ JsValue JsGlobalThis::increaseByIndex(VMContext *ctx, const JsValue &thiz, uint3
 
 JsValue JsGlobalThis::increaseBySymbol(VMContext *ctx, const JsValue &thiz, uint32_t index, int n, bool isPost) {
     if (!_obj) {
-        _newObject();
+        _newObject(ctx);
     }
     return _obj->increaseBySymbol(ctx, thiz, index, n, isPost);
 }
@@ -190,6 +242,13 @@ JsValue JsGlobalThis::increaseBySymbol(VMContext *ctx, const JsValue &thiz, uint
 JsProperty *JsGlobalThis::getRawByName(VMContext *ctx, const SizedString &name, JsNativeFunction &funcGetterOut, bool includeProtoProp) {
     auto declare = _scopeDesc->getVarDeclarationByName(name);
     if (!declare) {
+        if (includeProtoProp) {
+            auto objProto = getPrototypeObject(ctx);
+            if (objProto) {
+                return objProto->getRawByName(ctx, name, funcGetterOut, includeProtoProp);
+            }
+        }
+
         return nullptr;
     }
 
@@ -258,6 +317,14 @@ bool JsGlobalThis::removeBySymbol(VMContext *ctx, uint32_t index) {
     return true;
 }
 
+void JsGlobalThis::changeAllProperties(VMContext *ctx, int8_t configurable, int8_t writable) {
+    ctx->throwException(PE_TYPE_ERROR, "Cannot freeze");
+}
+
+void JsGlobalThis::preventExtensions(VMContext *ctx) {
+    ctx->throwException(PE_TYPE_ERROR, "Cannot prevent extensions");
+}
+
 IJsObject *JsGlobalThis::clone() {
     assert(0 && "");
     return nullptr;
@@ -280,8 +347,12 @@ void JsGlobalThis::markReferIdx(VMRuntime *rt) {
     }
 }
 
-void JsGlobalThis::_newObject() {
+void JsGlobalThis::_newObject(VMContext *ctx) {
     assert(_obj == nullptr);
 
-    _obj = new JsObject();
+    _obj = new JsObject(jsValuePrototypeWindow);
+
+    if (isPreventedExtensions) {
+        _obj->preventExtensions(ctx);
+    }
 }

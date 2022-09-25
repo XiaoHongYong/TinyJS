@@ -111,7 +111,7 @@ void JsArguments::definePropertyByName(VMContext *ctx, const SizedString &name, 
     }
 
     if (!_obj) {
-        _newObject();
+        _newObject(ctx);
     }
 
     _obj->definePropertyByName(ctx, name, descriptor);
@@ -141,7 +141,7 @@ void JsArguments::definePropertyByIndex(VMContext *ctx, uint32_t index, const Js
 
 void JsArguments::definePropertyBySymbol(VMContext *ctx, uint32_t index, const JsProperty &descriptor) {
     if (!_obj) {
-        _newObject();
+        _newObject(ctx);
     }
 
     _obj->definePropertyBySymbol(ctx, index, descriptor);
@@ -163,7 +163,7 @@ void JsArguments::setByName(VMContext *ctx, const JsValue &thiz, const SizedStri
     }
 
     if (!_obj) {
-        _newObject();
+        _newObject(ctx);
     }
     _obj->setByName(ctx, thiz, name, value);
 }
@@ -188,7 +188,7 @@ void JsArguments::setByIndex(VMContext *ctx, const JsValue &thiz, uint32_t index
 
 void JsArguments::setBySymbol(VMContext *ctx, const JsValue &thiz, uint32_t index, const JsValue &value) {
     if (!_obj) {
-        _newObject();
+        _newObject(ctx);
     }
     _obj->setBySymbol(ctx, thiz, index, value);
 }
@@ -207,7 +207,7 @@ JsValue JsArguments::increaseByName(VMContext *ctx, const JsValue &thiz, const S
     }
 
     if (!_obj) {
-        _newObject();
+        _newObject(ctx);
     }
     return _obj->increaseByName(ctx, thiz, name, n, isPost);
 }
@@ -234,7 +234,7 @@ JsValue JsArguments::increaseByIndex(VMContext *ctx, const JsValue &thiz, uint32
 
 JsValue JsArguments::increaseBySymbol(VMContext *ctx, const JsValue &thiz, uint32_t index, int n, bool isPost) {
     if (!_obj) {
-        _newObject();
+        _newObject(ctx);
     }
     return _obj->increaseBySymbol(ctx, thiz, index, n, isPost);
 }
@@ -330,6 +330,31 @@ bool JsArguments::removeBySymbol(VMContext *ctx, uint32_t index) {
     return true;
 }
 
+void JsArguments::changeAllProperties(VMContext *ctx, int8_t configurable, int8_t writable) {
+    if (!_argsDescriptors) {
+        _argsDescriptors = new VecJsProperties();
+        for (uint32_t i = 0; i < _args->count; i++)  {
+            _argsDescriptors->push_back(_args->data[i]);
+        }
+    }
+
+    for (auto &item : *_argsDescriptors) {
+        item.changeProperty(configurable, writable);
+    }
+
+    if (_obj) {
+        _obj->changeAllProperties(ctx, configurable, writable);
+    }
+}
+
+void JsArguments::preventExtensions(VMContext *ctx) {
+    IJsObject::preventExtensions(ctx);
+
+    if (_obj) {
+        _obj->preventExtensions(ctx);
+    }
+}
+
 IJsObject *JsArguments::clone() {
     assert(0 && "NOT supported.");
 
@@ -362,7 +387,11 @@ void JsArguments::markReferIdx(VMRuntime *rt) {
     rt->markReferIdx(_length);
 }
 
-void JsArguments::_newObject() {
+void JsArguments::_newObject(VMContext *ctx) {
     assert(_obj == nullptr);
     _obj = new JsObject();
+
+    if (isPreventedExtensions) {
+        _obj->preventExtensions(ctx);
+    }
 }

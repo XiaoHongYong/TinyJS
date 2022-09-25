@@ -21,6 +21,24 @@ static void objectConstructor(VMContext *ctx, const JsValue &thiz, const Argumen
     }
 }
 
+using IJsIteratorPtr = shared_ptr<IJsIterator>;
+
+IJsIteratorPtr getJsIteratorPtr(VMContext *ctx, const JsValue &obj, bool includeProtoProps = false, bool onIterateOf = false) {
+    IJsIterator *it = nullptr;
+    if (obj.type == JDT_CHAR || obj.type == JDT_STRING) {
+        it = newJsStringIterator(ctx, obj, includeProtoProps);
+    } else if (obj.type >= JDT_OBJECT) {
+        auto pobj = ctx->runtime->getObject(obj);
+        if (onIterateOf && !pobj->isOfIterable()) {
+            return nullptr;
+        }
+        it = pobj->getIteratorObject(ctx, includeProtoProps);
+    } else {
+        return nullptr;
+    }
+
+    return IJsIteratorPtr(it);
+}
 
 SizedString objectPrototypeToSizedString(const JsValue &thiz) {
     switch (thiz.type) {
@@ -37,6 +55,7 @@ SizedString objectPrototypeToSizedString(const JsValue &thiz) {
         case JDT_OBJ_NUMBER: return SizedString("[object Number]");
         case JDT_OBJ_STRING: return SizedString("[object String]");
         case JDT_ARRAY: return SizedString("[object Array]");
+        case JDT_OBJ_GLOBAL_THIS:
         case JDT_LIB_OBJECT: return SizedString("[object Object]");
         case JDT_NATIVE_FUNCTION:
         case JDT_FUNCTION: return SizedString("[object Function]");
@@ -209,28 +228,11 @@ void objectEntries(VMContext *ctx, const JsValue &thiz, const Arguments &args) {
 
     auto runtime = ctx->runtime;
     auto obj = args[0];
-    IJsIterator *it = nullptr;
-
-    switch (obj.type) {
-        case JDT_BOOL:
-        case JDT_INT32:
-        case JDT_NUMBER:
-        case JDT_SYMBOL:
-            break;
-        case JDT_CHAR:
-        case JDT_STRING:
-            it = newJsStringIterator(ctx, obj, false);
-            break;
-        default: {
-            auto pobj = runtime->getObject(obj);
-            it = pobj->getIteratorObject(ctx, false);
-            break;
-        }
-    }
 
     auto arr = new JsArray();
     ctx->retValue = runtime->pushObjValue(JDT_ARRAY, arr);
 
+    auto it = getJsIteratorPtr(ctx, obj);
     if (it) {
         JsValue key, value;
         while (it->next(nullptr, &key, &value)) {
@@ -303,7 +305,7 @@ bool getStringOwnPropertyDescriptor(VMContext *ctx, const JsValue &thiz, JsValue
 }
 
 // https://developer.mozilla.org/zh-CN/docs/Web/JavaScript/Reference/Global_Objects/Object/getOwnPropertyDescriptor
-void getOwnPropertyDescriptor(VMContext *ctx, const JsValue &thiz, const Arguments &args) {
+void objectGetOwnPropertyDescriptor(VMContext *ctx, const JsValue &thiz, const Arguments &args) {
     auto runtime = ctx->runtime;
     ctx->retValue = jsValueUndefined;
 
@@ -316,10 +318,6 @@ void getOwnPropertyDescriptor(VMContext *ctx, const JsValue &thiz, const Argumen
 
     auto &obj = args[0];
     auto &name = args[1];
-
-    if (obj.type < JDT_OBJECT) {
-        return;
-    }
 
     JsProperty descriptor;
 
@@ -367,6 +365,129 @@ void getOwnPropertyDescriptor(VMContext *ctx, const JsValue &thiz, const Argumen
     ctx->retValue = descValue;
 }
 
+void objectFreeze(VMContext *ctx, const JsValue &thiz, const Arguments &args) {
+    if (args.count == 0) {
+        ctx->retValue = jsValueUndefined;
+        return;
+    }
+
+    auto obj = args[0];
+    ctx->retValue = obj;
+    if (obj.type < JDT_OBJECT) {
+        return;
+    }
+
+    auto pobj = ctx->runtime->getObject(obj);
+    pobj->changeAllProperties(ctx, false, false);
+    pobj->preventExtensions(ctx);
+}
+
+void objectFromEntries(VMContext *ctx, const JsValue &thiz, const Arguments &args) {
+    if (args.count == 0 || args[0].type <= JDT_NULL) {
+        ctx->throwException(PE_TYPE_ERROR, "undefined is not iterable");
+        return;
+    }
+
+    auto entries = args[0];
+    auto runtime = ctx->runtime;
+
+    IJsIteratorPtr it;
+    if (entries.type == JDT_CHAR || entries.type == JDT_STRING) {
+        it.reset(newJsStringIterator(ctx, entries, false));
+    } else if (entries.type >= JDT_OBJECT) {
+        auto obj = runtime->getObject(entries);
+        if (!obj->isOfIterable()) {
+            auto name = runtime->toTypeName(entries);
+            ctx->throwException(PE_TYPE_ERROR, "%.*s is not iterable (cannot read property Symbol(Symbol.iterator))",
+                                name.len, name.data);
+            return;
+        }
+        it.reset(obj->getIteratorObject(ctx, false));
+    } else {
+        string buf;
+        auto name = runtime->toTypeName(entries);
+        auto s = runtime->toSizedString(ctx, entries, buf);
+        ctx->throwException(PE_TYPE_ERROR, "%.*s %.*s is not iterable (cannot read property Symbol(Symbol.iterator))",
+                            name.len, name.data, s.len, s.data);
+        return;
+    }
+
+    auto pobj = new JsObject();
+    auto obj = runtime->pushObjValue(JDT_OBJECT, pobj);
+
+    JsValue item;
+    while (it->nextOf(item)) {
+        if (item.type < JDT_OBJECT) {
+            ctx->throwExceptionFormatJsValue(PE_TYPE_ERROR, "Iterator value %.*s is not an entry object", item);
+            return;
+        } else {
+            auto entry = runtime->getObject(item);
+            pobj->set(ctx, obj, entry->getByIndex(ctx, item, 0), entry->getByIndex(ctx, item, 1));
+        }
+    }
+
+    ctx->retValue = obj;
+}
+
+void objectGetOwnPropertyDescriptors(VMContext *ctx, const JsValue &thiz, const Arguments &args) {
+    if (args.count == 0 || args[0].type <= JDT_NULL) {
+        ctx->throwException(PE_TYPE_ERROR, "Cannot convert undefined or null to object");
+        return;
+    }
+
+    auto obj = args[0];
+    auto descsObj = new JsObject();
+    auto descs = ctx->runtime->pushObjValue(JDT_OBJECT, descsObj);
+
+    auto it = getJsIteratorPtr(ctx, obj);
+    if (it) {
+        JsValue name, value;
+        while (it->next(nullptr, &name, &value)) {
+            objectGetOwnPropertyDescriptor(ctx, obj, ArgumentsX(obj, name));
+            descsObj->set(ctx, descs, name, ctx->retValue);
+        }
+    }
+
+    ctx->retValue = descs;
+}
+
+void objectGetOwnPropertyNames(VMContext *ctx, const JsValue &thiz, const Arguments &args) {
+    if (args.count == 0 || args[0].type <= JDT_NULL) {
+        ctx->throwException(PE_TYPE_ERROR, "Cannot convert undefined or null to object");
+        return;
+    }
+
+    auto obj = args[0];
+    auto namesObj = new JsArray();
+    auto names = ctx->runtime->pushObjValue(JDT_ARRAY, namesObj);
+
+    auto it = getJsIteratorPtr(ctx, obj);
+    if (it) {
+        JsValue name, value;
+        while (it->next(nullptr, &name, nullptr)) {
+            namesObj->push(ctx, name);
+        }
+    }
+
+    ctx->retValue = names;
+}
+
+void objectPreventExtensions(VMContext *ctx, const JsValue &thiz, const Arguments &args) {
+    if (args.count == 0 || args[0].type <= JDT_NULL) {
+        ctx->throwException(PE_TYPE_ERROR, "Cannot convert undefined or null to object");
+        return;
+    }
+
+    auto obj = args[0];
+    ctx->retValue = obj;
+    if (obj.type < JDT_OBJECT) {
+        return;
+    }
+
+    auto pobj = ctx->runtime->getObject(obj);
+    pobj->preventExtensions(ctx);
+}
+
 static JsLibProperty objectFunctions[] = {
     { "name", nullptr, "Object" },
     { "length", nullptr, nullptr, JsValue(JDT_INT32, 1) },
@@ -375,7 +496,12 @@ static JsLibProperty objectFunctions[] = {
     { "defineProperties", objectDefineProperties },
     { "defineProperty", objectDefineProperty },
     { "entries", objectEntries },
-    { "getOwnPropertyDescriptor", getOwnPropertyDescriptor },
+    { "freeze", objectFreeze },
+    { "fromEntries", objectFromEntries },
+    { "getOwnPropertyDescriptor", objectGetOwnPropertyDescriptor },
+    { "getOwnPropertyDescriptors", objectGetOwnPropertyDescriptors },
+    { "getOwnPropertyNames", objectGetOwnPropertyNames },
+    { "preventExtensions", objectPreventExtensions },
     { "prototype", nullptr, nullptr, JsValue(JDT_INT32, 1) },
 };
 
@@ -392,10 +518,9 @@ void registerObject(VMRuntimeCommon *rt) {
     // Object.prototype 是 null
     auto prototypeObj = new JsLibObject(rt, objectPrototypeFunctions, CountOf(objectPrototypeFunctions), nullptr, jsValueNull);
     rt->objPrototypeObject = prototypeObj;
-    auto prototype = rt->pushObjValue(JDT_LIB_OBJECT, prototypeObj);
-    assert(prototype == jsValuePrototypeObject);
+    rt->setPrototypeObject(jsValuePrototypeObject, prototypeObj);
 
-    SET_PROTOTYPE(objectFunctions, prototype);
+    SET_PROTOTYPE(objectFunctions, jsValuePrototypeObject);
 
     rt->setGlobalObject("Object",
         new JsLibObject(rt, objectFunctions, CountOf(objectFunctions), objectConstructor));

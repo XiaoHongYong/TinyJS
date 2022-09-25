@@ -9,7 +9,9 @@
 
 
 void registerConsole(VMRuntimeCommon *rt);
+void registerWindow(VMRuntimeCommon *rt);
 
 void registerWebAPIs(VMRuntimeCommon *rt) {
+    registerWindow(rt);
     registerConsole(rt);
 }

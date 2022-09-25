@@ -46,18 +46,24 @@ public:
     virtual bool removeByIndex(VMContext *ctx, uint32_t index) override;
     virtual bool removeBySymbol(VMContext *ctx, uint32_t index) override;
 
+    virtual void changeAllProperties(VMContext *ctx, int8_t configurable = -1, int8_t writable = -1) override;
+    virtual void preventExtensions(VMContext *ctx) override;
+
     virtual IJsObject *clone() override;
     virtual IJsIterator *getIteratorObject(VMContext *ctx, bool includeProtoProp = true) override;
 
     virtual void markReferIdx(VMRuntime *rt) override;
 
 protected:
-    void _newObject();
+    void _newObject(VMContext *ctx);
+    IJsObject *getPrototypeObject(VMContext *ctx) { return ctx->runtime->objPrototypeWindow; }
+    uint32_t _newIdentifier(const SizedString &name);
 
 protected:
     VMGlobalScope               *_scope;
     Scope                       *_scopeDesc;
 
+    // 仅仅用于处理 Symbol 相关的属性
     JsObject                    *_obj;
 
 };

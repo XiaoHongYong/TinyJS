@@ -96,10 +96,9 @@ static JsLibProperty numberPrototypeFunctions[] = {
 void registerNumber(VMRuntimeCommon *rt) {
     auto prototypeObj = new JsLibObject(rt, numberPrototypeFunctions, CountOf(numberPrototypeFunctions));
     rt->objPrototypeNumber = prototypeObj;
-    auto prototype = rt->pushObjValue(JDT_LIB_OBJECT, prototypeObj);
-    assert(prototype == jsValuePrototypeNumber);
+    rt->setPrototypeObject(jsValuePrototypeNumber, prototypeObj);
 
-    SET_PROTOTYPE(numberFunctions, prototype);
+    SET_PROTOTYPE(numberFunctions, jsValuePrototypeNumber);
 
     rt->setGlobalObject("Number",
         new JsLibObject(rt, numberFunctions, CountOf(numberFunctions), numberConstructor));

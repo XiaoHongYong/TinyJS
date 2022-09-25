@@ -200,10 +200,9 @@ public:
 void registerString(VMRuntimeCommon *rt) {
     auto prototypeObj = new JsLibObject(rt, stringPrototypeFunctions, CountOf(stringPrototypeFunctions));
     rt->objPrototypeString = prototypeObj;
-    auto prototype = rt->pushObjValue(JDT_LIB_OBJECT, prototypeObj);
-    assert(prototype == jsValuePrototypeString);
+    rt->setPrototypeObject(jsValuePrototypeString, prototypeObj);
 
-    SET_PROTOTYPE(stringFunctions, prototype);
+    SET_PROTOTYPE(stringFunctions, jsValuePrototypeString);
 
     rt->setGlobalObject("String",
         new JsLibObject(rt, stringFunctions, CountOf(stringFunctions), stringConstructor));

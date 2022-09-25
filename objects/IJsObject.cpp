@@ -406,6 +406,10 @@ void JsObject::definePropertyByName(VMContext *ctx, const SizedString &name, con
 
     auto it = _props.find(name);
     if (it == _props.end()) {
+        if (isPreventedExtensions) {
+            return;
+        }
+
         if (name.equal(SS___PROTO__)) {
             prop = &__proto__;
         } else {
@@ -432,6 +436,10 @@ void JsObject::definePropertyBySymbol(VMContext *ctx, uint32_t index, const JsPr
         return;
     }
 
+    if (isPreventedExtensions) {
+        return;
+    }
+
     // 定义新的属性
     if (!_symbolProps) {
         _symbolProps = new MapSymbolToJsProperty;
@@ -443,7 +451,9 @@ void JsObject::setByName(VMContext *ctx, const JsValue &thiz, const SizedString 
     auto it = _props.find(name);
     if (it == _props.end()) {
         if (name.equal(SS___PROTO__)) {
-            set(ctx, &__proto__, thiz, value);
+            if (!isPreventedExtensions) {
+                set(ctx, &__proto__, thiz, value);
+            }
             return;
         }
 
@@ -467,8 +477,10 @@ void JsObject::setByName(VMContext *ctx, const JsValue &thiz, const SizedString 
             }
         }
 
-        // 添加新属性
-        _props[copyPropertyIfNeed(name)] = value;
+        if (!isPreventedExtensions) {
+            // 添加新属性
+            _props[copyPropertyIfNeed(name)] = value;
+        }
     } else {
         set(ctx, &(*it).second, thiz, value);
     }
@@ -485,6 +497,9 @@ void JsObject::setBySymbol(VMContext *ctx, const JsValue &thiz, uint32_t index, 
         // 修改已经存在的
         set(ctx, prop, thiz, value);
     } else {
+        if (isPreventedExtensions) {
+            return;
+        }
         // 添加新属性
         if (!_symbolProps) {
             _symbolProps = new MapSymbolToJsProperty();
@@ -525,6 +540,9 @@ JsValue JsObject::increaseByName(VMContext *ctx, const JsValue &thiz, const Size
             }
             return ret;
         } else {
+            if (isPreventedExtensions) {
+                return jsValueNaN;
+            }
             // 添加新属性
             _props[copyPropertyIfNeed(name)] = jsValueNaN;
             return jsValueNaN;
@@ -545,6 +563,10 @@ JsValue JsObject::increaseBySymbol(VMContext *ctx, const JsValue &thiz, uint32_t
         // 修改已经存在的
         return increase(ctx, prop, thiz, n, isPost);
     } else {
+        if (isPreventedExtensions) {
+            return jsValueNaN;
+        }
+
         // 添加新属性
         if (!_symbolProps) {
             _symbolProps = new MapSymbolToJsProperty();
@@ -645,6 +667,18 @@ bool JsObject::removeBySymbol(VMContext *ctx, uint32_t index) {
     }
 
     return true;
+}
+
+void JsObject::changeAllProperties(VMContext *ctx, int8_t configurable, int8_t writable) {
+    for (auto &item : _props) {
+        item.second.changeProperty(configurable, writable);
+    }
+
+    if (_symbolProps) {
+        for (auto &item : *_symbolProps) {
+            item.second.changeProperty(configurable, writable);
+        }
+    }
 }
 
 IJsObject *JsObject::clone() {

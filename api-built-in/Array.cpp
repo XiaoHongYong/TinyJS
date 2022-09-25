@@ -70,10 +70,9 @@ void registerArray(VMRuntimeCommon *rt) {
     prototypeObj->setOfIteratorTrue();
 
     rt->objPrototypeArray = prototypeObj;
-    auto prototype = rt->pushObjValue(JDT_LIB_OBJECT, prototypeObj);
-    assert(prototype == jsValuePrototypeArray);
+    rt->setPrototypeObject(jsValuePrototypeArray, prototypeObj);
 
-    SET_PROTOTYPE(arrayFunctions, prototype);
+    SET_PROTOTYPE(arrayFunctions, jsValuePrototypeArray);
 
     rt->setGlobalObject("Array",
         new JsLibObject(rt, arrayFunctions, CountOf(arrayFunctions), arrayConstructor));

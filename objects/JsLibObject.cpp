@@ -78,7 +78,7 @@ void JsLibObject::definePropertyByName(VMContext *ctx, const SizedString &name, 
     }
 
     if (!_obj) {
-        _newObject();
+        _newObject(ctx);
     }
 
     _obj->definePropertyByName(ctx, name, descriptor);
@@ -91,7 +91,7 @@ void JsLibObject::definePropertyByIndex(VMContext *ctx, uint32_t index, const Js
 
 void JsLibObject::definePropertyBySymbol(VMContext *ctx, uint32_t index, const JsProperty &descriptor) {
     if (!_obj) {
-        _newObject();
+        _newObject(ctx);
     }
 
     _obj->definePropertyBySymbol(ctx, index, descriptor);
@@ -124,7 +124,7 @@ void JsLibObject::setByName(VMContext *ctx, const JsValue &thiz, const SizedStri
         }
     } else {
         if (!_obj) {
-            _newObject();
+            _newObject(ctx);
         }
 
         _obj->setByName(ctx, thiz, name, value);
@@ -138,7 +138,7 @@ void JsLibObject::setByIndex(VMContext *ctx, const JsValue &thiz, uint32_t index
 
 void JsLibObject::setBySymbol(VMContext *ctx, const JsValue &thiz, uint32_t index, const JsValue &value) {
     if (!_obj) {
-        _newObject();
+        _newObject(ctx);
     }
     _obj->setBySymbol(ctx, thiz, index, value);
 }
@@ -172,7 +172,7 @@ JsValue JsLibObject::increaseByName(VMContext *ctx, const JsValue &thiz, const S
         }
     } else {
         if (!_obj) {
-            _newObject();
+            _newObject(ctx);
         }
 
         return _obj->increaseByName(ctx, thiz, name, n, isPost);
@@ -186,7 +186,7 @@ JsValue JsLibObject::increaseByIndex(VMContext *ctx, const JsValue &thiz, uint32
 
 JsValue JsLibObject::increaseBySymbol(VMContext *ctx, const JsValue &thiz, uint32_t index, int n, bool isPost) {
     if (!_obj) {
-        _newObject();
+        _newObject(ctx);
     }
     return _obj->increaseBySymbol(ctx, thiz, index, n, isPost);
 }
@@ -281,6 +281,26 @@ bool JsLibObject::removeBySymbol(VMContext *ctx, uint32_t index) {
     return true;
 }
 
+void JsLibObject::changeAllProperties(VMContext *ctx, int8_t configurable, int8_t writable) {
+    _copyForModify();
+
+    for (auto p = _libProps; p != _libPropsEnd; p++) {
+        p->prop.changeProperty(configurable, writable);
+    }
+
+    if (_obj) {
+        _obj->changeAllProperties(ctx, configurable, writable);
+    }
+}
+
+void JsLibObject::preventExtensions(VMContext *ctx) {
+    IJsObject::preventExtensions(ctx);
+
+    if (_obj) {
+        _obj->preventExtensions(ctx);
+    }
+}
+
 IJsObject *JsLibObject::clone() {
     auto obj = new JsLibObject(this);
     return obj;
@@ -319,10 +339,14 @@ void setPrototype(JsLibProperty *prop, const JsValue &value) {
     prop->prop = JsProperty(value, false, false, false, false);
 }
 
-void JsLibObject::_newObject() {
+void JsLibObject::_newObject(VMContext *ctx) {
     assert(_obj == nullptr);
 
     _obj = new JsObject(__proto__.value);
+
+    if (isPreventedExtensions) {
+        _obj->preventExtensions(ctx);
+    }
 }
 
 void JsLibObject::_copyForModify() {

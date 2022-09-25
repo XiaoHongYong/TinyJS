@@ -42,6 +42,9 @@ public:
     virtual bool removeByIndex(VMContext *ctx, uint32_t index) override;
     virtual bool removeBySymbol(VMContext *ctx, uint32_t index) override;
 
+    virtual void changeAllProperties(VMContext *ctx, int8_t configurable = -1, int8_t writable = -1) override;
+    virtual void preventExtensions(VMContext *ctx) override;
+
     virtual IJsObject *clone() override;
     virtual bool isOfIterable() override { return true; }
     virtual IJsIterator *getIteratorObject(VMContext *ctx, bool includeProtoProp = true) override;

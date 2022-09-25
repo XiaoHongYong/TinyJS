@@ -40,7 +40,7 @@ void JsObjectFunction::definePropertyByName(VMContext *ctx, const SizedString &n
         defineNameProperty(ctx, &_arguments, descriptor, name);
     } else {
         if (!_obj) {
-            _newObject();
+            _newObject(ctx);
         }
         _obj->definePropertyByName(ctx, name, descriptor);
     }
@@ -48,7 +48,7 @@ void JsObjectFunction::definePropertyByName(VMContext *ctx, const SizedString &n
 
 void JsObjectFunction::definePropertyByIndex(VMContext *ctx, uint32_t index, const JsProperty &descriptor) {
     if (!_obj) {
-        _newObject();
+        _newObject(ctx);
     }
 
     _obj->definePropertyByIndex(ctx, index, descriptor);
@@ -56,7 +56,7 @@ void JsObjectFunction::definePropertyByIndex(VMContext *ctx, uint32_t index, con
 
 void JsObjectFunction::definePropertyBySymbol(VMContext *ctx, uint32_t index, const JsProperty &descriptor) {
     if (!_obj) {
-        _newObject();
+        _newObject(ctx);
     }
 
     _obj->definePropertyBySymbol(ctx, index, descriptor);
@@ -75,7 +75,7 @@ void JsObjectFunction::setByName(VMContext *ctx, const JsValue &thiz, const Size
         set(ctx, &_arguments, thiz, value);
     } else {
         if (!_obj) {
-            _newObject();
+            _newObject(ctx);
         }
 
         _obj->setByName(ctx, thiz, name, value);
@@ -84,14 +84,14 @@ void JsObjectFunction::setByName(VMContext *ctx, const JsValue &thiz, const Size
 
 void JsObjectFunction::setByIndex(VMContext *ctx, const JsValue &thiz, uint32_t index, const JsValue &value) {
     if (!_obj) {
-        _newObject();
+        _newObject(ctx);
     }
     _obj->setByIndex(ctx, thiz, index, value);
 }
 
 void JsObjectFunction::setBySymbol(VMContext *ctx, const JsValue &thiz, uint32_t index, const JsValue &value) {
     if (!_obj) {
-        _newObject();
+        _newObject(ctx);
     }
     _obj->setBySymbol(ctx, thiz, index, value);
 }
@@ -109,7 +109,7 @@ JsValue JsObjectFunction::increaseByName(VMContext *ctx, const JsValue &thiz, co
         return increase(ctx, &_arguments, thiz, n, isPost);
     } else {
         if (!_obj) {
-            _newObject();
+            _newObject(ctx);
         }
 
         return _obj->increaseByName(ctx, thiz, name, n, isPost);
@@ -118,14 +118,14 @@ JsValue JsObjectFunction::increaseByName(VMContext *ctx, const JsValue &thiz, co
 
 JsValue JsObjectFunction::increaseByIndex(VMContext *ctx, const JsValue &thiz, uint32_t index, int n, bool isPost) {
     if (!_obj) {
-        _newObject();
+        _newObject(ctx);
     }
     return _obj->increaseByIndex(ctx, thiz, index, n, isPost);
 }
 
 JsValue JsObjectFunction::increaseBySymbol(VMContext *ctx, const JsValue &thiz, uint32_t index, int n, bool isPost) {
     if (!_obj) {
-        _newObject();
+        _newObject(ctx);
     }
     return _obj->increaseBySymbol(ctx, thiz, index, n, isPost);
 }
@@ -225,6 +225,20 @@ bool JsObjectFunction::removeBySymbol(VMContext *ctx, uint32_t index) {
     return true;
 }
 
+void JsObjectFunction::changeAllProperties(VMContext *ctx, int8_t configurable, int8_t writable) {
+    if (_obj) {
+        _obj->changeAllProperties(ctx, configurable, writable);
+    }
+}
+
+void JsObjectFunction::preventExtensions(VMContext *ctx) {
+    IJsObject::preventExtensions(ctx);
+
+    if (_obj) {
+        _obj->preventExtensions(ctx);
+    }
+}
+
 IJsObject *JsObjectFunction::clone() {
     auto obj = new JsObjectFunction(stackScopes, function);
 
@@ -266,8 +280,12 @@ void JsObjectFunction::markReferIdx(VMRuntime *rt) {
     }
 }
 
-void JsObjectFunction::_newObject() {
+void JsObjectFunction::_newObject(VMContext *ctx) {
     assert(_obj == nullptr);
 
     _obj = new JsObject(__proto__.value);
+
+    if (isPreventedExtensions) {
+        _obj->preventExtensions(ctx);
+    }
 }

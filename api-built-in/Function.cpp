@@ -86,10 +86,9 @@ static JsLibProperty functionPrototypeFunctions[] = {
 void registerObjFunction(VMRuntimeCommon *rt) {
     auto prototypeObj = new JsLibObject(rt, functionPrototypeFunctions, CountOf(functionPrototypeFunctions));
     rt->objPrototypeFunction = prototypeObj;
-    auto prototype = rt->pushObjValue(JDT_LIB_OBJECT, prototypeObj);
-    assert(prototype == jsValuePrototypeFunction);
+    rt->setPrototypeObject(jsValuePrototypeFunction, prototypeObj);
 
-    SET_PROTOTYPE(functionFunctions, prototype);
+    SET_PROTOTYPE(functionFunctions, jsValuePrototypeFunction);
 
     rt->setGlobalObject("Function",
         new JsLibObject(rt, functionFunctions, CountOf(functionFunctions), functionConstructor));
