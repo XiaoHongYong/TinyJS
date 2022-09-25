@@ -472,6 +472,89 @@ void objectGetOwnPropertyNames(VMContext *ctx, const JsValue &thiz, const Argume
     ctx->retValue = names;
 }
 
+JsValue get__proto__(VMContext *ctx, const JsValue &value) {
+    auto runtime = ctx->runtime;
+    switch (value.type) {
+        case JDT_NOT_INITIALIZED:
+        case JDT_UNDEFINED:
+            ctx->throwException(PE_TYPE_ERROR, "Cannot read properties of undefined (reading '__proto__')");
+            break;
+        case JDT_NULL:
+            ctx->throwException(PE_TYPE_ERROR, "Cannot read properties of null (reading '__proto__')");
+            break;
+        case JDT_BOOL:
+            return jsValuePrototypeBool;
+        case JDT_INT32:
+        case JDT_NUMBER:
+            return jsValuePrototypeNumber;
+        case JDT_CHAR:
+        case JDT_STRING:
+            return jsValuePrototypeString;
+        case JDT_SYMBOL:
+            return jsValuePrototypeSymbol;
+        case JDT_NATIVE_FUNCTION:
+            return jsValuePrototypeFunction;
+        default: {
+            auto obj = runtime->getObject(value);
+            return obj->getByName(ctx, value, SS___PROTO__, jsValuePrototypeObject);
+        }
+    }
+
+    return jsValueNull;
+}
+
+void objectGetPrototypeOf(VMContext *ctx, const JsValue &thiz, const Arguments &args) {
+    if (args.count == 0 || args[0].type <= JDT_NULL) {
+        ctx->throwException(PE_TYPE_ERROR, "Cannot convert undefined or null to object");
+        return;
+    }
+
+    auto obj = args[0];
+    auto proto = get__proto__(ctx, obj);
+
+    ctx->retValue = proto;
+}
+
+void objectHasOwn(VMContext *ctx, const JsValue &thiz, const Arguments &args) {
+    if (args.count == 0 || args[0].type <= JDT_NULL) {
+        ctx->throwException(PE_TYPE_ERROR, "Cannot convert undefined or null to object");
+        return;
+    }
+
+    auto runtime = ctx->runtime;
+    auto obj = args[0];
+    JsValue name = args.count > 1 ? args[1] : jsStringValueUndefined;
+
+    JsValue ret = jsValueFalse;
+    if (obj.type < JDT_OBJECT) {
+        if (obj.type == JDT_CHAR || obj.type == JDT_STRING) {
+            string buf;
+            auto s = runtime->toSizedString(ctx, name, buf);
+            if (s.equal(SS_LENGTH)) {
+                ret = jsValueTrue;
+            } else {
+                bool successful;
+                auto n = s.atoi(successful);
+                if (successful) {
+                    auto len = runtime->getStringLength(obj);
+                    if (n >= 0 && n < len) {
+                        ret = jsValueTrue;
+                    }
+                }
+            }
+        }
+    } else {
+        auto pobj = runtime->getObject(obj);
+        JsProperty descriptor;
+
+        if (pobj->getOwnPropertyDescriptor(ctx, name, descriptor)) {
+            ret = jsValueTrue;
+        }
+    }
+
+    ctx->retValue = ret;
+}
+
 void objectPreventExtensions(VMContext *ctx, const JsValue &thiz, const Arguments &args) {
     if (args.count == 0 || args[0].type <= JDT_NULL) {
         ctx->throwException(PE_TYPE_ERROR, "Cannot convert undefined or null to object");
@@ -501,6 +584,8 @@ static JsLibProperty objectFunctions[] = {
     { "getOwnPropertyDescriptor", objectGetOwnPropertyDescriptor },
     { "getOwnPropertyDescriptors", objectGetOwnPropertyDescriptors },
     { "getOwnPropertyNames", objectGetOwnPropertyNames },
+    { "getPrototypeOf", objectGetPrototypeOf },
+    { "hasOwn", objectHasOwn },
     { "preventExtensions", objectPreventExtensions },
     { "prototype", nullptr, nullptr, JsValue(JDT_INT32, 1) },
 };

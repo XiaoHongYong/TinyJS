@@ -457,3 +457,173 @@ Round:  5 NaN
 Round:  6 Symbol()
 */
 
+
+// Index: 19
+// getPrototypeOf
+function f() {
+    var proto = {a : 'a1'};
+    var o = {x : 1, 1: 2, __proto__: proto};
+    var p = Object.getPrototypeOf(o);
+    console.log(p === proto);
+}
+f();
+/* OUTPUT
+true
+*/
+
+
+// Index: 20
+// getPrototypeOf
+var obj2 = { tt: 'x'}
+function g() { }
+g.f = 'f1';
+
+function f(r, obj, prototype, noPrint) {
+    console.log('Round: ', r, noPrint ? '' : obj)
+
+    try {
+        var d = Object.getPrototypeOf(obj);
+        console.log(d === prototype);
+    } catch (e) {
+        console.log(e.name + ': ' + e.message);
+    }
+}
+f(1, undefined);
+f(2, null);
+f(3, 1, Number.prototype);
+f(4, false, Boolean.prototype);
+f(5, NaN, Number.prototype);
+f(6, Symbol(), Symbol.prototype);
+f(7, 'x', String.prototype);
+f(8, 'Ab', String.prototype);
+f(9, g, Function.prototype);
+f(10, obj2, Object.prototype, 1);
+f(12, ['xy'], Array.prototype, 1);
+/* OUTPUT
+Round:  1 undefined
+TypeError: Cannot convert undefined or null to object
+Round:  2 null
+TypeError: Cannot convert undefined or null to object
+Round:  3 1
+true
+Round:  4 false
+true
+Round:  5 NaN
+true
+Round:  6 Symbol()
+true
+Round:  7 x
+true
+Round:  8 Ab
+true
+Round:  9 function g() { }
+true
+Round:  10 
+true
+Round:  12 
+true
+*/
+
+
+// Index: 21
+// hasOwn
+function f() {
+    var proto = {a : 'a1'};
+    var o = {x : 1, 1: 2, __proto__: proto};
+    console.log(Object.hasOwn(o, 'x'), Object.hasOwn(o, 'a'), Object.hasOwn(o, null), Object.hasOwn(o, undefined));
+}
+f();
+/* OUTPUT
+true false false false
+*/
+
+
+// Index: 22
+// hasOwn
+function f() {
+    var o = {1: 2, 'undefined': 'u'};
+    console.log(Object.hasOwn(o, 'undefined'), Object.hasOwn(o, undefined), Object.hasOwn(o, null), Object.hasOwn(o, 1), Object.hasOwn(o, '1'));
+    console.log(Object.hasOwn(o));
+}
+f();
+/* OUTPUT
+true true false true true
+true
+*/
+
+
+// Index: 23
+// hasOwn
+var obj2 = { tt: 'x'}
+function g() { }
+g.f = 'f1';
+
+function f(r, obj, prop, noPrint) {
+    console.log('Round: ', r, noPrint ? '' : obj)
+
+    try {
+        console.log(Object.hasOwn(obj, prop));
+    } catch (e) {
+        console.log(e.name + ': ' + e.message);
+    }
+}
+f(1, undefined, 'toString');
+f(2, null, 'toString');
+f(3, 1, 'toString');
+f(4, false, 'toString');
+f(5, NaN, 'toString');
+f(6, Symbol(), 'toString');
+f(7, 'x', 'toString');
+f(71, 'x', '0');
+f(72, 'x', 0);
+f(73, 'x', 'length');
+f(74, 'AB', '0');
+f(75, 'AB', 0);
+f(76, 'AB', 'length');
+f(9, g, 'f', 1);
+f(9, g, 'toString', 1);
+f(10, obj2, 'tt', 1);
+f(11, ['xy'], 'length', 1);
+f(12, ['xy'], '0', 1);
+f(13, ['xy'], 0, 1);
+/* OUTPUT
+Round:  1 undefined
+TypeError: Cannot convert undefined or null to object
+Round:  2 null
+TypeError: Cannot convert undefined or null to object
+Round:  3 1
+false
+Round:  4 false
+false
+Round:  5 NaN
+false
+Round:  6 Symbol()
+false
+Round:  7 x
+false
+Round:  71 x
+true
+Round:  72 x
+true
+Round:  73 x
+true
+Round:  74 AB
+true
+Round:  75 AB
+true
+Round:  76 AB
+true
+Round:  9 
+true
+Round:  9 
+false
+Round:  10 
+true
+Round:  11 
+true
+Round:  12 
+true
+Round:  13 
+true
+*/
+

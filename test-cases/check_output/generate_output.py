@@ -237,7 +237,11 @@ def args_to_string(args):
                     print(arg)
                     assert(0)
                 a.append('{')
-                a.append(', '.join([prop.get('name') + ': ' + prop.get('value') for prop in properties]))
+                try:
+                    a.append(', '.join([prop.get('name') + ': ' + prop.get('value') for prop in properties]))
+                except e:
+                    print(properties)
+                    raise e
                 a.append('}')
         else:
             print(arg)
