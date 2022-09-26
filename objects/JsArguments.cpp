@@ -83,6 +83,8 @@ protected:
 };
 
 JsArguments::JsArguments(VMScope *scope, Arguments *args) {
+    type = JDT_ARGUMENTS;
+
     _scope = scope;
     _args = args;
     _argsDescriptors = nullptr;

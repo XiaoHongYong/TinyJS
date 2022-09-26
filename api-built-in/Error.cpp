@@ -55,7 +55,7 @@ JsValue newJsError(VMContext *ctx, JsErrorType errType, const JsValue &message) 
     }
 
     auto errObj = new JsObject(proto);
-    auto err = runtime->pushObjValue(JDT_OBJECT, errObj);
+    auto err = runtime->pushObjectValue(errObj);
 
     errObj->setByName(ctx, err, SS_MESSAGE, message.type != JDT_STRING ? runtime->toString(ctx, message) : message);
     errObj->setByName(ctx, err, SS_STACK, runtime->pushString(SizedString(getStack(ctx))));
@@ -189,7 +189,7 @@ void registerErrorAPIs(VMRuntimeCommon *rt) {
     // Error
     //
     auto prototype = new JsLibObject(rt, errorPrototypeFunctions, CountOf(errorPrototypeFunctions), errorConstructor);
-    __errorPrototype = rt->pushObjValue(JDT_LIB_OBJECT, prototype);
+    __errorPrototype = rt->pushObjectValue(prototype);
     SET_PROTOTYPE(errorFunctions, __errorPrototype);
     rt->setGlobalObject("Error",
         new JsLibObject(rt, errorFunctions, CountOf(errorFunctions), errorConstructor));
@@ -198,7 +198,7 @@ void registerErrorAPIs(VMRuntimeCommon *rt) {
     // TypeError
     //
     prototype = new JsLibObject(rt, typeErrorPrototypeFunctions, CountOf(typeErrorPrototypeFunctions), typeErrorConstructor, __errorPrototype);
-    __typeErrorPrototype = rt->pushObjValue(JDT_LIB_OBJECT, prototype);
+    __typeErrorPrototype = rt->pushObjectValue(prototype);
     SET_PROTOTYPE(typeErrorFunctions, __typeErrorPrototype);
     rt->setGlobalObject("TypeError",
         new JsLibObject(rt, typeErrorFunctions, CountOf(typeErrorFunctions), typeErrorConstructor));
@@ -207,7 +207,7 @@ void registerErrorAPIs(VMRuntimeCommon *rt) {
     // ReferenceError
     //
     prototype = new JsLibObject(rt, referenceErrorPrototypeFunctions, CountOf(referenceErrorPrototypeFunctions), referenceErrorConstructor, __errorPrototype);
-    __referenceErrorPrototype = rt->pushObjValue(JDT_LIB_OBJECT, prototype);
+    __referenceErrorPrototype = rt->pushObjectValue(prototype);
     SET_PROTOTYPE(referenceErrorFunctions, __referenceErrorPrototype);
     rt->setGlobalObject("ReferenceError",
         new JsLibObject(rt, referenceErrorFunctions, CountOf(referenceErrorFunctions), referenceErrorConstructor));
@@ -216,7 +216,7 @@ void registerErrorAPIs(VMRuntimeCommon *rt) {
     // SyntaxError
     //
     prototype = new JsLibObject(rt, syntaxErrorPrototypeFunctions, CountOf(syntaxErrorPrototypeFunctions), syntaxErrorConstructor, __errorPrototype);
-    __syntaxErrorPrototype = rt->pushObjValue(JDT_LIB_OBJECT, prototype);
+    __syntaxErrorPrototype = rt->pushObjectValue(prototype);
     SET_PROTOTYPE(syntaxErrorFunctions, __syntaxErrorPrototype);
     rt->setGlobalObject("SyntaxError",
         new JsLibObject(rt, syntaxErrorFunctions, CountOf(syntaxErrorFunctions), syntaxErrorConstructor));
@@ -225,7 +225,7 @@ void registerErrorAPIs(VMRuntimeCommon *rt) {
     // RangeError
     //
     prototype = new JsLibObject(rt, rangeErrorPrototypeFunctions, CountOf(rangeErrorPrototypeFunctions), rangeErrorConstructor, __errorPrototype);
-    __rangeErrorPrototype = rt->pushObjValue(JDT_LIB_OBJECT, prototype);
+    __rangeErrorPrototype = rt->pushObjectValue(prototype);
     SET_PROTOTYPE(rangeErrorFunctions, __rangeErrorPrototype);
     rt->setGlobalObject("RangeError",
         new JsLibObject(rt, rangeErrorFunctions, CountOf(rangeErrorFunctions), rangeErrorConstructor));

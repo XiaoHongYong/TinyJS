@@ -19,7 +19,7 @@ void regExpConstructor(VMContext *ctx, const JsValue &thiz, const Arguments &arg
     }
     auto re = new JsRegExp(strRe);
 
-    ctx->retValue = runtime->pushObjValue(JDT_REGEX, re);
+    ctx->retValue = runtime->pushObjectValue(re);
 }
 
 static JsLibProperty regExpFunctions[] = {

@@ -159,11 +159,11 @@ void VMRuntimeCommon::setGlobalValue(const char *strName, const JsValue &value) 
 }
 
 void VMRuntimeCommon::setGlobalObject(const char *strName, IJsObject *obj) {
-    setGlobalValue(strName, pushObjValue(obj->type, obj));
+    setGlobalValue(strName, pushObjectValue(obj));
 }
 
-JsValue VMRuntimeCommon::pushObjValue(JsDataType type, IJsObject *value) {
-    auto jsv = JsValue(type, (uint32_t)objValues.size());
+JsValue VMRuntimeCommon::pushObjectValue(IJsObject *value) {
+    auto jsv = JsValue(value->type, (uint32_t)objValues.size());
     value->self = jsv;
     objValues.push_back(value);
     return jsv;
@@ -550,7 +550,7 @@ JsValue VMRuntime::addString(const JsValue &s1, const JsValue &s2) {
     }
 }
 
-JsValue VMRuntime::pushObjValue(JsDataType type, IJsObject *value) {
+JsValue VMRuntime::pushObjectValue(IJsObject *value) {
     _newAllocatedCount++;
 
     uint32_t n;
@@ -564,7 +564,7 @@ JsValue VMRuntime::pushObjValue(JsDataType type, IJsObject *value) {
         objValues.push_back(value);
     }
 
-    auto jsv = JsValue(type, n);
+    auto jsv = JsValue(value->type, n);
     value->self = jsv;
     return jsv;
 }

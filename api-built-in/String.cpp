@@ -34,7 +34,7 @@ static void stringConstructor(VMContext *ctx, const JsValue &thiz, const Argumen
 
     // New
     auto obj = new JsStringObject(str);
-    ctx->retValue = runtime->pushObjValue(JDT_OBJ_STRING, obj);
+    ctx->retValue = runtime->pushObjectValue(obj);
 }
 
 void stringFromCharCode(VMContext *ctx, const JsValue &thiz, const Arguments &args) {

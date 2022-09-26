@@ -39,19 +39,29 @@ const char *jsDataTypeToString(JsDataType type) {
         "JDT_BOOL",
         "JDT_CHAR",
         "JDT_INT32",
+
         "JDT_NUMBER",
         "JDT_SYMBOL",
         "JDT_STRING",
+
+        "JDT_ITERATOR",
+
+        "JDT_OBJECT",
         "JDT_REGEX",
         "JDT_ARRAY",
+        "JDT_ARGUMENTS",
+
         "JDT_OBJ_BOOL",
         "JDT_OBJ_NUMBER",
         "JDT_OBJ_STRING",
-        "JDT_OBJECT",
+        "JDT_OBJ_GLOBAL_THIS",
+
         "JDT_FUNCTION",
         "JDT_NATIVE_FUNCTION",
+        "JDT_LIB_OBJECT",
     };
 
+    static_assert(JDT_LIB_OBJECT + 1 == CountOf(NAMES), "Should be same.");
     assert(type <= CountOf(NAMES));
     return NAMES[type];
 }

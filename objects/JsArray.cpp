@@ -126,6 +126,8 @@ protected:
 
 
 JsArray::JsArray(uint32_t length) {
+    type = JDT_ARRAY;
+
     if (length > 0) {
         reserveSize(length);
     } else {

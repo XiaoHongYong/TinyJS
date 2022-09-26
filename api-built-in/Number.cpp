@@ -29,7 +29,7 @@ void numberConstructor(VMContext *ctx, const JsValue &thiz, const Arguments &arg
     if (thiz.type == JDT_NOT_INITIALIZED) {
         // New
         auto obj = new JsNumberObject(value);
-        ctx->retValue = ctx->runtime->pushObjValue(JDT_OBJ_NUMBER, obj);
+        ctx->retValue = ctx->runtime->pushObjectValue(obj);
     } else {
         ctx->retValue = value;
     }

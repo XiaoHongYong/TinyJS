@@ -16,7 +16,7 @@ static void objectConstructor(VMContext *ctx, const JsValue &thiz, const Argumen
     auto runtime = ctx->runtime;
 
     if (args.count == 0) {
-        ctx->retValue = runtime->pushObjValue(JDT_LIB_OBJECT, new JsObject());
+        ctx->retValue = runtime->pushObjectValue(new JsObject());
     } else {
         ctx->retValue = args[0];
     }
@@ -189,7 +189,7 @@ void objectCreate(VMContext *ctx, const JsValue &thiz, const Arguments &args) {
     }
 
     auto obj = new JsObject(proto);
-    ctx->retValue = runtime->pushObjValue(JDT_OBJECT, obj);
+    ctx->retValue = runtime->pushObjectValue(obj);
 
     if (args.count >= 2 && args[1].type > JDT_UNDEFINED) {
         objectDefineProperties(ctx, thiz, ArgumentsX(ctx->retValue, args[1]));
@@ -205,12 +205,12 @@ void objectAssign(VMContext *ctx, const JsValue &thiz, const Arguments &args) {
     auto runtime = ctx->runtime;
     auto targ = args[0];
     switch (targ.type) {
-        case JDT_BOOL: targ = runtime->pushObjValue(JDT_OBJ_BOOL, new JsBooleanObject(targ)); break;
-        case JDT_INT32: targ = runtime->pushObjValue(JDT_OBJ_NUMBER, new JsNumberObject(targ)); break;
-        case JDT_NUMBER: targ = runtime->pushObjValue(JDT_OBJ_NUMBER, new JsNumberObject(targ)); break;
+        case JDT_BOOL: targ = runtime->pushObjectValue(new JsBooleanObject(targ)); break;
+        case JDT_INT32: targ = runtime->pushObjectValue(new JsNumberObject(targ)); break;
+        case JDT_NUMBER: targ = runtime->pushObjectValue(new JsNumberObject(targ)); break;
         case JDT_SYMBOL: ctx->throwException(PE_TYPE_ERROR, "Not supported Object.assign for symbol"); return;
-        case JDT_CHAR: targ = runtime->pushObjValue(JDT_OBJ_STRING, new JsStringObject(targ)); break;
-        case JDT_STRING: targ = runtime->pushObjValue(JDT_OBJ_STRING, new JsStringObject(targ)); break;
+        case JDT_CHAR: targ = runtime->pushObjectValue(new JsStringObject(targ)); break;
+        case JDT_STRING: targ = runtime->pushObjectValue(new JsStringObject(targ)); break;
         default: break;
     }
 
@@ -231,7 +231,7 @@ void objectEntries(VMContext *ctx, const JsValue &thiz, const Arguments &args) {
     auto obj = args[0];
 
     auto arr = new JsArray();
-    ctx->retValue = runtime->pushObjValue(JDT_ARRAY, arr);
+    ctx->retValue = runtime->pushObjectValue(arr);
 
     auto it = getJsIteratorPtr(ctx, obj);
     if (it) {
@@ -241,7 +241,7 @@ void objectEntries(VMContext *ctx, const JsValue &thiz, const Arguments &args) {
             item->push(ctx, key);
             item->push(ctx, value);
 
-            arr->push(ctx, runtime->pushObjValue(JDT_ARRAY, item));
+            arr->push(ctx, runtime->pushObjectValue(item));
         }
     }
 }
@@ -350,7 +350,7 @@ void objectGetOwnPropertyDescriptor(VMContext *ctx, const JsValue &thiz, const A
 
     // 将 descriptor 转换为 object
     auto desc = new JsObject();
-    auto descValue = runtime->pushObjValue(JDT_OBJECT, desc);
+    auto descValue = runtime->pushObjectValue(desc);
 
     desc->setByName(ctx, descValue, SS_CONFIGURABLE, JsValue(JDT_BOOL, descriptor.isConfigurable));
     desc->setByName(ctx, descValue, SS_ENUMERABLE, JsValue(JDT_BOOL, descriptor.isEnumerable));
@@ -414,7 +414,7 @@ void objectFromEntries(VMContext *ctx, const JsValue &thiz, const Arguments &arg
     }
 
     auto pobj = new JsObject();
-    auto obj = runtime->pushObjValue(JDT_OBJECT, pobj);
+    auto obj = runtime->pushObjectValue(pobj);
 
     JsValue item;
     while (it->nextOf(item)) {
@@ -438,7 +438,7 @@ void objectGetOwnPropertyDescriptors(VMContext *ctx, const JsValue &thiz, const 
 
     auto obj = args[0];
     auto descsObj = new JsObject();
-    auto descs = ctx->runtime->pushObjValue(JDT_OBJECT, descsObj);
+    auto descs = ctx->runtime->pushObjectValue(descsObj);
 
     auto it = getJsIteratorPtr(ctx, obj);
     if (it) {
@@ -460,7 +460,7 @@ void objectGetOwnPropertyNames(VMContext *ctx, const JsValue &thiz, const Argume
 
     auto obj = args[0];
     auto namesObj = new JsArray();
-    auto names = ctx->runtime->pushObjValue(JDT_ARRAY, namesObj);
+    auto names = ctx->runtime->pushObjectValue(namesObj);
 
     auto it = getJsIteratorPtr(ctx, obj);
     if (it) {

@@ -646,20 +646,20 @@ void JsVirtualMachine::call(Function *function, VMContext *ctx, VecVMStackScopes
                 functionScope->vars[VAR_IDX_THIS] = thiz;
                 break;
             case OP_PREPARE_VAR_ARGUMENTS: {
-                functionScope->vars[VAR_IDX_ARGUMENTS] = runtime->pushObjValue(JDT_OBJECT, new JsArguments(functionScope, &functionScope->args));
+                functionScope->vars[VAR_IDX_ARGUMENTS] = runtime->pushObjectValue(new JsArguments(functionScope, &functionScope->args));
                 break;
             }
             case OP_INIT_FUNCTION_TO_VARS: {
                 // 将根 scope 被引用到的函数添加到变量中
                 for (auto f : function->scope->functionDecls) {
-                    functionScope->vars[f->declare->storageIndex] = runtime->pushObjValue(JDT_FUNCTION, new JsObjectFunction(stackScopes, f));
+                    functionScope->vars[f->declare->storageIndex] = runtime->pushObjectValue(new JsObjectFunction(stackScopes, f));
                 }
                 break;
             }
             case OP_INIT_FUNCTION_TO_ARGS: {
                 // 将根 scope 被引用到的函数添加到参数中
                 for (auto f : *function->scope->functionArgs) {
-                    functionScope->args[f->declare->storageIndex] = runtime->pushObjValue(JDT_FUNCTION, new JsObjectFunction(stackScopes, f));
+                    functionScope->args[f->declare->storageIndex] = runtime->pushObjectValue(new JsObjectFunction(stackScopes, f));
                 }
                 break;
             }
@@ -911,7 +911,7 @@ void JsVirtualMachine::call(Function *function, VMContext *ctx, VecVMStackScopes
                 // 将当前 scope 的 functionDecls 添加到 functionScope 中
                 auto &childFuncs = childScope->functionDecls;
                 for (auto f : childFuncs) {
-                    functionScope->vars[f->declare->storageIndex] = runtime->pushObjValue(JDT_FUNCTION, new JsObjectFunction(stackScopes, f));
+                    functionScope->vars[f->declare->storageIndex] = runtime->pushObjectValue(new JsObjectFunction(stackScopes, f));
                 }
 
                 if (childScope->hasWith || childScope->hasEval) {
@@ -1010,7 +1010,7 @@ void JsVirtualMachine::call(Function *function, VMContext *ctx, VecVMStackScopes
             case OP_PUSH_ID_LOCAL_FUNCTION: {
                 auto funcIdx = readUInt16(bytecode);
                 assert(funcIdx < scopeLocal->scopeDsc->function->functions.size());
-                auto v = runtime->pushObjValue(JDT_FUNCTION, new JsObjectFunction(stackScopes, scopeLocal->scopeDsc->function->functions[funcIdx]));
+                auto v = runtime->pushObjectValue(new JsObjectFunction(stackScopes, scopeLocal->scopeDsc->function->functions[funcIdx]));
                 stack.push_back(v);
                 break;
             }
@@ -1020,7 +1020,7 @@ void JsVirtualMachine::call(Function *function, VMContext *ctx, VecVMStackScopes
                 assert(scopeIdx < stackScopes.size());
                 auto scope = stackScopes[scopeIdx];
                 assert(funcIdx < scope->scopeDsc->function->functions.size());
-                auto v = runtime->pushObjValue(JDT_FUNCTION, new JsObjectFunction(stackScopes, scope->scopeDsc->function->functions[funcIdx]));
+                auto v = runtime->pushObjectValue(new JsObjectFunction(stackScopes, scope->scopeDsc->function->functions[funcIdx]));
                 stack.push_back(v);
                 break;
             }
@@ -1038,7 +1038,7 @@ void JsVirtualMachine::call(Function *function, VMContext *ctx, VecVMStackScopes
                 auto idx = readUInt32(bytecode);
                 auto str = runtime->getStringByIdx(idx, resourcePool);
                 auto re = new JsRegExp(str);
-                stack.push_back(runtime->pushObjValue(JDT_REGEX, re));
+                stack.push_back(runtime->pushObjectValue(re));
                 break;
             }
             case OP_PUSH_INT32: {
@@ -1057,7 +1057,7 @@ void JsVirtualMachine::call(Function *function, VMContext *ctx, VecVMStackScopes
                 assert(scopeIdx < stackScopes.size());
                 auto scope = stackScopes[scopeIdx];
                 assert(funcIdx < scope->scopeDsc->function->functions.size());
-                auto v = runtime->pushObjValue(JDT_FUNCTION, new JsObjectFunction(stackScopes, scope->scopeDsc->function->functions[funcIdx]));
+                auto v = runtime->pushObjectValue(new JsObjectFunction(stackScopes, scope->scopeDsc->function->functions[funcIdx]));
                 stack.push_back(v);
                 break;
             }
@@ -1568,7 +1568,7 @@ void JsVirtualMachine::call(Function *function, VMContext *ctx, VecVMStackScopes
                         if (prototype.type < JDT_OBJECT) {
                             prototype = jsValuePrototypeObject;
                         }
-                        thizVal = runtime->pushObjValue(JDT_OBJECT, new JsObject(prototype));
+                        thizVal = runtime->pushObjectValue(new JsObject(prototype));
                         call(obj->function, ctx, obj->stackScopes, thizVal, args);
                         break;
                     }
@@ -1603,7 +1603,7 @@ void JsVirtualMachine::call(Function *function, VMContext *ctx, VecVMStackScopes
                 break;
             }
             case OP_OBJ_CREATE: {
-                stack.push_back(runtime->pushObjValue(JDT_OBJECT, new JsObject()));
+                stack.push_back(runtime->pushObjectValue(new JsObject()));
                 break;
             }
             case OP_OBJ_SET_PROPERTY: {
@@ -1660,7 +1660,7 @@ void JsVirtualMachine::call(Function *function, VMContext *ctx, VecVMStackScopes
                 break;
             }
             case OP_ARRAY_CREATE: {
-                stack.push_back(runtime->pushObjValue(JDT_ARRAY, new JsArray()));
+                stack.push_back(runtime->pushObjectValue(new JsArray()));
                 break;
             }
             case OP_ARRAY_SPREAD_VALUE: {

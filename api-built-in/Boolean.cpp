@@ -18,7 +18,7 @@ void booleanConstructor(VMContext *ctx, const JsValue &thiz, const Arguments &ar
     if (thiz.type == JDT_NOT_INITIALIZED) {
         // New
         auto obj = new JsBooleanObject(value);
-        ctx->retValue = ctx->runtime->pushObjValue(JDT_OBJ_BOOL, obj);
+        ctx->retValue = ctx->runtime->pushObjectValue(obj);
     } else {
         ctx->retValue = value;
     }

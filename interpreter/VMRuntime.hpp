@@ -75,7 +75,7 @@ public:
         objValues[index] = obj;
     }
 
-    JsValue pushObjValue(JsDataType type, IJsObject *value);
+    JsValue pushObjectValue(IJsObject *value);
     uint32_t pushNativeFunction(JsNativeFunction f, const SizedString &name) {
         uint32_t n = (uint32_t)nativeFunctions.size();
         nativeFunctions.push_back(JsNativeFunctionInfo(f, name));
@@ -140,7 +140,7 @@ public:
 
     void dump(BinaryOutputStream &stream);
 
-    JsValue pushObjValue(JsDataType type, IJsObject *value);
+    JsValue pushObjectValue(IJsObject *value);
     JsValue pushJsIterator(IJsIterator *it);
     JsValue pushDoubleValue(double value);
     JsValue pushSymbolValue(JsSymbol &value);

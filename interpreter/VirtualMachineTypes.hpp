@@ -202,6 +202,8 @@ enum JsDataType : uint8_t {
     JDT_OBJECT,
     JDT_REGEX,
     JDT_ARRAY,
+    JDT_ARGUMENTS,
+
     JDT_OBJ_BOOL,
     JDT_OBJ_NUMBER,
     JDT_OBJ_STRING,

@@ -137,7 +137,7 @@ JsProperty *JsObjectFunction::getRawByName(VMContext *ctx, const SizedString &na
         if (_prototype.value.type == JDT_NOT_INITIALIZED) {
             // 为了节省内存分配，延迟初始化 _prototype 属性
             auto proto = new JsObject();
-            _prototype.value = ctx->runtime->pushObjValue(JDT_OBJECT, proto);
+            _prototype.value = ctx->runtime->pushObjectValue(proto);
             proto->setByName(ctx, _prototype.value, SS_CONSTRUCTOR, self);
         }
         return &_prototype;
