@@ -101,7 +101,9 @@ public:
     virtual bool removeBySymbol(VMContext *ctx, uint32_t index) = 0;
 
     virtual void changeAllProperties(VMContext *ctx, int8_t configurable = -1, int8_t writable = -1) = 0;
+    virtual bool hasAnyProperty(VMContext *ctx, bool configurable, bool writable) = 0;
     virtual void preventExtensions(VMContext *ctx) { isPreventedExtensions = true; }
+    virtual bool isExtensible() { return !isPreventedExtensions; }
 
     virtual IJsObject *clone() = 0;
 
@@ -317,6 +319,7 @@ public:
     virtual bool removeBySymbol(VMContext *ctx, uint32_t index) override { return false; }
 
     virtual void changeAllProperties(VMContext *ctx, int8_t configurable = -1, int8_t writable = -1) override {}
+    virtual bool hasAnyProperty(VMContext *ctx, bool configurable, bool writable) override { return false; }
 
     virtual IJsObject *clone() override { return new JsDummyObject(); }
     virtual IJsIterator *getIteratorObject(VMContext *ctx, bool includeProtoProp = true) override { return nullptr; }
@@ -358,6 +361,7 @@ public:
     virtual bool removeBySymbol(VMContext *ctx, uint32_t index) override;
 
     virtual void changeAllProperties(VMContext *ctx, int8_t configurable = -1, int8_t writable = -1) override;
+    virtual bool hasAnyProperty(VMContext *ctx, bool configurable, bool writable) override;
 
     virtual IJsObject *clone() override;
     virtual IJsIterator *getIteratorObject(VMContext *ctx, bool includeProtoProp = true) override;

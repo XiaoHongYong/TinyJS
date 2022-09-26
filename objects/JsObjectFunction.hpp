@@ -37,6 +37,7 @@ public:
     virtual bool removeBySymbol(VMContext *ctx, uint32_t index) override;
 
     virtual void changeAllProperties(VMContext *ctx, int8_t configurable = -1, int8_t writable = -1) override;
+    virtual bool hasAnyProperty(VMContext *ctx, bool configurable, bool writable) override;
     virtual void preventExtensions(VMContext *ctx) override;
 
     virtual IJsObject *clone() override;

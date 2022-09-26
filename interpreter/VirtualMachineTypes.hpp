@@ -366,6 +366,10 @@ struct JsProperty {
             isWritable = writable;
         }
     }
+
+    inline bool isPropertyAny(bool configurable, bool writable) {
+        return (configurable && isConfigurable) || (writable && isWritable);
+    }
 };
 
 

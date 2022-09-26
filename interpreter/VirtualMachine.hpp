@@ -49,6 +49,7 @@ public:
 
     Arguments &operator = (const Arguments &other);
     JsValue &operator[](uint32_t n) const { assert(n < capacity); return data[n]; }
+    JsValue getAt(uint32_t n, const JsValue &defValue = jsValueUndefined) const { return n < capacity ? data[n] : defValue; }
 
     void copy(const Arguments &other, uint32_t minSize = 0);
 

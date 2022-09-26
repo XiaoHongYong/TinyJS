@@ -9,6 +9,7 @@
 #include "objects/JsPrimaryObject.hpp"
 #include "objects/JsArray.hpp"
 #include "strings/JsString.hpp"
+#include "interpreter/BinaryOperation.hpp"
 
 
 static void objectConstructor(VMContext *ctx, const JsValue &thiz, const Arguments &args) {
@@ -515,17 +516,12 @@ void objectGetPrototypeOf(VMContext *ctx, const JsValue &thiz, const Arguments &
     ctx->retValue = proto;
 }
 
-void objectHasOwn(VMContext *ctx, const JsValue &thiz, const Arguments &args) {
-    if (args.count == 0 || args[0].type <= JDT_NULL) {
-        ctx->throwException(PE_TYPE_ERROR, "Cannot convert undefined or null to object");
-        return;
-    }
+void hasOwnProperty(VMContext *ctx, const JsValue &obj, const JsValue &name) {
+    assert(obj.type > JDT_NULL);
 
     auto runtime = ctx->runtime;
-    auto obj = args[0];
-    JsValue name = args.count > 1 ? args[1] : jsStringValueUndefined;
-
     JsValue ret = jsValueFalse;
+
     if (obj.type < JDT_OBJECT) {
         if (obj.type == JDT_CHAR || obj.type == JDT_STRING) {
             string buf;
@@ -553,6 +549,71 @@ void objectHasOwn(VMContext *ctx, const JsValue &thiz, const Arguments &args) {
     }
 
     ctx->retValue = ret;
+}
+
+void objectHasOwn(VMContext *ctx, const JsValue &thiz, const Arguments &args) {
+    if (args.count == 0 || args[0].type <= JDT_NULL) {
+        ctx->throwException(PE_TYPE_ERROR, "Cannot convert undefined or null to object");
+        return;
+    }
+
+    auto obj = args[0];
+    JsValue name = args.getAt(1, jsStringValueUndefined);
+
+    hasOwnProperty(ctx, obj, name);
+}
+
+void objectIs(VMContext *ctx, const JsValue &thiz, const Arguments &args) {
+    JsValue left = args.getAt(0);
+    JsValue right = args.getAt(1);
+
+    if (left.type == JDT_NUMBER && right.type == JDT_NUMBER) {
+        if (left.value.index == right.value.index) {
+            ctx->retValue = jsValueTrue;
+        } else {
+            auto a = ctx->runtime->getDouble(left);
+            auto b = ctx->runtime->getDouble(right);
+            if (isnan(a) && isnan(b)) {
+                ctx->retValue = jsValueTrue;
+            } else {
+                ctx->retValue = JsValue(JDT_BOOL, a == b);
+            }
+        }
+    } else {
+        ctx->retValue = JsValue(JDT_BOOL, relationalStrictEqual(ctx->runtime, left, right));
+    }
+}
+
+void objectIsExtensible(VMContext *ctx, const JsValue &thiz, const Arguments &args) {
+    auto obj = args.getAt(0);
+    bool extensible;
+    if (obj.type < JDT_OBJECT) {
+        extensible = false;
+    } else {
+        auto pobj = ctx->runtime->getObject(obj);
+        extensible = pobj->isExtensible();
+    }
+
+    ctx->retValue = JsValue(JDT_BOOL, extensible);
+}
+
+void objectIsFrozen(VMContext *ctx, const JsValue &thiz, const Arguments &args) {
+    auto obj = args.getAt(0);
+    if (obj.type < JDT_OBJECT) {
+        ctx->retValue = jsValueTrue;
+        return;
+    }
+
+    auto pobj = ctx->runtime->getObject(obj);
+    auto extensible = pobj->isExtensible();
+    if (extensible) {
+        ctx->retValue = jsValueFalse;
+        return;
+    }
+
+    bool isFrozen = !pobj->hasAnyProperty(ctx, true, true);
+
+    ctx->retValue = JsValue(JDT_BOOL, isFrozen);
 }
 
 void objectPreventExtensions(VMContext *ctx, const JsValue &thiz, const Arguments &args) {
@@ -586,6 +647,9 @@ static JsLibProperty objectFunctions[] = {
     { "getOwnPropertyNames", objectGetOwnPropertyNames },
     { "getPrototypeOf", objectGetPrototypeOf },
     { "hasOwn", objectHasOwn },
+    { "is", objectIs },
+    { "isExtensible", objectIsExtensible },
+    { "isFrozen", objectIsFrozen },
     { "preventExtensions", objectPreventExtensions },
     { "prototype", nullptr, nullptr, JsValue(JDT_INT32, 1) },
 };
@@ -595,8 +659,20 @@ void objectPrototypeToString(VMContext *ctx, const JsValue &thiz, const Argument
     ctx->retValue = ctx->runtime->pushString(str);
 }
 
+void objectPrototypeHasOwnProperty(VMContext *ctx, const JsValue &thiz, const Arguments &args) {
+    if (thiz.type <= JDT_NULL) {
+        ctx->throwException(PE_TYPE_ERROR, "Cannot convert undefined or null to object");
+        return;
+    }
+
+    JsValue name = args.count >= 1 ? args[0] : jsStringValueUndefined;
+
+    hasOwnProperty(ctx, thiz, name);
+}
+
 static JsLibProperty objectPrototypeFunctions[] = {
     { "toString", objectPrototypeToString },
+    { "hasOwnProperty", objectPrototypeHasOwnProperty },
 };
 
 void registerObject(VMRuntimeCommon *rt) {

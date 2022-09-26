@@ -319,7 +319,6 @@ bool IJsObject::remove(VMContext *ctx, const JsValue &propOrg) {
 class JsObjectIterator : public IJsIterator {
 public:
     JsObjectIterator(VMContext *ctx, JsObject *obj, bool includeProtoProp) {
-        assert(obj->type == JDT_OBJECT);
         _ctx = ctx;
         _obj = obj;
         _it = obj->_props.begin();
@@ -679,6 +678,24 @@ void JsObject::changeAllProperties(VMContext *ctx, int8_t configurable, int8_t w
             item.second.changeProperty(configurable, writable);
         }
     }
+}
+
+bool JsObject::hasAnyProperty(VMContext *ctx, bool configurable, bool writable) {
+    for (auto &item : _props) {
+        if (item.second.isPropertyAny(configurable, writable)) {
+            return true;
+        }
+    }
+
+    if (_symbolProps) {
+        for (auto &item : *_symbolProps) {
+            if (item.second.isPropertyAny(configurable, writable)) {
+                return true;
+            }
+        }
+    }
+
+    return false;
 }
 
 IJsObject *JsObject::clone() {

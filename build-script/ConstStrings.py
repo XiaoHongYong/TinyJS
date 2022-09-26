@@ -79,6 +79,7 @@ CONST_STRINGS = [
     [ 'Boolean', 'boolean' ],
     [ 'Bigint', 'bigint' ],
     [ 'Symbol', 'symbol' ],
+    [ 'LastIndex', 'lastIndex' ],
     # [ '', '' ],
 ]
 

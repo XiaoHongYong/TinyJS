@@ -48,6 +48,7 @@ public:
 
     virtual void changeAllProperties(VMContext *ctx, int8_t configurable = -1, int8_t writable = -1) override;
     virtual void preventExtensions(VMContext *ctx) override;
+    virtual bool hasAnyProperty(VMContext *ctx, bool configurable, bool writable) override { return true; }
 
     virtual IJsObject *clone() override;
     virtual IJsIterator *getIteratorObject(VMContext *ctx, bool includeProtoProp = true) override;

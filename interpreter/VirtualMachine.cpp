@@ -86,7 +86,8 @@ Arguments::Arguments(const Arguments &other) {
         copy(other);
     } else {
         data = other.data;
-        capacity = count = other.count;
+        count = other.count;
+        capacity = other.capacity;
     }
 }
 
@@ -110,7 +111,8 @@ Arguments & Arguments::operator = (const Arguments &other) {
         copy(other);
     } else {
         data = other.data;
-        capacity = count = other.count;
+        count = other.count;
+        capacity = other.capacity;
     }
 
     return *this;

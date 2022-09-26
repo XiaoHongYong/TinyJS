@@ -347,6 +347,14 @@ void JsArguments::changeAllProperties(VMContext *ctx, int8_t configurable, int8_
     }
 }
 
+bool JsArguments::hasAnyProperty(VMContext *ctx, bool configurable, bool writable) {
+    if (!_argsDescriptors) {
+        return true;
+    }
+
+    return _obj && _obj->hasAnyProperty(ctx, configurable, writable);
+}
+
 void JsArguments::preventExtensions(VMContext *ctx) {
     IJsObject::preventExtensions(ctx);
 

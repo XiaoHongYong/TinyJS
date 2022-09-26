@@ -293,6 +293,16 @@ void JsLibObject::changeAllProperties(VMContext *ctx, int8_t configurable, int8_
     }
 }
 
+bool JsLibObject::hasAnyProperty(VMContext *ctx, bool configurable, bool writable) {
+    for (auto p = _libProps; p != _libPropsEnd; p++) {
+        if (p->prop.isPropertyAny(configurable, writable)) {
+            return true;
+        }
+    }
+
+    return _obj && _obj->hasAnyProperty(ctx, configurable, writable);
+}
+
 void JsLibObject::preventExtensions(VMContext *ctx) {
     IJsObject::preventExtensions(ctx);
 

@@ -422,6 +422,18 @@ void JsArray::changeAllProperties(VMContext *ctx, int8_t configurable, int8_t wr
     }
 }
 
+bool JsArray::hasAnyProperty(VMContext *ctx, bool configurable, bool writable) {
+    for (auto block : _blocks) {
+        for (auto &item : block->items) {
+            if (item.isPropertyAny(configurable, writable)) {
+                return true;
+            }
+        }
+    }
+
+    return _obj && _obj->hasAnyProperty(ctx, configurable, writable);
+}
+
 void JsArray::preventExtensions(VMContext *ctx) {
     IJsObject::preventExtensions(ctx);
 

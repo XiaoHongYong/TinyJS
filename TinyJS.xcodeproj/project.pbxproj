@@ -517,15 +517,15 @@
 			inputFileListPaths = (
 			);
 			inputPaths = (
-				"$(SRCROOT)/TinyJS/build-script/build.py",
-				"$(SRCROOT)/TinyJS/build-script/ConstStrings.py",
+				"$(SRCROOT)/build-script/build.py",
+				"$(SRCROOT)/build-script/ConstStrings.py",
 			);
 			name = "Run Build Script";
 			outputFileListPaths = (
 			);
 			outputPaths = (
-				"$(SRCROOT)/TinyJS/generated/ConstStrings.hpp",
-				"$(SRCROOT)/TinyJS/generated/ConstStrings.cpp",
+				"$(SRCROOT)/generated/ConstStrings.hpp",
+				"$(SRCROOT)/generated/ConstStrings.cpp",
 			);
 			runOnlyForDeploymentPostprocessing = 0;
 			shellPath = /bin/sh;

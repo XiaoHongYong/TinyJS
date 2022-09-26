@@ -231,6 +231,10 @@ void JsObjectFunction::changeAllProperties(VMContext *ctx, int8_t configurable, 
     }
 }
 
+bool JsObjectFunction::hasAnyProperty(VMContext *ctx, bool configurable, bool writable) {
+    return _obj && _obj->hasAnyProperty(ctx, configurable, writable);
+}
+
 void JsObjectFunction::preventExtensions(VMContext *ctx) {
     IJsObject::preventExtensions(ctx);
 
