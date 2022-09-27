@@ -865,7 +865,7 @@ inline void assignMemberIndexOperation(VMContext *ctx, VMRuntime *runtime, const
     }
 
     if (index.type >= JDT_OBJECT) {
-        ctx->vm->callMember(ctx, obj, "toString", Arguments());
+        ctx->vm->callMember(ctx, obj, SS_TOSTRING, Arguments());
         if (ctx->error != PE_OK) {
             return;
         }

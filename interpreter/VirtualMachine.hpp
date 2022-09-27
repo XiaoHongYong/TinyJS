@@ -210,7 +210,7 @@ public:
     void run(cstr_t code, size_t len, VMRuntime *runtime = nullptr);
 
     void eval(cstr_t code, size_t len, VMContext *ctx, VecVMStackScopes &stackScopes, const Arguments &args);
-    void callMember(VMContext *ctx, const JsValue &thiz, const char *memberName, const Arguments &args);
+    void callMember(VMContext *ctx, const JsValue &thiz, const SizedString &memberName, const Arguments &args);
     void callMember(VMContext *ctx, const JsValue &thiz, const JsValue &memberFunc, const Arguments &args);
 
     JsValue getMemberDot(VMContext *ctx, const JsValue &thiz, const SizedString &name, const JsValue &defVal = jsValueUndefined);

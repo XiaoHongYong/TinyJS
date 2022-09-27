@@ -62,7 +62,7 @@ void consoleLog(VMContext *ctx, const JsValue &thiz, const Arguments &args) {
             continue;
         } else if (v.type >= JDT_OBJECT) {
             Arguments noArgs;
-            runtime->vm->callMember(ctx, v, "toString", noArgs);
+            runtime->vm->callMember(ctx, v, SS_TOSTRING, noArgs);
             if (ctx->error == PE_OK) {
                 v = ctx->retValue;
             } else {

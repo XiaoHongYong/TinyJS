@@ -364,7 +364,7 @@ void JsVirtualMachine::dump(BinaryOutputStream &stream) {
     writeIndent(stream, os.sizedStringStartNew(), SizedString("  "));
 }
 
-void JsVirtualMachine::callMember(VMContext *ctx, const JsValue &thiz, const char *memberName, const Arguments &args) {
+void JsVirtualMachine::callMember(VMContext *ctx, const JsValue &thiz, const SizedString &memberName, const Arguments &args) {
     auto member = getMemberDot(ctx, thiz, memberName);
 
     callMember(ctx, thiz, member, args);

@@ -693,7 +693,7 @@ bool VMRuntime::toNumber(VMContext *ctx, const JsValue &item, double &out) {
     auto v = item;
     if (item.type >= JDT_OBJECT) {
         Arguments noArgs;
-        vm->callMember(ctx, v, "toString", noArgs);
+        vm->callMember(ctx, v, SS_TOSTRING, noArgs);
         if (ctx->retValue.type >= JDT_OBJECT) {
             ctx->throwException(PE_TYPE_ERROR, " Cannot convert object to primitive value");
             return false;
@@ -740,7 +740,7 @@ bool VMRuntime::toNumber(VMContext *ctx, const JsValue &item, double &out) {
 
 JsValue VMRuntime::tryCallJsObjectValueOf(VMContext *ctx, const JsValue &obj) {
     // 先调用 valueOf
-    ctx->vm->callMember(ctx, obj, "valueOf", Arguments());
+    ctx->vm->callMember(ctx, obj, SS_VALUEOF, Arguments());
     if (ctx->retValue.type < JDT_OBJECT) {
         return ctx->retValue;
     }
@@ -750,7 +750,7 @@ JsValue VMRuntime::tryCallJsObjectValueOf(VMContext *ctx, const JsValue &obj) {
 
 JsValue VMRuntime::jsObjectToString(VMContext *ctx, const JsValue &v) {
     assert(v.type >= JDT_OBJECT);
-    vm->callMember(ctx, v, "toString", Arguments());
+    vm->callMember(ctx, v, SS_TOSTRING, Arguments());
     if (ctx->retValue.type >= JDT_OBJECT) {
         ctx->throwException(PE_TYPE_ERROR, " Cannot convert object to primitive value");
         return jsStringValueEmpty;
@@ -761,7 +761,7 @@ JsValue VMRuntime::jsObjectToString(VMContext *ctx, const JsValue &v) {
 JsValue VMRuntime::toString(VMContext *ctx, const JsValue &v) {
     JsValue val = v;
     if (val.type >= JDT_OBJECT) {
-        vm->callMember(ctx, v, "toString", Arguments());
+        vm->callMember(ctx, v, SS_TOSTRING, Arguments());
         if (ctx->retValue.type >= JDT_OBJECT) {
             ctx->throwException(PE_TYPE_ERROR, " Cannot convert object to primitive value");
             return jsStringValueEmpty;
@@ -809,7 +809,7 @@ JsValue VMRuntime::toString(VMContext *ctx, const JsValue &v) {
 SizedString VMRuntime::toSizedString(VMContext *ctx, const JsValue &v, string &buf) {
     JsValue val = v;
     if (val.type >= JDT_OBJECT) {
-        vm->callMember(ctx, v, "toString", Arguments());
+        vm->callMember(ctx, v, SS_TOSTRING, Arguments());
         if (ctx->retValue.type >= JDT_OBJECT) {
             ctx->throwException(PE_TYPE_ERROR, " Cannot convert object to primitive value");
             return SizedString();
