@@ -12,7 +12,7 @@ JsRegExp::JsRegExp(const SizedString &re) : JsObject(jsValuePrototypeRegExp),  _
     type = JDT_REGEX;
 
     // 添加缺省的 lastIndex 属性.
-    _props[SS_LASTINDEX] = JsValue(JDT_INT32, 0);
+    _props[SS_LASTINDEX] = JsProperty(JsValue(JDT_INT32, 0), false, false, false, true);
 }
 
 JsRegExp::~JsRegExp() {

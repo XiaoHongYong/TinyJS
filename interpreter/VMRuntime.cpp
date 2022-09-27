@@ -315,6 +315,10 @@ void VMRuntime::init(JsVirtualMachine *vm, VMRuntimeCommon *rtCommon) {
     objPrototypeArray = objValues[JS_OBJ_PROTOTYPE_IDX_ARRAY];
     objPrototypeFunction = objValues[JS_OBJ_PROTOTYPE_IDX_FUNCTION];
     objPrototypeWindow = objValues[JS_OBJ_PROTOTYPE_IDX_WINDOW];
+
+    auto valueOf = objPrototypeObject->getByName(nullptr, objPrototypeObject->self, SS_VALUEOF);
+    assert(valueOf.type == JDT_NATIVE_FUNCTION);
+    funcObjectPrototypeValueOf = getNativeFunction(valueOf.value.index);
 }
 
 void VMRuntime::dump(BinaryOutputStream &stream) {
@@ -732,6 +736,16 @@ bool VMRuntime::toNumber(VMContext *ctx, const JsValue &item, double &out) {
             out = NAN;
             return false;
     }
+}
+
+JsValue VMRuntime::tryCallJsObjectValueOf(VMContext *ctx, const JsValue &obj) {
+    // 先调用 valueOf
+    ctx->vm->callMember(ctx, obj, "valueOf", Arguments());
+    if (ctx->retValue.type < JDT_OBJECT) {
+        return ctx->retValue;
+    }
+
+    return jsObjectToString(ctx, obj);
 }
 
 JsValue VMRuntime::jsObjectToString(VMContext *ctx, const JsValue &v) {

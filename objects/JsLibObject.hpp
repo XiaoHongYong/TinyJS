@@ -75,7 +75,7 @@ public:
 
 protected:
     virtual void _newObject(VMContext *ctx);
-    void _copyForModify();
+    JsLibProperty *_copyForModify(JsLibProperty *pos);
 
 protected:
     JsLibObject();
@@ -92,8 +92,8 @@ protected:
 
 JsLibProperty makeJsLibPropertyGetter(const char *name, JsNativeFunction f);
 
-void setPrototype(JsLibProperty *prop, const JsValue &value);
+void setPrototype(JsLibProperty *prop, JsLibProperty *propEnd, const JsValue &value);
 
-#define SET_PROTOTYPE(props, prototype)     setPrototype(props + CountOf(props) - 1, prototype)
+#define SET_PROTOTYPE(props, prototype)     setPrototype(props, props + CountOf(props), prototype)
 
 #endif /* JsLibObject_hpp */

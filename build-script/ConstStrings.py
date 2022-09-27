@@ -67,6 +67,7 @@ CONST_STRINGS = [
     [ "Enumerable", "enumerable" ],
     [ "Writable", "writable" ],
     [ "Value", "value" ],
+    [ "ValueOf", "valueOf" ],
     [ "Get", "get" ],
     [ "Set", "set" ],
     [ 'Name', 'name' ],

@@ -264,7 +264,8 @@ public:
     bool toNumber(VMContext *ctx, const JsValue &v, double &out);
     JsValue toString(VMContext *ctx, const JsValue &v);
     SizedString toSizedString(VMContext *ctx, const JsValue &v, string &buf);
-    JsValue jsObjectToString(VMContext *ctx, const JsValue &v);
+    JsValue jsObjectToString(VMContext *ctx, const JsValue &obj);
+    JsValue tryCallJsObjectValueOf(VMContext *ctx, const JsValue &v);
     SizedString toTypeName(const JsValue &v);
 
     bool isEmptyString(const JsValue &v);
@@ -361,6 +362,8 @@ public:
     IJsObject                   *objPrototypeArray;
     IJsObject                   *objPrototypeFunction;
     IJsObject                   *objPrototypeWindow;
+
+    JsNativeFunction            funcObjectPrototypeValueOf;
 
     uint8_t                     _nextRefIdx;
     uint32_t                    _newAllocatedCount;

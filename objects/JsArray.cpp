@@ -325,7 +325,7 @@ JsProperty *JsArray::getRawByName(VMContext *ctx, const SizedString &name, JsNat
 
     if (name.equal(SS_LENGTH)) {
         static JsProperty prop;
-        prop = JsProperty(JsValue(JDT_INT32, _length), false, false);
+        prop = JsProperty(JsValue(JDT_INT32, _length), false, false, false);
         return &prop;
     }
 

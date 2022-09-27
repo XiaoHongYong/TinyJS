@@ -861,3 +861,39 @@ false
 false
 */
 
+
+// Index: 6
+// Object.isFrozen
+function f(r, o) {
+    console.log('Round: ', r);
+
+    Object.freeze(o);
+    console.log(Object.isFrozen(o));
+}
+f(1, {});
+f(2, String.prototype);
+f(3, []);
+f(4, new Array());
+f(5, new Object());
+f(6, /a/);
+f(7, new Number(1));
+f(8, new String('x'));
+/* OUTPUT
+Round:  1
+true
+Round:  2
+true
+Round:  3
+true
+Round:  4
+true
+Round:  5
+true
+Round:  6
+true
+Round:  7
+true
+Round:  8
+true
+*/
+

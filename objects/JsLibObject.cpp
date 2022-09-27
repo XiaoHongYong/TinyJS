@@ -70,7 +70,7 @@ void JsLibObject::definePropertyByName(VMContext *ctx, const SizedString &name, 
     auto first = std::lower_bound(_libProps, _libPropsEnd, name, JsLibFunctionLessCmp());
     if (first != _libPropsEnd && first->name.equal(name)) {
         // 修改现有的属性
-        _copyForModify();
+        first = _copyForModify(first);
 
         first->function = nullptr;
         defineNameProperty(ctx, &first->prop, descriptor, name);
@@ -114,7 +114,7 @@ void JsLibObject::setByName(VMContext *ctx, const JsValue &thiz, const SizedStri
 
     auto first = std::lower_bound(_libProps, _libPropsEnd, name, JsLibFunctionLessCmp());
     if (first != _libPropsEnd && first->name.equal(name)) {
-        _copyForModify();
+        first = _copyForModify(first);
 
         // 修改现有的属性
         if (first->functionSet) {
@@ -159,7 +159,7 @@ JsValue JsLibObject::increaseByName(VMContext *ctx, const JsValue &thiz, const S
 
     auto first = std::lower_bound(_libProps, _libPropsEnd, name, JsLibFunctionLessCmp());
     if (first != _libPropsEnd && first->name.equal(name)) {
-        _copyForModify();
+        first = _copyForModify(first);
 
         // 修改现有的属性
         if (first->functionSet) {
@@ -251,12 +251,9 @@ bool JsLibObject::removeByName(VMContext *ctx, const SizedString &name) {
             return false;
         }
 
-        auto posToDelete = first - _libProps;
-
         // 删除现有的属性
-        _copyForModify();
+        first = _copyForModify(first);
 
-        first = _libProps + posToDelete;
         memmove(first, first + 1, sizeof(*first) * (_libPropsEnd - first - 1));
         _libPropsEnd--;
     }
@@ -282,7 +279,7 @@ bool JsLibObject::removeBySymbol(VMContext *ctx, uint32_t index) {
 }
 
 void JsLibObject::changeAllProperties(VMContext *ctx, int8_t configurable, int8_t writable) {
-    _copyForModify();
+    _copyForModify(_libProps);
 
     for (auto p = _libProps; p != _libPropsEnd; p++) {
         p->prop.changeProperty(configurable, writable);
@@ -344,9 +341,15 @@ void JsLibObject::markReferIdx(VMRuntime *rt) {
 /**
  * 约定 prototype 在最后一个位置.
  */
-void setPrototype(JsLibProperty *prop, const JsValue &value) {
-    assert(prop->name.equal("prototype"));
-    prop->prop = JsProperty(value, false, false, false, false);
+void setPrototype(JsLibProperty *prop, JsLibProperty *propEnd, const JsValue &value) {
+    // 逆序查找，prototye 放在后面.
+    for (auto p = propEnd - 1; p >= prop; p--) {
+        if (p->name.equal("prototype")) {
+            p->prop = JsProperty(value, false, false, false, false);
+            return;
+        }
+    }
+    assert(0);
 }
 
 void JsLibObject::_newObject(VMContext *ctx) {
@@ -359,16 +362,21 @@ void JsLibObject::_newObject(VMContext *ctx) {
     }
 }
 
-void JsLibObject::_copyForModify() {
+JsLibProperty *JsLibObject::_copyForModify(JsLibProperty *pos) {
     if (!_modified) {
         _modified = true;
 
+        auto offset = pos - _libProps;
         auto count = _libPropsEnd - _libProps;
         auto tmp = new JsLibProperty[count];
         memcpy(tmp, _libProps, sizeof(JsLibProperty) * count);
         _libProps = tmp;
         _libPropsEnd = tmp + count;
+
+        pos = _libProps + offset;
     }
+
+    return pos;
 }
 
 JsLibProperty makeJsLibPropertyGetter(const char *name, JsNativeFunction f) {

@@ -231,7 +231,7 @@ void objectEntries(VMContext *ctx, const JsValue &thiz, const Arguments &args) {
     auto obj = args[0];
 
     auto arr = new JsArray();
-    ctx->retValue = runtime->pushObjectValue(arr);
+    auto ret = runtime->pushObjectValue(arr);
 
     auto it = getJsIteratorPtr(ctx, obj);
     if (it) {
@@ -244,6 +244,8 @@ void objectEntries(VMContext *ctx, const JsValue &thiz, const Arguments &args) {
             arr->push(ctx, runtime->pushObjectValue(item));
         }
     }
+
+    ctx->retValue = ret;
 }
 
 void stringPrototypeCharAt(VMContext *ctx, const JsValue &thiz, const Arguments &args);
@@ -616,6 +618,46 @@ void objectIsFrozen(VMContext *ctx, const JsValue &thiz, const Arguments &args) 
     ctx->retValue = JsValue(JDT_BOOL, isFrozen);
 }
 
+void objectIsSealed(VMContext *ctx, const JsValue &thiz, const Arguments &args) {
+    auto obj = args.getAt(0);
+    if (obj.type < JDT_OBJECT) {
+        ctx->retValue = jsValueTrue;
+        return;
+    }
+
+    auto pobj = ctx->runtime->getObject(obj);
+    auto extensible = pobj->isExtensible();
+    if (extensible) {
+        ctx->retValue = jsValueFalse;
+        return;
+    }
+
+    bool isSealed = !pobj->hasAnyProperty(ctx, true, false);
+
+    ctx->retValue = JsValue(JDT_BOOL, isSealed);
+}
+
+void objectKeys(VMContext *ctx, const JsValue &thiz, const Arguments &args) {
+    auto obj = args.getAt(0);
+    if (obj.type <= JDT_NULL) {
+        ctx->throwException(PE_TYPE_ERROR, "Cannot convert undefined or null to object");
+        return;
+    }
+
+    auto arr = new JsArray();
+    auto ret = ctx->runtime->pushObjectValue(arr);
+
+    auto it = getJsIteratorPtr(ctx, obj);
+    if (it) {
+        JsValue key;
+        while (it->next(nullptr, &key, nullptr)) {
+            arr->push(ctx, key);
+        }
+    }
+
+    ctx->retValue = ret;
+}
+
 void objectPreventExtensions(VMContext *ctx, const JsValue &thiz, const Arguments &args) {
     if (args.count == 0 || args[0].type <= JDT_NULL) {
         ctx->throwException(PE_TYPE_ERROR, "Cannot convert undefined or null to object");
@@ -630,6 +672,64 @@ void objectPreventExtensions(VMContext *ctx, const JsValue &thiz, const Argument
 
     auto pobj = ctx->runtime->getObject(obj);
     pobj->preventExtensions(ctx);
+}
+
+void objectSeal(VMContext *ctx, const JsValue &thiz, const Arguments &args) {
+    auto obj = args.getAt(0);
+    ctx->retValue = obj;
+    if (obj.type < JDT_OBJECT) {
+        return;
+    }
+
+    auto pobj = ctx->runtime->getObject(obj);
+    pobj->preventExtensions(ctx);
+    pobj->changeAllProperties(ctx, true);
+}
+
+void objectSetPrototypeOf(VMContext *ctx, const JsValue &thiz, const Arguments &args) {
+    auto obj = args.getAt(0);
+    auto prototype = args.getAt(1);
+
+    if (obj.type <= JDT_NULL) {
+        ctx->throwException(PE_TYPE_ERROR, "Object.setPrototypeOf called on null or undefined");
+        return;
+    }
+
+    if (prototype.type != JDT_NULL && prototype.type < JDT_OBJECT) {
+        ctx->throwExceptionFormatJsValue(PE_TYPE_ERROR, "Object prototype may only be an Object or null: %.*s", prototype);
+        return;
+    }
+
+    ctx->retValue = obj;
+    if (obj.type < JDT_OBJECT) {
+        return;
+    }
+
+    auto pobj = ctx->runtime->getObject(obj);
+    pobj->setByName(ctx, obj, SS___PROTO__, prototype);
+}
+
+void objectValues(VMContext *ctx, const JsValue &thiz, const Arguments &args) {
+    auto obj = args.getAt(0);
+    auto runtime = ctx->runtime;
+
+    if (obj.type <= JDT_NULL) {
+        ctx->throwException(PE_TYPE_ERROR, "Cannot convert undefined or null to object");
+        return;
+    }
+
+    auto arr = new JsArray();
+    auto ret = runtime->pushObjectValue(arr);
+
+    auto it = getJsIteratorPtr(ctx, obj);
+    if (it) {
+        JsValue value;
+        while (it->next(nullptr, nullptr, &value)) {
+            arr->push(ctx, value);
+        }
+    }
+
+    ctx->retValue = ret;
 }
 
 static JsLibProperty objectFunctions[] = {
@@ -650,7 +750,12 @@ static JsLibProperty objectFunctions[] = {
     { "is", objectIs },
     { "isExtensible", objectIsExtensible },
     { "isFrozen", objectIsFrozen },
+    { "isSealed", objectIsSealed },
+    { "keys", objectKeys },
     { "preventExtensions", objectPreventExtensions },
+    { "seal", objectSeal },
+    { "setPrototypeOf", objectSetPrototypeOf },
+    { "values", objectValues },
     { "prototype", nullptr, nullptr, JsValue(JDT_INT32, 1) },
 };
 
@@ -665,14 +770,76 @@ void objectPrototypeHasOwnProperty(VMContext *ctx, const JsValue &thiz, const Ar
         return;
     }
 
-    JsValue name = args.count >= 1 ? args[0] : jsStringValueUndefined;
+    JsValue name = args.getAt(0, jsStringValueUndefined);
 
     hasOwnProperty(ctx, thiz, name);
 }
 
+void objectPrototypeIsPrototypeOf(VMContext *ctx, const JsValue &thiz, const Arguments &args) {
+    JsValue obj = args.getAt(0);
+    auto runtime = ctx->runtime;
+    bool ret = false;
+
+    while (obj.type >= JDT_OBJECT) {
+        auto pobj = runtime->getObject(obj);
+        obj = pobj->getByName(ctx, obj, SS___PROTO__);
+        if (obj == thiz) {
+            ret = true;
+            break;
+        }
+    }
+
+    ctx->retValue = JsValue(JDT_BOOL, ret);
+}
+
+void objectPrototypeValueOf(VMContext *ctx, const JsValue &thiz, const Arguments &args) {
+    auto runtime = ctx->runtime;
+
+    auto ret = thiz;
+    switch (thiz.type) {
+        case JDT_OBJ_BOOL: ret = ((JsBooleanObject *)runtime->getObject(thiz))->value(); break;
+        case JDT_OBJ_NUMBER: ret = ((JsNumberObject *)runtime->getObject(thiz))->value(); break;
+        case JDT_OBJ_STRING: ret = ((JsStringObject *)runtime->getObject(thiz))->value(); break;
+        default: break;
+    }
+
+    ctx->retValue = ret;
+}
+
+void objectPrototypePropertyIsEnumerable(VMContext *ctx, const JsValue &thiz, const Arguments &args) {
+    JsValue name = args.getAt(0, jsStringValueUndefined);
+    auto runtime = ctx->runtime;
+    bool ret = false;
+
+    if (thiz.type < JDT_OBJECT) {
+        if (thiz.type == JDT_CHAR || thiz.type == JDT_STRING) {
+            string buf;
+            auto s = runtime->toSizedString(ctx, name, buf);
+            bool successful;
+            auto index = s.atoi(successful);
+            if (successful && index >= 0 && index < runtime->getStringLength(thiz)) {
+                ret = true;
+            }
+        }
+    } else {
+        auto pobj = runtime->getObject(thiz);
+        JsNativeFunction funcGetter = nullptr;
+        auto prop = pobj->getRaw(ctx, name, funcGetter);
+        if (prop && prop->isEnumerable) {
+            ret = true;
+        }
+    }
+
+    ctx->retValue = JsValue(JDT_BOOL, ret);
+}
+
 static JsLibProperty objectPrototypeFunctions[] = {
+    { "toLocaleString", objectPrototypeToString },
     { "toString", objectPrototypeToString },
     { "hasOwnProperty", objectPrototypeHasOwnProperty },
+    { "isPrototypeOf", objectPrototypeIsPrototypeOf },
+    { "valueOf", objectPrototypeValueOf },
+    { "propertyIsEnumerable", objectPrototypePropertyIsEnumerable },
 };
 
 void registerObject(VMRuntimeCommon *rt) {

@@ -420,7 +420,7 @@ inline JsValue plusOperate(VMContext *ctx, VMRuntime *rt, int32_t left, const Js
             }
         }
         default: {
-            return plusOperate(ctx, rt, left, leftStr, rt->jsObjectToString(ctx, right));
+            return plusOperate(ctx, rt, left, leftStr, rt->tryCallJsObjectValueOf(ctx, right));
         }
     }
 }
@@ -449,7 +449,7 @@ inline JsValue plusOperate(VMContext *ctx, VMRuntime *rt, const JsValue &left, c
                 case JDT_STRING:
                     return rt->addString(jsStringValueUndefined, right);
                 default: {
-                    return plusOperate(ctx, rt, left, rt->jsObjectToString(ctx, right));
+                    return plusOperate(ctx, rt, left, rt->tryCallJsObjectValueOf(ctx, right));
                 }
             }
             break;
@@ -489,7 +489,7 @@ inline JsValue plusOperate(VMContext *ctx, VMRuntime *rt, const JsValue &left, c
                     return rt->addString(s, r);
                 }
                 default:
-                    return plusOperate(ctx, rt, left, rt->jsObjectToString(ctx, right));
+                    return plusOperate(ctx, rt, left, rt->tryCallJsObjectValueOf(ctx, right));
             }
             break;
         }
@@ -518,7 +518,7 @@ inline JsValue plusOperate(VMContext *ctx, VMRuntime *rt, const JsValue &left, c
                     throwSymbolConvertStringException(ctx);
                     return jsValueNaN;
                 default:
-                    return plusOperate(ctx, rt, left, rt->jsObjectToString(ctx, right));
+                    return plusOperate(ctx, rt, left, rt->tryCallJsObjectValueOf(ctx, right));
             }
             break;
         }
@@ -550,7 +550,7 @@ inline JsValue plusOperate(VMContext *ctx, VMRuntime *rt, const JsValue &left, c
                     throwSymbolConvertStringException(ctx);
                     return jsValueNaN;
                 default:
-                    return plusOperate(ctx, rt, left, rt->jsObjectToString(ctx, right));
+                    return plusOperate(ctx, rt, left, rt->tryCallJsObjectValueOf(ctx, right));
             }
             break;
         }
@@ -559,7 +559,7 @@ inline JsValue plusOperate(VMContext *ctx, VMRuntime *rt, const JsValue &left, c
             return jsValueNaN;
         }
         default:
-            return plusOperate(ctx, rt, rt->jsObjectToString(ctx, left), right);
+            return plusOperate(ctx, rt, rt->tryCallJsObjectValueOf(ctx, left), right);
     }
 }
 
@@ -734,8 +734,8 @@ inline bool relationalStringCmp(VMContext *ctx, VMRuntime *rt, const SizedString
             return op(left, rt->getString(right));
         }
         default: {
-            // Object 类型需要再此转换
-            return relationalStringCmp(ctx, rt, left, rt->jsObjectToString(ctx, right), op);
+            // Object 类型需要再次转换
+            return relationalStringCmp(ctx, rt, left, rt->tryCallJsObjectValueOf(ctx, right), op);
         }
     }
 }
@@ -793,8 +793,8 @@ inline bool relationalOperate(VMContext *ctx, VMRuntime *rt, const JsValue &left
             return op.symbolVsOthers(ctx);
         }
         default: {
-            // Object 类型需要再此转换
-            return relationalOperate(ctx, rt, rt->jsObjectToString(ctx, left), right, op);
+            // Object 类型需要再次转换
+            return relationalOperate(ctx, rt, rt->tryCallJsObjectValueOf(ctx, left), right, op);
         }
     }
 }

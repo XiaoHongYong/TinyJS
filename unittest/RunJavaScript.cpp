@@ -50,18 +50,21 @@ const char *ignoreSpace(const char *text) {
  * 找到字符串 [pos, len] 能在 orgRight 中唯一出现一次的长度. 用于打印出错的位置.
  */
 uint32_t uniqueLen(const char *orgRight, const char *pos) {
-    if (pos - orgRight < 100 || strlen(pos) == 0) {
+    if (strlen(pos) == 0) {
         return 100;
     }
 
     uint32_t len = 100;
     SizedString org(orgRight);
+
+    // 去掉第一个相同的部分
+    auto n = org.strStr(pos);
+    assert(n != -1);
+    org.shrink(n + (int)len);
+
     for (int i = 0; i < 10; i++) {
         SizedString pt(pos, min((uint32_t)strlen(pos), len));
-        auto n = org.strStr(pos);
-        if (n == -1) break;
-        org.shrink(n + (int)len);
-        n = org.strStr(pos);
+        auto n = org.strStr(pt);
         if (n == -1) break;
         len += 30;
     }
