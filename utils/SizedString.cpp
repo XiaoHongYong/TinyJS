@@ -384,8 +384,9 @@ bool SizedString::split(const char *separator, SizedString &left, SizedString &r
     while (p < end) {
         if (*p == *separator && strncmp(p, separator, lenSep) == 0) {
             // Found it.
+            auto lenOrg = len;
             left = SizedString(data, (uint32_t)((uint8_t *)p - data), _isStable);
-            right = SizedString((uint8_t *)p + lenSep, (uint32_t)(len - left.len - lenSep), _isStable);
+            right = SizedString((uint8_t *)p + lenSep, (uint32_t)(lenOrg - left.len - lenSep), _isStable);
             return true;
         }
         p++;

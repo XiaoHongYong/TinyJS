@@ -120,26 +120,27 @@ bool runJavascript(const string &code, string &output) {
     return true;
 }
 
-void splitTestCodeAndOutput(string text, VecStrings &vCodeOut, VecStrings &vOutputOut) {
+void splitTestCodeAndOutput(string textOrg, VecStrings &vCodeOut, VecStrings &vOutputOut) {
+    SizedString text(textOrg);
     while (true) {
-        string left, right;
-        if (strSplit(text.c_str(), "/* OUTPUT", left, right)) {
-            vCodeOut.push_back(left);
+        SizedString left, right;
+        if (text.split("/* OUTPUT", left, right)) {
+            vCodeOut.push_back(left.toString());
 
-            if (startsWith(right.c_str(), "-FIXED")) {
-                right.erase(right.begin(), right.begin() + 6);
+            if (right.startsWith("-FIXED")) {
+                right.shrink(6);
             }
-            if (!strSplit(right.c_str(), "*/", left, right)) {
+            if (!right.split("*/", left, right)) {
                 throw "Invalid output format";
             }
-            vOutputOut.push_back(left);
+            vOutputOut.push_back(left.toString());
             text = right;
         } else {
-            trimStr(text);
-            if (!text.empty()) {
-                printf("NO OUTPUT is specified: %s\n", text.c_str());
+            text.trim();
+            if (text.len > 0) {
+                printf("NO OUTPUT is specified: %.*s\n", text.len, text.data);
             }
-            assert(text.empty());
+            assert(text.len == 0);
             break;
         }
     }

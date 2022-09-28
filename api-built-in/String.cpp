@@ -121,20 +121,11 @@ void stringPrototypeAt(VMContext *ctx, const JsValue &thiz, const Arguments &arg
     }
 }
 
-void stringPrototypeCharAt(VMContext *ctx, const JsValue &thiz, const Arguments &args) {
+int getStringCharCodeAt(VMContext *ctx, const JsValue &thiz, const Arguments &args, cstr_t apiName) {
     auto runtime = ctx->runtime;
-    auto strValue = convertStringToJsValue(ctx, thiz, "charAt");
+    auto strValue = convertStringToJsValue(ctx, thiz, apiName);
     if (!strValue.isValid()) {
-        return;
-    }
-
-    SizedString str;
-    uint8_t buf[32];
-    if (strValue.type == JDT_STRING) {
-        str = runtime->getString(strValue);
-    } else {
-        buf[0] = strValue.value.n32;
-        str = SizedString(buf, 1);
+        return -1;
     }
 
     int32_t index = 0;
@@ -142,12 +133,38 @@ void stringPrototypeCharAt(VMContext *ctx, const JsValue &thiz, const Arguments 
         index = (int32_t)runtime->toNumber(ctx, args.data[0]);
     }
 
-    if (index < 0 || index >= str.len) {
+    if (strValue.type == JDT_STRING) {
+        auto str = runtime->getString(strValue);
+        if (index < 0 || index >= str.len) {
+            return -1;
+        }
+        return str.data[index];
+    } else {
+        if (index != 1) {
+            return -1;
+        }
+        return strValue.value.n32;
+    }
+}
+
+void stringPrototypeCharAt(VMContext *ctx, const JsValue &thiz, const Arguments &args) {
+    int code = getStringCharCodeAt(ctx, thiz, args, "charAt");
+    if (code == -1) {
         ctx->retValue = jsStringValueEmpty;
         return;
     }
 
-    ctx->retValue = JsValue(JDT_CHAR, str.data[index]);
+    ctx->retValue = JsValue(JDT_CHAR, code);
+}
+
+void stringPrototypeCharCodeAt(VMContext *ctx, const JsValue &thiz, const Arguments &args) {
+    int code = getStringCharCodeAt(ctx, thiz, args, "charCodeAt");
+    if (code == -1) {
+        ctx->retValue = jsValueNaN;
+        return;
+    }
+
+    ctx->retValue = JsValue(JDT_INT32, code);
 }
 
 void stringPrototypeToString(VMContext *ctx, const JsValue &thiz, const Arguments &args) {
@@ -170,8 +187,14 @@ void stringPrototypeLength(VMContext *ctx, const JsValue &thiz, const Arguments 
 }
 
 static JsLibProperty stringPrototypeFunctions[] = {
+    // @@iterator
+    // * anchor
     { "at", stringPrototypeAt },
+    // * big
+    // * blink
+    // * bold
     { "charAt", stringPrototypeCharAt },
+    { "charCodeAt", stringPrototypeCharCodeAt },
     { "toString", stringPrototypeToString },
     makeJsLibPropertyGetter("length", stringPrototypeLength),
 };

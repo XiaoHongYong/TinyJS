@@ -27,6 +27,8 @@ public:
     SizedString(const uint8_t *data, size_t len) : data((uint8_t *)data), len((uint32_t)len), _isStable(false) { }
     SizedString(const void *data, size_t len, bool isStable) : data((uint8_t *)data), len((uint32_t)len), _isStable(isStable) { }
 
+    inline bool empty() const { return len == 0; }
+
     inline void setStable() { _isStable = true; }
     inline bool isStable() const { return _isStable; }
 
