@@ -397,18 +397,15 @@ inline JsValue plusOperate(VMContext *ctx, VMRuntime *rt, int32_t left, const Js
             throwSymbolConvertException(ctx);
             return jsValueNaN;
         case JDT_CHAR: {
-            char buf[64];
-            uint32_t len = 0;
+            SizedStringWrapper str;
             if (leftStr.isValid()) {
-                SizedString str = rt->getString(leftStr);
-                assert(len < CountOf(buf));
-                memcpy(buf, str.data, str.len);
-                len = str.len;
+                str.append(rt->getUtf8String(leftStr));
             } else {
-                len = (uint32_t)::itoa(left, buf);
+                str.append(left);
             }
-            buf[len++] = (char )right.value.index;
-            return rt->pushString(SizedString(buf, len));
+
+            str.append(right);
+            return rt->pushString(str.str());
         }
         case JDT_STRING: {
             if (leftStr.isValid()) {
@@ -442,9 +439,9 @@ inline JsValue plusOperate(VMContext *ctx, VMRuntime *rt, const JsValue &left, c
                     throwSymbolConvertException(ctx);
                     return jsValueNaN;
                 case JDT_CHAR: {
-                    char buf[32] = "undefined";
-                    buf[SS_UNDEFINED.len] = (char)right.value.index;
-                    return rt->pushString(SizedString(buf, SS_UNDEFINED.len + 1));
+                    SizedStringWrapper str(SS_UNDEFINED);
+                    str.append(right);
+                    return rt->pushString(str.str());
                 }
                 case JDT_STRING:
                     return rt->addString(jsStringValueUndefined, right);
@@ -731,7 +728,7 @@ inline bool relationalStringCmp(VMContext *ctx, VMRuntime *rt, const SizedString
             return op(left, tmp.str());
         }
         case JDT_STRING: {
-            return op(left, rt->getString(right));
+            return op(left, rt->getUtf8String(right));
         }
         default: {
             // Object 类型需要再次转换
@@ -782,7 +779,7 @@ inline bool relationalOperate(VMContext *ctx, VMRuntime *rt, const JsValue &left
             return relationalStringCmp(ctx, rt, str, right, op);
         }
         case JDT_STRING: {
-            auto str = rt->getString(left);
+            auto &str = rt->getUtf8String(left);
             return relationalStringCmp(ctx, rt, str, right, op);
         }
         case JDT_SYMBOL: {
@@ -821,21 +818,21 @@ inline bool relationalStrictEqual(VMRuntime *rt, const JsValue &left, const JsVa
 
     if (left.type == JDT_CHAR) {
         if (right.type == JDT_STRING && rt->getStringLength(right) == 1) {
-            auto s = rt->getString(right);
-            return s.data[0] == left.value.index;
+            auto &s = rt->getString(right);
+            return s.equal(left.value.index);
         }
     } else if (left.type == JDT_STRING) {
         auto len1 = rt->getStringLength(left);
         if (right.type == JDT_CHAR) {
             if (len1 == 1) {
-                auto s1 = rt->getString(left);
-                return s1.data[0] == left.value.n32;
+                auto &s1 = rt->getString(left);
+                return s1.equal(right.value.n32);
             }
         } else if (right.type == JDT_STRING) {
             auto len2 = rt->getStringLength(right);
             if (len1 == len2) {
-                auto s1 = rt->getString(left);
-                auto s2 = rt->getString(right);
+                auto &s1 = rt->getUtf8String(left);
+                auto &s2 = rt->getUtf8String(right);
                 return s1.equal(s2);
             }
         }

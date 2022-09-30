@@ -1646,8 +1646,7 @@ int JSParser::_getStringIndex(const SizedString &str) {
         idx = _nextStringIdx++;
         _strings[str] = idx;
 
-        SizedString value = str;
-        _resPool->strings.push_back(value);
+        _resPool->strings.push_back(str);
     } else {
         idx = (*it).second;
     }

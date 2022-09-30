@@ -14,12 +14,16 @@
 #include <vector>
 #include "Hash.h"
 
+
 using namespace std;
 
+using utf16_t = uint16_t;
+using utf32_t = uint32_t;
 
 class SizedString {
 public:
     SizedString() { auto p = (uint64_t *)this; p[0] = 0; p[1] = 0; }
+    SizedString(const SizedString &other) { *this = other; }
     SizedString(const char *data);
     SizedString(const string &s) : data((uint8_t *)s.c_str()), len((uint32_t)s.size()), _isStable(false) { }
     SizedString(const void *data, size_t len) : data((uint8_t *)data), len((uint32_t)len), _isStable(false) { }
@@ -125,7 +129,73 @@ private:
 
 };
 
+/**
+ * SizedString 保存的是 utf-8 编码, 而 dataUtf16 和 lenUtf16 保存的是 utf-16 编码
+ */
+class SizedStringUtf16 {
+public:
+    SizedStringUtf16() {
+        _dataUtf16 = nullptr;
+        _lenUtf16 = 0;
+        _isAnsi = true;
+    }
+
+    SizedStringUtf16(const utf16_t *dataUtf16, uint32_t lenUtf16) : _dataUtf16((uint16_t *)dataUtf16), _lenUtf16(lenUtf16) {
+        _isAnsi = false;
+    }
+
+    SizedStringUtf16(const SizedString &s) : _utf8Str(s) {
+        onSetUtf8String();
+    }
+
+    void set(const SizedString &other) {
+        _utf8Str = other;
+        onSetUtf8String();
+    }
+
+    void setUtf16(const utf16_t *dataUtf16, uint32_t lenUtf16) {
+        _dataUtf16 = (utf16_t *)dataUtf16;
+        assert(lenUtf16 == _lenUtf16); // _lenUtf16 = lenUtf16;
+        _isAnsi = false;
+    }
+
+    const SizedString &utf8Str() const { return _utf8Str; }
+
+    inline uint32_t size() const { return _lenUtf16; }
+    inline utf16_t *utf16Data() const { return _dataUtf16; }
+
+    inline utf16_t chartAt(uint32_t index) const {
+        assert(index < size());
+        assert(canRandomAccess());
+        return _isAnsi ? _utf8Str.data[index] : _dataUtf16[index];
+    }
+
+    utf32_t codePointAt(uint32_t index) const;
+
+    inline bool canRandomAccess() const { return _isAnsi || _dataUtf16 != nullptr; }
+    inline bool isAnsi() const { return _isAnsi; }
+    inline bool isUtf16Valid() const { return _dataUtf16 != nullptr; }
+
+    bool equal(uint32_t code) const;
+
+protected:
+    void onSetUtf8String();
+
+protected:
+    SizedString                     _utf8Str;
+    utf16_t                         *_dataUtf16;
+
+    // _lenUtf16 是一定有效的，_dataUtf16 不一定有效
+    uint32_t                        _lenUtf16;
+
+    // 都是 ansi 字符
+    bool                            _isAnsi;
+
+};
+
+
 using VecSizedStrings = std::vector<SizedString>;
+using VecSizedStringUtf16s = std::vector<SizedStringUtf16>;
 
 #define MAKE_STABLE_STR(s)       SizedString(s, sizeof(s) - 1, true)
 

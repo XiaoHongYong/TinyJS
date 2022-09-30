@@ -56,7 +56,7 @@ bool jsValueStrictLessThan(VMRuntime *runtime, const JsValue &left, const JsValu
                 return left.value.n32 < right.value.n32;
             } else if (right.type == JDT_STRING) {
                 SizedStringWrapper s1(left);
-                auto s2 = runtime->getString(right);
+                auto &s2 = runtime->getUtf8String(right);
                 return s1.cmp(s2) < 0;
             } else {
                 return left.type < right.type;
@@ -64,12 +64,12 @@ bool jsValueStrictLessThan(VMRuntime *runtime, const JsValue &left, const JsValu
         }
         case JDT_STRING: {
             if (right.type == JDT_CHAR) {
-                auto s1 = runtime->getString(left);
+                auto &s1 = runtime->getUtf8String(left);
                 SizedStringWrapper s2(right);
                 return s1.cmp(s2) < 0;
             } else if (right.type == JDT_STRING) {
-                auto s1 = runtime->getString(left);
-                auto s2 = runtime->getString(right);
+                auto &s1 = runtime->getUtf8String(left);
+                auto &s2 = runtime->getUtf8String(right);
                 return s1.cmp(s2) < 0;
             } else {
                 return left.type < right.type;

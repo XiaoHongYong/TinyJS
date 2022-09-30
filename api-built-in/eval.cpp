@@ -33,7 +33,7 @@ static void _eval(VMContext *ctx, const JsValue &thiz, const Arguments &args) {
             stackScopes = &stackScopesGlobal;
         }
 
-        ctx->vm->eval((cstr_t)code.data, code.len, ctx, *stackScopes, args);
+        ctx->vm->eval((cstr_t)code.utf8Str().data, code.utf8Str().len, ctx, *stackScopes, args);
     } else if (v.type == JDT_CHAR) {
         ctx->retValue = jsValueUndefined;
     } else {

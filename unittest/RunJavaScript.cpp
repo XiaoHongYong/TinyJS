@@ -41,60 +41,63 @@ protected:
 
 };
 
-const char *ignoreSpace(const char *text) {
-    while (isspace(*text)) text++;
-    return text;
+uint8_t *ignoreSpace(const uint8_t *text, const uint8_t *end) {
+    while (text < end && isspace(*text)) text++;
+    return (uint8_t *)text;
 }
 
 /**
  * 找到字符串 [pos, len] 能在 orgRight 中唯一出现一次的长度. 用于打印出错的位置.
  */
-uint32_t uniqueLen(const char *orgRight, const char *pos) {
-    if (strlen(pos) == 0) {
-        return 100;
+uint32_t uniqueLen(const SizedString &orgRight, const uint8_t *pos) {
+    uint32_t maxlen = (uint32_t)(orgRight.data + orgRight.len - pos);
+    uint32_t len = min((uint32_t)100, maxlen);
+    if (strlen((char *)pos) == 0) {
+        return len;
     }
 
-    uint32_t len = 100;
     SizedString org(orgRight);
+    SizedString pt(pos, len);
 
     // 去掉第一个相同的部分
-    auto n = org.strStr(pos);
+    auto n = org.strStr(pt);
     assert(n != -1);
     org.shrink(n + (int)len);
 
     for (int i = 0; i < 10; i++) {
-        SizedString pt(pos, min((uint32_t)strlen(pos), len));
         auto n = org.strStr(pt);
         if (n == -1) break;
-        len += 30;
+        pt.len = min(maxlen, pt.len + 30);
     }
 
-    return len;
+    return pt.len;
 }
 
-bool compareTextIgnoreSpace(const char *left, const char *right) {
-    auto orgLeft = left, orgRight = right;
+bool compareTextIgnoreSpace(const SizedString &leftS, const SizedString &rightS) {
+    auto left = leftS.data, right = rightS.data;
+    auto leftEnd = left + leftS.len, rightEnd = right + rightS.len;
 
     while (true) {
         auto p1 = left;
         auto p2 = right;
 
-        while (*left != '\0' && *left == *right) {
+        while (left != leftEnd && right != rightEnd && *left == *right) {
             left++; right++;
         }
-        left = ignoreSpace(left);
-        right = ignoreSpace(right);
+        left = ignoreSpace(left, leftEnd);
+        right = ignoreSpace(right, rightEnd);
 
         if (p1 == left && p2 == right)
             break;
     }
 
-    if (*left != *right) {
-        auto len = uniqueLen(orgRight, right);
-        printf("NOT EQUAL, at:\nCurrent(%d):  %.100s\nExpected(%d): %.*s\n", (int)(left - orgLeft), left, (int)(right - orgRight), len, right);
+    if (left != leftEnd || right != rightEnd) {
+        auto len = uniqueLen(rightS, right);
+        printf("NOT EQUAL, at:\nCurrent(%d):  %.100s\nExpected(%d): %.*s\n", (int)(left - leftS.data), left, (int)(right - rightS.data), len, right);
+        return false;
     }
 
-    return *left == *right;
+    return true;
 }
 
 bool runJavascript(const string &code, string &output) {
@@ -189,7 +192,7 @@ TEST(RunJavaScript, outputCheck) {
                 printf("   Code(%d): %.*s\n", (int)i, (int)70, removeNewLine(code).c_str());
                 printf("   Current:   %.*s\n", (int)60, removeNewLine(output).c_str());
                 printf("   Expected: %.*s\n", (int)60, removeNewLine(outputExpected).c_str());
-                auto result = compareTextIgnoreSpace(output.c_str(), outputExpected.c_str());
+                auto result = compareTextIgnoreSpace(output, outputExpected);
                 if (!result) {
                     FAIL() << "File: " + fn;
                 }

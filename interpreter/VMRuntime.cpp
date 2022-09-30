@@ -120,9 +120,9 @@ void VMRuntimeCommon::dump(BinaryOutputStream &stream) {
 
     stream.write("Strings: [\n");
     for (uint32_t i = 0; i < stringValues.size(); i++) {
-        auto item = stringValues[i];
+        auto &item = stringValues[i];
         assert(!item.isJoinedString);
-        auto &s = item.value.str;
+        auto &s = item.value.str.utf8Str();
         stream.writeFormat("  %d: %.*s,\n", i, (int)s.len, s.data);
     }
     stream.write("]\n");
@@ -342,21 +342,22 @@ void VMRuntime::dump(BinaryOutputStream &stream) {
             stream.writeFormat("  %d: ReferIdx: %d, JoinedString: ", index, item.referIdx);
             auto &joinedString = item.value.joinedString;
             if (joinedString.isStringIdxInResourcePool) {
-                auto ss = getStringInResourcePool(joinedString.stringIdx);
+                auto &ss = getStringInResourcePool(joinedString.stringIdx).utf8Str();
                 stream.writeFormat("'%.*s' + ", int(ss.len), ss.data);
             } else {
                 stream.writeFormat("[%d] + ", joinedString.stringIdx);
             }
 
             if (joinedString.isNextStringIdxInResourcePool) {
-                auto ss = getStringInResourcePool(joinedString.nextStringIdx);
+                auto &ss = getStringInResourcePool(joinedString.nextStringIdx).utf8Str();
                 stream.writeFormat("'%.*s' + ", int(ss.len), ss.data);
             } else {
                 stream.writeFormat("[%d] + ", joinedString.nextStringIdx);
             }
         } else {
             stream.writeFormat("  %d: ReferIdx: %d, ", index, item.referIdx);
-            stream.writeFormat("Value: %.*s,\n", (int)item.value.str.len, item.value.str.data);
+            auto &s = item.value.str.utf8Str();
+            stream.writeFormat("Value: %.*s,\n", (int)s.len, s.data);
         }
         index++;
     }
@@ -411,7 +412,7 @@ void VMRuntime::joinString(JsString &js) {
             // 复制 head
             if (joinedStr->isStringIdxInResourcePool) {
                 // 在 ResourcePool 中
-                auto ss = getStringInResourcePool(joinedStr->stringIdx);
+                auto &ss = getStringInResourcePool(joinedStr->stringIdx).utf8Str();
                 memcpy(p, ss.data, ss.len);
                 p += ss.len;
             } else {
@@ -421,7 +422,7 @@ void VMRuntime::joinString(JsString &js) {
                     auto tailP = p + head.value.joinedString.len;
                     if (joinedStr->isNextStringIdxInResourcePool) {
                         // 在 ResourcePool 中
-                        auto ss = getStringInResourcePool(joinedStr->nextStringIdx);
+                        auto &ss = getStringInResourcePool(joinedStr->nextStringIdx).utf8Str();
                         memcpy(tailP, ss.data, ss.len);
                     } else {
                         auto &tail = stringValues[joinedStr->nextStringIdx];
@@ -429,7 +430,7 @@ void VMRuntime::joinString(JsString &js) {
                             // 添加到 tasks 中
                             tasks.push({tailP, &tail.value.joinedString});
                         } else {
-                            auto &ss = tail.value.str;
+                            auto &ss = tail.value.str.utf8Str();
                             memcpy(tailP, ss.data, ss.len);
                         }
                     }
@@ -439,7 +440,7 @@ void VMRuntime::joinString(JsString &js) {
                     continue;
                 } else {
                     // head 是 SizedString 类型
-                    auto &ss = head.value.str;
+                    auto &ss = head.value.str.utf8Str();
                     memcpy(p, ss.data, ss.len);
                     p += ss.len;
                 }
@@ -448,7 +449,7 @@ void VMRuntime::joinString(JsString &js) {
             // 复制尾部
             if (joinedStr->isNextStringIdxInResourcePool) {
                 // 在 ResourcePool 中
-                auto ss = getStringInResourcePool(joinedStr->nextStringIdx);
+                auto &ss = getStringInResourcePool(joinedStr->nextStringIdx).utf8Str();
                 memcpy(p, ss.data, ss.len);
             } else {
                 auto &tail = stringValues[joinedStr->nextStringIdx];
@@ -458,7 +459,7 @@ void VMRuntime::joinString(JsString &js) {
                     continue;
                 } else {
                     // 是 SizedString 类型
-                    auto &ss = tail.value.str;
+                    auto &ss = tail.value.str.utf8Str();
                     memcpy(p, ss.data, ss.len);
                 }
             }
@@ -488,13 +489,14 @@ JsValue VMRuntime::joinSmallString(const SizedString &sz1, const SizedString &sz
 JsValue VMRuntime::addString(const SizedString &str1, const JsValue &s2) {
     assert(s2.type == JDT_STRING);
 
-    if (getStringLength(s2) >= JOINED_STRING_MIN_SIZE) {
+    auto s2Length = getStringLength(s2);
+    if (s2Length >= JOINED_STRING_MIN_SIZE) {
         auto s1 = pushString(str1);
 
-        JsJoinedString js(s1, s2);
+        JsJoinedString js(s1, s2, getStringLength(s1) + s2Length);
         return pushString(JsString(js));
     } else {
-        auto str2 = getString(s2);
+        auto &str2 = getUtf8String(s2);
         return joinSmallString(str1, str2);
     }
 }
@@ -502,13 +504,14 @@ JsValue VMRuntime::addString(const SizedString &str1, const JsValue &s2) {
 JsValue VMRuntime::addString(const JsValue &s1, const SizedString &str2) {
     assert(s1.type == JDT_STRING);
 
-    if (getStringLength(s1) >= JOINED_STRING_MIN_SIZE) {
+    auto s1Length = getStringLength(s1);
+    if (s1Length >= JOINED_STRING_MIN_SIZE) {
         auto s2 = pushString(str2);
 
-        JsJoinedString js(s1, s2);
+        JsJoinedString js(s1, s2, s1Length + utf8ToUtf16Length(str2));
         return pushString(JsString(js));
     } else {
-        auto str1 = getString(s1);
+        auto &str1 = getUtf8String(s1);
         return joinSmallString(str1, str2);
     }
 }
@@ -517,40 +520,49 @@ JsValue VMRuntime::addString(const JsValue &s1, const JsValue &s2) {
     assert(s1.type == JDT_STRING);
     assert(s2.type == JDT_STRING);
 
-    JsString js1, js2;
-    SizedString ss1, ss2;
+    bool isJoinedString = false;
+    SizedStringUtf16 ss1, ss2;
+    uint32_t lenUtf16 = 0;
 
     if (s1.isInResourcePool) {
         ss1 = getStringInResourcePool(s1.value.index);
+        lenUtf16 += ss1.size();
     } else {
-        js1 = stringValues[s1.value.index];
-        if (!js1.isJoinedString) {
+        auto &js1 = stringValues[s1.value.index];
+        lenUtf16 += js1.lenUtf16();
+        if (js1.isJoinedString) {
+            isJoinedString = true;
+        } else {
             ss1 = js1.value.str;
         }
     }
 
     if (s2.isInResourcePool) {
         ss2 = getStringInResourcePool(s2.value.index);
+        lenUtf16 += ss2.size();
     } else {
-        js2 = stringValues[s2.value.index];
-        if (!js2.isJoinedString) {
+        auto &js2 = stringValues[s2.value.index];
+        lenUtf16 += js2.lenUtf16();
+        if (js2.isJoinedString) {
+            isJoinedString = true;
+        } else {
             ss2 = js2.value.str;
         }
     }
 
-    if (js1.isJoinedString || js2.isJoinedString) {
+    if (isJoinedString) {
         // 任何一个是 JoinedString
-        JsJoinedString js(s1, s2);
+        JsJoinedString js(s1, s2, lenUtf16);
         return pushString(JsString(js));
     }
 
-    if (ss1.len + ss2.len >= JOINED_STRING_MIN_SIZE) {
+    if (lenUtf16 >= JOINED_STRING_MIN_SIZE) {
         // 超过 JOINED_STRING_MIN_SIZE，连接两个字符串
-        JsJoinedString js(s1, s2);
+        JsJoinedString js(s1, s2, lenUtf16);
         return pushString(JsString(js));
     } else {
         // 直接拼接
-        return joinSmallString(ss1, ss2);
+        return joinSmallString(ss1.utf8Str(), ss2.utf8Str());
     }
 }
 
@@ -724,7 +736,7 @@ bool VMRuntime::toNumber(VMContext *ctx, const JsValue &item, double &out) {
             out = NAN;
             return false;
         case JDT_STRING:
-            return jsStringToNumber(getString(v), out);
+            return jsStringToNumber(getUtf8String(v), out);
         case JDT_NUMBER:
             out = getDouble(v);
             return true;
@@ -786,9 +798,8 @@ JsValue VMRuntime::toString(VMContext *ctx, const JsValue &v) {
             return pushString(SizedString(buf, len));
         }
         case JDT_CHAR: {
-            char buf[32];
-            buf[0] = val.value.n32;
-            return pushString(SizedString(buf, 1));
+            SizedStringWrapper str(val);
+            return pushString(str.str());
         }
         case JDT_STRING: {
             return val;
@@ -841,11 +852,12 @@ SizedString VMRuntime::toSizedString(VMContext *ctx, const JsValue &v, string &b
             return SizedString(buf.data(), len);
         }
         case JDT_CHAR: {
-            buf.assign(1, val.value.n32);
-            return SizedString(buf.c_str(), 1);
+            buf.clear();
+            utf32CodeToUtf8(val.value.n32, buf);
+            return SizedString(buf.c_str(), buf.size());
         }
         case JDT_STRING: {
-            return getString(val);
+            return getUtf8String(val);
         }
         case JDT_SYMBOL: {
             auto index = val.value.n32;
@@ -888,16 +900,16 @@ SizedString VMRuntime::toTypeName(const JsValue &value) {
 bool VMRuntime::isEmptyString(const JsValue &v) {
     assert(v.type == JDT_STRING);
     if (v.isInResourcePool) {
-        return getStringInResourcePool(v.value.index).len == 0;
+        return getStringInResourcePool(v.value.index).size() == 0;
     } else if (v.value.index == JS_STRING_IDX_EMPTY) {
         return true;
     }
 
-    auto js = stringValues[v.value.index];
+    auto &js = stringValues[v.value.index];
     if (js.isJoinedString) {
-        return js.value.joinedString.len > 0;
+        return js.value.joinedString.len == 0;
     } else {
-        return js.value.str.len > 0;
+        return js.value.str.size() == 0;
     }
 }
 
@@ -909,14 +921,13 @@ uint32_t VMRuntime::getStringLength(const JsValue &value) {
         len = 1;
     } else {
         if (value.isInResourcePool) {
-            auto ss = getStringInResourcePool(value.value.index);
-            len = ss.len;
+            len = getStringInResourcePool(value.value.index).size();
         } else {
             auto &js = stringValues[value.value.index];
             if (js.isJoinedString) {
-                len = js.value.joinedString.len;
+                len = js.value.joinedString.lenUtf16;
             } else {
-                len = js.value.str.len;
+                len = js.value.str.size();
             }
         }
     }
@@ -952,9 +963,10 @@ void VMRuntime::extendObject(VMContext *ctx, const JsValue &dst, const JsValue &
     auto objDst = getObject(dst);
 
     if (src.type == JDT_STRING) {
-        auto s = getString(src);
-        for (uint32_t i = 0; i < s.len; i++) {
-            objDst->setByIndex(ctx, dst, i, JsValue(JDT_CHAR, s.data[i]));
+        auto &s = getStringWithRandAccess(src);
+        auto size = s.size();
+        for (uint32_t i = 0; i < size; i++) {
+            objDst->setByIndex(ctx, dst, i, JsValue(JDT_CHAR, s.chartAt(i)));
         }
     } else if (src.type == JDT_CHAR) {
         objDst->setByIndex(ctx, dst, 0, src);
@@ -1022,8 +1034,11 @@ uint32_t VMRuntime::garbageCollect() {
         if (item.referIdx != _nextRefIdx) {
             item.nextFreeIdx = firstFreeStringIdx;
             firstFreeStringIdx = i;
-            if (!item.value.str.isStable()) {
-                freeString(item.value.str);
+            if (!item.value.str.utf8Str().isStable()) {
+                freeString(item.value.str.utf8Str());
+            }
+            if (item.value.str.utf16Data()) {
+                freeUtf16String(item.value.str);
             }
             countFreed++;
         }
@@ -1187,4 +1202,13 @@ void VMRuntime::markJoinedStringReferIdx(const JsJoinedString &joinedString) {
             }
         }
     }
+}
+
+void VMRuntime::convertUtf8ToUtf16(SizedStringUtf16 &str) {
+    assert(str.utf16Data() == nullptr);
+
+    auto &utf8Str = str.utf8Str();
+    auto dataUtf16 = new utf16_t[str.size()];
+    utf8ToUtf16(utf8Str.data, utf8Str.len, dataUtf16, str.size());
+    str.setUtf16(dataUtf16, str.size());
 }

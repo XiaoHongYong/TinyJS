@@ -28,8 +28,8 @@ public:
             return false;
         }
 
-        auto s = _ctx->runtime->getString(_str);
-        valueOut = JsValue(JDT_CHAR, s.data[_pos]);
+        auto &s = _ctx->runtime->getStringWithRandAccess(_str);
+        valueOut = JsValue(JDT_CHAR, s.chartAt(_pos));
         _pos++;
 
         return true;
@@ -56,8 +56,8 @@ public:
         }
 
         if (valueOut) {
-            auto s = _ctx->runtime->getString(_str);
-            *valueOut = JsValue(JDT_CHAR, s.data[_pos]);
+            auto &s = _ctx->runtime->getStringWithRandAccess(_str);
+            *valueOut = JsValue(JDT_CHAR, s.chartAt(_pos));
         }
 
         _pos++;
@@ -158,9 +158,9 @@ JsValue getStringCharAtIndex(VMContext *ctx, const JsValue &thiz, uint32_t index
         return jsValueUndefined;
     }
 
-    auto str = ctx->runtime->getString(thiz);
-    if (index < str.len) {
-        return JsValue(JDT_CHAR, str.data[index]);
+    auto &str = ctx->runtime->getStringWithRandAccess(thiz);
+    if (index < str.size()) {
+        return JsValue(JDT_CHAR, str.chartAt(index));
     }
 
     return jsValueUndefined;

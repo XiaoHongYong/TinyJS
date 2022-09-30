@@ -91,11 +91,7 @@ SizedStringWrapper::SizedStringWrapper(const JsValue &v) {
     data = _buf;
 
     if (v.type == JDT_CHAR) {
-        if (len + 1 < CountOf(_buf)) {
-            _buf[len] = (char)v.value.n32;
-            len++;
-        } else {
-        }
+        len = utf32CodeToUtf8(v.value.n32, data);
     } else if (v.type == JDT_UNDEFINED) {
         append(SS_UNDEFINED);
     } else if (v.type == JDT_NULL) {
@@ -110,6 +106,13 @@ SizedStringWrapper::SizedStringWrapper(const JsValue &v) {
     }
 }
 
+SizedStringWrapper::SizedStringWrapper(const SizedString &s) {
+    data = _buf;
+    len = 0;
+
+    append(s);
+}
+
 void SizedStringWrapper::clear() {
     len = 0;
     data = _buf;
@@ -117,9 +120,8 @@ void SizedStringWrapper::clear() {
 
 bool SizedStringWrapper::append(const JsValue &v) {
     if (v.type == JDT_CHAR) {
-        if (len + 1 < CountOf(_buf)) {
-            _buf[len] = (char)v.value.n32;
-            len++;
+        if (len + utf32CodeToUtf8Length(v.value.n32) < CountOf(_buf)) {
+            len += utf32CodeToUtf8(v.value.n32, _buf + len);
             return true;
         } else {
             assert(0);
@@ -160,4 +162,24 @@ bool SizedStringWrapper::append(double v) {
         assert(0);
         return false;
     }
+}
+
+bool SizedStringWrapper::append(uint32_t n) {
+    if (len + 12 < CountOf(_buf)) {
+        len += (uint32_t)::itoa(n, (char *)_buf + len);
+        return true;
+    }
+
+    assert(0);
+    return false;
+}
+
+bool SizedStringWrapper::append(int32_t n) {
+    if (len + 12 < CountOf(_buf)) {
+        len += (uint32_t)::itoa(n, (char *)_buf + len);
+        return true;
+    }
+
+    assert(0);
+    return false;
 }

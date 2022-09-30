@@ -378,7 +378,7 @@ public:
     uint32_t                nextFreeIdx; // 下一个空闲的索引位置
 
     AllocatorPool           pool;
-    VecSizedStrings         strings;
+    VecSizedStringUtf16s    strings;
     vector<double>          doubles;
     VecSwitchJumps          switchCaseJumps;
 
@@ -392,6 +392,8 @@ public:
 
     inline void needDestructJsNode(IJsNode *node) { toDestructNodes.push_back(node); }
     inline void needDestructScope(Scope *scope) { toDestructScopes.push_back(scope); }
+
+    void convertUtf8ToUtf16(SizedStringUtf16 &str);
 
     void dump(BinaryOutputStream &stream);
 

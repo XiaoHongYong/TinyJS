@@ -9,6 +9,7 @@
 /* Begin PBXBuildFile section */
 		C00E4787283FBC5700F9BC35 /* libasmjit.a in Frameworks */ = {isa = PBXBuildFile; fileRef = C00E4784283FBBE300F9BC35 /* libasmjit.a */; };
 		C0443AAC28DE07D900CBF6DB /* Window.cpp in Sources */ = {isa = PBXBuildFile; fileRef = C0443AAB28DE07D900CBF6DB /* Window.cpp */; };
+		C0443AAF28E5229C00CBF6DB /* CharEncoding.cpp in Sources */ = {isa = PBXBuildFile; fileRef = C0443AAE28E51F9800CBF6DB /* CharEncoding.cpp */; };
 		C08597AD28D0D4D500577A8E /* libThirdPartiesSDK.a in Frameworks */ = {isa = PBXBuildFile; fileRef = C08597AA28D0D4C200577A8E /* libThirdPartiesSDK.a */; };
 		C085981A28D0D54C00577A8E /* main.cpp in Sources */ = {isa = PBXBuildFile; fileRef = C08597B028D0D54C00577A8E /* main.cpp */; };
 		C085981B28D0D54C00577A8E /* Symbol.cpp in Sources */ = {isa = PBXBuildFile; fileRef = C08597B328D0D54C00577A8E /* Symbol.cpp */; };
@@ -98,6 +99,7 @@
 		C00E4784283FBBE300F9BC35 /* libasmjit.a */ = {isa = PBXFileReference; lastKnownFileType = archive.ar; name = libasmjit.a; path = "third-parties/asmjit/mac/libasmjit.a"; sourceTree = "<group>"; };
 		C03E44422839CECC00864631 /* TinyJS */ = {isa = PBXFileReference; explicitFileType = "compiled.mach-o.executable"; includeInIndex = 0; path = TinyJS; sourceTree = BUILT_PRODUCTS_DIR; };
 		C0443AAB28DE07D900CBF6DB /* Window.cpp */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.cpp.cpp; path = Window.cpp; sourceTree = "<group>"; };
+		C0443AAE28E51F9800CBF6DB /* CharEncoding.cpp */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.cpp.cpp; path = CharEncoding.cpp; sourceTree = "<group>"; };
 		C08597A528D0D4C200577A8E /* ThirdPartiesSDK.xcodeproj */ = {isa = PBXFileReference; lastKnownFileType = "wrapper.pb-project"; name = ThirdPartiesSDK.xcodeproj; path = "../third-parties/ThirdPartiesSDK.xcodeproj"; sourceTree = "<group>"; };
 		C08597B028D0D54C00577A8E /* main.cpp */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = sourcecode.cpp.cpp; path = main.cpp; sourceTree = "<group>"; };
 		C08597B228D0D54C00577A8E /* BuiltIn.hpp */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = sourcecode.cpp.h; path = BuiltIn.hpp; sourceTree = "<group>"; };
@@ -233,6 +235,14 @@
 			name = Frameworks;
 			sourceTree = "<group>";
 		};
+		C0443AAD28E51F7800CBF6DB /* utils */ = {
+			isa = PBXGroup;
+			children = (
+				C0443AAE28E51F9800CBF6DB /* CharEncoding.cpp */,
+			);
+			path = utils;
+			sourceTree = "<group>";
+		};
 		C08597A628D0D4C200577A8E /* Products */ = {
 			isa = PBXGroup;
 			children = (
@@ -280,6 +290,7 @@
 		C08597BF28D0D54C00577A8E /* unittest */ = {
 			isa = PBXGroup;
 			children = (
+				C0443AAD28E51F7800CBF6DB /* utils */,
 				C08597C028D0D54C00577A8E /* objects */,
 				C08597C228D0D54C00577A8E /* parser */,
 				C08597C528D0D54C00577A8E /* RunJavaScript.cpp */,
@@ -538,6 +549,7 @@
 			isa = PBXSourcesBuildPhase;
 			buildActionMask = 2147483647;
 			files = (
+				C0443AAF28E5229C00CBF6DB /* CharEncoding.cpp in Sources */,
 				C085984628D0D54C00577A8E /* JsArray.cpp in Sources */,
 				C085983728D0D54C00577A8E /* CharEncodingMac.mm in Sources */,
 				C085983C28D0D54C00577A8E /* unittest.cpp in Sources */,

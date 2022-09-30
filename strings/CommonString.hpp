@@ -34,16 +34,20 @@ protected:
 
 class SizedStringWrapper : public SizedString {
 public:
+    SizedStringWrapper() : SizedString(_buf, 0) { };
     SizedStringWrapper(int32_t n);
     SizedStringWrapper(uint32_t n) : SizedStringWrapper(int32_t(n)) { }
     SizedStringWrapper(double n);
     SizedStringWrapper(const JsValue &v);
+    SizedStringWrapper(const SizedString &s);
 
     void clear();
 
     bool append(const JsValue &v);
     bool append(const SizedString &s);
     bool append(double v);
+    bool append(uint32_t n);
+    bool append(int32_t n);
 
     const SizedString &str() const { return *this; }
 

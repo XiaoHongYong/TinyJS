@@ -9,19 +9,6 @@
 #include "objects/JsPrimaryObject.hpp"
 
 
-void ucs2ToUtf8(uint16_t code, string &out) {
-    if (code < 0x80) {
-        out.push_back((uint8_t)code);
-    } else if (code < 0x0800) {
-        out.push_back((uint8_t)((code >> 6) | 0xC0));
-        out.push_back((uint8_t)((code & 0x3F) | 0x80));
-    } else {
-        out.push_back((uint8_t)((code >> 12) | 0xE0));
-        out.push_back((uint8_t)((code >> 6 & 0x3F) | 0x80));
-        out.push_back((uint8_t)((code & 0x3F) | 0x80));
-    }
-}
-
 static void stringConstructor(VMContext *ctx, const JsValue &thiz, const Arguments &args) {
     auto runtime = ctx->runtime;
 
@@ -43,16 +30,12 @@ void stringFromCharCode(VMContext *ctx, const JsValue &thiz, const Arguments &ar
     string str;
     for (uint32_t i = 0; i < args.count; i++) {
         auto &item = args.data[i];
-        if (item.type == JDT_INT32) {
-            // 按照数据类型都完全正确的情况处理
-            if (item.value.n32 <= 0xFFFF) {
-                ucs2ToUtf8(item.value.n32, str);
-            }
-            continue;
-        }
+        int32_t code = item.type == JDT_INT32 ? item.value.n32 : (int32_t)runtime->toNumber(ctx, item);
 
-        auto f = runtime->toNumber(ctx, item);
-        ucs2ToUtf8((uint16_t)f, str);
+        // 按照数据类型都完全正确的情况处理
+        if (code <= 0xFFFF) {
+            utf32CodeToUtf8((uint16_t)code, str);
+        }
     }
 
     auto tmp = runtime->allocString((uint32_t)str.size());
@@ -61,7 +44,26 @@ void stringFromCharCode(VMContext *ctx, const JsValue &thiz, const Arguments &ar
 }
 
 void stringFromCodePoint(VMContext *ctx, const JsValue &thiz, const Arguments &args) {
-    ctx->retValue = jsValueUndefined;
+    auto runtime = ctx->runtime;
+
+    string str;
+    for (uint32_t i = 0; i < args.count; i++) {
+        auto &item = args.data[i];
+        double code = item.type == JDT_INT32 ? item.value.n32 : runtime->toNumber(ctx, item);
+
+        // 按照数据类型都完全正确的情况处理
+        if (code == (uint32_t)code && code <= 0x10FFFF) {
+            utf32CodeToUtf8((uint32_t)code, str);
+        } else {
+            SizedStringWrapper str(code);
+            ctx->throwException(PE_RANGE_ERROR, "Invalid code point %.*s", str.len, str.data);
+            return;
+        }
+    }
+
+    auto tmp = runtime->allocString((uint32_t)str.size());
+    memcpy(tmp.data, str.c_str(), str.size());
+    ctx->retValue = runtime->pushString(JsString(tmp));
 }
 
 static JsLibProperty stringFunctions[] = {
@@ -92,30 +94,29 @@ void stringPrototypeAt(VMContext *ctx, const JsValue &thiz, const Arguments &arg
         return;
     }
 
-    SizedString str;
-    uint8_t buf[32];
-    if (strValue.type == JDT_STRING) {
-        str = runtime->getString(strValue);
-    } else {
-        buf[0] = strValue.value.n32;
-        str = SizedString(buf, 1);
+    int32_t index = (int32_t)runtime->toNumber(ctx, args.getAt(0, JsValue(JDT_INT32, 0)));
+
+    if (strValue.type == JDT_CHAR) {
+        if (index == 0 || index == -1) {
+            ctx->retValue = strValue;
+        } else {
+            ctx->retValue = jsValueUndefined;
+        }
+        return;
     }
 
-    int32_t index = 0;
-    if (args.count > 0) {
-        index = (int32_t)runtime->toNumber(ctx, args.data[0]);
-    }
+    auto &str = runtime->getStringWithRandAccess(strValue);
 
     if (index < 0) {
-        index = str.len + index;
+        index = str.size() + index;
         if (index < 0) {
             ctx->retValue = jsValueUndefined;
             return;
         }
     }
 
-    if (index < str.len) {
-        ctx->retValue = JsValue(JDT_CHAR, str.data[index]);
+    if (index < str.size()) {
+        ctx->retValue = JsValue(JDT_CHAR, str.chartAt(index));
     } else {
         ctx->retValue = jsValueUndefined;
     }
@@ -134,13 +135,13 @@ int getStringCharCodeAt(VMContext *ctx, const JsValue &thiz, const Arguments &ar
     }
 
     if (strValue.type == JDT_STRING) {
-        auto str = runtime->getString(strValue);
-        if (index < 0 || index >= str.len) {
+        auto &str = runtime->getStringWithRandAccess(strValue);
+        if (index < 0 || index >= str.size()) {
             return -1;
         }
-        return str.data[index];
+        return str.chartAt(index);
     } else {
-        if (index != 1) {
+        if (index != 0) {
             return -1;
         }
         return strValue.value.n32;
@@ -165,6 +166,34 @@ void stringPrototypeCharCodeAt(VMContext *ctx, const JsValue &thiz, const Argume
     }
 
     ctx->retValue = JsValue(JDT_INT32, code);
+}
+
+void stringPrototypeCodePointAt(VMContext *ctx, const JsValue &thiz, const Arguments &args) {
+    auto runtime = ctx->runtime;
+    auto strValue = convertStringToJsValue(ctx, thiz, "codePointAt");
+    if (!strValue.isValid()) {
+        return;
+    }
+
+    int32_t index = 0;
+    if (args.count > 0) {
+        index = (int32_t)runtime->toNumber(ctx, args.data[0]);
+    }
+
+    if (strValue.type == JDT_STRING) {
+        auto &str = runtime->getStringWithRandAccess(strValue);
+        if (index < 0 || index >= str.size()) {
+            ctx->retValue = jsValueUndefined;
+            return;
+        }
+        ctx->retValue = JsValue(JDT_INT32, str.codePointAt(index));
+    } else {
+        if (index != 0) {
+            ctx->retValue = jsValueUndefined;
+            return;
+        }
+        ctx->retValue = JsValue(JDT_INT32, strValue.value.n32);
+    }
 }
 
 void stringPrototypeToString(VMContext *ctx, const JsValue &thiz, const Arguments &args) {
@@ -195,6 +224,7 @@ static JsLibProperty stringPrototypeFunctions[] = {
     // * bold
     { "charAt", stringPrototypeCharAt },
     { "charCodeAt", stringPrototypeCharCodeAt },
+    { "codePointAt", stringPrototypeCodePointAt },
     { "toString", stringPrototypeToString },
     makeJsLibPropertyGetter("length", stringPrototypeLength),
 };

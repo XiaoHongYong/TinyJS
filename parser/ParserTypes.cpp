@@ -422,6 +422,13 @@ ResourcePool::~ResourcePool() {
     free();
 }
 
+void ResourcePool::convertUtf8ToUtf16(SizedStringUtf16 &str) {
+    auto &utf8Str = str.utf8Str();
+    auto dataUtf16 = (utf16_t *)pool.allocate(str.size() * sizeof(utf16_t));
+    utf8ToUtf16(utf8Str.data, utf8Str.len, dataUtf16, str.size());
+    str.setUtf16(dataUtf16, str.size());
+}
+
 void ResourcePool::dump(BinaryOutputStream &stream) {
     stream.writeFormat("------ ResourcePool(%d, %llx) ------\n", index, (uint64_t)this);
     stream.writeFormat("  ReferIdx: %d\n", referIdx);
@@ -430,7 +437,7 @@ void ResourcePool::dump(BinaryOutputStream &stream) {
     stream.write("  Strings: [\n");
     for (auto &s : strings) {
         stream.write("    ");
-        stream.write(s);
+        stream.write(s.utf8Str());
         stream.write(",\n");
     }
     stream.write("  ]\n");

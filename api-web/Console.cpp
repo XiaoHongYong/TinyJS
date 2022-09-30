@@ -94,10 +94,10 @@ void consoleLog(VMContext *ctx, const JsValue &thiz, const Arguments &args) {
                 break;
             }
             case JDT_CHAR:
-                out.append(1, (char)v.value.n32);
+                utf32CodeToUtf8(v.value.n32, out);
                 break;
             case JDT_STRING: {
-                auto s = runtime->getString(v);
+                auto &s = runtime->getUtf8String(v);
                 out.append((const char *)s.data, s.len);
                 break;
             }

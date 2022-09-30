@@ -264,10 +264,11 @@ int ucs2ToUtf8(const WCHAR *str, int nLen, string &strOut)
 }
 
 #define MXS(c,x,s)            (((c) - (x)) <<  (s))
-#define M80S(c,s)            MXS(c,0x80,s)
-#define UTF8_1_to_UCS2(in)    ((WCHAR) (in)[0])
-#define UTF8_2_to_UCS2(in)    ((WCHAR) (MXS((in)[0],0xC0, 6) | M80S((in)[1], 0)))
-#define UTF8_3_to_UCS2(in)    ((WCHAR) (MXS((in)[0],0xE0,12) | M80S((in)[1], 6) | M80S((in)[2], 0) ))
+#define M80S(c,s)             MXS(c,0x80,s)
+#define UTF8_1_to_UCS2(in)    ((utf16_t) (in)[0])
+#define UTF8_2_to_UCS2(in)    ((utf16_t) (MXS((in)[0],0xC0, 6) | M80S((in)[1], 0)))
+#define UTF8_3_to_UCS2(in)    ((utf16_t) (MXS((in)[0],0xE0,12) | M80S((in)[1], 6) | M80S((in)[2], 0) ))
+#define UTF8_4_to_UCS4(in)    ((utf32_t) (MXS((in)[0],0xF0,18) | M80S((in)[1],12) | M80S((in)[2], 6) | M80S((in)[3], 0) ))
 
 int utf8ToUCS2(const char *str, int nLen, u16string &strOut)
 {
@@ -328,7 +329,7 @@ int utf8ToUCS2(const char *str, int nLen, u16string &strOut)
     return ul;
 }
 
-void ucs2EncodingReverse(WCHAR *str, int nLen)
+void ucs2EncodingReverse(WCHAR *str, uint32_t nLen)
 {
     assert(nLen >= 0);
 
@@ -338,5 +339,188 @@ void ucs2EncodingReverse(WCHAR *str, int nLen)
         uint8_t t = p[i];
         p[i] = p[i + 1];
         p[i + 1] = t;
+    }
+}
+
+uint32_t utf8ToUtf16Length(const uint8_t *str, uint32_t len) {
+    auto p = str, last = str + len;
+    uint32_t lenUtf16 = 0;
+
+    // bool hasInvalidChars = false;
+    while ((p < last)) {
+        lenUtf16++;
+        if ((*p) < 0x80) {
+            p += 1;
+            continue;
+        }
+
+        if ((*p) < 0xc0) {
+            // hasInvalidChars = true;
+            p++;
+        } else if ((*p) < 0xe0) {
+            // if (p[1] < 0x80) {
+            //     hasInvalidChars = true;
+            // }
+            p += 2;
+        } else if ((*p) < 0xf0) {
+            // if (p[1] < 0x80 || p[2] < 0x80) {
+            //     hasInvalidChars = true;
+            // }
+            p += 3;
+        } else if ((*p) < 0xf8) {
+            // Code points from U+010000 to U+10FFFF
+            // 由两个 utf-16 char 组成: are encoded as two 16-bit code units called a surrogate pair
+            // https://en.wikipedia.org/wiki/UTF-16
+            lenUtf16++;
+            // if (p[1] < 0x80 || p[2] < 0x80 || p[3] < 0x80) {
+            //     hasInvalidChars = true;
+            // }
+            p += 4;
+        } else if ((*p) < 0xfc) {
+            // 不支持转 utf-16，转换为 '?'
+            // if (p[1] < 0x80 || p[2] < 0x80 || p[3] < 0x80 || p[4] < 0x80) {
+            //     hasInvalidChars = true;
+            // }
+            p += 5;
+        } else if ((*p) < 0xfe) {
+            // 不支持转 utf-16，转换为 '?'
+            // if (p[1] < 0x80 || p[2] < 0x80 || p[3] < 0x80 || p[4] < 0x80 || p[5] < 0x80) {
+            //     hasInvalidChars = true;
+            // }
+            p += 6;
+        } else {
+            // hasInvalidChars = true;
+        }
+    }
+
+    return lenUtf16;
+}
+
+uint32_t utf8ToUtf16(const uint8_t *str, uint32_t len, utf16_t *u16BufOut, uint32_t sizeU16Buf) {
+    auto p = str, last = str + len;
+    uint32_t lenUtf16 = 0;
+
+    while (p < last && lenUtf16 < sizeU16Buf) {
+        if ((*p) < 0x80) {
+            u16BufOut[lenUtf16++] = UTF8_1_to_UCS2(p);
+            p += 1;
+        } else if ((*p) < 0xc0) {
+            assert((*p));    // Invalid UTF8 First Byte
+            u16BufOut[lenUtf16++] = '?';
+            p += 1;
+        } else if ((*p) < 0xe0) {
+            u16BufOut[lenUtf16++] = UTF8_2_to_UCS2(p);
+            p += 2;
+        } else if ((*p) < 0xf0) {
+            u16BufOut[lenUtf16++] = UTF8_3_to_UCS2(p);
+            p += 3;
+        } else if ((*p) < 0xf8) {
+            auto n = UTF8_4_to_UCS4(p);
+            n -= 0x10000;
+            u16BufOut[lenUtf16++] = 0xD800 + (n >> 10);
+            if (lenUtf16 < sizeU16Buf)
+                u16BufOut[lenUtf16++] = 0xDC00 + (n & 0x3FF);
+            p += 4;
+        } else if ((*p) < 0xfc) {
+            u16BufOut[lenUtf16++] = '?';
+            p += 5;
+        } else if ((*p) < 0xfe) {
+            u16BufOut[lenUtf16++] = '?';
+            p += 6;
+        } else {
+            u16BufOut[lenUtf16++] = '?';
+            p += 1;
+        }
+    }
+
+    return lenUtf16;
+}
+
+uint32_t utf8ToUtf32(const uint8_t *data, uint32_t len, utf32_t *bufOut, uint32_t capacityBufOut) {
+    auto p = data, last = data + len;
+    uint32_t lenUtf32 = 0;
+
+    while (p < last && lenUtf32 < capacityBufOut) {
+        if ((*p) < 0x80) {
+            bufOut[lenUtf32] = UTF8_1_to_UCS2(p);
+            p += 1;
+        } else if ((*p) < 0xc0) {
+            assert((*p));    // Invalid UTF8 First Byte
+            bufOut[lenUtf32] = '?';
+            p += 1;
+        } else if ((*p) < 0xe0) {
+            bufOut[lenUtf32] = UTF8_2_to_UCS2(p);
+            p += 2;
+        } else if ((*p) < 0xf0) {
+            bufOut[lenUtf32] = UTF8_3_to_UCS2(p);
+            p += 3;
+        } else if ((*p) < 0xf8) {
+            bufOut[lenUtf32] = UTF8_4_to_UCS4(p);
+            p += 4;
+        } else if ((*p) < 0xfc) {
+            bufOut[lenUtf32] = '?';
+            p += 5;
+        } else if ((*p) < 0xfe) {
+            bufOut[lenUtf32] = '?';
+            p += 6;
+        } else {
+            bufOut[lenUtf32] = '?';
+            p += 1;
+        }
+        lenUtf32++;
+    }
+
+    return lenUtf32;
+}
+
+uint32_t utf32CodeToUtf8Length(uint16_t code) {
+    if (code < 0x80) {
+        return 1;
+    } else if (code < 0x0800) {
+        return 2;
+    } else if (code < 0xFFFF) {
+        return 3;
+    } else {
+        return 4;
+    }
+}
+
+uint32_t utf32CodeToUtf8(uint16_t code, uint8_t *bufOut) {
+    if (code < 0x80) {
+        bufOut[0] = (uint8_t)code;
+        return 1;
+    } else if (code < 0x0800) {
+        bufOut[0] = (uint8_t)((code >> 6) | 0xC0);
+        bufOut[1] = (uint8_t)((code & 0x3F) | 0x80);
+        return 2;
+    } else if (code < 0xFFFF) {
+        bufOut[0] = (uint8_t)((code >> 12) | 0xE0);
+        bufOut[1] = (uint8_t)((code >> 6 & 0x3F) | 0x80);
+        bufOut[2] = (uint8_t)((code & 0x3F) | 0x80);
+        return 3;
+    } else {
+        bufOut[0] = (uint8_t)((code >> 18) | 0xF0);
+        bufOut[1] = (uint8_t)((code >> 12 & 0x3F) | 0x80);
+        bufOut[2] = (uint8_t)((code >> 6 & 0x3F) | 0x80);
+        bufOut[3] = (uint8_t)((code & 0x3F) | 0x80);
+        return 4;
+    }
+}
+
+void utf32CodeToUtf8(uint16_t code, string &out) {
+    if (code < 0x80) {
+        out.push_back((uint8_t)code);
+    } else if (code < 0x0800) {
+        out.push_back((uint8_t)((code >> 6) | 0xC0));
+        out.push_back((uint8_t)((code & 0x3F) | 0x80));
+    } else if (code < 0xFFFF) {
+        out.push_back((uint8_t)((code >> 12) | 0xE0));
+        out.push_back((uint8_t)((code >> 6 & 0x3F) | 0x80));
+        out.push_back((uint8_t)((code & 0x3F) | 0x80));
+    } else {
+        out.push_back((uint8_t)((code >> 18) | 0xF0));
+        out.push_back((uint8_t)((code >> 12 & 0x3F) | 0x80));
+        out.push_back((uint8_t)((code >> 6 & 0x3F) | 0x80));
+        out.push_back((uint8_t)((code & 0x3F) | 0x80));
     }
 }

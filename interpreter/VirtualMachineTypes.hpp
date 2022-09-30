@@ -291,7 +291,8 @@ struct JsJoinedString {
     bool                        isNextStringIdxInResourcePool; // nextStringIdx 指向的是 ResourcePool?
     uint32_t                    stringIdx;
     uint32_t                    nextStringIdx; // 下一个连接的字符串索引位置
-    uint32_t                    len; // 长度大小
+    uint32_t                    len; // utf-8 的长度大小
+    uint32_t                    lenUtf16; // 转换为 utf-16 之后的长度
 
     JsJoinedString() {
         isStringIdxInResourcePool = false;
@@ -301,7 +302,7 @@ struct JsJoinedString {
         len = 0;
     }
 
-    JsJoinedString(const JsValue &s1, const JsValue &s2) {
+    JsJoinedString(const JsValue &s1, const JsValue &s2, uint32_t lenUtf16) : lenUtf16(lenUtf16) {
         stringIdx = s1.value.index;
         isStringIdxInResourcePool = s1.isInResourcePool;
 
@@ -315,8 +316,11 @@ struct JsJoinedString {
  */
 struct JsString {
     JsString() { referIdx = 0; nextFreeIdx = 0; isJoinedString = false; }
-    JsString(const SizedString &str) { referIdx = 0; nextFreeIdx = 0; isJoinedString = false; value.str = str; }
+    JsString(const SizedString &str) { referIdx = 0; nextFreeIdx = 0; isJoinedString = false; value.str.set(str); }
     JsString(const JsJoinedString &joinedString) { referIdx = 0; nextFreeIdx = 0; isJoinedString = true; value.joinedString = joinedString; }
+    JsString(const JsString &other) { *this = other; }
+
+    uint32_t lenUtf16() const { return isJoinedString ? value.joinedString.lenUtf16 : value.str.size(); }
 
     uint32_t                    nextFreeIdx; // 下一个空闲的索引位置
     int8_t                      referIdx; // 用于资源回收时所用
@@ -326,11 +330,11 @@ struct JsString {
     union Value {
         Value() { }
         JsJoinedString          joinedString;
-        SizedString             str;
+        SizedStringUtf16        str;
     } value;
 };
 
-static_assert(sizeof(JsString) == 24, "JsString should be 24 bytes long.");
+static_assert(sizeof(JsString) == 40, "JsString should be 32 bytes long.");
 
 /**
  * JsProperty 定义了 Object 的基本属性

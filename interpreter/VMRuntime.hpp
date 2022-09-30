@@ -181,28 +181,40 @@ public:
         return symbolValues[val.value.index];
     }
 
-    SizedString getStringInResourcePool(uint32_t index) {
+    const SizedStringUtf16 &getStringInResourcePool(uint32_t index, bool needRandAccess = false) {
         uint16_t poolIndex = getPoolIndexOfResource(index);
         uint16_t strIndex = getIndexOfResource(index);
         assert(poolIndex < resourcePools.size());
         auto rp = resourcePools[poolIndex];
         assert(strIndex < rp->strings.size());
-        return rp->strings[strIndex];
+        auto &str = rp->strings[strIndex];
+
+        if (needRandAccess && !str.canRandomAccess()) {
+            rp->convertUtf8ToUtf16(str);
+        }
+
+        return str;
     }
 
-    SizedString getString(const JsValue &val) {
+    const SizedStringUtf16 &getString(const JsValue &val, bool needRandAccess = false) {
         assert(val.type == JDT_STRING);
         if (val.isInResourcePool) {
-            return getStringInResourcePool(val.value.index);
+            return getStringInResourcePool(val.value.index, needRandAccess);
         } else {
             auto &js = stringValues[val.value.index];
             if (js.isJoinedString) {
                 joinString(js);
             }
 
+            if (needRandAccess && !js.value.str.canRandomAccess()) {
+                convertUtf8ToUtf16(js.value.str);
+            }
             return js.value.str;
         }
     }
+
+    inline const SizedString &getUtf8String(const JsValue &val) { return getString(val).utf8Str(); }
+    inline const SizedStringUtf16 &getStringWithRandAccess(const JsValue &val) { return getString(val, true); }
 
     IJsIterator *getJsIterator(const JsValue &val) {
         assert(val.type == JDT_ITERATOR);
@@ -220,13 +232,13 @@ public:
         return rtCommon->findStringValue(str);
     }
 
-    SizedString getStringByIdx(uint32_t index, const ResourcePool *pool) {
+    const SizedString &getStringByIdx(uint32_t index, const ResourcePool *pool) {
         if (index < countCommonStrings) {
-            return stringValues[index].value.str;
+            return stringValues[index].value.str.utf8Str();
         }
 
         index -= countCommonStrings;
-        return pool->strings[index];
+        return pool->strings[index].utf8Str();
     }
 
     const SwitchJump &getSwitchJumpInResourcePool(uint32_t index, const ResourcePool *pool) {
@@ -258,7 +270,8 @@ public:
     JsValue addString(const JsValue &s1, const JsValue &s2);
 
     inline SizedString allocString(uint32_t size) { return SizedString(new uint8_t[size], size); }
-    inline void freeString(const SizedString &s) { delete [] s.data; }
+    inline void freeString(const SizedString &s) { assert(s.data); delete [] s.data; }
+    inline void freeUtf16String(const SizedStringUtf16 &s) { assert(s.isUtf16Valid()); delete [] s.utf16Data(); }
 
     double toNumber(VMContext *ctx, const JsValue &v);
     bool toNumber(VMContext *ctx, const JsValue &v, double &out);
@@ -313,6 +326,8 @@ public:
     }
 
     void markJoinedStringReferIdx(const JsJoinedString &joinedString);
+
+    void convertUtf8ToUtf16(SizedStringUtf16 &str);
 
 protected:
     VMRuntimeCommon             *rtCommon;

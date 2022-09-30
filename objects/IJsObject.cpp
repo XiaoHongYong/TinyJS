@@ -50,13 +50,12 @@ void IJsObject::defineProperty(VMContext *ctx, const JsValue &nameOrg, const JsP
             break;
         }
         case JDT_CHAR: {
-            char buf[32];
-            buf[0] = name.value.n32;
-            definePropertyByName(ctx, SizedString(buf, 1), descriptor);
+            SizedStringWrapper str(name);
+            definePropertyByName(ctx, str, descriptor);
             break;
         }
         case JDT_STRING: {
-            auto strName = ctx->runtime->getString(name);
+            auto &strName = ctx->runtime->getUtf8String(name);
             definePropertyByName(ctx, strName, descriptor);
             break;
         }
@@ -89,12 +88,11 @@ bool IJsObject::getOwnPropertyDescriptor(VMContext *ctx, const JsValue &nameOrg,
             return getOwnPropertyDescriptorByName(ctx, SizedString(buf, len), descriptorOut);
         }
         case JDT_CHAR: {
-            char buf[32];
-            buf[0] = name.value.n32;
-            return getOwnPropertyDescriptorByName(ctx, SizedString(buf, 1), descriptorOut);
+            SizedStringWrapper str(name);
+            return getOwnPropertyDescriptorByName(ctx, str.str(), descriptorOut);
         }
         case JDT_STRING: {
-            auto str = ctx->runtime->getString(name);
+            auto &str = ctx->runtime->getUtf8String(name);
             return getOwnPropertyDescriptorByName(ctx, str, descriptorOut);
         }
         case JDT_SYMBOL:
@@ -128,12 +126,11 @@ JsProperty *IJsObject::getRaw(VMContext *ctx, const JsValue &name, JsNativeFunct
             break;
         }
         case JDT_CHAR: {
-            char buf[32];
-            buf[0] = name.value.n32;
-            return getRawByName(ctx, SizedString(buf, 1), funcGetterOut, includeProtoProp);
+            SizedStringWrapper str(name);
+            return getRawByName(ctx, str.str(), funcGetterOut, includeProtoProp);
         }
         case JDT_STRING: {
-            auto str = ctx->runtime->getString(name);
+            auto &str = ctx->runtime->getUtf8String(name);
             return getRawByName(ctx, str, funcGetterOut, includeProtoProp);
         }
         case JDT_SYMBOL: {
@@ -210,13 +207,12 @@ void IJsObject::set(VMContext *ctx, const JsValue &thiz, const JsValue &nameOrg,
             break;
         }
         case JDT_CHAR: {
-            char buf[32];
-            buf[0] = name.value.n32;
-            setByName(ctx, thiz, SizedString(buf, 1), value);
+            SizedStringWrapper s(name);
+            setByName(ctx, thiz, s.str(), value);
             break;
         }
         case JDT_STRING: {
-            auto strName = ctx->runtime->getString(name);
+            auto &strName = ctx->runtime->getUtf8String(name);
             setByName(ctx, thiz, strName, value);
             break;
         }
@@ -256,12 +252,11 @@ JsValue IJsObject::increase(VMContext *ctx, const JsValue &thiz, const JsValue &
             break;
         }
         case JDT_CHAR: {
-            char buf[32];
-            buf[0] = name.value.n32;
-            return increaseByName(ctx, thiz, SizedString(buf, 1), n, isPost);
+            SizedStringWrapper str(name);
+            return increaseByName(ctx, thiz, str.str(), n, isPost);
         }
         case JDT_STRING: {
-            auto strName = ctx->runtime->getString(name);
+            auto &strName = ctx->runtime->getUtf8String(name);
             return increaseByName(ctx, thiz, strName, n, isPost);
         }
         case JDT_SYMBOL:
@@ -294,12 +289,11 @@ bool IJsObject::remove(VMContext *ctx, const JsValue &propOrg) {
             break;
         }
         case JDT_CHAR: {
-            char buf[32];
-            buf[0] = prop.value.n32;
-            return removeByName(ctx, SizedString(buf, 1));
+            SizedStringWrapper str(prop);
+            return removeByName(ctx, str.str());
         }
         case JDT_STRING: {
-            auto name = ctx->runtime->getString(prop);
+            auto &name = ctx->runtime->getUtf8String(prop);
             return removeByName(ctx, name);
         }
         case JDT_SYMBOL:
