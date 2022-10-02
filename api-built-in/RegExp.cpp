@@ -12,10 +12,9 @@
 void regExpConstructor(VMContext *ctx, const JsValue &thiz, const Arguments &args) {
     auto runtime = ctx->runtime;
 
-    string buf;
-    SizedString strRe;
+    LockedSizedStringWrapper strRe;
     if (args.count > 0) {
-        strRe = runtime->toSizedString(ctx, args[0], buf);
+        strRe = runtime->toSizedString(ctx, args[0]);
     }
     auto re = new JsRegExp(strRe);
 

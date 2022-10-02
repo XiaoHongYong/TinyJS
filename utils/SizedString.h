@@ -39,8 +39,9 @@ public:
     uint8_t *strlchr(uint8_t c) const;
     uint8_t *strrchr(uint8_t c) const;
 
-    int strStr(const SizedString &find) const;
-    int strIStr(const SizedString &find) const;
+    int strstr(const SizedString &find, int32_t start = 0) const;
+    int stristr(const SizedString &find) const;
+    int strrstr(const SizedString &find, int32_t start = 0x7FFFFFFF) const;
 
     int cmp(const SizedString &other) const;
     int iCmp(const SizedString &other) const;
@@ -177,6 +178,9 @@ public:
     inline bool isUtf16Valid() const { return _dataUtf16 != nullptr; }
 
     bool equal(uint32_t code) const;
+
+    int indexOf(const SizedString &find, int32_t start = 0) const;
+    int lastIndexOf(const SizedString &find, int32_t start = 0x7FFFFFFF) const;
 
 protected:
     void onSetUtf8String();

@@ -105,6 +105,8 @@ uint32_t utf8ToUtf16Length(const uint8_t *str, uint32_t len);
 inline uint32_t utf8ToUtf16Length(const SizedString &str) { return utf8ToUtf16Length(str.data, str.len); }
 uint32_t utf8ToUtf16(const uint8_t *str, uint32_t len, utf16_t *u16BufOut, uint32_t sizeU16Buf);
 
+uint8_t *utf8ToUtf16Seek(const uint8_t *str, uint32_t len, uint32_t utf16Pos);
+
 uint32_t utf8ToUtf32(const uint8_t *data, uint32_t len, utf32_t *bufOut, uint32_t capacityBufOut);
 
 // 将 utf-32 的 code 转换为 utf-8 编码, @bufOut 需要至少 4 个字节的长度
@@ -112,6 +114,8 @@ uint32_t utf8ToUtf32(const uint8_t *data, uint32_t len, utf32_t *bufOut, uint32_
 uint32_t utf32CodeToUtf8Length(uint16_t code);
 uint32_t utf32CodeToUtf8(uint16_t code, uint8_t *bufOut);
 void utf32CodeToUtf8(uint16_t code, string &out);
+
+uint32_t utf32CodeToUtf16Length(uint16_t code);
 
 // Big Endian to Little Endian, or vice versa
 void ucs2EncodingReverse(WCHAR *str, uint32_t nLen);

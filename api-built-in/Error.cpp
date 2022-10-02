@@ -94,12 +94,11 @@ static void errorToString(VMContext *ctx, const JsValue &thiz, const Arguments &
         ctx->retValue = name;
     } else {
         string message;
-        string buf;
-        auto s = runtime->toSizedString(ctx, name, buf);
+        auto s = runtime->toSizedString(ctx, name);
         message.append((cstr_t)s.data, s.len);
 
         message.append(": ");
-        s = runtime->toSizedString(ctx, msg, buf);
+        s = runtime->toSizedString(ctx, msg);
         message.append((cstr_t)s.data, s.len);
 
         ctx->retValue = runtime->pushString(SizedString(message));

@@ -20,14 +20,12 @@ static void functionConstructor(VMContext *ctx, const JsValue &thiz, const Argum
             functionStr.append(",");
         }
 
-        string buf;
-        auto s = runtime->toSizedString(ctx, args[i], buf);
+        auto s = runtime->toSizedString(ctx, args[i]);
         functionStr.append((char *)s.data, s.len);
     }
     functionStr.append("){");
     if (args.count > 0) {
-        string buf;
-        auto s = runtime->toSizedString(ctx, args[args.count - 1], buf);
+        auto s = runtime->toSizedString(ctx, args[args.count - 1]);
         functionStr.append((char *)s.data, s.len);
     }
     functionStr.append("})");

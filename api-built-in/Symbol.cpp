@@ -11,11 +11,10 @@
 // https://developer.mozilla.org/zh-CN/docs/Web/JavaScript/Reference/Global_Objects/Symbol
 static void symbolConstructor(VMContext *ctx, const JsValue &thiz, const Arguments &args) {
     auto runtime = ctx->runtime;
-    SizedString name;
-    string buf;
+    LockedSizedStringWrapper name;
 
     if (args.count > 0) {
-        name = runtime->toSizedString(ctx, args[0], buf);
+        name = runtime->toSizedString(ctx, args[0]);
     }
 
     JsSymbol symbol(name);

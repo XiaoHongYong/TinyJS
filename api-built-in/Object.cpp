@@ -43,35 +43,35 @@ IJsIteratorPtr getJsIteratorPtr(VMContext *ctx, const JsValue &obj, bool include
 
 SizedString objectPrototypeToSizedString(const JsValue &thiz) {
     switch (thiz.type) {
-        case JDT_UNDEFINED: return SizedString("[object Undefined]");
-        case JDT_NULL: return SizedString("[object Null]");
-        case JDT_BOOL: return SizedString("[object Boolean]");
-        case JDT_INT32: return SizedString("[object Number]");
-        case JDT_SYMBOL: return SizedString("[object Symbol]");
+        case JDT_UNDEFINED: return MAKE_STABLE_STR("[object Undefined]");
+        case JDT_NULL: return MAKE_STABLE_STR("[object Null]");
+        case JDT_BOOL: return MAKE_STABLE_STR("[object Boolean]");
+        case JDT_INT32: return MAKE_STABLE_STR("[object Number]");
+        case JDT_SYMBOL: return MAKE_STABLE_STR("[object Symbol]");
         case JDT_CHAR:
-        case JDT_STRING: return SizedString("[object String]");
-        case JDT_OBJECT: return SizedString("[object Object]");
-        case JDT_REGEX: return SizedString("[object RegExp]");
-        case JDT_OBJ_BOOL: return SizedString("[object Boolean]");
-        case JDT_OBJ_NUMBER: return SizedString("[object Number]");
-        case JDT_OBJ_STRING: return SizedString("[object String]");
-        case JDT_ARRAY: return SizedString("[object Array]");
+        case JDT_STRING: return MAKE_STABLE_STR("[object String]");
+        case JDT_OBJECT: return MAKE_STABLE_STR("[object Object]");
+        case JDT_REGEX: return MAKE_STABLE_STR("[object RegExp]");
+        case JDT_OBJ_BOOL: return MAKE_STABLE_STR("[object Boolean]");
+        case JDT_OBJ_NUMBER: return MAKE_STABLE_STR("[object Number]");
+        case JDT_OBJ_STRING: return MAKE_STABLE_STR("[object String]");
+        case JDT_ARRAY: return MAKE_STABLE_STR("[object Array]");
         case JDT_OBJ_GLOBAL_THIS:
-        case JDT_LIB_OBJECT: return SizedString("[object Object]");
+        case JDT_LIB_OBJECT: return MAKE_STABLE_STR("[object Object]");
         case JDT_NATIVE_FUNCTION:
-        case JDT_FUNCTION: return SizedString("[object Function]");
+        case JDT_FUNCTION: return MAKE_STABLE_STR("[object Function]");
         default:
             assert(0);
-            return SizedString("[object Object]");
+            return MAKE_STABLE_STR("[object Object]");
             break;
     }
 }
 
-SizedString definePropertyXetterToString(VMContext *ctx, const JsValue &xetter, string &buf) {
+LockedSizedStringWrapper definePropertyXetterToString(VMContext *ctx, const JsValue &xetter) {
     if (xetter.type < JDT_OBJECT) {
-        return ctx->runtime->toSizedString(ctx, xetter, buf);
+        return ctx->runtime->toSizedString(ctx, xetter);
     } else if (xetter.type == JDT_OBJECT) {
-        return SizedString("#<Object>");
+        return MAKE_STABLE_STR("#<Object>");
     } else {
         return objectPrototypeToSizedString(xetter);
     }
@@ -105,15 +105,13 @@ void objectDefineProperty(VMContext *ctx, const JsValue &thiz, const Arguments &
     auto set = descriptorObj->getByName(ctx, descriptor, SS_SET, jsValueNotInitialized);
 
     if (get.type < JDT_FUNCTION && get.type > JDT_UNDEFINED) {
-        string buf;
-        SizedString str = definePropertyXetterToString(ctx, get, buf);
+        auto str = definePropertyXetterToString(ctx, get);
         ctx->throwException(PE_TYPE_ERROR, "Getter must be a function: %.*s", (int)str.len, str.data);
         return;
     }
 
     if (set.type < JDT_FUNCTION && set.type > JDT_UNDEFINED) {
-        string buf;
-        SizedString str = definePropertyXetterToString(ctx, set, buf);
+        auto str = definePropertyXetterToString(ctx, set);
         ctx->throwException(PE_TYPE_ERROR, "Setter must be a function: %.*s", (int)str.len, str.data);
         return;
     }
@@ -283,9 +281,8 @@ bool getStringOwnPropertyDescriptor(VMContext *ctx, const JsValue &thiz, JsValue
             return false;
         } else {
             bool ret = false;
-            string buf;
 
-            auto str = runtime->toSizedString(ctx, name, buf);
+            auto str = runtime->toSizedString(ctx, name);
             if (str.equal(SS_LENGTH)) {
                 descriptorOut.value = JsValue(JDT_INT32, len);
                 descriptorOut.isConfigurable = false;
@@ -407,9 +404,8 @@ void objectFromEntries(VMContext *ctx, const JsValue &thiz, const Arguments &arg
         }
         it.reset(obj->getIteratorObject(ctx, false));
     } else {
-        string buf;
         auto name = runtime->toTypeName(entries);
-        auto s = runtime->toSizedString(ctx, entries, buf);
+        auto s = runtime->toSizedString(ctx, entries);
         ctx->throwException(PE_TYPE_ERROR, "%.*s %.*s is not iterable (cannot read property Symbol(Symbol.iterator))",
                             name.len, name.data, s.len, s.data);
         return;
@@ -526,8 +522,7 @@ void hasOwnProperty(VMContext *ctx, const JsValue &obj, const JsValue &name) {
 
     if (obj.type < JDT_OBJECT) {
         if (obj.type == JDT_CHAR || obj.type == JDT_STRING) {
-            string buf;
-            auto s = runtime->toSizedString(ctx, name, buf);
+            auto s = runtime->toSizedString(ctx, name);
             if (s.equal(SS_LENGTH)) {
                 ret = jsValueTrue;
             } else {
@@ -813,8 +808,7 @@ void objectPrototypePropertyIsEnumerable(VMContext *ctx, const JsValue &thiz, co
 
     if (thiz.type < JDT_OBJECT) {
         if (thiz.type == JDT_CHAR || thiz.type == JDT_STRING) {
-            string buf;
-            auto s = runtime->toSizedString(ctx, name, buf);
+            auto s = runtime->toSizedString(ctx, name);
             bool successful;
             auto index = s.atoi(successful);
             if (successful && index >= 0 && index < runtime->getStringLength(thiz)) {

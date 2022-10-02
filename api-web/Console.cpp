@@ -31,14 +31,13 @@ void dumpObject(VMContext *ctx, const JsValue &obj,string &out, SetUInts &histor
     SizedString key;
     JsValue value;
     bool first = true;
-    string buf;
 
     while (it->next(&key, nullptr, &value)) {
         if (first) first = false; else out.append(",");
 
         out.append((cstr_t)key.data, key.len);
         out.append(": ");
-        auto s = runtime->toSizedString(ctx, value, buf);
+        auto s = runtime->toSizedString(ctx, value);
         out.append((cstr_t)s.data, s.len);
     }
 

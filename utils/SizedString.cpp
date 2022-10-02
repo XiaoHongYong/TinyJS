@@ -45,11 +45,10 @@ uint8_t *SizedString::strrchr(uint8_t c) const {
     return nullptr;
 }
 
-int SizedString::strStr(const SizedString &find) const {
+int SizedString::strstr(const SizedString &find, int32_t start) const {
     if (len < find.len) {
         return -1;
-    }
-    if (find.len == 0) {
+    } else if (find.len == 0) {
         return 0;
     }
 
@@ -57,6 +56,10 @@ int SizedString::strStr(const SizedString &find) const {
     const uint8_t *s1 = data, *s2 = find.data;
     size_t len = find.len - 1;
     uint8_t  c1, c2;
+
+    if (start > 0) {
+        s1 += start;
+    }
 
     c2 = (uint8_t)*s2++;
 
@@ -74,9 +77,11 @@ int SizedString::strStr(const SizedString &find) const {
     return (int)(s1 - data - 1);
 }
 
-int SizedString::strIStr(const SizedString &find) const {
+int SizedString::stristr(const SizedString &find) const {
     if (len < find.len) {
         return -1;
+    } else if (find.len == 0) {
+        return 0;
     }
 
     const uint8_t *last = data + len - find.len;
@@ -98,6 +103,43 @@ int SizedString::strIStr(const SizedString &find) const {
     } while (strncasecmp((char *)s1, (char *)s2, len) != 0);
 
     return (int)(s1 - data - 1);
+}
+
+int SizedString::strrstr(const SizedString &find, int32_t start) const {
+    if (len < find.len) {
+        return -1;
+    } else if (find.len == 0) {
+        return len;
+    }
+
+    const uint8_t *s1 = data + len - find.len;
+    const uint8_t *begin = data, *s2 = find.data;
+    size_t len = find.len - 1;
+    uint8_t  c1, c2;
+
+    if (start > 0) {
+        auto tmp = data + start;
+        if (tmp < s1) {
+            s1 = tmp;
+        }
+    } else {
+        s1 = begin;
+    }
+
+    c2 = (uint8_t)*s2++;
+
+    do {
+        do {
+            if (s1 < begin) {
+                return -1;
+            }
+
+            c1 = *s1--;
+        } while (c1 != c2);
+
+    } while (memcmp(s1 + 2, s2, len) != 0);
+
+    return (int)(s1 + 1 - data);
 }
 
 int SizedString::cmp(const SizedString &other) const {
@@ -459,3 +501,51 @@ utf32_t SizedStringUtf16::codePointAt(uint32_t index) const {
 
     return code;
 }
+
+int SizedStringUtf16::indexOf(const SizedString &find, int32_t start) const {
+    if (_isAnsi) {
+        return _utf8Str.strstr(find, start);
+    }
+
+    int32_t pos;
+    if (start > 0) {
+        // 将 utf-16 的偏移转换为 utf-8 的
+        auto p = utf8ToUtf16Seek(_utf8Str.data, _utf8Str.len, start);
+        pos = SizedString(p, _utf8Str.len - (p - _utf8Str.data)).strstr(find);
+        if (pos >= 0) {
+            // 需要转换为 utf-16 的偏移地址
+            pos = start + utf8ToUtf16Length(p, pos);
+        }
+    } else {
+        pos = _utf8Str.strstr(find);
+        if (pos >= 0) {
+            // 需要转换为 utf-16 的偏移地址
+            pos = utf8ToUtf16Length(_utf8Str.data, pos);
+        }
+    }
+
+    return pos;
+}
+
+int SizedStringUtf16::lastIndexOf(const SizedString &find, int32_t start) const {
+    if (_isAnsi) {
+        return _utf8Str.strrstr(find, start);
+    }
+
+    int32_t pos;
+    if (start > 0) {
+        // 将 utf-16 的偏移转换为 utf-8 的
+        auto p = utf8ToUtf16Seek(_utf8Str.data, _utf8Str.len, start);
+        start = int32_t(p - _utf8Str.data);
+    }
+
+    pos = _utf8Str.strrstr(find, start);
+
+    if (pos > 0) {
+        // 需要转换为 utf-16 的偏移地址
+        pos = utf8ToUtf16Length(_utf8Str.data, pos);
+    }
+
+    return pos;
+}
+

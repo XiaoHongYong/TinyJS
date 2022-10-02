@@ -265,9 +265,9 @@ public:
 
     void joinString(JsString &js);
     JsValue joinSmallString(const SizedString &sz1, const SizedString &sz2);
-    JsValue addString(const SizedString &s1, const JsValue &s2);
-    JsValue addString(const JsValue &s1, const SizedString &s2);
-    JsValue addString(const JsValue &s1, const JsValue &s2);
+    JsValue plusString(const SizedString &s1, const JsValue &s2);
+    JsValue plusString(const JsValue &s1, const SizedString &s2);
+    JsValue plusString(const JsValue &s1, const JsValue &s2);
 
     inline SizedString allocString(uint32_t size) { return SizedString(new uint8_t[size], size); }
     inline void freeString(const SizedString &s) { assert(s.data); delete [] s.data; }
@@ -276,7 +276,7 @@ public:
     double toNumber(VMContext *ctx, const JsValue &v);
     bool toNumber(VMContext *ctx, const JsValue &v, double &out);
     JsValue toString(VMContext *ctx, const JsValue &v);
-    SizedString toSizedString(VMContext *ctx, const JsValue &v, string &buf);
+    LockedSizedStringWrapper toSizedString(VMContext *ctx, const JsValue &v);
     JsValue jsObjectToString(VMContext *ctx, const JsValue &obj);
     JsValue tryCallJsObjectValueOf(VMContext *ctx, const JsValue &v);
     SizedString toTypeName(const JsValue &v);

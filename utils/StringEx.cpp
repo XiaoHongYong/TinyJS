@@ -72,7 +72,7 @@ bool iEndsWith(cstr_t szText, cstr_t szEndWith)
 
 char *stristr(cstr_t source, cstr_t find) {
     SizedString str(source);
-    int pos = str.strIStr(SizedString(find));
+    int pos = str.stristr(SizedString(find));
     if (pos == -1) {
         return nullptr;
     }

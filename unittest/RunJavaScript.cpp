@@ -60,12 +60,12 @@ uint32_t uniqueLen(const SizedString &orgRight, const uint8_t *pos) {
     SizedString pt(pos, len);
 
     // 去掉第一个相同的部分
-    auto n = org.strStr(pt);
+    auto n = org.strstr(pt);
     assert(n != -1);
     org.shrink(n + (int)len);
 
     for (int i = 0; i < 10; i++) {
-        auto n = org.strStr(pt);
+        auto n = org.strstr(pt);
         if (n == -1) break;
         pt.len = min(maxlen, pt.len + 30);
     }

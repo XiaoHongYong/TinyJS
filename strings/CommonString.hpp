@@ -40,6 +40,10 @@ public:
     SizedStringWrapper(double n);
     SizedStringWrapper(const JsValue &v);
     SizedStringWrapper(const SizedString &s);
+    SizedStringWrapper(const string &v);
+
+    SizedStringWrapper(const SizedStringWrapper &other);
+    SizedStringWrapper &operator =(const SizedStringWrapper &other);
 
     void clear();
 
@@ -56,6 +60,32 @@ public:
     };
 
 protected:
+    uint8_t             _buf[MAX_SIZE];
+
+};
+
+class LockedSizedStringWrapper : public SizedString {
+public:
+    LockedSizedStringWrapper() { }
+    LockedSizedStringWrapper(int32_t n);
+    LockedSizedStringWrapper(uint32_t n) : LockedSizedStringWrapper(int32_t(n)) { }
+    LockedSizedStringWrapper(double n);
+    LockedSizedStringWrapper(const JsValue &v);
+    LockedSizedStringWrapper(const SizedString &s) { *(SizedString *)this = s; }
+    LockedSizedStringWrapper(const string &v);
+
+    LockedSizedStringWrapper(const LockedSizedStringWrapper &other);
+    LockedSizedStringWrapper &operator =(const LockedSizedStringWrapper &other);
+
+    void clear();
+
+    void reset(const SizedString &s);
+
+protected:
+    enum {
+        MAX_SIZE = 128,
+    };
+
     uint8_t             _buf[MAX_SIZE];
 
 };

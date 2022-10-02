@@ -486,8 +486,12 @@ JsValue VMRuntime::joinSmallString(const SizedString &sz1, const SizedString &sz
     return pushString(JsString(str));
 }
 
-JsValue VMRuntime::addString(const SizedString &str1, const JsValue &s2) {
-    assert(s2.type == JDT_STRING);
+JsValue VMRuntime::plusString(const SizedString &str1, const JsValue &s2) {
+    assert(s2.type == JDT_STRING || s2.type == JDT_CHAR);
+    if (s2.type == JDT_CHAR) {
+        SizedStringWrapper str2(s2);
+        return joinSmallString(str1, str2);
+    }
 
     auto s2Length = getStringLength(s2);
     if (s2Length >= JOINED_STRING_MIN_SIZE) {
@@ -501,8 +505,12 @@ JsValue VMRuntime::addString(const SizedString &str1, const JsValue &s2) {
     }
 }
 
-JsValue VMRuntime::addString(const JsValue &s1, const SizedString &str2) {
-    assert(s1.type == JDT_STRING);
+JsValue VMRuntime::plusString(const JsValue &s1, const SizedString &str2) {
+    assert(s1.type == JDT_STRING || s1.type == JDT_CHAR);
+    if (s1.type == JDT_CHAR) {
+        SizedStringWrapper str1(s1);
+        return joinSmallString(str1, str2);
+    }
 
     auto s1Length = getStringLength(s1);
     if (s1Length >= JOINED_STRING_MIN_SIZE) {
@@ -516,37 +524,48 @@ JsValue VMRuntime::addString(const JsValue &s1, const SizedString &str2) {
     }
 }
 
-JsValue VMRuntime::addString(const JsValue &s1, const JsValue &s2) {
-    assert(s1.type == JDT_STRING);
-    assert(s2.type == JDT_STRING);
+JsValue VMRuntime::plusString(const JsValue &s1, const JsValue &s2) {
+    assert(s1.type == JDT_STRING || s1.type == JDT_CHAR);
+    assert(s2.type == JDT_STRING || s2.type == JDT_CHAR);
 
     bool isJoinedString = false;
     SizedStringUtf16 ss1, ss2;
     uint32_t lenUtf16 = 0;
+    uint8_t buf1[8], buf2[8];
 
-    if (s1.isInResourcePool) {
-        ss1 = getStringInResourcePool(s1.value.index);
-        lenUtf16 += ss1.size();
+    if (s1.type == JDT_CHAR) {
+        lenUtf16 = utf32CodeToUtf16Length(s1.value.index);
+        ss1.set(SizedString(buf1, utf32CodeToUtf8(s1.value.index, buf1)));
     } else {
-        auto &js1 = stringValues[s1.value.index];
-        lenUtf16 += js1.lenUtf16();
-        if (js1.isJoinedString) {
-            isJoinedString = true;
+        if (s1.isInResourcePool) {
+            ss1 = getStringInResourcePool(s1.value.index);
+            lenUtf16 += ss1.size();
         } else {
-            ss1 = js1.value.str;
+            auto &js1 = stringValues[s1.value.index];
+            lenUtf16 += js1.lenUtf16();
+            if (js1.isJoinedString) {
+                isJoinedString = true;
+            } else {
+                ss1 = js1.value.str;
+            }
         }
     }
 
-    if (s2.isInResourcePool) {
-        ss2 = getStringInResourcePool(s2.value.index);
-        lenUtf16 += ss2.size();
+    if (s2.type == JDT_CHAR) {
+        lenUtf16 += utf32CodeToUtf16Length(s2.value.index);
+        ss2.set(SizedString(buf2, utf32CodeToUtf8(s2.value.index, buf2)));
     } else {
-        auto &js2 = stringValues[s2.value.index];
-        lenUtf16 += js2.lenUtf16();
-        if (js2.isJoinedString) {
-            isJoinedString = true;
+        if (s2.isInResourcePool) {
+            ss2 = getStringInResourcePool(s2.value.index);
+            lenUtf16 += ss2.size();
         } else {
-            ss2 = js2.value.str;
+            auto &js2 = stringValues[s2.value.index];
+            lenUtf16 += js2.lenUtf16();
+            if (js2.isJoinedString) {
+                isJoinedString = true;
+            } else {
+                ss2 = js2.value.str;
+            }
         }
     }
 
@@ -817,7 +836,7 @@ JsValue VMRuntime::toString(VMContext *ctx, const JsValue &v) {
     return jsValueUndefined;
 }
 
-SizedString VMRuntime::toSizedString(VMContext *ctx, const JsValue &v, string &buf) {
+LockedSizedStringWrapper VMRuntime::toSizedString(VMContext *ctx, const JsValue &v) {
     JsValue val = v;
     if (val.type >= JDT_OBJECT) {
         vm->callMember(ctx, v, SS_TOSTRING, Arguments());
@@ -834,43 +853,22 @@ SizedString VMRuntime::toSizedString(VMContext *ctx, const JsValue &v, string &b
             break;
         case JDT_UNDEFINED: return SS_UNDEFINED;
         case JDT_NULL: return SS_NULL;
-        case JDT_BOOL: return val.value.n32 ? SS_TRUE : SS_FALSE;
-        case JDT_INT32: {
-            auto n = val.value.n32;
-            auto ss = intToSizedString(n);
-            if (ss.len == 0) {
-                buf.resize(32);
-                ss.len = (uint32_t)::itoa(n, (char *)buf.data());
-                ss.data = (uint8_t *)buf.data();
-            }
-
-            return ss;
-        }
-        case JDT_NUMBER: {
-            buf.resize(64);
-            auto len = floatToString(getDouble(val), buf.data());
-            return SizedString(buf.data(), len);
-        }
-        case JDT_CHAR: {
-            buf.clear();
-            utf32CodeToUtf8(val.value.n32, buf);
-            return SizedString(buf.c_str(), buf.size());
-        }
-        case JDT_STRING: {
-            return getUtf8String(val);
-        }
+        case JDT_BOOL: return LockedSizedStringWrapper(val.value.n32 ? SS_TRUE : SS_FALSE);
+        case JDT_INT32: return LockedSizedStringWrapper(val.value.n32);
+        case JDT_NUMBER: return LockedSizedStringWrapper(getDouble(val));
+        case JDT_CHAR: return LockedSizedStringWrapper(val);
+        case JDT_STRING: return getUtf8String(val);
         case JDT_SYMBOL: {
             auto index = val.value.n32;
             assert(index < symbolValues.size());
-            buf.assign(symbolValues[index].toString());
-            return SizedString(buf);
+            return LockedSizedStringWrapper(symbolValues[index].toString());
         }
         default: {
             ctx->throwException(PE_TYPE_ERROR, "Cannot convert object to primitive value");
         }
     }
 
-    return SizedString();
+    return SS_EMPTY;
 }
 
 SizedString VMRuntime::toTypeName(const JsValue &value) {

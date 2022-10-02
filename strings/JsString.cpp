@@ -178,8 +178,7 @@ JsValue getStringMemberIndex(VMContext *ctx, const JsValue &thiz, const JsValue 
         return value;
     }
 
-    string buf;
-    auto strName = runtime->toSizedString(ctx, name, buf);
+    auto strName = runtime->toSizedString(ctx, name);
 
     bool successful = false;
     auto index = strName.atoi(successful);

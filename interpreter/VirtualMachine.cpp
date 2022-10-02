@@ -263,8 +263,7 @@ void VMContext::throwException(JsErrorType err, JsValue errorMessage) {
 }
 
 void VMContext::throwExceptionFormatJsValue(JsErrorType err, cstr_t format, const JsValue &value) {
-    string buf;
-    auto s = runtime->toSizedString(this, value, buf);
+    auto s = runtime->toSizedString(this, value);
     throwException(err, format, s.len, s.data);
 }
 
@@ -289,8 +288,7 @@ void JsVirtualMachine::run(cstr_t code, size_t len, VMRuntime *runtime) {
 
     eval(code, len, ctx, stackScopes, args);
     if (ctx->error) {
-        string buf;
-        auto message = runtime->toSizedString(ctx, ctx->errorMessage, buf);
+        auto message = runtime->toSizedString(ctx, ctx->errorMessage);
         runtime->console->error(stringPrintf("Uncaught %.*s\n", message.len, message.data).c_str());
     }
 
@@ -1459,9 +1457,8 @@ void JsVirtualMachine::call(Function *function, VMContext *ctx, VecVMStackScopes
                 JsValue right = stack.back(); stack.pop_back();
                 JsValue left = stack.back(); stack.pop_back();
                 if (right.type < JDT_OBJECT) {
-                    string buf1, buf2;
-                    auto s1 = runtime->toSizedString(ctx, left, buf1);
-                    auto s2 = runtime->toSizedString(ctx, right, buf2);
+                    auto s1 = runtime->toSizedString(ctx, left);
+                    auto s2 = runtime->toSizedString(ctx, right);
                     ctx->throwException(PE_TYPE_ERROR, "Cannot use 'in' operator to search for '%.*s' in %.*s",
                         (int)s1.len, s1.data, (int)s2.len, s2.data);
                     break;

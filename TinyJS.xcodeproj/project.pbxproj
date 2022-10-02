@@ -10,6 +10,7 @@
 		C00E4787283FBC5700F9BC35 /* libasmjit.a in Frameworks */ = {isa = PBXBuildFile; fileRef = C00E4784283FBBE300F9BC35 /* libasmjit.a */; };
 		C0443AAC28DE07D900CBF6DB /* Window.cpp in Sources */ = {isa = PBXBuildFile; fileRef = C0443AAB28DE07D900CBF6DB /* Window.cpp */; };
 		C0443AAF28E5229C00CBF6DB /* CharEncoding.cpp in Sources */ = {isa = PBXBuildFile; fileRef = C0443AAE28E51F9800CBF6DB /* CharEncoding.cpp */; };
+		C0443AB128E7254000CBF6DB /* SizedString.cpp in Sources */ = {isa = PBXBuildFile; fileRef = C0443AB028E7254000CBF6DB /* SizedString.cpp */; };
 		C08597AD28D0D4D500577A8E /* libThirdPartiesSDK.a in Frameworks */ = {isa = PBXBuildFile; fileRef = C08597AA28D0D4C200577A8E /* libThirdPartiesSDK.a */; };
 		C085981A28D0D54C00577A8E /* main.cpp in Sources */ = {isa = PBXBuildFile; fileRef = C08597B028D0D54C00577A8E /* main.cpp */; };
 		C085981B28D0D54C00577A8E /* Symbol.cpp in Sources */ = {isa = PBXBuildFile; fileRef = C08597B328D0D54C00577A8E /* Symbol.cpp */; };
@@ -100,6 +101,7 @@
 		C03E44422839CECC00864631 /* TinyJS */ = {isa = PBXFileReference; explicitFileType = "compiled.mach-o.executable"; includeInIndex = 0; path = TinyJS; sourceTree = BUILT_PRODUCTS_DIR; };
 		C0443AAB28DE07D900CBF6DB /* Window.cpp */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.cpp.cpp; path = Window.cpp; sourceTree = "<group>"; };
 		C0443AAE28E51F9800CBF6DB /* CharEncoding.cpp */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.cpp.cpp; path = CharEncoding.cpp; sourceTree = "<group>"; };
+		C0443AB028E7254000CBF6DB /* SizedString.cpp */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.cpp.cpp; path = SizedString.cpp; sourceTree = "<group>"; };
 		C08597A528D0D4C200577A8E /* ThirdPartiesSDK.xcodeproj */ = {isa = PBXFileReference; lastKnownFileType = "wrapper.pb-project"; name = ThirdPartiesSDK.xcodeproj; path = "../third-parties/ThirdPartiesSDK.xcodeproj"; sourceTree = "<group>"; };
 		C08597B028D0D54C00577A8E /* main.cpp */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = sourcecode.cpp.cpp; path = main.cpp; sourceTree = "<group>"; };
 		C08597B228D0D54C00577A8E /* BuiltIn.hpp */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = sourcecode.cpp.h; path = BuiltIn.hpp; sourceTree = "<group>"; };
@@ -238,6 +240,7 @@
 		C0443AAD28E51F7800CBF6DB /* utils */ = {
 			isa = PBXGroup;
 			children = (
+				C0443AB028E7254000CBF6DB /* SizedString.cpp */,
 				C0443AAE28E51F9800CBF6DB /* CharEncoding.cpp */,
 			);
 			path = utils;
@@ -555,6 +558,7 @@
 				C085983C28D0D54C00577A8E /* unittest.cpp in Sources */,
 				C085984D28D0D54C00577A8E /* Expression.cpp in Sources */,
 				C085984E28D0D54C00577A8E /* Parser.cpp in Sources */,
+				C0443AB128E7254000CBF6DB /* SizedString.cpp in Sources */,
 				C085984928D0D54C00577A8E /* Statement.cpp in Sources */,
 				C085984028D0D54C00577A8E /* VirtualMachine.cpp in Sources */,
 				C085984528D0D54C00577A8E /* IJsObject.cpp in Sources */,

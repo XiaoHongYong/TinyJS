@@ -409,11 +409,10 @@ inline JsValue plusOperate(VMContext *ctx, VMRuntime *rt, int32_t left, const Js
         }
         case JDT_STRING: {
             if (leftStr.isValid()) {
-                return rt->addString(leftStr, right);
+                return rt->plusString(leftStr, right);
             } else {
-                char buf[64];
-                auto len = (uint32_t)::itoa(left, buf);
-                return rt->addString(SizedString(buf, len), right);
+                SizedStringWrapper s(left);
+                return rt->plusString(s.str(), right);
             }
         }
         default: {
@@ -444,7 +443,7 @@ inline JsValue plusOperate(VMContext *ctx, VMRuntime *rt, const JsValue &left, c
                     return rt->pushString(str.str());
                 }
                 case JDT_STRING:
-                    return rt->addString(jsStringValueUndefined, right);
+                    return rt->plusString(jsStringValueUndefined, right);
                 default: {
                     return plusOperate(ctx, rt, left, rt->tryCallJsObjectValueOf(ctx, right));
                 }
@@ -481,9 +480,8 @@ inline JsValue plusOperate(VMContext *ctx, VMRuntime *rt, const JsValue &left, c
                     return jsValueNaN;
                 case JDT_CHAR:
                 case JDT_STRING: {
-                    auto s = rt->toString(ctx, left);
-                    auto r = rt->toString(ctx, right);
-                    return rt->addString(s, r);
+                    SizedStringWrapper s(n);
+                    return rt->plusString(s, right);
                 }
                 default:
                     return plusOperate(ctx, rt, left, rt->tryCallJsObjectValueOf(ctx, right));
@@ -503,8 +501,7 @@ inline JsValue plusOperate(VMContext *ctx, VMRuntime *rt, const JsValue &left, c
                     return rt->pushString(str.str());
                 }
                 case JDT_STRING: {
-                    SizedStringWrapper str1(left);
-                    return rt->addString(str1, right);
+                    return rt->plusString(left, right);
                 }
                 case JDT_NUMBER: {
                     SizedStringWrapper str(left);
@@ -523,25 +520,24 @@ inline JsValue plusOperate(VMContext *ctx, VMRuntime *rt, const JsValue &left, c
             switch (right.type) {
                 case JDT_NOT_INITIALIZED:
                 case JDT_UNDEFINED:
-                    return rt->addString(left, jsStringValueUndefined);
+                    return rt->plusString(left, jsStringValueUndefined);
                 case JDT_NULL:
-                    return rt->addString(left, jsStringValueNull);
+                    return rt->plusString(left, jsStringValueNull);
                 case JDT_BOOL:
-                    return rt->addString(left, right.value.n32 ? jsStringValueTrue : jsStringValueFalse);
+                    return rt->plusString(left, right.value.n32 ? jsStringValueTrue : jsStringValueFalse);
                 case JDT_INT32: {
-                    SizedStringWrapper str(right);
-                    return rt->addString(left, str);
+                    SizedStringWrapper str(right.value.n32);
+                    return rt->plusString(left, str);
                 }
                 case JDT_CHAR: {
-                    SizedStringWrapper str(right);
-                    return rt->addString(left, str);
+                    return rt->plusString(left, right);
                 }
                 case JDT_STRING: {
-                    return rt->addString(left, right);
+                    return rt->plusString(left, right);
                 }
                 case JDT_NUMBER: {
                     SizedStringWrapper str(rt->getDouble(right));
-                    return rt->addString(left, str);
+                    return rt->plusString(left, str);
                 }
                 case JDT_SYMBOL:
                     throwSymbolConvertStringException(ctx);

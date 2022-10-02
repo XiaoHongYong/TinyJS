@@ -483,7 +483,6 @@ static set<uint32_t> toStringCallStack;
 
 void JsArray::toString(VMContext *ctx, const JsValue &thiz, BinaryOutputStream &stream) {
     uint32_t lastIdx = 0;
-    string buf;
     bool empty = true;
 
     auto it = toStringCallStack.find(thiz.value.index);
@@ -508,12 +507,12 @@ void JsArray::toString(VMContext *ctx, const JsValue &thiz, BinaryOutputStream &
                 v = ctx->retValue;
             }
 
-            SizedString s;
+            LockedSizedStringWrapper s;
             if (v.type == JDT_ARRAY) {
                 auto arr = (JsArray *)ctx->runtime->getObject(v);
                 arr->toString(ctx, v, stream);
             } else {
-                s = ctx->runtime->toSizedString(ctx, v, buf);
+                s = ctx->runtime->toSizedString(ctx, v);
             }
 
             if (empty) {

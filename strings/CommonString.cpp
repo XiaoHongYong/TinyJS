@@ -113,6 +113,26 @@ SizedStringWrapper::SizedStringWrapper(const SizedString &s) {
     append(s);
 }
 
+SizedStringWrapper::SizedStringWrapper(const string &v) {
+    data = _buf;
+    len = min((int)v.size(), (int)CountOf(_buf));
+    memcpy(_buf, v.c_str(), len);
+}
+
+SizedStringWrapper::SizedStringWrapper(const SizedStringWrapper &other) {
+    data = _buf;
+    len = other.len;
+    memcpy(_buf, other._buf, other.len);
+}
+
+SizedStringWrapper &SizedStringWrapper::operator =(const SizedStringWrapper &other) {
+    data = _buf;
+    len = other.len;
+    memcpy(_buf, other._buf, other.len);
+
+    return *this;
+}
+
 void SizedStringWrapper::clear() {
     len = 0;
     data = _buf;
@@ -182,4 +202,88 @@ bool SizedStringWrapper::append(int32_t n) {
 
     assert(0);
     return false;
+}
+
+
+LockedSizedStringWrapper::LockedSizedStringWrapper(int32_t n) {
+    auto ss = intToSizedString(n);
+    if (ss.len == 0) {
+        len = (uint32_t)::itoa(n, (char *)_buf);
+        data = _buf;
+    } else {
+        *(SizedString *)this = ss;
+    }
+}
+
+LockedSizedStringWrapper::LockedSizedStringWrapper(double n) {
+    len = floatToString(n, (char *)_buf);
+    data = _buf;
+}
+
+LockedSizedStringWrapper::LockedSizedStringWrapper(const JsValue &v) {
+    data = _buf;
+
+    if (v.type == JDT_CHAR) {
+        len = utf32CodeToUtf8(v.value.n32, data);
+    } else if (v.type == JDT_UNDEFINED) {
+        *(SizedString *)this = SS_UNDEFINED;
+    } else if (v.type == JDT_NULL) {
+        *(SizedString *)this = SS_NULL;
+    } else if (v.type == JDT_BOOL) {
+        *(SizedString *)this = v.value.n32 ? SS_TRUE : SS_FALSE;
+    } else if (v.type == JDT_INT32) {
+        auto n = v.value.index;
+        auto ss = intToSizedString(n);
+        if (ss.len == 0) {
+            len = (uint32_t)::itoa(n, (char *)_buf);
+            data = _buf;
+        } else {
+            *(SizedString *)this = ss;
+        }
+    } else {
+        assert(0);
+    }
+}
+
+LockedSizedStringWrapper::LockedSizedStringWrapper(const string &v) {
+    data = _buf;
+    len = min((int)v.size(), (int)CountOf(_buf));
+    memcpy(_buf, v.c_str(), len);
+}
+
+void LockedSizedStringWrapper::clear() {
+    len = 0;
+    data = _buf;
+}
+
+void LockedSizedStringWrapper::reset(const SizedString &s) {
+    *(SizedString *)this = s;
+}
+
+LockedSizedStringWrapper::LockedSizedStringWrapper(const LockedSizedStringWrapper &other) {
+    len = other.len;
+    if (other.data == other._buf) {
+        memcpy(_buf, other._buf, other.len);
+        data = _buf;
+    } else {
+        data = other.data;
+        if (other.isStable()) {
+            setStable();
+        }
+    }
+}
+
+LockedSizedStringWrapper &LockedSizedStringWrapper::operator =(const LockedSizedStringWrapper &other) {
+    len = other.len;
+    if (other.data == other._buf) {
+        memcpy(_buf, other._buf, other.len);
+        data = _buf;
+    } else {
+        data = other.data;
+        if (other.isStable()) {
+            setStable();
+        }
+    }
+
+    return *this;
 }

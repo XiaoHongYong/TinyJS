@@ -175,8 +175,7 @@ void IJsObject::set(VMContext *ctx, const JsValue &thiz, const JsValue &nameOrg,
 //
 //    if (thiz.type < JDT_OBJECT) {
 //        // Primitive types 不能被修改，但是其 setter 函数会被调用
-//        string buf;
-//        auto strName = ctx->runtime->toSizedString(ctx, name, buf);
+//        auto strName = ctx->runtime->toSizedString(ctx, name);
 //        JsNativeFunction funcGetter = nullptr;
 //        auto prop = getRawByName(ctx, strName, funcGetter, true);
 //        if (prop && prop->setter.type >= JDT_FUNCTION) {

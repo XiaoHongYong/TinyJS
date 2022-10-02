@@ -196,13 +196,367 @@ void stringPrototypeCodePointAt(VMContext *ctx, const JsValue &thiz, const Argum
     }
 }
 
-void stringPrototypeToString(VMContext *ctx, const JsValue &thiz, const Arguments &args) {
-    auto value = convertStringToJsValue(ctx, thiz, "toString");
-    if (!value.isValid()) {
+JsValue toStringStrict(VMContext *ctx, const JsValue &val) {
+    if (val.type == JDT_SYMBOL) {
+        ctx->throwException(PE_TYPE_ERROR, "Cannot convert a Symbol value to a string");
+        return jsValueUndefined;
+    }
+
+    return ctx->runtime->toString(ctx, val);
+}
+
+LockedSizedStringWrapper toSizedStringStrict(VMContext *ctx, const JsValue &val) {
+    if (val.type == JDT_SYMBOL) {
+        ctx->throwException(PE_TYPE_ERROR, "Cannot convert a Symbol value to a string");
+        return SS_EMPTY;
+    }
+
+    return ctx->runtime->toSizedString(ctx, val);
+}
+
+void stringPrototypeConcat(VMContext *ctx, const JsValue &thiz, const Arguments &args) {
+    auto strVal = convertStringToJsValue(ctx, thiz, "concat");
+    if (!strVal.isValid()) {
         return;
     }
 
-    ctx->retValue = value;
+    auto other = toStringStrict(ctx, args.getAt(0, jsStringValueEmpty));
+    if (ctx->error != PE_OK) {
+        return;
+    }
+
+    ctx->retValue = ctx->runtime->plusString(strVal, ctx->runtime->toString(ctx, other));
+}
+
+void stringPrototypeEndsWith(VMContext *ctx, const JsValue &thiz, const Arguments &args) {
+    auto runtime = ctx->runtime;
+    auto strVal = convertStringToJsValue(ctx, thiz, "endsWith");
+    if (!strVal.isValid()) {
+        return;
+    }
+
+    auto s = runtime->toSizedString(ctx, strVal);
+    auto p = toSizedStringStrict(ctx, args.getAt(0, jsStringValueUndefined));
+    if (ctx->error != PE_OK) {
+        return;
+    }
+
+    ctx->retValue = JsValue(JDT_BOOL, s.endsWith(p));
+}
+
+/*
+void stringPrototypeFixed(VMContext *ctx, const JsValue &thiz, const Arguments &args) {
+    auto strVal = convertStringToJsValue(ctx, thiz, "fixed");
+    if (!strVal.isValid()) {
+        return;
+    }
+
+    ctx->retValue = strVal;
+}
+
+void stringPrototypeFontcolor(VMContext *ctx, const JsValue &thiz, const Arguments &args) {
+    auto strVal = convertStringToJsValue(ctx, thiz, "fontcolor");
+    if (!strVal.isValid()) {
+        return;
+    }
+
+    ctx->retValue = strVal;
+}
+
+void stringPrototypeFontsize(VMContext *ctx, const JsValue &thiz, const Arguments &args) {
+    auto strVal = convertStringToJsValue(ctx, thiz, "fontsize");
+    if (!strVal.isValid()) {
+        return;
+    }
+
+    ctx->retValue = strVal;
+}*/
+
+void stringPrototypeIncludes(VMContext *ctx, const JsValue &thiz, const Arguments &args) {
+    auto runtime = ctx->runtime;
+    auto strVal = convertStringToJsValue(ctx, thiz, "includes");
+    if (!strVal.isValid()) {
+        return;
+    }
+
+    auto s = runtime->toSizedString(ctx, strVal);
+    auto p = toSizedStringStrict(ctx, args.getAt(0, jsStringValueUndefined));
+    if (ctx->error != PE_OK) {
+        return;
+    }
+
+    ctx->retValue = JsValue(JDT_BOOL, s.strstr(p) != -1);
+}
+
+void stringPrototypeIndexOf(VMContext *ctx, const JsValue &thiz, const Arguments &args) {
+    auto runtime = ctx->runtime;
+    auto strVal = convertStringToJsValue(ctx, thiz, "indexOf");
+    if (!strVal.isValid()) {
+        return;
+    }
+
+    int32_t index = 0;
+    if (args.count > 1) {
+        index = (int32_t)runtime->toNumber(ctx, args[1]);
+    }
+
+    auto p = toSizedStringStrict(ctx, args.getAt(0, jsStringValueUndefined));
+    if (ctx->error != PE_OK) {
+        return;
+    }
+
+    // 转换为 utf16 的 string
+    SizedStringWrapper tmp;
+    SizedStringUtf16 s;
+    if (strVal.type == JDT_CHAR) {
+        tmp.append(strVal);
+        s.set(tmp);
+    } else {
+        s = runtime->getString(strVal);
+    }
+
+    auto pos = s.indexOf(p, index);
+
+    // 返回的位置是 utf-16 的
+    ctx->retValue = JsValue(JDT_INT32, pos);
+}
+
+void stringPrototypeLastIndexOf(VMContext *ctx, const JsValue &thiz, const Arguments &args) {
+    auto runtime = ctx->runtime;
+    auto strVal = convertStringToJsValue(ctx, thiz, "lastIndexOf");
+    if (!strVal.isValid()) {
+        return;
+    }
+
+    int32_t index = 0x7FFFFFFF;
+    if (args.count > 1) {
+        index = (int32_t)runtime->toNumber(ctx, args[1]);
+    }
+
+    auto p = toSizedStringStrict(ctx, args.getAt(0, jsStringValueUndefined));
+
+    // 转换为 utf16 的 string
+    SizedStringWrapper tmp;
+    SizedStringUtf16 s;
+    if (strVal.type == JDT_CHAR) {
+        tmp.append(strVal);
+        s.set(tmp);
+    } else {
+        s = runtime->getString(strVal);
+    }
+
+    auto pos = s.lastIndexOf(p, index);
+
+    ctx->retValue = JsValue(JDT_INT32, pos);
+}
+
+void stringPrototypeLocaleCompare(VMContext *ctx, const JsValue &thiz, const Arguments &args) {
+    auto strVal = convertStringToJsValue(ctx, thiz, "localeCompare");
+    if (!strVal.isValid()) {
+        return;
+    }
+
+    assert(0 && "NOT SUPPORTED YET.");
+
+    ctx->retValue = strVal;
+}
+
+void stringPrototypeMatch(VMContext *ctx, const JsValue &thiz, const Arguments &args) {
+    auto strVal = convertStringToJsValue(ctx, thiz, "match");
+    if (!strVal.isValid()) {
+        return;
+    }
+
+    ctx->retValue = strVal;
+}
+
+void stringPrototypeMatchAll(VMContext *ctx, const JsValue &thiz, const Arguments &args) {
+    auto strVal = convertStringToJsValue(ctx, thiz, "matchAll");
+    if (!strVal.isValid()) {
+        return;
+    }
+
+    ctx->retValue = strVal;
+}
+
+void stringPrototypeNormalize(VMContext *ctx, const JsValue &thiz, const Arguments &args) {
+    auto strVal = convertStringToJsValue(ctx, thiz, "normalize");
+    if (!strVal.isValid()) {
+        return;
+    }
+
+    ctx->retValue = strVal;
+}
+
+void stringPrototypePadEnd(VMContext *ctx, const JsValue &thiz, const Arguments &args) {
+    auto strVal = convertStringToJsValue(ctx, thiz, "padEnd");
+    if (!strVal.isValid()) {
+        return;
+    }
+
+    ctx->retValue = strVal;
+}
+
+void stringPrototypePadStart(VMContext *ctx, const JsValue &thiz, const Arguments &args) {
+    auto strVal = convertStringToJsValue(ctx, thiz, "padStart");
+    if (!strVal.isValid()) {
+        return;
+    }
+
+    ctx->retValue = strVal;
+}
+
+void stringPrototypeRepeat(VMContext *ctx, const JsValue &thiz, const Arguments &args) {
+    auto strVal = convertStringToJsValue(ctx, thiz, "repeat");
+    if (!strVal.isValid()) {
+        return;
+    }
+
+    ctx->retValue = strVal;
+}
+
+void stringPrototypeReplace(VMContext *ctx, const JsValue &thiz, const Arguments &args) {
+    auto strVal = convertStringToJsValue(ctx, thiz, "replace");
+    if (!strVal.isValid()) {
+        return;
+    }
+
+    ctx->retValue = strVal;
+}
+
+void stringPrototypeReplaceAll(VMContext *ctx, const JsValue &thiz, const Arguments &args) {
+    auto strVal = convertStringToJsValue(ctx, thiz, "replaceAll");
+    if (!strVal.isValid()) {
+        return;
+    }
+
+    ctx->retValue = strVal;
+}
+
+void stringPrototypeSearch(VMContext *ctx, const JsValue &thiz, const Arguments &args) {
+    auto strVal = convertStringToJsValue(ctx, thiz, "search");
+    if (!strVal.isValid()) {
+        return;
+    }
+
+    ctx->retValue = strVal;
+}
+
+void stringPrototypeSlice(VMContext *ctx, const JsValue &thiz, const Arguments &args) {
+    auto strVal = convertStringToJsValue(ctx, thiz, "slice");
+    if (!strVal.isValid()) {
+        return;
+    }
+
+    ctx->retValue = strVal;
+}
+
+void stringPrototypeSplit(VMContext *ctx, const JsValue &thiz, const Arguments &args) {
+    auto strVal = convertStringToJsValue(ctx, thiz, "split");
+    if (!strVal.isValid()) {
+        return;
+    }
+
+    ctx->retValue = strVal;
+}
+
+void stringPrototypeStartsWith(VMContext *ctx, const JsValue &thiz, const Arguments &args) {
+    auto strVal = convertStringToJsValue(ctx, thiz, "startsWith");
+    if (!strVal.isValid()) {
+        return;
+    }
+
+    ctx->retValue = strVal;
+}
+
+void stringPrototypeSubstring(VMContext *ctx, const JsValue &thiz, const Arguments &args) {
+    auto strVal = convertStringToJsValue(ctx, thiz, "substring");
+    if (!strVal.isValid()) {
+        return;
+    }
+
+    ctx->retValue = strVal;
+}
+
+void stringPrototypeToLocaleLowerCase(VMContext *ctx, const JsValue &thiz, const Arguments &args) {
+    auto strVal = convertStringToJsValue(ctx, thiz, "toLocaleLowerCase");
+    if (!strVal.isValid()) {
+        return;
+    }
+
+    ctx->retValue = strVal;
+}
+
+void stringPrototypeToLocaleUpperCase(VMContext *ctx, const JsValue &thiz, const Arguments &args) {
+    auto strVal = convertStringToJsValue(ctx, thiz, "toLocaleUpperCase");
+    if (!strVal.isValid()) {
+        return;
+    }
+
+    ctx->retValue = strVal;
+}
+
+void stringPrototypeToLowerCase(VMContext *ctx, const JsValue &thiz, const Arguments &args) {
+    auto strVal = convertStringToJsValue(ctx, thiz, "toLowerCase");
+    if (!strVal.isValid()) {
+        return;
+    }
+
+    ctx->retValue = strVal;
+}
+
+void stringPrototypeToString(VMContext *ctx, const JsValue &thiz, const Arguments &args) {
+    auto strVal = convertStringToJsValue(ctx, thiz, "toString");
+    if (!strVal.isValid()) {
+        return;
+    }
+
+    ctx->retValue = strVal;
+}
+
+void stringPrototypeToUpperCase(VMContext *ctx, const JsValue &thiz, const Arguments &args) {
+    auto strVal = convertStringToJsValue(ctx, thiz, "toUpperCase");
+    if (!strVal.isValid()) {
+        return;
+    }
+
+    ctx->retValue = strVal;
+}
+
+void stringPrototypeTrim(VMContext *ctx, const JsValue &thiz, const Arguments &args) {
+    auto strVal = convertStringToJsValue(ctx, thiz, "trim");
+    if (!strVal.isValid()) {
+        return;
+    }
+
+    ctx->retValue = strVal;
+}
+
+void stringPrototypeTrimEnd(VMContext *ctx, const JsValue &thiz, const Arguments &args) {
+    auto strVal = convertStringToJsValue(ctx, thiz, "trimEnd");
+    if (!strVal.isValid()) {
+        return;
+    }
+
+    ctx->retValue = strVal;
+}
+
+void stringPrototypeTrimStart(VMContext *ctx, const JsValue &thiz, const Arguments &args) {
+    auto strVal = convertStringToJsValue(ctx, thiz, "trimStart");
+    if (!strVal.isValid()) {
+        return;
+    }
+
+    ctx->retValue = strVal;
+}
+
+void stringPrototypeValueOf(VMContext *ctx, const JsValue &thiz, const Arguments &args) {
+    auto strVal = convertStringToJsValue(ctx, thiz, "valueOf");
+    if (!strVal.isValid()) {
+        return;
+    }
+
+    ctx->retValue = strVal;
 }
 
 void stringPrototypeLength(VMContext *ctx, const JsValue &thiz, const Arguments &args) {
@@ -225,7 +579,44 @@ static JsLibProperty stringPrototypeFunctions[] = {
     { "charAt", stringPrototypeCharAt },
     { "charCodeAt", stringPrototypeCharCodeAt },
     { "codePointAt", stringPrototypeCodePointAt },
+    { "concat", stringPrototypeConcat },
+    { "endsWith", stringPrototypeEndsWith },
+    // { "fixed", stringPrototypeFixed },
+    // { "fontcolor", stringPrototypeFontcolor },
+    // { "fontsize", stringPrototypeFontsize },
+    { "includes", stringPrototypeIncludes },
+    { "indexOf", stringPrototypeIndexOf },
+    // * { "italics", stringPrototypeItalics },
+    { "lastIndexOf", stringPrototypeLastIndexOf },
+    // * { "link", stringPrototypeLink },
+    { "localeCompare", stringPrototypeLocaleCompare },
+    { "match", stringPrototypeMatch },
+    { "matchAll", stringPrototypeMatchAll },
+    { "normalize", stringPrototypeNormalize },
+    { "padEnd", stringPrototypePadEnd },
+    { "padStart", stringPrototypePadStart },
+    { "repeat", stringPrototypeRepeat },
+    { "replace", stringPrototypeReplace },
+    { "replaceAll", stringPrototypeReplaceAll },
+    { "search", stringPrototypeSearch },
+    { "slice", stringPrototypeSlice },
+    // * { "small", stringPrototypeSmall },
+    { "split", stringPrototypeSplit },
+    { "startsWith", stringPrototypeStartsWith },
+    // * { "strike", stringPrototypeStrike },
+    // * { "sub", stringPrototypeSub },
+    // * { "substr", stringPrototypeSubstr },
+    { "substring", stringPrototypeSubstring },
+    // * { "sup", stringPrototypeSup },
+    { "toLocaleLowerCase", stringPrototypeToLocaleLowerCase },
+    { "toLocaleUpperCase", stringPrototypeToLocaleUpperCase },
+    { "toLowerCase", stringPrototypeToLowerCase },
     { "toString", stringPrototypeToString },
+    { "toUpperCase", stringPrototypeToUpperCase },
+    { "trim", stringPrototypeTrim },
+    { "trimEnd", stringPrototypeTrimEnd },
+    { "trimStart", stringPrototypeTrimStart },
+    { "valueOf", stringPrototypeValueOf },
     makeJsLibPropertyGetter("length", stringPrototypeLength),
 };
 

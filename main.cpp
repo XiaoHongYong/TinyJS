@@ -68,16 +68,14 @@ int main(int argc, const char * argv[]) {
 
     vm.eval(code, strlen(code), ctx, stackScopes, args);
     if (ctx->error) {
-        string buf;
-        SizedString err = runtime->toSizedString(ctx, ctx->errorMessage, buf);
+        auto err = runtime->toSizedString(ctx, ctx->errorMessage);
         printf("Got exception: %.*s\n", int(err.len), err.data);
     }
 
 //    code = "g('y');";
 //    vm.eval(code, strlen(code), runtime->mainVmCtx, stackScopes, args);
 //    if (runtime->mainVmCtx->error) {
-//        string buf;
-//        SizedString err = runtime->toSizedString(ctx, ctx->errorMessage, buf);
+//        auto err = runtime->toSizedString(ctx, ctx->errorMessage);
 //        printf("Got exception: %.*s\n", int(err.len), err.data);
 //    }
 

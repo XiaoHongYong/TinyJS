@@ -436,6 +436,35 @@ uint32_t utf8ToUtf16(const uint8_t *str, uint32_t len, utf16_t *u16BufOut, uint3
     return lenUtf16;
 }
 
+uint8_t *utf8ToUtf16Seek(const uint8_t *str, uint32_t len, uint32_t utf16Pos) {
+    auto p = str, last = str + len;
+    uint32_t lenUtf16 = 0;
+
+    while (p < last && lenUtf16 < utf16Pos) {
+        lenUtf16++;
+        if ((*p) < 0x80) {
+            p += 1;
+        } else if ((*p) < 0xc0) {
+            p += 1;
+        } else if ((*p) < 0xe0) {
+            p += 2;
+        } else if ((*p) < 0xf0) {
+            p += 3;
+        } else if ((*p) < 0xf8) {
+            lenUtf16++;
+            p += 4;
+        } else if ((*p) < 0xfc) {
+            p += 5;
+        } else if ((*p) < 0xfe) {
+            p += 6;
+        } else {
+            p += 1;
+        }
+    }
+
+    return (uint8_t *)(p > last ? last : p);
+}
+
 uint32_t utf8ToUtf32(const uint8_t *data, uint32_t len, utf32_t *bufOut, uint32_t capacityBufOut) {
     auto p = data, last = data + len;
     uint32_t lenUtf32 = 0;
@@ -484,6 +513,11 @@ uint32_t utf32CodeToUtf8Length(uint16_t code) {
         return 4;
     }
 }
+
+uint32_t utf32CodeToUtf16Length(uint16_t code) {
+    return code <= 0xFFFF ? 1 : 2;
+}
+
 
 uint32_t utf32CodeToUtf8(uint16_t code, uint8_t *bufOut) {
     if (code < 0x80) {

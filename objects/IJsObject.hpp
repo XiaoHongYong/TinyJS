@@ -196,8 +196,7 @@ protected:
         assert(prop);
         // 自身的属性，可以直接修改
         if (!prop->merge(descriptor)) {
-            string buf;
-            auto name = ctx->runtime->toSizedString(ctx, JsValue(JDT_SYMBOL, index), buf);
+            auto name = ctx->runtime->toSizedString(ctx, JsValue(JDT_SYMBOL, index));
             ctx->throwException(PE_TYPE_ERROR, "Cannot redefine property: %.*s", (int)name.len, name.data);
         }
     }
