@@ -67,7 +67,7 @@ Ab length
 Round:  9 function g() { }
 function g() { } length
 Round:  10 
-{ tt: x } length
+{tt: x} length
 Round:  11 
 TypeError: Cannot freeze
 */
@@ -211,7 +211,7 @@ function f() {
 }
 f();
 /* OUTPUT
-{ 1: d, a: b }
+{1: d, a: b}
 */
 
 
@@ -280,7 +280,7 @@ function f() {
 }
 f();
 /* OUTPUT
-{ 1: d, a: b }
+{1: d, a: b}
 */
 
 
@@ -293,7 +293,7 @@ function f() {
 }
 f();
 /* OUTPUT
-{ 1: undefined, undefined: undefined }
+{1: undefined, undefined: undefined}
 */
 
 
@@ -322,10 +322,10 @@ function f() {
 }
 f();
 /* OUTPUT-FIXED
-{ value: 1, writable: true, enumerable: true, configurable: true }
-{ set: x(p) {}, get: undefined, enumerable: true, configurable: true}
+{configurable: true, enumerable: true, value: 1, writable: true}
+{configurable: true, enumerable: true, get: undefined, set: x(p) {}}
 undefined
-{ value: 1, writable: false, enumerable: false, configurable: false }
+{configurable: false, enumerable: false, value: 1, writable: false}
 */
 
 
@@ -384,13 +384,13 @@ TypeError: Cannot convert undefined or null to object
 Round:  2 null
 TypeError: Cannot convert undefined or null to object
 Round:  3 1
-{  }
+{}
 Round:  4 false
-{  }
+{}
 Round:  5 NaN
-{  }
+{}
 Round:  6 Symbol()
-{  }
+{}
 */
 
 
@@ -403,7 +403,7 @@ function f() {
 }
 f();
 /* OUTPUT
-1, x
+[1, x]
 */
 
 
@@ -417,7 +417,7 @@ function f() {
 }
 f();
 /* OUTPUT
-1, x
+[1, x]
 */
 
 
@@ -449,12 +449,13 @@ TypeError: Cannot convert undefined or null to object
 Round:  2 null
 TypeError: Cannot convert undefined or null to object
 Round:  3 1
-
+[]
 Round:  4 false
-
+[]
 Round:  5 NaN
-
+[]
 Round:  6 Symbol()
+[]
 */
 
 

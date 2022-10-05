@@ -136,8 +136,11 @@ public:
 
 struct Token {
     TokenType               type;
-    OpCode                  opr;        // 当 Token 为 TK_ASSIGN_X 和二元操作符是，对应的 OpCode.
     bool                    newLineBefore;
+    union {
+        OpCode              opr;        // 当 Token 为 TK_ASSIGN_X 和二元操作符是，对应的 OpCode.
+        uint32_t            index;
+    }                       param;
     uint32_t                line, col;
     uint32_t                len;
     uint8_t                 *buf;

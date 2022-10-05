@@ -181,7 +181,7 @@ round:  function g() {
 >a1
 >a3
 @f
-round:  {  }
+round:  {}
 i
 h
 >a5

@@ -8,6 +8,8 @@
 #include "Lexer.hpp"
 #include <math.h>
 #include "parser/ParserTypes.hpp"
+#include "objects/JsRegExp.hpp"
+
 
 uint8_t *parseNumber(uint8_t *start, uint8_t *end, double &retValue) {
     retValue = 0;
@@ -324,7 +326,7 @@ void JSLexer::_readToken() {
             }
 
             if (!isRegexAllowed(_prevTokenType)) {
-                _curToken.opr = OP_DIV;
+                _curToken.param.opr = OP_DIV;
                 if (code == '=') {
                     _bufPos++;
                     _curToken.type = TK_ASSIGN_X;
@@ -335,7 +337,7 @@ void JSLexer::_readToken() {
             }
 
             _readRegexp();
-            break;
+            return;
         case '!':
             code = *_bufPos;
             if (code == '=') {
@@ -345,19 +347,19 @@ void JSLexer::_readToken() {
                 if (code == '=') {
                     // !==
                     _bufPos++;
-                    _curToken.opr = OP_INEQUAL_STRICT;
+                    _curToken.param.opr = OP_INEQUAL_STRICT;
                 } else { // !=
-                    _curToken.opr = OP_INEQUAL;
+                    _curToken.param.opr = OP_INEQUAL;
                 }
             } else {
                 // !
                 _curToken.type = TK_UNARY_PREFIX;
-                _curToken.opr = OP_LOGICAL_NOT;
+                _curToken.param.opr = OP_LOGICAL_NOT;
             }
             break;
         case '%':
             code = *_bufPos;
-            _curToken.opr = OP_MOD;
+            _curToken.param.opr = OP_MOD;
             if (code == '=') {
                 _bufPos++;
                 _curToken.type = TK_ASSIGN_X;
@@ -375,11 +377,11 @@ void JSLexer::_readToken() {
                 // &=
                 _bufPos++;
                 _curToken.type = TK_ASSIGN_X;
-                _curToken.opr = OP_BIT_AND;
+                _curToken.param.opr = OP_BIT_AND;
             } else {
                 // &
                 _curToken.type = TK_BIT_AND;
-                _curToken.opr = OP_BIT_AND;
+                _curToken.param.opr = OP_BIT_AND;
             }
             break;
         case '*':
@@ -390,21 +392,21 @@ void JSLexer::_readToken() {
                     // **=
                     _bufPos++;
                     _curToken.type = TK_ASSIGN_X;
-                    _curToken.opr = OP_EXP;
+                    _curToken.param.opr = OP_EXP;
                 } else {
                     // **
                     _curToken.type = TK_EXP;
-                    _curToken.opr = OP_EXP;
+                    _curToken.param.opr = OP_EXP;
                 }
             } else if (code == '=') {
                 // *=
                 _bufPos++;
                 _curToken.type = TK_ASSIGN_X;
-                _curToken.opr = OP_MUL;
+                _curToken.param.opr = OP_MUL;
             } else {
                 // *
                 _curToken.type = TK_MUL;
-                _curToken.opr = OP_MUL;
+                _curToken.param.opr = OP_MUL;
             }
             break;
         case '+':
@@ -417,11 +419,11 @@ void JSLexer::_readToken() {
                 // +=
                 _bufPos++;
                 _curToken.type = TK_ASSIGN_X;
-                _curToken.opr = OP_ADD;
+                _curToken.param.opr = OP_ADD;
             } else {
                 // +
                 _curToken.type = TK_ADD;
-                _curToken.opr = OP_ADD;
+                _curToken.param.opr = OP_ADD;
             }
             break;
         case '-':
@@ -434,11 +436,11 @@ void JSLexer::_readToken() {
                 // -=
                 _bufPos++;
                 _curToken.type = TK_ASSIGN_X;
-                _curToken.opr = OP_SUB;
+                _curToken.param.opr = OP_SUB;
             } else {
                 // -
                 _curToken.type = TK_ADD;
-                _curToken.opr = OP_SUB;
+                _curToken.param.opr = OP_SUB;
             }
             break;
         case '<':
@@ -449,21 +451,21 @@ void JSLexer::_readToken() {
                     // <<=
                     _bufPos++;
                     _curToken.type = TK_ASSIGN_X;
-                    _curToken.opr = OP_LEFT_SHIFT;
+                    _curToken.param.opr = OP_LEFT_SHIFT;
                 } else {
                     // <<
                     _curToken.type = TK_SHIFT;
-                    _curToken.opr = OP_LEFT_SHIFT;
+                    _curToken.param.opr = OP_LEFT_SHIFT;
                 }
             } else {
                 if (code == '=') {
                     // <=
                     _bufPos++;
                     _curToken.type = TK_RATIONAL;
-                    _curToken.opr = OP_LESS_EQUAL_THAN;
+                    _curToken.param.opr = OP_LESS_EQUAL_THAN;
                 } else { // <
                     _curToken.type = TK_RATIONAL;
-                    _curToken.opr = OP_LESS_THAN;
+                    _curToken.param.opr = OP_LESS_THAN;
                 }
             }
             break;
@@ -476,32 +478,32 @@ void JSLexer::_readToken() {
                     // >>=
                     _bufPos++;
                     _curToken.type = TK_ASSIGN_X;
-                    _curToken.opr = OP_RIGHT_SHIFT;
+                    _curToken.param.opr = OP_RIGHT_SHIFT;
                 } else if (code == '>') {
                     _bufPos++;
                     if (*_bufPos == '=') {
                         // >>>=
                         _bufPos++;
                         _curToken.type = TK_ASSIGN_X;
-                        _curToken.opr = OP_UNSIGNED_RIGHT_SHIFT;
+                        _curToken.param.opr = OP_UNSIGNED_RIGHT_SHIFT;
                     } else {
                         // >>>
                         _curToken.type = TK_SHIFT;
-                        _curToken.opr = OP_UNSIGNED_RIGHT_SHIFT;
+                        _curToken.param.opr = OP_UNSIGNED_RIGHT_SHIFT;
                     }
                 } else {
                     // >>
                     _curToken.type = TK_SHIFT;
-                    _curToken.opr = OP_RIGHT_SHIFT;
+                    _curToken.param.opr = OP_RIGHT_SHIFT;
                 }
             } else {
                 _curToken.type = TK_RATIONAL;
                 if (code == '=') {
                     // >=
                     _bufPos++;
-                    _curToken.opr = OP_GREATER_EQUAL_THAN;
+                    _curToken.param.opr = OP_GREATER_EQUAL_THAN;
                 } else { // >
-                    _curToken.opr = OP_GREATER_THAN;
+                    _curToken.param.opr = OP_GREATER_THAN;
                 }
             }
             break;
@@ -512,9 +514,9 @@ void JSLexer::_readToken() {
                 if (*_bufPos == '=') {
                     // ===
                     _bufPos++;
-                    _curToken.opr = OP_EQUAL_STRICT;
+                    _curToken.param.opr = OP_EQUAL_STRICT;
                 } else { // ==
-                    _curToken.opr = OP_EQUAL;
+                    _curToken.param.opr = OP_EQUAL;
                 }
                 _curToken.type = TK_EQUALITY;
             } else {
@@ -551,7 +553,7 @@ void JSLexer::_readToken() {
                 // ^
                 _curToken.type = TK_BIT_XOR;
             }
-            _curToken.opr = OP_BIT_XOR;
+            _curToken.param.opr = OP_BIT_XOR;
             break;
         case '|':
             code = *_bufPos;
@@ -559,7 +561,7 @@ void JSLexer::_readToken() {
                 // |=
                 _bufPos++;
                 _curToken.type = TK_ASSIGN_X;
-                _curToken.opr = OP_BIT_OR;
+                _curToken.param.opr = OP_BIT_OR;
             } else {
                 if (code == '|') {
                     // ||
@@ -567,7 +569,7 @@ void JSLexer::_readToken() {
                     _curToken.type = TK_LOGICAL_OR;
                 } else { // |
                     _curToken.type = TK_BIT_OR;
-                    _curToken.opr = OP_BIT_OR;
+                    _curToken.param.opr = OP_BIT_OR;
                 }
             }
             break;
@@ -598,7 +600,7 @@ void JSLexer::_readToken() {
             break;
         case '~':
             _curToken.type = TK_UNARY_PREFIX;
-            _curToken.opr = OP_BIT_NOT;
+            _curToken.param.opr = OP_BIT_NOT;
             break;
         case '(': _curToken.type = TK_OPEN_PAREN; break;
         case ')': _curToken.type = TK_CLOSE_PAREN; break;
@@ -698,6 +700,8 @@ void JSLexer::_readRegexp() {
     bool inBracket = false;
     uint8_t ch;
 
+    SizedString str(_bufPos, 0);
+
     do {
         ch = *_bufPos++;
         if (!ch || ch == '\n') {
@@ -717,9 +721,22 @@ void JSLexer::_readRegexp() {
         }
     } while (ch != '/' || inBracket);    // / or in []
 
+    str.len = (int)(_bufPos - str.data) - 1;
+
     // mods
+    SizedString mode(_bufPos, 0);
     _readName();
+    mode.len = uint32_t(_bufPos - mode.data);
+    uint32_t flags = 0;
+    if (!parseRegexpFlags(mode, flags)) {
+        _parseError("Invalid flags supplied to RegExp constructor '%.*s'", mode.len, mode.data);
+    }
+
+    _curToken.param.opr = (OpCode)flags;
     _curToken.type = TK_REGEX;
+    _curToken.len = (uint32_t)(_bufPos - _curToken.buf);
+
+    _resPool->addRegexp(_curToken, str, flags);
 }
 
 void JSLexer::_readName() {

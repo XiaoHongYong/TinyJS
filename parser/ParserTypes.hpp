@@ -10,6 +10,7 @@
 
 #include <deque>
 #include <unordered_map>
+#include <regex>
 #include "Lexer.hpp"
 #include "ByteCodeStream.hpp"
 
@@ -366,6 +367,12 @@ struct SwitchJump {
     VMAddress findAddress(VMRuntime *runtime, uint16_t poolIndex, const JsValue &cond);
 };
 
+struct RegexpInfo {
+    SizedString             str;
+    std::regex              re;
+    uint32_t                flags;
+};
+
 using VecSwitchJumps = vector<SwitchJump>;
 
 /**
@@ -381,6 +388,7 @@ public:
     VecSizedStringUtf16s    strings;
     vector<double>          doubles;
     VecSwitchJumps          switchCaseJumps;
+    vector<RegexpInfo>      regexps;
 
     // 当 ResourcePool 被释放时，需要调用 toDestructNodes, toDestructScopes 的析构函数
     DequeJsNodes            toDestructNodes;
@@ -389,6 +397,8 @@ public:
 public:
     ResourcePool(uint32_t index = 0);
     ~ResourcePool();
+
+    void addRegexp(Token &token, const SizedString &str, uint32_t flags);
 
     inline void needDestructJsNode(IJsNode *node) { toDestructNodes.push_back(node); }
     inline void needDestructScope(Scope *scope) { toDestructScopes.push_back(scope); }

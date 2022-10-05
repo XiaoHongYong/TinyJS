@@ -188,7 +188,7 @@ function f() {
 }
 f();
 /* OUTPUT
-{ baz: 3 }
+{baz: 3}
 */
 
 
@@ -283,7 +283,7 @@ a 2
 x 1
 ==
 1
-a, 2
+[a, 2]
 */
 
 
@@ -329,17 +329,17 @@ Round:  6 Symbol()
 0
 Round:  7 x
 1
-0, x
+[0, x]
 Round:  8 Ab
 2
-0, A
-1, b
+[0, A]
+[1, b]
 Round:  9 function g() { }
 1
-f, f1
+[f, f1]
 Round:  10 
 1
-tt, x
+[tt, x]
 */
 
 
@@ -357,6 +357,6 @@ function f() {
 f();
 /* OUTPUT
 1
-a, 2
+[a, 2]
 */
 

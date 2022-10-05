@@ -156,18 +156,18 @@ f();
 /* OUTPUT
 TypeError: Cannot convert undefined or null to object
 TypeError: Cannot convert undefined or null to object
-#1 
-#2 
-#3 0
-#4 
-#5 
-#6 
-#7 
-#8 0
-#9 
-#10 
-#11 x
-#12 0, 1
+#1 []
+#2 []
+#3 [0]
+#4 []
+#5 []
+#6 []
+#7 []
+#8 [0]
+#9 []
+#10 []
+#11 [x]
+#12 [0, 1]
 */
 
 
@@ -269,10 +269,10 @@ null
 #6 /a/
 #7 Symbol()
 #8 b
-#9 {  }
-#10 
-#11 { x: 1 }
-#12 1, 2
+#9 {}
+#10 []
+#11 {x: 1}
+#12 [1, 2]
 */
 
 
@@ -379,16 +379,16 @@ f(5, [1, 2]);
 round:  1 /a/
 #6 true
 #6 true
-round:  2 {  }
+round:  2 {}
 #6 true
 #6 true
-round:  3 
+round:  3 []
 #6 true
 #6 true
-round:  4 { x: 1 }
+round:  4 {x: 1}
 #6 true
 #6 true
-round:  5 1, 2
+round:  5 [1, 2]
 #6 true
 #6 true
 */
@@ -602,13 +602,13 @@ f();
 TypeError: Cannot convert undefined or null to object
 TypeError: Cannot convert undefined or null to object
 TypeError: Cannot convert undefined or null to object
-4 
-5 
-6 
-7 x
-8 y
-9 
-9 b1, a1
-9 a1, a2, 3, x1
+4 []
+5 []
+6 []
+7 [x]
+8 [y]
+9 []
+9 [b1, a1]
+9 [a1, a2, 3, x1]
 */
 

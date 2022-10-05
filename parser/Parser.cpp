@@ -901,7 +901,7 @@ IJsNode *JSParser::_expectExpression(Precedence pred, bool enableIn) {
             break;
         }
         case TK_REGEX: {
-            expr = PoolNew(_pool, JsExprRegExp)(_getStringIndex(_curToken));
+            expr = PoolNew(_pool, JsExprRegExp)(_curToken.param.index);
             _readToken();
             break;
         }
@@ -947,7 +947,7 @@ IJsNode *JSParser::_expectExpression(Precedence pred, bool enableIn) {
         }
         case TK_UNARY_PREFIX: {
             // !, ~
-            auto opcode = _curToken.opr;
+            auto opcode = _curToken.param.opr;
             _readToken();
             expr = PoolNew(_pool, JsExprUnaryPrefix)(_expectExpression(PRED_UNARY_PREFIX), opcode);
             break;
@@ -1078,7 +1078,7 @@ IJsNode *JSParser::_expectExpression(Precedence pred, bool enableIn) {
                 return expr;
             }
 
-            auto opr = _curToken.opr;
+            auto opr = _curToken.param.opr;
             _readToken();
             expr = PoolNew(_pool, JsExprAssignX)(expr, _expectExpression(PRED_ASSIGNMENT, enableIn), opr);
             break;
@@ -1144,7 +1144,7 @@ IJsNode *JSParser::_expectExpression(Precedence pred, bool enableIn) {
             case TK_EQUALITY: {
                 if (pred >= PRED_EQUALITY)
                     return expr;
-                auto opcode = _curToken.opr;
+                auto opcode = _curToken.param.opr;
                 _readToken();
                 expr = PoolNew(_pool, JsExprBinaryOp)(expr, _expectExpression(PRED_EQUALITY), opcode);
                 break;
@@ -1152,7 +1152,7 @@ IJsNode *JSParser::_expectExpression(Precedence pred, bool enableIn) {
             case TK_RATIONAL: {
                 if (pred >= PRED_RATIONAL)
                     return expr;
-                auto opcode = _curToken.opr;
+                auto opcode = _curToken.param.opr;
                 _readToken();
                 expr = PoolNew(_pool, JsExprBinaryOp)(expr, _expectExpression(PRED_RATIONAL), opcode);
                 break;
@@ -1174,7 +1174,7 @@ IJsNode *JSParser::_expectExpression(Precedence pred, bool enableIn) {
             case TK_SHIFT: {
                 if (pred >= PRED_SHIFT)
                     return expr;
-                auto opcode = _curToken.opr;
+                auto opcode = _curToken.param.opr;
                 _readToken();
                 expr = PoolNew(_pool, JsExprBinaryOp)(expr, _expectExpression(PRED_SHIFT), opcode);
                 break;
@@ -1182,7 +1182,7 @@ IJsNode *JSParser::_expectExpression(Precedence pred, bool enableIn) {
             case TK_ADD: {
                 if (pred >= PRED_ADD)
                     return expr;
-                auto opcode = _curToken.opr;
+                auto opcode = _curToken.param.opr;
                 _readToken();
                 expr = PoolNew(_pool, JsExprBinaryOp)(expr, _expectExpression(PRED_ADD), opcode);
                 break;
@@ -1190,7 +1190,7 @@ IJsNode *JSParser::_expectExpression(Precedence pred, bool enableIn) {
             case TK_MUL: {
                 if (pred >= PRED_MUL)
                     return expr;
-                auto opcode = _curToken.opr;
+                auto opcode = _curToken.param.opr;
                 _readToken();
                 expr = PoolNew(_pool, JsExprBinaryOp)(expr, _expectExpression(PRED_MUL), opcode);
                 break;

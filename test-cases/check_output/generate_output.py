@@ -182,6 +182,37 @@ def python_value_to_js_string(v):
     else:
         return str(v)
 
+def obj_arr_to_string(properties, is_arr=False):
+    # Array
+    # a.append(', '.join([prop.get('value', '##') for prop in properties]))
+    if properties is None:
+        print(properties)
+        assert(0)
+
+    a = []
+    p = []
+
+    try:
+        for prop in properties:
+            name = prop.get('name')
+            value = prop.get('value')
+            if is_arr and name.isdigit():
+                a.append(value)
+            else:
+                p.append(name + ': ' + value)
+    except e:
+        print(properties)
+        raise e
+
+    p.sort()
+    a.extend(p)
+    a = ', '.join(a)
+
+    if is_arr:
+        return '[' + a + ']'
+    else:
+        return '{' + a + '}'
+
 def args_to_string(args):
     a = []
     for arg in args:
@@ -224,7 +255,7 @@ def args_to_string(args):
                 # { "type": "object", "className": "Array", "preview": { "properties": [{ "type": "number", "name": "3", "value": "NaN" } ] } }
                 preview = arg.get('preview')
                 properties = preview.get('properties')
-                a.append(', '.join([prop.get('value', '##') for prop in properties]))
+                a.append(obj_arr_to_string(properties, is_arr=True))
             elif className in ['Boolean', 'String', 'Number']:
                 preview = arg.get('preview')
                 properties = preview.get('properties')
@@ -233,16 +264,7 @@ def args_to_string(args):
                 # if className == 'Object'
                 # { "type": "object",  "className": "Object", "preview": {"properties": [{ "type": "number", "name": "1", "value": "NaN" }] }}
                 properties = (arg.get('preview') or arg).get('properties')
-                if properties is None:
-                    print(arg)
-                    assert(0)
-                a.append('{')
-                try:
-                    a.append(', '.join([prop.get('name') + ': ' + prop.get('value') for prop in properties]))
-                except e:
-                    print(properties)
-                    raise e
-                a.append('}')
+                a.append(obj_arr_to_string(properties))
         else:
             print(arg)
             assert(0)

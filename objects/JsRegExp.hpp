@@ -12,16 +12,33 @@
 #include <regex>
 
 
+enum RegexpFlags {
+    RF_CASE_INSENSITIVE = std::regex_constants::icase,      // i    Case-insensitive search.    ignoreCase
+    RF_MULTILINE        = std::regex_constants::multiline,  // m    Allows ^ and $ to match newline characters.    multiline
+    RF_DOT_ALL          = 1 << 16, // s    Allows . to match newline characters.    dotAll
+    RF_UNICODE          = 1 << 17, // u    "Unicode"; treat a pattern as a sequence of Unicode code points.    unicode
+    RF_STICKY           = 1 << 18, // y    Perform a "sticky" search that matches starting at the current
+                                   //      position in the target string.    sticky
+    RF_GLOBAL_SEARCH    = 1 << 19, // g    Global search.    global
+    RF_INDEX            = 1 << 20, // d    Generate indices for substring matches.    hasIndices
+};
+
+bool parseRegexpFlags(const SizedString &flags, uint32_t &flagsOut);
+
 class JsRegExp : public JsObject {
 public:
-    JsRegExp(const SizedString &re);
+    JsRegExp(const SizedString &str, const std::regex &re, uint32_t flags);
     ~JsRegExp();
 
     const string &toString() const { return _strRe; }
 
+    std::regex &getRegexp() { return _re; }
+    uint32_t flags() const { return _flags; }
+
 protected:
     string                      _strRe;
     std::regex                  _re;
+    uint32_t                    _flags;
 
 };
 

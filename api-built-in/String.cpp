@@ -7,6 +7,8 @@
 
 #include "BuiltIn.hpp"
 #include "objects/JsPrimaryObject.hpp"
+#include "objects/JsRegExp.hpp"
+#include "objects/JsArray.hpp"
 
 
 static void stringConstructor(VMContext *ctx, const JsValue &thiz, const Arguments &args) {
@@ -362,12 +364,47 @@ void stringPrototypeLocaleCompare(VMContext *ctx, const JsValue &thiz, const Arg
 }
 
 void stringPrototypeMatch(VMContext *ctx, const JsValue &thiz, const Arguments &args) {
+    auto runtime = ctx->runtime;
     auto strVal = convertStringToJsValue(ctx, thiz, "match");
     if (!strVal.isValid()) {
         return;
     }
 
-    ctx->retValue = strVal;
+    auto arr = new JsArray();
+    auto ret = runtime->pushObjectValue(arr);
+
+    auto str = runtime->toSizedString(ctx, strVal);
+
+    auto pattern = args.getAt(0, jsStringValueEmpty);
+    if (pattern.type == JDT_REGEX) {
+        auto regexp = (JsRegExp *)runtime->getObject(pattern);
+        auto &re = regexp->getRegexp();
+        auto flags = regexp->flags();
+
+        if (flags & RegexpFlags::RF_GLOBAL_SEARCH) {
+            auto begin = std::cregex_iterator((cstr_t)str.data, (cstr_t)str.data + str.len, re);
+            auto end = std::cregex_iterator();
+            for (auto it = begin; it != end; ++it) {
+                auto &m = *it;
+                arr->push(ctx, runtime->pushString(SizedString(m.str())));
+            }
+        } else {
+            std::cmatch matches;
+            if (std::regex_search((cstr_t)str.data, (cstr_t)str.data + str.len, matches, re)) {
+                for (auto &m : matches) {
+                    arr->push(ctx, runtime->pushString(SizedString(m.str())));
+                    if (!(flags & RegexpFlags::RF_GLOBAL_SEARCH)) {
+                        arr->setByName(ctx, ret, SS_INDEX, JsValue(JDT_INT32, (uint32_t)(m.first - (cstr_t)str.data)));
+                        arr->setByName(ctx, ret, SS_GROUPS, jsValueUndefined);
+                        arr->setByName(ctx, ret, SS_INPUT, strVal);
+                        break;
+                    }
+                }
+            }
+        }
+    }
+
+    ctx->retValue = ret;
 }
 
 void stringPrototypeMatchAll(VMContext *ctx, const JsValue &thiz, const Arguments &args) {

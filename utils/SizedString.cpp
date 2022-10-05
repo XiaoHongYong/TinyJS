@@ -13,6 +13,19 @@
 SizedString::SizedString(const char *data) : data((uint8_t *)data), len((uint32_t)strlen((const char *)data)) {
 }
 
+bool SizedString::isNumeric() const {
+    auto end = data + len;
+    auto p = data;
+
+    for (; p < end; ++p) {
+        if (!isnumber(*p)) {
+            return false;
+        }
+    }
+
+    return data != end;
+}
+
 uint8_t *SizedString::strlchr(uint8_t c) const {
     const uint8_t *p = data, *last = data + len;
 

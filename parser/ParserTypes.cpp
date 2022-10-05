@@ -422,6 +422,13 @@ ResourcePool::~ResourcePool() {
     free();
 }
 
+void ResourcePool::addRegexp(Token &token, const SizedString &str, uint32_t flags) {
+    token.param.index = (uint32_t)regexps.size();
+
+    regexps.push_back({ SizedString(token.buf, token.len),
+        std::regex((cstr_t)str.data, (cstr_t)str.data + str.len, (std::regex::flag_type)flags), flags });
+}
+
 void ResourcePool::convertUtf8ToUtf16(SizedStringUtf16 &str) {
     auto &utf8Str = str.utf8Str();
     auto dataUtf16 = (utf16_t *)pool.allocate(str.size() * sizeof(utf16_t));

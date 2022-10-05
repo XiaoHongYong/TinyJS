@@ -11,12 +11,13 @@
 
 using SetUInts = set<uint32_t>;
 
-void dumpObject(VMContext *ctx, const JsValue &obj,string &out, SetUInts &historyObjs) {
+void dumpObject(VMContext *ctx, const JsValue &obj, string &out, SetUInts &historyObjs) {
     assert(obj.type >= JDT_OBJECT);
+    bool isArray = obj.type == JDT_ARRAY;
 
     // 避免同一个 object 被多次输出
     if (historyObjs.find(obj.value.index) != historyObjs.end()) {
-        out.append("{...}");
+        out.append(isArray ? "[...]" : "{...}");
         return;
     }
     historyObjs.insert(obj.value.index);
@@ -26,22 +27,30 @@ void dumpObject(VMContext *ctx, const JsValue &obj,string &out, SetUInts &histor
     IJsObject *pobj = runtime->getObject(obj);
     std::shared_ptr<IJsIterator> it(pobj->getIteratorObject(ctx, false));
 
-    out.append("{");
-
     SizedString key;
     JsValue value;
-    bool first = true;
+    vector<string> vs;
+    vector<string> kvs;
 
     while (it->next(&key, nullptr, &value)) {
-        if (first) first = false; else out.append(",");
-
-        out.append((cstr_t)key.data, key.len);
-        out.append(": ");
         auto s = runtime->toSizedString(ctx, value);
-        out.append((cstr_t)s.data, s.len);
+        if (isArray && key.isNumeric()) {
+            vs.push_back(string((cstr_t)s.data, s.len));
+        } else {
+            string kv;
+            kv.append((cstr_t)key.data, key.len);
+            kv.append(": ");
+            kv.append((cstr_t)s.data, s.len);
+            kvs.push_back(kv);
+        }
     }
 
-    out.append("}");
+    std::sort(kvs.begin(), kvs.end());
+    vs.insert(vs.end(), kvs.begin(), kvs.end());
+
+    out.append(isArray ? "[" : "{");
+    out.append(strJoin(vs.begin(), vs.end(), ", "));
+    out.append(isArray ? "]" : "}");
 }
 
 void consoleLog(VMContext *ctx, const JsValue &thiz, const Arguments &args) {
@@ -55,7 +64,7 @@ void consoleLog(VMContext *ctx, const JsValue &thiz, const Arguments &args) {
         }
 
         auto v = args.data[i];
-        if (v.type == JDT_OBJECT) {
+        if (v.type == JDT_OBJECT || v.type == JDT_ARRAY) {
             SetUInts historyObjs;
             dumpObject(ctx, v, out, historyObjs);
             continue;

@@ -1034,8 +1034,8 @@ void JsVirtualMachine::call(Function *function, VMContext *ctx, VecVMStackScopes
             }
             case OP_PUSH_REGEXP: {
                 auto idx = readUInt32(bytecode);
-                auto str = runtime->getStringByIdx(idx, resourcePool);
-                auto re = new JsRegExp(str);
+                auto &info = resourcePool->regexps[idx];
+                auto re = new JsRegExp(info.str, info.re, info.flags);
                 stack.push_back(runtime->pushObjectValue(re));
                 break;
             }

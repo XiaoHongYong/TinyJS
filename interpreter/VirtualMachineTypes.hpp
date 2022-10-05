@@ -237,6 +237,7 @@ struct JsValue {
     JsValue(JsDataType type, uint32_t objIdx) { *(uint64_t *)this = 0; this->type = type; value.index = objIdx; }
 
     inline bool isValid() const { return type > JDT_NOT_INITIALIZED; }
+    inline bool isString() const { return type == JDT_CHAR || type == JDT_STRING; }
     inline bool equal(const JsValue &other) const { return *(uint64_t *)this == *(uint64_t *)&other; }
 };
 

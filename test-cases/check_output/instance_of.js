@@ -340,7 +340,7 @@ f(12, 'xy');
 6 false
 7 false
 8 false
-== Round: 4 
+== Round: 4 []
 1 false
 2 false
 3 false
@@ -349,7 +349,7 @@ f(12, 'xy');
 6 false
 7 false
 8 false
-== Round: 5 {  }
+== Round: 5 {}
 1 false
 2 false
 3 false
@@ -367,7 +367,7 @@ f(12, 'xy');
 6 true
 7 false
 8 false
-== Round: 7 {  }
+== Round: 7 {}
 1 false
 2 false
 3 false

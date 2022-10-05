@@ -663,9 +663,9 @@ function f14() {
 }
 f14();
 /* OUTPUT
-{ value: 1, writable: true, enumerable: true, configurable: true }
+{configurable: true, enumerable: true, value: 1, writable: true}
 1 1
-{ value: 1, writable: false, enumerable: true, configurable: true }
+{configurable: true, enumerable: true, value: 1, writable: false}
 2 1
 */
 

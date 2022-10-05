@@ -36,6 +36,8 @@ public:
     inline void setStable() { _isStable = true; }
     inline bool isStable() const { return _isStable; }
 
+    bool isNumeric() const;
+
     uint8_t *strlchr(uint8_t c) const;
     uint8_t *strrchr(uint8_t c) const;
 

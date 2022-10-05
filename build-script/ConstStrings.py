@@ -80,7 +80,10 @@ CONST_STRINGS = [
     [ 'Boolean', 'boolean' ],
     [ 'Bigint', 'bigint' ],
     [ 'Symbol', 'symbol' ],
+    [ 'Index', 'index' ],
     [ 'LastIndex', 'lastIndex' ],
+    [ 'Groups', 'groups' ],
+    [ 'Input', 'input' ],
     # [ '', '' ],
 ]
 

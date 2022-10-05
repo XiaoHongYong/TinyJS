@@ -119,15 +119,15 @@ public:
 
 class JsExprRegExp : public IJsNode {
 public:
-    JsExprRegExp(uint32_t stringIdx) : IJsNode(NT_REGEXP), stringIdx(stringIdx) { }
+    JsExprRegExp(uint32_t regexIdx) : IJsNode(NT_REGEXP), regexIdx(regexIdx) { }
 
     virtual void convertToByteCode(ByteCodeStream &stream) {
         stream.writeOpCode(OP_PUSH_REGEXP);
-        stream.writeUInt32(stringIdx);
+        stream.writeUInt32(regexIdx);
     }
 
 protected:
-    uint32_t                    stringIdx;
+    uint32_t                    regexIdx;
 
 };
 
