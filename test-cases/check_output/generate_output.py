@@ -277,10 +277,11 @@ class ChromeRunner(object):
         self._process = subprocess.Popen(['/Applications/Google Chrome.app/Contents/MacOS/Google Chrome', '--remote-debugging-port=9222', '--headless']) #, '--headless'
         self._chrome = None
 
-        for i in range(10):
+        for i in range(30):
             time.sleep(0.2)
             try:
                 self._connect()
+                break
             except:
                 pass
 

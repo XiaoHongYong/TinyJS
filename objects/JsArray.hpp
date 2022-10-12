@@ -8,7 +8,7 @@
 #ifndef JsArray_hpp
 #define JsArray_hpp
 
-#include "IJsObject.hpp"
+#include "JsObject.hpp"
 
 
 /**

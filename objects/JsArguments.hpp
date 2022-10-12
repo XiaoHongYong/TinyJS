@@ -8,7 +8,7 @@
 #ifndef JsArguments_hpp
 #define JsArguments_hpp
 
-#include "IJsObject.hpp"
+#include "JsObject.hpp"
 
 
 class JsArguments : public IJsObject {

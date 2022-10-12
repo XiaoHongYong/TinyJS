@@ -363,15 +363,49 @@ void stringPrototypeLocaleCompare(VMContext *ctx, const JsValue &thiz, const Arg
     ctx->retValue = strVal;
 }
 
+inline JsValue regexMatch(VMContext *ctx, VMRuntime *runtime, std::regex &re, uint32_t flags, const SizedString &str, const JsValue &strVal) {
+    JsValue ret = jsValueNull;
+
+    if (flags & RegexpFlags::RF_GLOBAL_SEARCH) {
+        auto begin = std::cregex_iterator((cstr_t)str.data, (cstr_t)str.data + str.len, re);
+        auto end = std::cregex_iterator();
+        if (begin == end) {
+            return jsValueNull;
+        }
+
+        auto arr = new JsArray();
+        ret = runtime->pushObjectValue(arr);
+
+        for (auto it = begin; it != end; ++it) {
+            auto &m = *it;
+            arr->push(ctx, runtime->pushString(SizedString(m.str())));
+        }
+    } else {
+        std::cmatch matches;
+        if (std::regex_search((cstr_t)str.data, (cstr_t)str.data + str.len, matches, re)) {
+            auto arr = new JsArray();
+            ret = runtime->pushObjectValue(arr);
+
+            for (auto &m : matches) {
+                arr->push(ctx, runtime->pushString(SizedString(m.str())));
+            }
+
+            auto index = utf8ToUtf16Length(str.data, (uint32_t)(matches[0].first - (cstr_t)str.data));
+            arr->setByName(ctx, ret, SS_INDEX, JsValue(JDT_INT32, index));
+            arr->setByName(ctx, ret, SS_GROUPS, jsValueUndefined);
+            arr->setByName(ctx, ret, SS_INPUT, strVal);
+        }
+    }
+
+    return ret;
+}
+
 void stringPrototypeMatch(VMContext *ctx, const JsValue &thiz, const Arguments &args) {
     auto runtime = ctx->runtime;
     auto strVal = convertStringToJsValue(ctx, thiz, "match");
     if (!strVal.isValid()) {
         return;
     }
-
-    auto arr = new JsArray();
-    auto ret = runtime->pushObjectValue(arr);
 
     auto str = runtime->toSizedString(ctx, strVal);
 
@@ -381,38 +415,106 @@ void stringPrototypeMatch(VMContext *ctx, const JsValue &thiz, const Arguments &
         auto &re = regexp->getRegexp();
         auto flags = regexp->flags();
 
-        if (flags & RegexpFlags::RF_GLOBAL_SEARCH) {
-            auto begin = std::cregex_iterator((cstr_t)str.data, (cstr_t)str.data + str.len, re);
-            auto end = std::cregex_iterator();
-            for (auto it = begin; it != end; ++it) {
-                auto &m = *it;
-                arr->push(ctx, runtime->pushString(SizedString(m.str())));
-            }
-        } else {
-            std::cmatch matches;
-            if (std::regex_search((cstr_t)str.data, (cstr_t)str.data + str.len, matches, re)) {
-                for (auto &m : matches) {
-                    arr->push(ctx, runtime->pushString(SizedString(m.str())));
-                }
-
-                auto index = utf8ToUtf16Length(str.data, (uint32_t)(matches[0].first - (cstr_t)str.data));
-                arr->setByName(ctx, ret, SS_INDEX, JsValue(JDT_INT32, index));
-                arr->setByName(ctx, ret, SS_GROUPS, jsValueUndefined);
-                arr->setByName(ctx, ret, SS_INPUT, strVal);
-            }
+        ctx->retValue = regexMatch(ctx, runtime, re, flags, str, strVal);
+    } else {
+        if (pattern.type == JDT_UNDEFINED) {
+            pattern = jsStringValueEmpty;
         }
-    }
 
-    ctx->retValue = ret;
+        LockedSizedStringWrapper strRe = toSizedStringStrict(ctx, pattern);
+        auto flags = std::regex::flag_type::ECMAScript;
+        std::regex re((cstr_t)strRe.data, strRe.len, flags);
+
+        ctx->retValue = regexMatch(ctx, runtime, re, flags, str, strVal);
+    }
 }
 
+class StringMatchAllIterator : public IJsIterator {
+public:
+    StringMatchAllIterator(VMContext *ctx, std::regex &re, uint32_t flags, const SizedString &str, const JsValue &strVal) : _ctx(ctx), _re(re), _flags(flags), _strBegin(str.data), _strEnd(str.data + str.len), _strVal(strVal), _offset(0) { }
+
+    virtual bool isOfIterable() override { return true; }
+
+    virtual bool nextOf(JsValue &valueOut) override {
+        auto runtime = _ctx->runtime;
+        std::cmatch matches;
+
+        if (std::regex_search((cstr_t)_strBegin, (cstr_t)_strEnd, matches, _re)) {
+            auto arr = new JsArray();
+            auto ret = runtime->pushObjectValue(arr);
+
+            for (auto &m : matches) {
+                arr->push(_ctx, runtime->pushString(SizedString(m.str())));
+            }
+
+            auto m0 = matches[0];
+            _offset += utf8ToUtf16Length(_strBegin, (uint32_t)(m0.first - (cstr_t)_strBegin));
+            arr->setByName(_ctx, ret, SS_INDEX, JsValue(JDT_INT32, _offset));
+            arr->setByName(_ctx, ret, SS_GROUPS, jsValueUndefined);
+            arr->setByName(_ctx, ret, SS_INPUT, _strVal);
+
+            _strBegin = (uint8_t *)m0.second;
+            _offset += utf8ToUtf16Length((uint8_t *)m0.first, (uint32_t)(m0.second - m0.first));
+
+            valueOut = ret;
+            return true;
+        }
+
+        return false;
+    }
+
+    virtual bool next(SizedString *strKeyOut = nullptr, JsValue *keyOut = nullptr, JsValue *valueOut = nullptr) override {
+        return false;
+    }
+
+    virtual void markReferIdx(VMRuntime *rt) override {
+        IJsIterator::markReferIdx(rt);
+
+        rt->markReferIdx(_strVal);
+    }
+
+protected:
+    VMContext                       *_ctx;
+    std::regex                      _re;
+    uint32_t                        _flags;
+
+    uint32_t                        _offset;
+    uint8_t                         *_strBegin, *_strEnd;
+    JsValue                         _strVal;
+
+};
+
 void stringPrototypeMatchAll(VMContext *ctx, const JsValue &thiz, const Arguments &args) {
+    auto runtime = ctx->runtime;
     auto strVal = convertStringToJsValue(ctx, thiz, "matchAll");
     if (!strVal.isValid()) {
         return;
     }
 
-    ctx->retValue = strVal;
+    auto str = runtime->toSizedString(ctx, strVal);
+
+    auto pattern = args.getAt(0, jsStringValueEmpty);
+    if (pattern.type == JDT_REGEX) {
+        auto regexp = (JsRegExp *)runtime->getObject(pattern);
+        auto &re = regexp->getRegexp();
+        auto flags = regexp->flags();
+        if (!isFlagSet(flags, RegexpFlags::RF_GLOBAL_SEARCH)) {
+            ctx->throwException(PE_TYPE_ERROR, "String.prototype.matchAll called with a non-global RegExp argument");
+            return;
+        }
+
+        ctx->retValue = runtime->pushObjectValue(new StringMatchAllIterator(ctx, re, flags, str, strVal));
+    } else {
+        if (pattern.type == JDT_UNDEFINED) {
+            pattern = jsStringValueEmpty;
+        }
+
+        LockedSizedStringWrapper strRe = toSizedStringStrict(ctx, pattern);
+        auto flags = std::regex::flag_type::ECMAScript;
+        std::regex re((cstr_t)strRe.data, strRe.len, flags);
+
+        ctx->retValue = runtime->pushObjectValue(new StringMatchAllIterator(ctx, re, flags, str, strVal));
+    }
 }
 
 void stringPrototypeNormalize(VMContext *ctx, const JsValue &thiz, const Arguments &args) {

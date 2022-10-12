@@ -98,13 +98,15 @@ inline cstr_t parseInt(cstr_t str, _int &value) {
 void multiStrToVStr(cstr_t szText, vector<string> &vStr);
 
 template<class _iterator>
-string strJoin(_iterator first, _iterator end, cstr_t format, cstr_t szSeperator)
-{
+string strJoin(_iterator first, _iterator end, cstr_t format, cstr_t seperator) {
     string str;
-    for (; first != end; ++first)
-    {
-        if (str.size())
-            str += szSeperator;
+    if (first != end) {
+        str += stringPrintf(format, *first);
+        ++first;
+    }
+
+    for (; first != end; ++first) {
+        str += seperator;
         str += stringPrintf(format, *first);
     }
 
@@ -112,13 +114,15 @@ string strJoin(_iterator first, _iterator end, cstr_t format, cstr_t szSeperator
 }
 
 template<class _iterator>
-string strJoin(_iterator first, _iterator end, cstr_t szSeperator)
-{
-    string        str;
-    for (; first != end; ++first)
-    {
-        if (str.size())
-            str += szSeperator;
+string strJoin(_iterator first, _iterator end, cstr_t seperator) {
+    string str;
+    if (first != end) {
+        str += *first;
+        ++first;
+    }
+
+    for (; first != end; ++first) {
+        str += seperator;
         str += *first;
     }
 

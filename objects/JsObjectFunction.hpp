@@ -8,7 +8,7 @@
 #ifndef JsObjectFunction_hpp
 #define JsObjectFunction_hpp
 
-#include "IJsObject.hpp"
+#include "JsObject.hpp"
 
 
 class JsObjectFunction : public IJsObject {

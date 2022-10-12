@@ -8,7 +8,7 @@
 #ifndef JsGlobalThis_hpp
 #define JsGlobalThis_hpp
 
-#include "IJsObject.hpp"
+#include "JsObject.hpp"
 
 
 class VMGlobalScope;

@@ -8,7 +8,7 @@
 #ifndef JsRegExp_hpp
 #define JsRegExp_hpp
 
-#include "IJsObject.hpp"
+#include "JsObject.hpp"
 #include <regex>
 
 

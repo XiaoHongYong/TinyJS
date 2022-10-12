@@ -11,6 +11,8 @@
 		C0443AAC28DE07D900CBF6DB /* Window.cpp in Sources */ = {isa = PBXBuildFile; fileRef = C0443AAB28DE07D900CBF6DB /* Window.cpp */; };
 		C0443AAF28E5229C00CBF6DB /* CharEncoding.cpp in Sources */ = {isa = PBXBuildFile; fileRef = C0443AAE28E51F9800CBF6DB /* CharEncoding.cpp */; };
 		C0443AB128E7254000CBF6DB /* SizedString.cpp in Sources */ = {isa = PBXBuildFile; fileRef = C0443AB028E7254000CBF6DB /* SizedString.cpp */; };
+		C06EE43F28F40406000F0E41 /* JsObject.cpp in Sources */ = {isa = PBXBuildFile; fileRef = C06EE43E28F40406000F0E41 /* JsObject.cpp */; };
+		C06EE44328F40552000F0E41 /* IJsIterator.cpp in Sources */ = {isa = PBXBuildFile; fileRef = C06EE44128F40552000F0E41 /* IJsIterator.cpp */; };
 		C08597AD28D0D4D500577A8E /* libThirdPartiesSDK.a in Frameworks */ = {isa = PBXBuildFile; fileRef = C08597AA28D0D4C200577A8E /* libThirdPartiesSDK.a */; };
 		C085981A28D0D54C00577A8E /* main.cpp in Sources */ = {isa = PBXBuildFile; fileRef = C08597B028D0D54C00577A8E /* main.cpp */; };
 		C085981B28D0D54C00577A8E /* Symbol.cpp in Sources */ = {isa = PBXBuildFile; fileRef = C08597B328D0D54C00577A8E /* Symbol.cpp */; };
@@ -102,6 +104,11 @@
 		C0443AAB28DE07D900CBF6DB /* Window.cpp */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.cpp.cpp; path = Window.cpp; sourceTree = "<group>"; };
 		C0443AAE28E51F9800CBF6DB /* CharEncoding.cpp */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.cpp.cpp; path = CharEncoding.cpp; sourceTree = "<group>"; };
 		C0443AB028E7254000CBF6DB /* SizedString.cpp */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.cpp.cpp; path = SizedString.cpp; sourceTree = "<group>"; };
+		C06EE43D28F40406000F0E41 /* JsObject.hpp */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.cpp.h; path = JsObject.hpp; sourceTree = "<group>"; };
+		C06EE43E28F40406000F0E41 /* JsObject.cpp */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.cpp.cpp; path = JsObject.cpp; sourceTree = "<group>"; };
+		C06EE44028F40495000F0E41 /* JsDummyObject.hpp */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.cpp.h; path = JsDummyObject.hpp; sourceTree = "<group>"; };
+		C06EE44128F40552000F0E41 /* IJsIterator.cpp */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.cpp.cpp; path = IJsIterator.cpp; sourceTree = "<group>"; };
+		C06EE44228F40552000F0E41 /* IJsIterator.hpp */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.cpp.h; path = IJsIterator.hpp; sourceTree = "<group>"; };
 		C08597A528D0D4C200577A8E /* ThirdPartiesSDK.xcodeproj */ = {isa = PBXFileReference; lastKnownFileType = "wrapper.pb-project"; name = ThirdPartiesSDK.xcodeproj; path = "../third-parties/ThirdPartiesSDK.xcodeproj"; sourceTree = "<group>"; };
 		C08597B028D0D54C00577A8E /* main.cpp */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = sourcecode.cpp.cpp; path = main.cpp; sourceTree = "<group>"; };
 		C08597B228D0D54C00577A8E /* BuiltIn.hpp */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = sourcecode.cpp.h; path = BuiltIn.hpp; sourceTree = "<group>"; };
@@ -415,6 +422,9 @@
 			children = (
 				C085980728D0D54C00577A8E /* IJsObject.cpp */,
 				C085980128D0D54C00577A8E /* IJsObject.hpp */,
+				C06EE43E28F40406000F0E41 /* JsObject.cpp */,
+				C06EE43D28F40406000F0E41 /* JsObject.hpp */,
+				C06EE44028F40495000F0E41 /* JsDummyObject.hpp */,
 				C085980228D0D54C00577A8E /* JsArguments.cpp */,
 				C085980928D0D54C00577A8E /* JsArguments.hpp */,
 				C085980828D0D54C00577A8E /* JsArray.cpp */,
@@ -429,6 +439,8 @@
 				C085980528D0D54C00577A8E /* JsPrimaryObject.hpp */,
 				C08597FF28D0D54C00577A8E /* JsRegExp.cpp */,
 				C085980C28D0D54C00577A8E /* JsRegExp.hpp */,
+				C06EE44128F40552000F0E41 /* IJsIterator.cpp */,
+				C06EE44228F40552000F0E41 /* IJsIterator.hpp */,
 			);
 			path = objects;
 			sourceTree = "<group>";
@@ -552,6 +564,7 @@
 			isa = PBXSourcesBuildPhase;
 			buildActionMask = 2147483647;
 			files = (
+				C06EE44328F40552000F0E41 /* IJsIterator.cpp in Sources */,
 				C0443AAF28E5229C00CBF6DB /* CharEncoding.cpp in Sources */,
 				C085984628D0D54C00577A8E /* JsArray.cpp in Sources */,
 				C085983728D0D54C00577A8E /* CharEncodingMac.mm in Sources */,
@@ -592,6 +605,7 @@
 				C085982428D0D54C00577A8E /* eval.cpp in Sources */,
 				C085981F28D0D54C00577A8E /* String.cpp in Sources */,
 				C085982828D0D54C00577A8E /* Parser.cpp in Sources */,
+				C06EE43F28F40406000F0E41 /* JsObject.cpp in Sources */,
 				C085982928D0D54C00577A8E /* RunJavaScript.cpp in Sources */,
 				C085985128D9A0A100577A8E /* JsGlobalThis.cpp in Sources */,
 				C085984428D0D54C00577A8E /* JsObjectFunction.cpp in Sources */,

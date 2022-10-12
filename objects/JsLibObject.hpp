@@ -8,7 +8,7 @@
 #ifndef JsLibObject_hpp
 #define JsLibObject_hpp
 
-#include "IJsObject.hpp"
+#include "JsObject.hpp"
 
 
 struct JsLibProperty {

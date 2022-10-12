@@ -24,7 +24,6 @@ class JsVirtualMachine;
 class IJsIterator;
 
 
-using VecJsIterators = vector<IJsIterator *>;
 using VecVMScopes = vector<VMScope *>;
 using MapIndexToJsObjs = unordered_map<int, IJsObject *>;
 
@@ -141,7 +140,6 @@ public:
     void dump(BinaryOutputStream &stream);
 
     JsValue pushObjectValue(IJsObject *value);
-    JsValue pushJsIterator(IJsIterator *it);
     JsValue pushDoubleValue(double value);
     JsValue pushSymbolValue(JsSymbol &value);
     JsValue pushString(const JsString &str);
@@ -215,12 +213,6 @@ public:
 
     inline const SizedString &getUtf8String(const JsValue &val) { return getString(val).utf8Str(); }
     inline const SizedStringUtf16 &getStringWithRandAccess(const JsValue &val) { return getString(val, true); }
-
-    IJsIterator *getJsIterator(const JsValue &val) {
-        assert(val.type == JDT_ITERATOR);
-        assert(val.value.index < iteratorValues.size());
-        return iteratorValues[val.value.index];
-    }
 
     IJsObject *getObject(const JsValue &val) {
         assert(val.type >= JDT_OBJECT);
@@ -353,7 +345,6 @@ public:
     VecJsDoubles                doubleValues;
     VecJsSymbols                symbolValues;
     VecJsStrings                stringValues;
-    VecJsIterators              iteratorValues;
     VecJsObjects                objValues;
     VecVMScopes                 vmScopes;
     VecJsNativeFunction         nativeFunctions;
@@ -363,7 +354,6 @@ public:
     uint32_t                    firstFreeDoubleIdx;
     uint32_t                    firstFreeSymbolIdx;
     uint32_t                    firstFreeStringIdx;
-    uint32_t                    firstFreeIteratorIdx;
     uint32_t                    firstFreeObjIdx;
     uint32_t                    firstFreeVMScopeIdx;
     uint32_t                    firstFreeResourcePoolIdx;

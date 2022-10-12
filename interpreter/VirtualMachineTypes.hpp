@@ -14,6 +14,8 @@
 
 
 class IJsObject;
+class JsObject;
+class IJsIterator;
 class VMContext;
 
 #define OP_CODE_DEFINES \
@@ -195,9 +197,6 @@ enum JsDataType : uint8_t {
     JDT_SYMBOL,
     JDT_STRING,
 
-    // Iterator 仅仅在虚拟机内部的 OP_ITERATOR_NEXT_XX 等几个指令使用
-    JDT_ITERATOR,
-
     // Object 开始
     JDT_OBJECT,
     JDT_REGEX,
@@ -208,6 +207,8 @@ enum JsDataType : uint8_t {
     JDT_OBJ_NUMBER,
     JDT_OBJ_STRING,
     JDT_OBJ_GLOBAL_THIS,
+
+    JDT_ITERATOR,
 
     // 函数 开始
     JDT_FUNCTION,

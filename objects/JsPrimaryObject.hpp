@@ -9,7 +9,7 @@
 #define JsPrimaryObject_hpp
 
 
-#include "IJsObject.hpp"
+#include "JsObject.hpp"
 #include <regex>
 
 

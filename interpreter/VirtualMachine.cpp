@@ -7,7 +7,7 @@
 
 #include "VirtualMachine.hpp"
 #include "Parser.hpp"
-#include "IJsObject.hpp"
+#include "JsObject.hpp"
 #include "VMRuntime.hpp"
 #include "JsArguments.hpp"
 #include "JsLibObject.hpp"
@@ -1723,14 +1723,14 @@ void JsVirtualMachine::call(Function *function, VMContext *ctx, VecVMStackScopes
                     }
                 }
                 assert(it);
-                stack.push_back(runtime->pushJsIterator(it));
+                stack.push_back(runtime->pushObjectValue(it));
                 break;
             }
             case OP_ITERATOR_NEXT_KEY: {
                 auto addrEnd = readUInt32(bytecode);
                 auto it = stack.back();
-                auto pit = runtime->getJsIterator(it);
-                assert(pit);
+                auto pit = (IJsIterator *)runtime->getObject(it);
+                assert(pit && pit->type == JDT_ITERATOR);
                 JsValue key;
                 if (pit->nextKey(key)) {
                     stack.push_back(key);
@@ -1746,8 +1746,8 @@ void JsVirtualMachine::call(Function *function, VMContext *ctx, VecVMStackScopes
             case OP_ITERATOR_NEXT_VALUE: {
                 auto addrEnd = readUInt32(bytecode);
                 auto it = stack.back();
-                auto pit = runtime->getJsIterator(it);
-                assert(pit);
+                auto pit = (IJsIterator *)runtime->getObject(it);
+                assert(pit && pit->type == JDT_ITERATOR);
                 JsValue value;
                 if (pit->nextOf(value)) {
                     stack.push_back(value);

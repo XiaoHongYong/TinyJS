@@ -12,6 +12,7 @@
 #include "api-web/WebAPI.hpp"
 #include "api-built-in/BuiltIn.hpp"
 #include "objects/JsGlobalThis.hpp"
+#include "objects/JsDummyObject.hpp"
 
 
 #define MAX_STACK_SIZE          (1024 * 1024 / 8)
@@ -238,7 +239,6 @@ VMRuntime::VMRuntime() {
     firstFreeDoubleIdx = 0;
     firstFreeSymbolIdx = 0;
     firstFreeStringIdx = 0;
-    firstFreeIteratorIdx = 0;
     firstFreeObjIdx = 0;
     firstFreeVMScopeIdx = 0;
     firstFreeResourcePoolIdx = 0;
@@ -249,10 +249,6 @@ VMRuntime::VMRuntime() {
 }
 
 VMRuntime::~VMRuntime() {
-    for (auto item : iteratorValues) {
-        delete item;
-    }
-
     for (auto item : objValues) {
         delete item;
     }
@@ -599,26 +595,10 @@ JsValue VMRuntime::pushObjectValue(IJsObject *value) {
         objValues.push_back(value);
     }
 
+    assert(value->type >= JDT_OBJECT);
     auto jsv = JsValue(value->type, n);
     value->self = jsv;
     return jsv;
-}
-
-JsValue VMRuntime::pushJsIterator(IJsIterator *it) {
-    _newAllocatedCount++;
-    uint32_t n;
-
-    if (firstFreeIteratorIdx) {
-        n = firstFreeIteratorIdx;
-        firstFreeIteratorIdx = iteratorValues[firstFreeIteratorIdx]->nextFreeIdx;
-        delete iteratorValues[firstFreeIteratorIdx];
-        iteratorValues[firstFreeIteratorIdx] = it;
-    } else {
-        n = (uint32_t)iteratorValues.size();
-        iteratorValues.push_back(it);
-    }
-
-    return JsValue(JDT_ITERATOR, n);
 }
 
 JsValue VMRuntime::pushDoubleValue(double value) {
@@ -1003,7 +983,7 @@ uint32_t freeValues(ARRAY &arr, uint32_t startIdx, uint32_t firstFreeIdx, uint8_
 uint32_t VMRuntime::countAllocated() const {
     return uint32_t(doubleValues.size() - countCommonDobules
         + symbolValues.size() + stringValues.size() - countCommonStrings
-        + objValues.size() - countCommonObjs + iteratorValues.size()
+        + objValues.size() - countCommonObjs
         + vmScopes.size() + resourcePools.size());
 }
 
@@ -1050,18 +1030,6 @@ uint32_t VMRuntime::garbageCollect() {
             objValues[i] = item = new JsDummyObject();
             item->nextFreeIdx = firstFreeObjIdx;
             firstFreeObjIdx = i;
-            countFreed++;
-        }
-    }
-
-    size = (uint32_t)iteratorValues.size();
-    for (uint32_t i = 0; i < size; i++) {
-        auto item = iteratorValues[i];
-        if (item->referIdx != _nextRefIdx) {
-            delete item;
-            iteratorValues[i] = item = new EmptyJsIterator();
-            item->nextFreeIdx = firstFreeIteratorIdx;
-            firstFreeIteratorIdx = i;
             countFreed++;
         }
     }
@@ -1132,11 +1100,6 @@ void VMRuntime::markReferIdx(const JsValue &val) {
                     }
                 }
             }
-            break;
-        }
-        case JDT_ITERATOR: {
-            assert(val.value.index < iteratorValues.size());
-            iteratorValues[val.value.index]->referIdx = _nextRefIdx;
             break;
         }
         default: {

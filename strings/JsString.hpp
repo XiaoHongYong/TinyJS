@@ -8,7 +8,7 @@
 #ifndef JsString_hpp
 #define JsString_hpp
 
-#include "IJsObject.hpp"
+#include "JsObject.hpp"
 
 
 IJsIterator *newJsStringIterator(VMContext *ctx, const JsValue &str, bool includeProtoProps);
