@@ -810,6 +810,26 @@ void JSLexer::_skipMultilineComment() {
     }
 }
 
+inline void escapeOctalSequences(uint8_t *&out, uint8_t *&p, const uint8_t *pEnd, uint8_t c) {
+    int n = c - '0';
+
+    if (p + 2 < pEnd) {
+        pEnd = p + 2;
+    }
+
+    while (p < pEnd) {
+        c = *p;
+        int tmp = n * 8 + c - '0';
+        if (!isDigit(c) || tmp > 255) {
+            break;
+        }
+        n = tmp;
+        p++;
+    }
+
+    out += utf32CodeToUtf8(n, out);
+}
+
 SizedString JSLexer::_escapeString(const SizedString &str) {
     uint8_t c;
     auto p = str.data;
@@ -821,8 +841,78 @@ SizedString JSLexer::_escapeString(const SizedString &str) {
         c = *p++;
         if (c == '\\') {  // '\\'
             // Escape next char.
-            *po++ = *p++;
-            ++p;
+            if (p >= end) {
+                _parseError("Invalid or unexpected token");
+            }
+
+            c = *p++;
+            switch (c) {
+                case '\n': break; // JavaScript 的这个比较特别
+                case 'b': *po++ = '\b'; break;
+                case 'f': *po++ = '\f'; break;
+                case 'n': *po++ = '\n'; break;
+                case 'r': *po++ = '\r'; break;
+                case 't': *po++ = '\t'; break;
+                case 'v': *po++ = '\v'; break;
+                case 'x': {
+                    // Hexadecimal escape sequences
+                    if (p + 1 >= end || !isHexChar(p[0]) || !isHexChar(p[1])) {
+                        _parseError("Invalid hexadecimal escape sequence");
+                    }
+
+                    int n = hexToInt(p[0]) * 16 + hexToInt(p[1]);
+                    po += utf32CodeToUtf8(n, po);
+                    p += 2;
+                    break;
+                }
+                case 'u': {
+                    // Hexadecimal escape sequences
+                    if (p + 2 < end && *p == '{') {
+                        p++;
+
+                        int n = 0;
+                        for (; p < end && isHexChar(*p); p++) {
+                            n = n * 16 + hexToInt(*p);
+                        }
+
+                        if (p >= end || *p != '}') {
+                            _parseError("Invalid Unicode escape sequence");
+                        }
+                        po += utf32CodeToUtf8(n, po);
+                        p++;
+                    } else {
+                        if (p + 3 >= end || !isHexChar(p[0]) || !isHexChar(p[1]) || !isHexChar(p[2]) || !isHexChar(p[3])) {
+                            _parseError("Invalid Unicode escape sequence");
+                        }
+
+                        int n = hexToInt(p[0]) * 16 + hexToInt(p[1]);
+                        n = n * 16 + hexToInt(p[2]);
+                        n = n * 16 + hexToInt(p[3]);
+
+                        po += utf32CodeToUtf8(n, po);
+                        p += 4;
+                    }
+                    break;
+                }
+                case '0':
+                case '1':
+                case '2':
+                case '3':
+                case '4':
+                case '5':
+                case '6':
+                case '7':
+                case '8':
+                case '9':
+                    escapeOctalSequences(po, p, end, c);
+                    break;
+                default:
+                    // case '\'': c = '\''; break;
+                    // case '"': c = '"'; break;
+                    // case '\\': c = '\\'; break;
+                    *po++ = c;
+                    break;
+            }
         } else {
             *po++ = c;
         }

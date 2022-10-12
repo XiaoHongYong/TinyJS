@@ -393,13 +393,12 @@ void stringPrototypeMatch(VMContext *ctx, const JsValue &thiz, const Arguments &
             if (std::regex_search((cstr_t)str.data, (cstr_t)str.data + str.len, matches, re)) {
                 for (auto &m : matches) {
                     arr->push(ctx, runtime->pushString(SizedString(m.str())));
-                    if (!(flags & RegexpFlags::RF_GLOBAL_SEARCH)) {
-                        arr->setByName(ctx, ret, SS_INDEX, JsValue(JDT_INT32, (uint32_t)(m.first - (cstr_t)str.data)));
-                        arr->setByName(ctx, ret, SS_GROUPS, jsValueUndefined);
-                        arr->setByName(ctx, ret, SS_INPUT, strVal);
-                        break;
-                    }
                 }
+
+                auto index = utf8ToUtf16Length(str.data, (uint32_t)(matches[0].first - (cstr_t)str.data));
+                arr->setByName(ctx, ret, SS_INDEX, JsValue(JDT_INT32, index));
+                arr->setByName(ctx, ret, SS_GROUPS, jsValueUndefined);
+                arr->setByName(ctx, ret, SS_INPUT, strVal);
             }
         }
     }

@@ -36,13 +36,13 @@ void regExpConstructor(VMContext *ctx, const JsValue &thiz, const Arguments &arg
     LockedSizedStringWrapper strRe = toSizedStringStrict(ctx, strVal);
     LockedSizedStringWrapper strFlags = toSizedStringStrict(ctx, flagsVal);
     string all = stringPrintf("/%.*s/%.*s", strRe.len, strRe.data, strFlags.len, strFlags.data);
-    std::regex re((cstr_t)strRe.data, strRe.len);
 
     uint32_t flags;
     if (!parseRegexpFlags(strFlags, flags)) {
         ctx->throwExceptionFormatJsValue(PE_SYNTAX_ERROR, "Invalid flags supplied to RegExp constructor '%.*s'", flagsVal);
         return;
     }
+    std::regex re((cstr_t)strRe.data, strRe.len, (std::regex::flag_type)flags);
     auto reObj = new JsRegExp(SizedString(all), re, flags);
 
     ctx->retValue = runtime->pushObjectValue(reObj);
