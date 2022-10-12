@@ -431,4 +431,15 @@ void JsObject::markReferIdx(VMRuntime *rt) {
     for (auto &item : _props) {
         rt->markReferIdx(item.second);
     }
+
+    if (__proto__.value.type > JDT_NUMBER) {
+        rt->markReferIdx(__proto__.value);
+    }
+
+    if (_symbolProps) {
+        for (auto &item : *_symbolProps) {
+            rt->markSymbolUsed(item.first);
+            rt->markReferIdx(item.second);
+        }
+    }
 }

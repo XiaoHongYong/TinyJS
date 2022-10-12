@@ -317,6 +317,11 @@ public:
         rp->referIdx = _nextRefIdx;
     }
 
+    inline void markSymbolUsed(uint32_t index) {
+        assert(index < symbolValues.size());
+        symbolValues[index].referIdx = _nextRefIdx;
+    }
+
     void markJoinedStringReferIdx(const JsJoinedString &joinedString);
 
     void convertUtf8ToUtf16(SizedStringUtf16 &str);

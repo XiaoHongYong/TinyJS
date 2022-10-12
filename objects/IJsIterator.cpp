@@ -208,7 +208,7 @@ void IJsIterator::markReferIdx(VMRuntime *rt) {
     assert(referIdx == rt->nextReferIdx());
 
     rt->markReferIdx(__proto__);
-    if (_curValue.type < JDT_NUMBER) {
+    if (_curValue.type > JDT_NUMBER) {
         rt->markReferIdx(_curValue);
     }
 
