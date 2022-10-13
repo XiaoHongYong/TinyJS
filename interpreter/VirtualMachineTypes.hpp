@@ -338,6 +338,8 @@ struct JsString {
 
 static_assert(sizeof(JsString) == 40, "JsString should be 32 bytes long.");
 
+const uint32_t LEN_MAX_STRING = 1024 * 124 * 512;
+
 /**
  * JsProperty 定义了 Object 的基本属性
  */

@@ -523,16 +523,57 @@ void stringPrototypeNormalize(VMContext *ctx, const JsValue &thiz, const Argumen
         return;
     }
 
+    assert(0 && "TBD");
+
     ctx->retValue = strVal;
 }
 
 void stringPrototypePadEnd(VMContext *ctx, const JsValue &thiz, const Arguments &args) {
+    auto runtime = ctx->runtime;
     auto strVal = convertStringToJsValue(ctx, thiz, "padEnd");
     if (!strVal.isValid()) {
         return;
     }
 
-    ctx->retValue = strVal;
+    auto str = runtime->toSizedString(ctx, strVal);
+    auto lenVal = args.getAt(0);
+    auto len = runtime->toNumber(ctx, lenVal);
+    if (str.len >= len || isnan(len) || ctx->error != PE_OK) {
+        ctx->retValue = strVal;
+        return;
+    }
+
+    if (isinf(len) || len >= LEN_MAX_STRING) {
+        ctx->throwException(PE_RANGE_ERROR, "Invalid string length");
+        return;
+    }
+
+    auto pad = args.getAt(1);
+    if (pad.type == JDT_UNDEFINED) {
+        pad = JsValue(JDT_CHAR, ' ');
+    }
+
+    auto sPad = runtime->toSizedString(ctx, pad);
+    if (sPad.len == 0) {
+        ctx->retValue = strVal;
+        return;
+    }
+
+    auto retStr = runtime->allocString((uint32_t)len);
+    auto p = retStr.data + str.len;
+    memcpy(retStr.data, str.data, str.len);
+    if (sPad.len == 1) {
+        memset(p, sPad.data[0], retStr.len - str.len);
+    } else {
+        auto end = retStr.data + retStr.len - sPad.len;
+        for (; p < end; p += sPad.len) {
+            memcpy(p, sPad.data, sPad.len);
+        }
+
+        memcpy(p, sPad.data, retStr.data + retStr.len - p);
+    }
+
+    ctx->retValue = runtime->pushString(retStr);
 }
 
 void stringPrototypePadStart(VMContext *ctx, const JsValue &thiz, const Arguments &args) {
@@ -541,7 +582,47 @@ void stringPrototypePadStart(VMContext *ctx, const JsValue &thiz, const Argument
         return;
     }
 
-    ctx->retValue = strVal;
+    auto runtime = ctx->runtime;
+    auto str = runtime->toSizedString(ctx, strVal);
+    auto lenVal = args.getAt(0);
+    auto len = runtime->toNumber(ctx, lenVal);
+    if (str.len >= len || isnan(len) || ctx->error != PE_OK) {
+        ctx->retValue = strVal;
+        return;
+    }
+
+    if (isinf(len) || len >= LEN_MAX_STRING) {
+        ctx->throwException(PE_RANGE_ERROR, "Invalid string length");
+        return;
+    }
+
+    auto pad = args.getAt(1);
+    if (pad.type == JDT_UNDEFINED) {
+        pad = JsValue(JDT_CHAR, ' ');
+    }
+
+    auto sPad = runtime->toSizedString(ctx, pad);
+    if (sPad.len == 0) {
+        ctx->retValue = strVal;
+        return;
+    }
+
+    auto retStr = runtime->allocString((uint32_t)len);
+    auto lenPadded = retStr.len - str.len;
+    auto p = retStr.data;
+    if (sPad.len == 1) {
+        memset(p, sPad.data[0], lenPadded);
+    } else {
+        auto end = p + lenPadded - sPad.len;
+        for (; p < end; p += sPad.len) {
+            memcpy(p, sPad.data, sPad.len);
+        }
+
+        memcpy(p, sPad.data, retStr.data + lenPadded - p);
+    }
+    memcpy(retStr.data + lenPadded, str.data, str.len);
+
+    ctx->retValue = runtime->pushString(retStr);
 }
 
 void stringPrototypeRepeat(VMContext *ctx, const JsValue &thiz, const Arguments &args) {
