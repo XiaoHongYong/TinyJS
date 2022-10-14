@@ -880,13 +880,40 @@ void stringPrototypeReplaceAll(VMContext *ctx, const JsValue &thiz, const Argume
     }
 }
 
+inline void regexSearch(VMContext *ctx, std::regex &re, const SizedString &str) {
+    std::cmatch matches;
+    if (std::regex_search((cstr_t)str.data, (cstr_t)str.data + str.len, matches, re)) {
+        ctx->retValue = JsValue(JDT_INT32, utf8ToUtf16Length(str.data, (uint32_t)(matches[0].first - (cstr_t)str.data)));
+    } else {
+        ctx->retValue = JsValue(JDT_INT32, -1);
+    }
+}
+
 void stringPrototypeSearch(VMContext *ctx, const JsValue &thiz, const Arguments &args) {
     auto strVal = convertStringToJsValue(ctx, thiz, "search");
     if (!strVal.isValid()) {
         return;
     }
 
-    ctx->retValue = strVal;
+    auto runtime = ctx->runtime;
+    auto str = runtime->toSizedString(ctx, strVal);
+
+    auto pattern = args.getAt(0, jsStringValueEmpty);
+    if (pattern.type == JDT_REGEX) {
+        auto regexp = (JsRegExp *)runtime->getObject(pattern);
+        auto &re = regexp->getRegexp();
+
+        regexSearch(ctx, re, str);
+    } else {
+        if (pattern.type == JDT_UNDEFINED) {
+            pattern = jsStringValueEmpty;
+        }
+
+        LockedSizedStringWrapper strRe = toSizedStringStrict(ctx, pattern);
+        std::regex re((cstr_t)strRe.data, strRe.len, std::regex::flag_type::ECMAScript);
+
+        regexSearch(ctx, re, str);
+    }
 }
 
 void stringPrototypeSlice(VMContext *ctx, const JsValue &thiz, const Arguments &args) {
