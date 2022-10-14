@@ -9,6 +9,7 @@
 #include "objects/JsPrimaryObject.hpp"
 #include "objects/JsRegExp.hpp"
 #include "objects/JsArray.hpp"
+#include "objects/JsObjectFunction.hpp"
 
 
 static void stringConstructor(VMContext *ctx, const JsValue &thiz, const Arguments &args) {
@@ -553,7 +554,7 @@ void stringPrototypePadEnd(VMContext *ctx, const JsValue &thiz, const Arguments 
         pad = JsValue(JDT_CHAR, ' ');
     }
 
-    auto sPad = runtime->toSizedString(ctx, pad);
+    auto sPad = toSizedStringStrict(ctx, pad);
     if (sPad.len == 0) {
         ctx->retValue = strVal;
         return;
@@ -601,7 +602,7 @@ void stringPrototypePadStart(VMContext *ctx, const JsValue &thiz, const Argument
         pad = JsValue(JDT_CHAR, ' ');
     }
 
-    auto sPad = runtime->toSizedString(ctx, pad);
+    auto sPad = toSizedStringStrict(ctx, pad);
     if (sPad.len == 0) {
         ctx->retValue = strVal;
         return;
@@ -631,8 +632,156 @@ void stringPrototypeRepeat(VMContext *ctx, const JsValue &thiz, const Arguments 
         return;
     }
 
-    ctx->retValue = strVal;
+    auto runtime = ctx->runtime;
+    auto str = runtime->toSizedString(ctx, strVal);
+    auto countVal = args.getAt(0);
+    auto count = runtime->toNumber(ctx, countVal);
+    if (isinf(count) || count < 0) {
+        ctx->throwExceptionFormatJsValue(PE_RANGE_ERROR, "Invalid count value: %.*s", countVal);
+        return;
+    }
+
+    auto n = (uint32_t)count;
+    if (n * str.len  >= LEN_MAX_STRING) {
+        ctx->throwException(PE_RANGE_ERROR, "Invalid string length");
+        return;
+    }
+
+    if (n == 0) {
+        ctx->retValue = jsStringValueEmpty;
+    } else if (n == 1) {
+        ctx->retValue = strVal;
+    } else {
+        auto retStr = runtime->allocString(n * str.len);
+        auto p = retStr.data, end = p + retStr.len;
+        for (; p < end; p += str.len) {
+            memcpy(p, str.data, str.len);
+        }
+
+        ctx->retValue = runtime->pushString(retStr);
+    }
 }
+
+void doStringReplaceWithFunction(VMContext *ctx, const SizedString &str, const JsValue &strVal, uint32_t matchBegin, uint32_t matchEnd, const std::cmatch &matches, const JsValue &replacementFunc, string &out, uint32_t offset) {
+
+    assert(replacementFunc.type == JDT_FUNCTION);
+
+    auto runtime = ctx->runtime;
+
+    // function replacer(match, p1, p2, /* …, */ pN, offset, string, groups)
+    VecJsValues argvs;
+
+    for (auto &m : matches) {
+        argvs.push_back(runtime->pushString(SizedString(m.str())));
+    }
+    argvs.push_back(JsValue(JDT_INT32, offset));
+    argvs.push_back(strVal);
+    argvs.push_back(jsValueUndefined);
+
+    Arguments args(argvs.data(), (uint32_t)argvs.size());
+    ctx->vm->callMember(ctx, jsValueGlobalThis, replacementFunc, args);
+    if (ctx->error != PE_OK) {
+        return;
+    }
+
+    auto s = runtime->toSizedString(ctx, ctx->retValue);
+    out.append((cstr_t)s.data, s.len);
+}
+
+void doStringReplaceWithString(VMContext *ctx, const SizedString &str, uint32_t matchBegin, uint32_t matchEnd, const std::cmatch &matches, const SizedString &replacement, string &out) {
+
+    auto p = replacement.data, end = p + replacement.len;
+
+    while (p < end) {
+        auto c = *p++;
+        if (c == '$' && p < end) {
+            c = *p++;
+            if (isDigit(c)) {
+                // $n    Inserts the nth (1-indexed) capturing group where n is a positive integer less than 100.
+                auto start = p;
+                uint32_t n = c - '0';
+                while (p < end && isDigit(*p)) {
+                    auto tmp = n * 10 + *p - '0';
+                    if (tmp >= matches.size()) {
+                        break;
+                    }
+                    n = tmp;
+                    p++;
+                }
+
+                if (n > 0 && n < matches.size()) {
+                    auto &m = matches[n];
+                    out.append(m.first, (uint32_t)(m.second - m.first));
+                } else {
+                    out.append((cstr_t)start - 2, (uint32_t)(2 + p - start));
+                }
+            } else if (c == '<') {
+                // $<Name>    Inserts the named capturing group where Name is the group name.
+                assert(0 && "TBD");
+            } else if (c == '$') {
+                // $$    Inserts a "$".
+                out.append(1, '$');
+            } else if (c == '&') {
+                // $&    Inserts the matched substring.
+                out.append((cstr_t)str.data + matchBegin, matchEnd - matchBegin);
+            } else if (c == '`') {
+                // $`    Inserts the portion of the string that precedes the matched substring.
+                out.append((cstr_t)str.data, matchBegin);
+            } else if (c == '\'') {
+                // $'    Inserts the portion of the string that follows the matched substring.
+                out.append((cstr_t)str.data + matchEnd, str.len - matchEnd);
+            } else {
+                out.append((cstr_t)p - 2, 2);
+            }
+        } else {
+            out.append(1, c);
+        }
+    }
+}
+
+class StringSearch {
+public:
+    StringSearch(VMContext *ctx, const JsValue &patternVal) {
+        if (patternVal.type == JDT_REGEX) {
+            regexp = (JsRegExp *)ctx->runtime->getObject(patternVal);
+        } else {
+            regexp = nullptr;
+            pattern = toSizedStringStrict(ctx, patternVal);
+            if (ctx->error != PE_OK) {
+                return;
+            }
+        }
+    }
+
+    virtual bool search(const SizedString &str, uint32_t &matchBegin, uint32_t &matchEnd, std::cmatch &matches) {
+        if (regexp) {
+            if (std::regex_search((cstr_t)str.data, (cstr_t)str.data + str.len, matches, regexp->getRegexp())) {
+                auto &m0 = matches[0];
+                matchBegin = str.offsetOf(m0.first);
+                matchEnd = str.offsetOf(m0.second);
+                return true;
+            } else {
+                // 找不到
+                return false;
+            }
+        } else {
+            auto pos = str.strstr(pattern);
+            if (pos == -1) {
+                // 找不到
+                return false;
+            } else {
+                matchBegin = pos;
+                matchEnd = pos + pattern.len;
+                return true;
+            }
+        }
+    }
+
+public:
+    LockedSizedStringWrapper    pattern;
+    JsRegExp                    *regexp;
+
+};
 
 void stringPrototypeReplace(VMContext *ctx, const JsValue &thiz, const Arguments &args) {
     auto strVal = convertStringToJsValue(ctx, thiz, "replace");
@@ -640,7 +789,34 @@ void stringPrototypeReplace(VMContext *ctx, const JsValue &thiz, const Arguments
         return;
     }
 
-    ctx->retValue = strVal;
+    auto runtime = ctx->runtime;
+    auto str = runtime->toSizedString(ctx, strVal);
+    auto replacementVal = args.getAt(1, jsValueUndefined);
+
+    StringSearch pattern(ctx, args.getAt(0));
+    uint32_t matchBegin, matchEnd;
+    std::cmatch matches;
+
+    if (pattern.search(str, matchBegin, matchEnd, matches)) {
+        string ret((cstr_t)str.data, matchBegin);
+
+        if (replacementVal.type == JDT_FUNCTION) {
+            auto offset = utf8ToUtf16Length(str.data, matchBegin);
+            doStringReplaceWithFunction(ctx, str, strVal, matchBegin, matchEnd, matches, replacementVal, ret, offset);
+        } else {
+            auto replacement = toSizedStringStrict(ctx, replacementVal);
+            if (ctx->error != PE_OK) {
+                return;
+            }
+            doStringReplaceWithString(ctx, str, matchBegin, matchEnd, matches, replacement, ret);
+        }
+
+        ret.append((cstr_t)str.data + matchEnd, str.len - matchEnd);
+        ctx->retValue = runtime->pushString(SizedString(ret));
+    } else {
+        // 找不到
+        ctx->retValue = strVal;
+    }
 }
 
 void stringPrototypeReplaceAll(VMContext *ctx, const JsValue &thiz, const Arguments &args) {
@@ -649,7 +825,59 @@ void stringPrototypeReplaceAll(VMContext *ctx, const JsValue &thiz, const Argume
         return;
     }
 
-    ctx->retValue = strVal;
+    auto runtime = ctx->runtime;
+    StringSearch pattern(ctx, args.getAt(0));
+    if (pattern.regexp) {
+        if (!isFlagSet(pattern.regexp->flags(), RegexpFlags::RF_GLOBAL_SEARCH)) {
+            ctx->throwException(PE_TYPE_ERROR, "String.prototype.replaceAll called with a non-global RegExp argument");
+            return;
+        }
+    }
+
+    auto str = runtime->toSizedString(ctx, strVal);
+    auto replacementVal = args.getAt(1, jsValueUndefined);
+
+    LockedSizedStringWrapper replacement;
+    if (replacementVal.type != JDT_FUNCTION) {
+        replacement = toSizedStringStrict(ctx, replacementVal);
+        if (ctx->error != PE_OK) {
+            return;
+        }
+    }
+
+    uint32_t offset = 0;
+    bool replaced = false;
+    auto p = str.data, strEnd = str.data + str.len;
+    string ret;
+
+    while (p < strEnd) {
+        uint32_t matchBegin, matchEnd;
+        std::cmatch matches;
+        SizedString remain = SizedString(p, uint32_t(strEnd - p));
+
+        if (pattern.search(remain, matchBegin, matchEnd, matches)) {
+            ret.append((cstr_t)remain.data, matchBegin);
+
+            if (replacementVal.type == JDT_FUNCTION) {
+                offset += utf8ToUtf16Length(remain.data, matchBegin);
+                doStringReplaceWithFunction(ctx, remain, strVal, matchBegin, matchEnd, matches, replacementVal, ret, offset);
+                offset += utf8ToUtf16Length(remain.data + matchBegin, matchEnd - matchBegin);
+            } else {
+                doStringReplaceWithString(ctx, remain, matchBegin, matchEnd, matches, replacement, ret);
+            }
+            replaced = true;
+            p += matchEnd;
+        } else {
+            break;
+        }
+    }
+
+    if (replaced) {
+        ret.append((cstr_t)p, uint32_t(strEnd - p));
+        ctx->retValue = runtime->pushString(SizedString(ret));
+    } else {
+        ctx->retValue = strVal;
+    }
 }
 
 void stringPrototypeSearch(VMContext *ctx, const JsValue &thiz, const Arguments &args) {

@@ -9,8 +9,9 @@
 #define BinaryOperation_hpp
 
 
-inline bool throwSymbolConvertException(VMContext *ctx) {
-    ctx->throwException(PE_TYPE_ERROR, "Cannot convert a Symbol value to a number");
+inline bool throwSymbolConvertException(VMContext *ctx, bool isToNumber = true) {
+    ctx->throwException(PE_TYPE_ERROR,
+        isToNumber ? "Cannot convert a Symbol value to a number" : "Cannot convert a Symbol value to a string");
     return false;
 }
 
@@ -548,7 +549,7 @@ inline JsValue plusOperate(VMContext *ctx, VMRuntime *rt, const JsValue &left, c
             break;
         }
         case JDT_SYMBOL: {
-            throwSymbolConvertException(ctx);
+            throwSymbolConvertException(ctx, left.isNumber());
             return jsValueNaN;
         }
         default:

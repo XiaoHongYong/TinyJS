@@ -120,6 +120,8 @@ public:
 
     string toString() { return string((const char *)data, len); }
 
+    uint32_t offsetOf(const void *p) const { return (uint32_t)((uint8_t *)p - data); }
+
 public:
     uint8_t                         *data;
     uint32_t                        len;
