@@ -488,15 +488,15 @@ bool SizedStringUtf16::equal(uint32_t code) const {
 void SizedStringUtf16::onSetUtf8String() {
     _dataUtf16 = nullptr;
 
-    _lenUtf16 = utf8ToUtf16Length(_utf8Str.data, _utf8Str.len);
-    _isAnsi = _lenUtf16 == _utf8Str.len;
+    setUtf16Size(utf8ToUtf16Length(_utf8Str.data, _utf8Str.len));
+    setAnsi(size() == _utf8Str.len);
 }
 
 utf32_t SizedStringUtf16::codePointAt(uint32_t index) const {
     assert(canRandomAccess());
-    assert(index < _lenUtf16);
+    assert(index < size());
 
-    if (_isAnsi) {
+    if (isAnsi()) {
         return _utf8Str.data[index];
     }
 
@@ -504,7 +504,7 @@ utf32_t SizedStringUtf16::codePointAt(uint32_t index) const {
     if (code >= 0xd800 && code <= 0xdbff) {
         // Code points from the other planes (called Supplementary Planes) are encoded as two 16-bit code units called a surrogate pair,
         // https://en.wikipedia.org/wiki/UTF-16
-        if (index + 1 < _lenUtf16) {
+        if (index + 1 < size()) {
             auto next = _dataUtf16[index + 1];
             if (next >= 0xdc00 && next <= 0xdfff) {
                 code = 0x10000 + ((code - 0xd800) << 10) | (next - 0xdc00);
@@ -516,7 +516,7 @@ utf32_t SizedStringUtf16::codePointAt(uint32_t index) const {
 }
 
 int SizedStringUtf16::indexOf(const SizedString &find, int32_t start) const {
-    if (_isAnsi) {
+    if (isAnsi()) {
         return _utf8Str.strstr(find, start);
     }
 
@@ -541,7 +541,7 @@ int SizedStringUtf16::indexOf(const SizedString &find, int32_t start) const {
 }
 
 int SizedStringUtf16::lastIndexOf(const SizedString &find, int32_t start) const {
-    if (_isAnsi) {
+    if (isAnsi()) {
         return _utf8Str.strrstr(find, start);
     }
 

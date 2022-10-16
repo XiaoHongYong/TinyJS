@@ -379,7 +379,7 @@ inline JsValue regexMatch(VMContext *ctx, VMRuntime *runtime, std::regex &re, ui
 
         for (auto it = begin; it != end; ++it) {
             auto &m = *it;
-            arr->push(ctx, runtime->pushString(SizedString(m.str())));
+            arr->push(ctx, runtime->pushString(str.subStr(m.position(), m.length())));
         }
     } else {
         std::cmatch matches;
@@ -388,7 +388,7 @@ inline JsValue regexMatch(VMContext *ctx, VMRuntime *runtime, std::regex &re, ui
             ret = runtime->pushObjectValue(arr);
 
             for (auto &m : matches) {
-                arr->push(ctx, runtime->pushString(SizedString(m.str())));
+                arr->push(ctx, runtime->pushString(str.subStr(m.first, m.second)));
             }
 
             auto index = utf8ToUtf16Length(str.data, (uint32_t)(matches[0].first - (cstr_t)str.data));
@@ -443,9 +443,10 @@ public:
         if (std::regex_search((cstr_t)_strBegin, (cstr_t)_strEnd, matches, _re)) {
             auto arr = new JsArray();
             auto ret = runtime->pushObjectValue(arr);
+            SizedString str(_strBegin, uint32_t(_strEnd - _strBegin));
 
             for (auto &m : matches) {
-                arr->push(_ctx, runtime->pushString(SizedString(m.str())));
+                arr->push(_ctx, runtime->pushString(str.subStr(m.first, m.second)));
             }
 
             auto m0 = matches[0];
@@ -672,7 +673,7 @@ void doStringReplaceWithFunction(VMContext *ctx, const SizedString &str, const J
     VecJsValues argvs;
 
     for (auto &m : matches) {
-        argvs.push_back(runtime->pushString(SizedString(m.str())));
+        argvs.push_back(runtime->pushString(str.subStr(m.first, m.second)));
     }
     argvs.push_back(JsValue(JDT_INT32, offset));
     argvs.push_back(strVal);

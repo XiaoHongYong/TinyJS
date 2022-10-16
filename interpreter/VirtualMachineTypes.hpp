@@ -337,7 +337,7 @@ struct JsString {
     } value;
 };
 
-static_assert(sizeof(JsString) == 40, "JsString should be 32 bytes long.");
+static_assert(sizeof(JsString) == 32);
 
 const uint32_t LEN_MAX_STRING = 1024 * 124 * 512;
 

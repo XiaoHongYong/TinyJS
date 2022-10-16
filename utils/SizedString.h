@@ -77,6 +77,15 @@ public:
     void shrink(int startShrinkSize, int endShrinkSize = 0);
 
     SizedString subStr(size_t offset, size_t size) const;
+    SizedString subStr(const uint8_t *start, const uint8_t *end) const {
+        assert(start <= end);
+        assert(start >= data);
+        assert(end <= data + len);
+        return SizedString(start, (uint32_t)(end - start), _isStable);
+    }
+    SizedString subStr(const char *start, const char *end) const {
+        return subStr((const uint8_t *)start, (const uint8_t *)end);
+    }
 
     long atoi(bool &successful) const;
     SizedString itoa(long num, char *str) const;
@@ -126,13 +135,20 @@ public:
     uint8_t                         *data;
     uint32_t                        len;
 
-private:
-    uint8_t                         _unused[3];
+protected:
+    friend class SizedStringUtf16;
 
     // 为 true 表示此字符串的 data 是稳定的 buffer，不会被释放.
-    bool                            _isStable;
+    uint32_t                        _isStable : 1;
+
+    // 给 SizedStringUtf16 的成员变量
+    uint32_t                        _isAnsi : 1;
+    uint32_t                        _unused1 : 1;
+    uint32_t                        _lenUtf16 : 29;
 
 };
+
+static_assert(sizeof(SizedString) == 16);
 
 /**
  * SizedString 保存的是 utf-8 编码, 而 dataUtf16 和 lenUtf16 保存的是 utf-16 编码
@@ -141,12 +157,11 @@ class SizedStringUtf16 {
 public:
     SizedStringUtf16() {
         _dataUtf16 = nullptr;
-        _lenUtf16 = 0;
-        _isAnsi = true;
+        setAnsi(true);
     }
 
-    SizedStringUtf16(const utf16_t *dataUtf16, uint32_t lenUtf16) : _dataUtf16((uint16_t *)dataUtf16), _lenUtf16(lenUtf16) {
-        _isAnsi = false;
+    SizedStringUtf16(const utf16_t *dataUtf16, uint32_t lenUtf16) : _dataUtf16((uint16_t *)dataUtf16) {
+        setUtf16Size(lenUtf16);
     }
 
     SizedStringUtf16(const SizedString &s) : _utf8Str(s) {
@@ -160,25 +175,25 @@ public:
 
     void setUtf16(const utf16_t *dataUtf16, uint32_t lenUtf16) {
         _dataUtf16 = (utf16_t *)dataUtf16;
-        assert(lenUtf16 == _lenUtf16); // _lenUtf16 = lenUtf16;
-        _isAnsi = false;
+        assert(lenUtf16 == size()); // _lenUtf16 = lenUtf16;
+        setAnsi(false);
     }
 
     const SizedString &utf8Str() const { return _utf8Str; }
 
-    inline uint32_t size() const { return _lenUtf16; }
+    inline uint32_t size() const { return _utf8Str._lenUtf16; }
     inline utf16_t *utf16Data() const { return _dataUtf16; }
 
     inline utf16_t chartAt(uint32_t index) const {
         assert(index < size());
         assert(canRandomAccess());
-        return _isAnsi ? _utf8Str.data[index] : _dataUtf16[index];
+        return isAnsi() ? _utf8Str.data[index] : _dataUtf16[index];
     }
 
     utf32_t codePointAt(uint32_t index) const;
 
-    inline bool canRandomAccess() const { return _isAnsi || _dataUtf16 != nullptr; }
-    inline bool isAnsi() const { return _isAnsi; }
+    inline bool canRandomAccess() const { return isAnsi() || _dataUtf16 != nullptr; }
+    inline bool isAnsi() const { return _utf8Str._isAnsi; }
     inline bool isUtf16Valid() const { return _dataUtf16 != nullptr; }
 
     bool equal(uint32_t code) const;
@@ -188,16 +203,14 @@ public:
 
 protected:
     void onSetUtf8String();
+    inline void setAnsi(bool isAnsi) { _utf8Str._isAnsi = isAnsi; }
+    inline void setUtf16Size(uint32_t len) { _utf8Str._lenUtf16 = len; }
 
 protected:
     SizedString                     _utf8Str;
-    utf16_t                         *_dataUtf16;
 
     // _lenUtf16 是一定有效的，_dataUtf16 不一定有效
-    uint32_t                        _lenUtf16;
-
-    // 都是 ansi 字符
-    bool                            _isAnsi;
+    utf16_t                         *_dataUtf16;
 
 };
 
