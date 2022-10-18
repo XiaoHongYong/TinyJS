@@ -67,7 +67,7 @@ int SizedString::strstr(const SizedString &find, int32_t start) const {
 
     const uint8_t *last = data + len - find.len;
     const uint8_t *s1 = data, *s2 = find.data;
-    size_t len = find.len - 1;
+    uint32_t len = find.len - 1;
     uint8_t  c1, c2;
 
     if (start > 0) {
@@ -99,7 +99,7 @@ int SizedString::stristr(const SizedString &find) const {
 
     const uint8_t *last = data + len - find.len;
     const uint8_t *s1 = data, *s2 = find.data;
-    size_t len = find.len - 1;
+    uint32_t len = find.len - 1;
     uint8_t  c1, c2;
 
     c2 = (uint8_t)*s2++;
@@ -127,7 +127,7 @@ int SizedString::strrstr(const SizedString &find, int32_t start) const {
 
     const uint8_t *s1 = data + len - find.len;
     const uint8_t *begin = data, *s2 = find.data;
-    size_t len = find.len - 1;
+    uint32_t len = find.len - 1;
     uint8_t  c1, c2;
 
     if (start > 0) {
@@ -303,7 +303,7 @@ void SizedString::shrink(int startShrinkSize, int endShrinkSize) {
     }
 }
 
-SizedString SizedString::subStr(size_t offset, size_t size) const {
+SizedString SizedString::substr(uint32_t offset, uint32_t size) const {
     if (offset + size <= len) {
         return SizedString(data + offset, size, _isStable);
     } else if (offset <= len) {
@@ -370,7 +370,7 @@ void reverse(char str[], size_t length) {
 }
 
 SizedString SizedString::itoa(long num, char *str) const {
-    size_t i = 0;
+    uint32_t i = 0;
     bool isNegative = false;
 
     if (num == 0) {
@@ -562,3 +562,22 @@ int SizedStringUtf16::lastIndexOf(const SizedString &find, int32_t start) const 
     return pos;
 }
 
+SizedString SizedStringUtf16::substr(uint32_t offset, uint32_t size) const {
+    if (isAnsi()) {
+        return _utf8Str.substr(offset, size);
+    }
+
+    if (offset >= _utf8Str._lenUtf16) {
+        return sizedStringNull;
+    }
+
+    auto start = utf8ToUtf16Seek(_utf8Str.data, _utf8Str.len, offset);
+    if (offset + size <= _utf8Str._lenUtf16) {
+        auto end = utf8ToUtf16Seek(start, (uint32_t)(_utf8Str.data + _utf8Str.len - start), size);
+        return SizedString(start, (uint32_t)(end - start), _utf8Str._isStable);
+    } else {
+        return SizedString(start, (uint32_t)(_utf8Str.data + _utf8Str.len - start), _utf8Str._isStable);
+    }
+
+    return sizedStringNull;
+}

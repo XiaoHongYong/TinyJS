@@ -97,7 +97,7 @@ void stringPrototypeAt(VMContext *ctx, const JsValue &thiz, const Arguments &arg
         return;
     }
 
-    int32_t index = (int32_t)runtime->toNumber(ctx, args.getAt(0, JsValue(JDT_INT32, 0)));
+    int32_t index = args.getIntAt(ctx, 0);
 
     if (strValue.type == JDT_CHAR) {
         if (index == 0 || index == -1) {
@@ -132,10 +132,7 @@ int getStringCharCodeAt(VMContext *ctx, const JsValue &thiz, const Arguments &ar
         return -1;
     }
 
-    int32_t index = 0;
-    if (args.count > 0) {
-        index = (int32_t)runtime->toNumber(ctx, args.data[0]);
-    }
+    int32_t index = args.getIntAt(ctx, 0);
 
     if (strValue.type == JDT_STRING) {
         auto &str = runtime->getStringWithRandAccess(strValue);
@@ -178,10 +175,7 @@ void stringPrototypeCodePointAt(VMContext *ctx, const JsValue &thiz, const Argum
         return;
     }
 
-    int32_t index = 0;
-    if (args.count > 0) {
-        index = (int32_t)runtime->toNumber(ctx, args.data[0]);
-    }
+    int32_t index = args.getIntAt(ctx, 0);
 
     if (strValue.type == JDT_STRING) {
         auto &str = runtime->getStringWithRandAccess(strValue);
@@ -298,10 +292,7 @@ void stringPrototypeIndexOf(VMContext *ctx, const JsValue &thiz, const Arguments
         return;
     }
 
-    int32_t index = 0;
-    if (args.count > 1) {
-        index = (int32_t)runtime->toNumber(ctx, args[1]);
-    }
+    int32_t index = args.getIntAt(ctx, 1);
 
     auto p = toSizedStringStrict(ctx, args.getAt(0, jsStringValueUndefined));
     if (ctx->error != PE_OK) {
@@ -331,10 +322,7 @@ void stringPrototypeLastIndexOf(VMContext *ctx, const JsValue &thiz, const Argum
         return;
     }
 
-    int32_t index = 0x7FFFFFFF;
-    if (args.count > 1) {
-        index = (int32_t)runtime->toNumber(ctx, args[1]);
-    }
+    int32_t index = args.getIntAt(ctx, 1, 0x7FFFFFFF);
 
     auto p = toSizedStringStrict(ctx, args.getAt(0, jsStringValueUndefined));
 
@@ -379,7 +367,7 @@ inline JsValue regexMatch(VMContext *ctx, VMRuntime *runtime, std::regex &re, ui
 
         for (auto it = begin; it != end; ++it) {
             auto &m = *it;
-            arr->push(ctx, runtime->pushString(str.subStr(m.position(), m.length())));
+            arr->push(ctx, runtime->pushString(str.substr((uint32_t)m.position(), (uint32_t)m.length())));
         }
     } else {
         std::cmatch matches;
@@ -388,7 +376,7 @@ inline JsValue regexMatch(VMContext *ctx, VMRuntime *runtime, std::regex &re, ui
             ret = runtime->pushObjectValue(arr);
 
             for (auto &m : matches) {
-                arr->push(ctx, runtime->pushString(str.subStr(m.first, m.second)));
+                arr->push(ctx, runtime->pushString(str.substr(m.first, m.second)));
             }
 
             auto index = utf8ToUtf16Length(str.data, (uint32_t)(matches[0].first - (cstr_t)str.data));
@@ -446,7 +434,7 @@ public:
             SizedString str(_strBegin, uint32_t(_strEnd - _strBegin));
 
             for (auto &m : matches) {
-                arr->push(_ctx, runtime->pushString(str.subStr(m.first, m.second)));
+                arr->push(_ctx, runtime->pushString(str.substr(m.first, m.second)));
             }
 
             auto m0 = matches[0];
@@ -673,7 +661,7 @@ void doStringReplaceWithFunction(VMContext *ctx, const SizedString &str, const J
     VecJsValues argvs;
 
     for (auto &m : matches) {
-        argvs.push_back(runtime->pushString(str.subStr(m.first, m.second)));
+        argvs.push_back(runtime->pushString(str.substr(m.first, m.second)));
     }
     argvs.push_back(JsValue(JDT_INT32, offset));
     argvs.push_back(strVal);
@@ -923,7 +911,34 @@ void stringPrototypeSlice(VMContext *ctx, const JsValue &thiz, const Arguments &
         return;
     }
 
-    ctx->retValue = strVal;
+    int32_t start = args.getIntAt(ctx, 0);
+    int32_t end = args.getIntAt(ctx, 1, 0x7FFFFFFF);
+    auto runtime = ctx->runtime;
+
+    if (strVal.type == JDT_CHAR) {
+        if (end >= 1 && start <= 0) {
+            ctx->retValue = strVal;
+        } else {
+            ctx->retValue = jsStringValueEmpty;
+        }
+        return;
+    }
+
+    auto &str = runtime->getString(strVal);
+    uint32_t len = str.size();
+    if (start < 0) {
+        start = max(len + start, (uint32_t)0);
+    }
+
+    if (end < 0) {
+        end = len + end;
+    }
+
+    if (start < end) {
+        ctx->retValue = runtime->pushString(str.substr(start, end - start));
+    } else {
+        ctx->retValue = jsStringValueEmpty;
+    }
 }
 
 void stringPrototypeSplit(VMContext *ctx, const JsValue &thiz, const Arguments &args) {
@@ -932,7 +947,76 @@ void stringPrototypeSplit(VMContext *ctx, const JsValue &thiz, const Arguments &
         return;
     }
 
-    ctx->retValue = strVal;
+    auto runtime = ctx->runtime;
+    auto sep = args.getAt(0);
+    auto limit = args.getIntAt(ctx, 1, 0x7FFFFFFF);
+    auto arrObj = new JsArray();
+    auto arr = runtime->pushObjectValue(arrObj);
+
+    if (limit < 0) {
+        limit = 0x7FFFFFFF;
+    } else if (limit == 0) {
+        ctx->retValue = arr;
+        return;
+    }
+
+    if (sep.type == JDT_UNDEFINED) {
+        arrObj->push(ctx, strVal);
+        ctx->retValue = arr;
+        return;
+    }
+
+    auto str = runtime->toSizedString(ctx, strVal);
+
+    if (sep.type == JDT_REGEX) {
+        auto regexp = (JsRegExp *)runtime->getObject(sep);
+        auto &re = regexp->getRegexp();
+
+        for (; limit > 0; --limit) {
+            std::cmatch matches;
+            if (!std::regex_search((cstr_t)str.data, (cstr_t)str.data + str.len, matches, re)) {
+                arrObj->push(ctx, runtime->pushString(str));
+                break;
+            }
+
+            auto &m0 = matches[0];
+            auto pos = (uint32_t)(m0.first - (cstr_t)str.data);
+            arrObj->push(ctx, runtime->pushString(str.substr(0, pos)));
+
+            pos = (uint32_t)(m0.second - (cstr_t)str.data);
+            str.data = (uint8_t *)m0.second;
+            str.len -= pos;
+        }
+    } else {
+        auto sepStr = toSizedStringStrict(ctx, sep);
+        if (sepStr.len == 0) {
+            // 分为 utf-16 的字符串数组
+            vector<utf16_t> u16s;
+            u16s.resize(min(str.len, (uint32_t)limit));
+            auto len = utf8ToUtf16(str.data, str.len, u16s.data(), (uint32_t)u16s.size());
+
+            auto p = u16s.data(), end = p + len;
+            for (; p < end; p++) {
+                arrObj->push(ctx, JsValue(JDT_CHAR, *p));
+            }
+        } else {
+            for (; limit > 0; --limit) {
+                int pos = str.strstr(sepStr);
+                if (pos < 0) {
+                    arrObj->push(ctx, runtime->pushString(str));
+                    break;
+                }
+
+                arrObj->push(ctx, runtime->pushString(str.substr(0, pos)));
+
+                pos += sepStr.len;
+                str.data += pos;
+                str.len -= pos;
+            }
+        }
+    }
+
+    ctx->retValue = arr;
 }
 
 void stringPrototypeStartsWith(VMContext *ctx, const JsValue &thiz, const Arguments &args) {
@@ -944,13 +1028,68 @@ void stringPrototypeStartsWith(VMContext *ctx, const JsValue &thiz, const Argume
     ctx->retValue = strVal;
 }
 
+void stringPrototypeSubstr(VMContext *ctx, const JsValue &thiz, const Arguments &args) {
+    auto strVal = convertStringToJsValue(ctx, thiz, "substring");
+    if (!strVal.isValid()) {
+        return;
+    }
+
+    int32_t start = args.getIntAt(ctx, 0);
+    int32_t length = args.getIntAt(ctx, 1, 0x7FFFFFFF);
+
+    auto runtime = ctx->runtime;
+    if (strVal.type == JDT_CHAR) {
+        if (length >= 1 && start <= 0) {
+            ctx->retValue = strVal;
+        } else {
+            ctx->retValue = jsStringValueEmpty;
+        }
+        return;
+    }
+
+    auto &str = runtime->getString(strVal);
+    if (start < 0) {
+        start = max(str.size() + start, (uint32_t)0);
+    }
+
+    if (length < 0) {
+        ctx->retValue = jsStringValueEmpty;
+        return;
+    }
+
+    ctx->retValue = runtime->pushString(str.substr(start, length));
+}
+
 void stringPrototypeSubstring(VMContext *ctx, const JsValue &thiz, const Arguments &args) {
     auto strVal = convertStringToJsValue(ctx, thiz, "substring");
     if (!strVal.isValid()) {
         return;
     }
 
-    ctx->retValue = strVal;
+    int32_t start = args.getIntAt(ctx, 0);
+    int32_t end = args.getIntAt(ctx, 1, 0x7FFFFFFF);
+    if (start < 0) { start = 0; }
+    if (end < 0) { end = 0; }
+
+    if (start > end) {
+        std::swap(start, end);
+    } else if (start == end) {
+        ctx->retValue = jsStringValueEmpty;
+        return;
+    }
+
+    auto runtime = ctx->runtime;
+    if (strVal.type == JDT_CHAR) {
+        if (start == 0) {
+            ctx->retValue = strVal;
+        } else {
+            ctx->retValue = jsStringValueEmpty;
+        }
+        return;
+    }
+
+    auto &str = runtime->getString(strVal);
+    ctx->retValue = runtime->pushString(str.substr(start, end - start));
 }
 
 void stringPrototypeToLocaleLowerCase(VMContext *ctx, const JsValue &thiz, const Arguments &args) {
@@ -1080,7 +1219,7 @@ static JsLibProperty stringPrototypeFunctions[] = {
     { "startsWith", stringPrototypeStartsWith },
     // * { "strike", stringPrototypeStrike },
     // * { "sub", stringPrototypeSub },
-    // * { "substr", stringPrototypeSubstr },
+    { "substr", stringPrototypeSubstr },
     { "substring", stringPrototypeSubstring },
     // * { "sup", stringPrototypeSup },
     { "toLocaleLowerCase", stringPrototypeToLocaleLowerCase },

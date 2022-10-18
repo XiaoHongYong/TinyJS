@@ -76,15 +76,15 @@ public:
 
     void shrink(int startShrinkSize, int endShrinkSize = 0);
 
-    SizedString subStr(size_t offset, size_t size) const;
-    SizedString subStr(const uint8_t *start, const uint8_t *end) const {
+    SizedString substr(uint32_t offset, uint32_t size) const;
+    SizedString substr(const uint8_t *start, const uint8_t *end) const {
         assert(start <= end);
         assert(start >= data);
         assert(end <= data + len);
         return SizedString(start, (uint32_t)(end - start), _isStable);
     }
-    SizedString subStr(const char *start, const char *end) const {
-        return subStr((const uint8_t *)start, (const uint8_t *)end);
+    SizedString substr(const char *start, const char *end) const {
+        return substr((const uint8_t *)start, (const uint8_t *)end);
     }
 
     long atoi(bool &successful) const;
@@ -200,6 +200,8 @@ public:
 
     int indexOf(const SizedString &find, int32_t start = 0) const;
     int lastIndexOf(const SizedString &find, int32_t start = 0x7FFFFFFF) const;
+
+    SizedString substr(uint32_t offset, uint32_t size) const;
 
 protected:
     void onSetUtf8String();

@@ -650,8 +650,12 @@ JsValue VMRuntime::pushString(const JsString &str) {
 }
 
 JsValue VMRuntime::pushString(const SizedString &str) {
-    if (str.len == 0) {
-        return jsStringValueEmpty;
+    if (str.len <= 1) {
+        if (str.len == 0) {
+            return jsStringValueEmpty;
+        } else {
+            return JsValue(JDT_CHAR, str.data[0]);
+        }
     }
 
     if (str.isStable()) {

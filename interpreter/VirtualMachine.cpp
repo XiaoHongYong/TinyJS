@@ -118,6 +118,26 @@ Arguments & Arguments::operator = (const Arguments &other) {
     return *this;
 }
 
+int32_t Arguments::getIntAt(VMContext *ctx, uint32_t index, int32_t defVal) const {
+    if (index < capacity) {
+        auto v = data[index];
+        if (v.type == JDT_INT32) {
+            return v.value.n32;
+        }
+
+        double d = ctx->runtime->toNumber(ctx, v);
+        if (isnan(d)) {
+            return 0;
+        } else if (isinf(d)) {
+            return 0x7FFFFFFF;
+        } else {
+            return (int32_t)d;
+        }
+    } else {
+        return defVal;
+    }
+}
+
 void Arguments::copy(const Arguments &other, uint32_t minSize) {
     assert(!needFree);
 

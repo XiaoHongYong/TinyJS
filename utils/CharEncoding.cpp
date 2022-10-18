@@ -436,6 +436,26 @@ uint32_t utf8ToUtf16(const uint8_t *str, uint32_t len, utf16_t *u16BufOut, uint3
     return lenUtf16;
 }
 
+uint32_t utf8FirstByteLength(uint8_t c) {
+    if ((c) < 0x80) {
+        return 1;
+    } else if ((c) < 0xc0) {
+        return 1;
+    } else if ((c) < 0xe0) {
+        return 2;
+    } else if ((c) < 0xf0) {
+        return 3;
+    } else if ((c) < 0xf8) {
+        return 4;
+    } else if ((c) < 0xfc) {
+        return 5;
+    } else if ((c) < 0xfe) {
+        return 6;
+    } else {
+        return 1;
+    }
+}
+
 uint8_t *utf8ToUtf16Seek(const uint8_t *str, uint32_t len, uint32_t utf16Pos) {
     auto p = str, last = str + len;
     uint32_t lenUtf16 = 0;
