@@ -73,6 +73,8 @@ public:
     void trim(uint8_t charToTrim);
     void trim(const SizedString &toTrim);
     void trim();
+    void trimStart(const SizedString &toTrim);
+    void trimEnd(const SizedString &toTrim);
 
     void shrink(int startShrinkSize, int endShrinkSize = 0);
 
@@ -90,6 +92,8 @@ public:
     long atoi(bool &successful) const;
     SizedString itoa(long num, char *str) const;
 
+    bool hasLowerCase() const;
+    bool hasUpperCase() const;
     void toLowerCase();
 
     template <class _Container>
@@ -224,7 +228,8 @@ using VecSizedStringUtf16s = std::vector<SizedStringUtf16>;
 
 inline SizedString makeStableStr(const char *str) { return SizedString(str, (uint32_t)strlen(str), true); }
 
-const SizedString sizedStringNull(nullptr, 0, true);
+const SizedString sizedStringEmpty(nullptr, 0, true);
+const SizedString sizedStringBlanks(" \t\r\n");
 
 struct SizedStrCmpLess {
 

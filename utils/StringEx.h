@@ -56,7 +56,7 @@ string toUpper(cstr_t szString);
 string toLower(cstr_t szString);
 
 inline int toLower(int ch) { return ('A' <= ch && ch <= 'Z') ? (ch + 'a' - 'A') : ch; }
-inline int toUpper(int ch) { return ('a' <= ch && ch <= 'a') ? (ch + 'A' - 'a') : ch; }
+inline int toUpper(int ch) { return ('a' <= ch && ch <= 'z') ? (ch + 'A' - 'a') : ch; }
 
 inline bool isDigit(int ch) { return ('0' <= ch) && (ch <= '9'); }
 inline bool isAlpha(int ch) { return ('a' <= ch && ch <= 'z') || ('A' <= ch && ch <= 'Z'); }

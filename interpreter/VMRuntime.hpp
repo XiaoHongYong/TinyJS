@@ -268,7 +268,9 @@ public:
     double toNumber(VMContext *ctx, const JsValue &v);
     bool toNumber(VMContext *ctx, const JsValue &v, double &out);
     JsValue toString(VMContext *ctx, const JsValue &v);
-    LockedSizedStringWrapper toSizedString(VMContext *ctx, const JsValue &v);
+    LockedSizedStringWrapper toSizedString(VMContext *ctx, const JsValue &v, bool isStrict = false);
+    inline LockedSizedStringWrapper toSizedStringStrictly(VMContext *ctx, const JsValue &v) {
+        return toSizedString(ctx, v, true); }
     JsValue jsObjectToString(VMContext *ctx, const JsValue &obj);
     JsValue tryCallJsObjectValueOf(VMContext *ctx, const JsValue &v);
     SizedString toTypeName(const JsValue &v);

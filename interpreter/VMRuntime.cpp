@@ -820,7 +820,7 @@ JsValue VMRuntime::toString(VMContext *ctx, const JsValue &v) {
     return jsValueUndefined;
 }
 
-LockedSizedStringWrapper VMRuntime::toSizedString(VMContext *ctx, const JsValue &v) {
+LockedSizedStringWrapper VMRuntime::toSizedString(VMContext *ctx, const JsValue &v, bool isStrict) {
     JsValue val = v;
     if (val.type >= JDT_OBJECT) {
         vm->callMember(ctx, v, SS_TOSTRING, Arguments());
@@ -843,6 +843,10 @@ LockedSizedStringWrapper VMRuntime::toSizedString(VMContext *ctx, const JsValue 
         case JDT_CHAR: return LockedSizedStringWrapper(val);
         case JDT_STRING: return getUtf8String(val);
         case JDT_SYMBOL: {
+            if (isStrict) {
+                ctx->throwException(PE_TYPE_ERROR, "Cannot convert a Symbol value to a string");
+                return LockedSizedStringWrapper();
+            }
             auto index = val.value.n32;
             assert(index < symbolValues.size());
             return LockedSizedStringWrapper(symbolValues[index].toString());

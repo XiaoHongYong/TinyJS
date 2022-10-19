@@ -255,52 +255,52 @@ bool getStringOwnPropertyDescriptor(VMContext *ctx, const JsValue &thiz, JsValue
 
     auto len = runtime->getStringLength(thiz);
 
-    while (true) {
-        if (name.type == JDT_NUMBER || name.type == JDT_INT32) {
-            int32_t index;
-            if (name.type == JDT_NUMBER) {
-                auto v = runtime->getDouble(name);
-                index = (int32_t)v;
-                if (v != index) {
-                    return false;
-                }
-            } else {
-                index = name.value.n32;
+    if (name.type == JDT_NUMBER || name.type == JDT_INT32) {
+        int32_t index;
+        if (name.type == JDT_NUMBER) {
+            auto v = runtime->getDouble(name);
+            index = (int32_t)v;
+            if (v != index) {
+                return false;
             }
-
-            if (index >= 0 && index < len) {
-                ArgumentsX args(JsValue(JDT_INT32, index));
-                stringPrototypeCharAt(ctx, thiz, args);
-                descriptorOut.value = ctx->retValue;
-                descriptorOut.isConfigurable = false;
-                descriptorOut.isEnumerable = true;
-                descriptorOut.isWritable = false;
-                descriptorOut.isGSetter = false;
-                return true;
-            }
-            return false;
         } else {
-            bool ret = false;
-
-            auto str = runtime->toSizedString(ctx, name);
-            if (str.equal(SS_LENGTH)) {
-                descriptorOut.value = JsValue(JDT_INT32, len);
-                descriptorOut.isConfigurable = false;
-                descriptorOut.isEnumerable = true;
-                descriptorOut.isWritable = false;
-                descriptorOut.isGSetter = false;
-                ret = true;
-            } else {
-                bool successful;
-                auto n = str.atoi(successful);
-                if (successful) {
-                    name = JsValue(JDT_INT32, (uint32_t)n);
-                    ret = true;
-                }
-            }
-
-            return ret;
+            index = name.value.n32;
         }
+
+        if (index >= 0 && index < len) {
+            ArgumentsX args(JsValue(JDT_INT32, index));
+            stringPrototypeCharAt(ctx, thiz, args);
+            descriptorOut.value = ctx->retValue;
+            descriptorOut.isConfigurable = false;
+            descriptorOut.isEnumerable = true;
+            descriptorOut.isWritable = false;
+            descriptorOut.isGSetter = false;
+            return true;
+        }
+        return false;
+    } else if (name.type == JDT_SYMBOL) {
+        return false;
+    } else {
+        bool ret = false;
+
+        auto str = runtime->toSizedString(ctx, name);
+        if (str.equal(SS_LENGTH)) {
+            descriptorOut.value = JsValue(JDT_INT32, len);
+            descriptorOut.isConfigurable = false;
+            descriptorOut.isEnumerable = true;
+            descriptorOut.isWritable = false;
+            descriptorOut.isGSetter = false;
+            ret = true;
+        } else {
+            bool successful;
+            auto n = str.atoi(successful);
+            if (successful) {
+                name = JsValue(JDT_INT32, (uint32_t)n);
+                ret = true;
+            }
+        }
+
+        return ret;
     }
 }
 

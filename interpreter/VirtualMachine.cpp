@@ -138,6 +138,16 @@ int32_t Arguments::getIntAt(VMContext *ctx, uint32_t index, int32_t defVal) cons
     }
 }
 
+LockedSizedStringWrapper Arguments::getStringAt(VMContext *ctx, uint32_t index, const SizedString &defVal) const {
+    if (index < capacity) {
+        auto v = data[index];
+
+        return ctx->runtime->toSizedStringStrictly(ctx, v);
+    } else {
+        return defVal;
+    }
+}
+
 void Arguments::copy(const Arguments &other, uint32_t minSize) {
     assert(!needFree);
 

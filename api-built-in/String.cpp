@@ -202,15 +202,6 @@ JsValue toStringStrict(VMContext *ctx, const JsValue &val) {
     return ctx->runtime->toString(ctx, val);
 }
 
-LockedSizedStringWrapper toSizedStringStrict(VMContext *ctx, const JsValue &val) {
-    if (val.type == JDT_SYMBOL) {
-        ctx->throwException(PE_TYPE_ERROR, "Cannot convert a Symbol value to a string");
-        return SS_EMPTY;
-    }
-
-    return ctx->runtime->toSizedString(ctx, val);
-}
-
 void stringPrototypeConcat(VMContext *ctx, const JsValue &thiz, const Arguments &args) {
     auto strVal = convertStringToJsValue(ctx, thiz, "concat");
     if (!strVal.isValid()) {
@@ -233,12 +224,12 @@ void stringPrototypeEndsWith(VMContext *ctx, const JsValue &thiz, const Argument
     }
 
     auto s = runtime->toSizedString(ctx, strVal);
-    auto p = toSizedStringStrict(ctx, args.getAt(0, jsStringValueUndefined));
+    auto with = args.getStringAt(ctx, 0, SS_UNDEFINED);
     if (ctx->error != PE_OK) {
         return;
     }
 
-    ctx->retValue = JsValue(JDT_BOOL, s.endsWith(p));
+    ctx->retValue = JsValue(JDT_BOOL, s.endsWith(with));
 }
 
 /*
@@ -277,7 +268,7 @@ void stringPrototypeIncludes(VMContext *ctx, const JsValue &thiz, const Argument
     }
 
     auto s = runtime->toSizedString(ctx, strVal);
-    auto p = toSizedStringStrict(ctx, args.getAt(0, jsStringValueUndefined));
+    auto p = args.getStringAt(ctx, 0, SS_UNDEFINED);
     if (ctx->error != PE_OK) {
         return;
     }
@@ -294,7 +285,7 @@ void stringPrototypeIndexOf(VMContext *ctx, const JsValue &thiz, const Arguments
 
     int32_t index = args.getIntAt(ctx, 1);
 
-    auto p = toSizedStringStrict(ctx, args.getAt(0, jsStringValueUndefined));
+    auto p = args.getStringAt(ctx, 0, SS_UNDEFINED);
     if (ctx->error != PE_OK) {
         return;
     }
@@ -324,7 +315,7 @@ void stringPrototypeLastIndexOf(VMContext *ctx, const JsValue &thiz, const Argum
 
     int32_t index = args.getIntAt(ctx, 1, 0x7FFFFFFF);
 
-    auto p = toSizedStringStrict(ctx, args.getAt(0, jsStringValueUndefined));
+    auto p = args.getStringAt(ctx, 0, SS_UNDEFINED);
 
     // 转换为 utf16 的 string
     SizedStringWrapper tmp;
@@ -410,7 +401,7 @@ void stringPrototypeMatch(VMContext *ctx, const JsValue &thiz, const Arguments &
             pattern = jsStringValueEmpty;
         }
 
-        LockedSizedStringWrapper strRe = toSizedStringStrict(ctx, pattern);
+        auto strRe = runtime->toSizedStringStrictly(ctx, pattern);
         auto flags = std::regex::flag_type::ECMAScript;
         std::regex re((cstr_t)strRe.data, strRe.len, flags);
 
@@ -499,7 +490,7 @@ void stringPrototypeMatchAll(VMContext *ctx, const JsValue &thiz, const Argument
             pattern = jsStringValueEmpty;
         }
 
-        LockedSizedStringWrapper strRe = toSizedStringStrict(ctx, pattern);
+        auto strRe = runtime->toSizedStringStrictly(ctx, pattern);
         auto flags = std::regex::flag_type::ECMAScript;
         std::regex re((cstr_t)strRe.data, strRe.len, flags);
 
@@ -543,7 +534,7 @@ void stringPrototypePadEnd(VMContext *ctx, const JsValue &thiz, const Arguments 
         pad = JsValue(JDT_CHAR, ' ');
     }
 
-    auto sPad = toSizedStringStrict(ctx, pad);
+    auto sPad = runtime->toSizedStringStrictly(ctx, pad);
     if (sPad.len == 0) {
         ctx->retValue = strVal;
         return;
@@ -563,7 +554,7 @@ void stringPrototypePadEnd(VMContext *ctx, const JsValue &thiz, const Arguments 
         memcpy(p, sPad.data, retStr.data + retStr.len - p);
     }
 
-    ctx->retValue = runtime->pushString(retStr);
+    ctx->retValue = runtime->pushString(JsString(retStr));
 }
 
 void stringPrototypePadStart(VMContext *ctx, const JsValue &thiz, const Arguments &args) {
@@ -591,7 +582,7 @@ void stringPrototypePadStart(VMContext *ctx, const JsValue &thiz, const Argument
         pad = JsValue(JDT_CHAR, ' ');
     }
 
-    auto sPad = toSizedStringStrict(ctx, pad);
+    auto sPad = runtime->toSizedStringStrictly(ctx, pad);
     if (sPad.len == 0) {
         ctx->retValue = strVal;
         return;
@@ -612,7 +603,7 @@ void stringPrototypePadStart(VMContext *ctx, const JsValue &thiz, const Argument
     }
     memcpy(retStr.data + lenPadded, str.data, str.len);
 
-    ctx->retValue = runtime->pushString(retStr);
+    ctx->retValue = runtime->pushString(JsString(retStr));
 }
 
 void stringPrototypeRepeat(VMContext *ctx, const JsValue &thiz, const Arguments &args) {
@@ -647,7 +638,7 @@ void stringPrototypeRepeat(VMContext *ctx, const JsValue &thiz, const Arguments 
             memcpy(p, str.data, str.len);
         }
 
-        ctx->retValue = runtime->pushString(retStr);
+        ctx->retValue = runtime->pushString(JsString(retStr));
     }
 }
 
@@ -735,7 +726,7 @@ public:
             regexp = (JsRegExp *)ctx->runtime->getObject(patternVal);
         } else {
             regexp = nullptr;
-            pattern = toSizedStringStrict(ctx, patternVal);
+            pattern = ctx->runtime->toSizedStringStrictly(ctx, patternVal);
             if (ctx->error != PE_OK) {
                 return;
             }
@@ -793,7 +784,7 @@ void stringPrototypeReplace(VMContext *ctx, const JsValue &thiz, const Arguments
             auto offset = utf8ToUtf16Length(str.data, matchBegin);
             doStringReplaceWithFunction(ctx, str, strVal, matchBegin, matchEnd, matches, replacementVal, ret, offset);
         } else {
-            auto replacement = toSizedStringStrict(ctx, replacementVal);
+            auto replacement = runtime->toSizedStringStrictly(ctx, replacementVal);
             if (ctx->error != PE_OK) {
                 return;
             }
@@ -828,7 +819,7 @@ void stringPrototypeReplaceAll(VMContext *ctx, const JsValue &thiz, const Argume
 
     LockedSizedStringWrapper replacement;
     if (replacementVal.type != JDT_FUNCTION) {
-        replacement = toSizedStringStrict(ctx, replacementVal);
+        replacement = runtime->toSizedStringStrictly(ctx, replacementVal);
         if (ctx->error != PE_OK) {
             return;
         }
@@ -898,7 +889,7 @@ void stringPrototypeSearch(VMContext *ctx, const JsValue &thiz, const Arguments 
             pattern = jsStringValueEmpty;
         }
 
-        LockedSizedStringWrapper strRe = toSizedStringStrict(ctx, pattern);
+        auto strRe = runtime->toSizedStringStrictly(ctx, pattern);
         std::regex re((cstr_t)strRe.data, strRe.len, std::regex::flag_type::ECMAScript);
 
         regexSearch(ctx, re, str);
@@ -988,7 +979,7 @@ void stringPrototypeSplit(VMContext *ctx, const JsValue &thiz, const Arguments &
             str.len -= pos;
         }
     } else {
-        auto sepStr = toSizedStringStrict(ctx, sep);
+        auto sepStr = runtime->toSizedStringStrictly(ctx, sep);
         if (sepStr.len == 0) {
             // 分为 utf-16 的字符串数组
             vector<utf16_t> u16s;
@@ -1025,7 +1016,25 @@ void stringPrototypeStartsWith(VMContext *ctx, const JsValue &thiz, const Argume
         return;
     }
 
-    ctx->retValue = strVal;
+    auto runtime = ctx->runtime;
+    auto with = args.getStringAt(ctx, 0, SS_UNDEFINED);
+    auto start = args.getIntAt(ctx, 0, 0);
+    if (start <= 0) {
+        auto str = runtime->toSizedString(ctx, strVal);
+        ctx->retValue = JsValue(JDT_BOOL, str.startsWith(with));
+        return;
+    }
+
+    if (strVal.type == JDT_CHAR) {
+        ctx->retValue = jsValueFalse;
+        return;
+    }
+
+    auto &str = runtime->getString(strVal);
+    auto &su8 = str.utf8Str();
+    auto p = utf8ToUtf16Seek(su8.data, su8.len, start);
+
+    ctx->retValue = JsValue(JDT_BOOL, SizedString(p, uint32_t(su8.data + su8.len - p)).startsWith(with));
 }
 
 void stringPrototypeSubstr(VMContext *ctx, const JsValue &thiz, const Arguments &args) {
@@ -1092,31 +1101,39 @@ void stringPrototypeSubstring(VMContext *ctx, const JsValue &thiz, const Argumen
     ctx->retValue = runtime->pushString(str.substr(start, end - start));
 }
 
-void stringPrototypeToLocaleLowerCase(VMContext *ctx, const JsValue &thiz, const Arguments &args) {
-    auto strVal = convertStringToJsValue(ctx, thiz, "toLocaleLowerCase");
-    if (!strVal.isValid()) {
-        return;
-    }
-
-    ctx->retValue = strVal;
-}
-
-void stringPrototypeToLocaleUpperCase(VMContext *ctx, const JsValue &thiz, const Arguments &args) {
-    auto strVal = convertStringToJsValue(ctx, thiz, "toLocaleUpperCase");
-    if (!strVal.isValid()) {
-        return;
-    }
-
-    ctx->retValue = strVal;
-}
-
 void stringPrototypeToLowerCase(VMContext *ctx, const JsValue &thiz, const Arguments &args) {
     auto strVal = convertStringToJsValue(ctx, thiz, "toLowerCase");
     if (!strVal.isValid()) {
         return;
     }
 
-    ctx->retValue = strVal;
+    if (strVal.type == JDT_CHAR) {
+        ctx->retValue = JsValue(JDT_CHAR, toLower(strVal.value.n32));
+        return;
+    }
+
+    auto runtime = ctx->runtime;
+    auto &su8 = runtime->getString(strVal).utf8Str();
+    if (!su8.hasUpperCase()) {
+        ctx->retValue = strVal;
+        return;
+    }
+
+    auto s = runtime->allocString(su8.len);
+    auto p1 = su8.data, p1End = su8.data + su8.len, p2 = s.data;
+    for (; p1 < p1End; p1++, p2++) {
+        if (*p1 >= 'A' && *p1 <= 'Z') {
+            *p2 = *p1 + 'a' - 'A';
+        } else {
+            *p2 = *p1;
+        }
+    }
+
+    ctx->retValue = runtime->pushString(JsString(s));
+}
+
+void stringPrototypeToLocaleLowerCase(VMContext *ctx, const JsValue &thiz, const Arguments &args) {
+    stringPrototypeToLowerCase(ctx, thiz, args);
 }
 
 void stringPrototypeToString(VMContext *ctx, const JsValue &thiz, const Arguments &args) {
@@ -1134,7 +1151,33 @@ void stringPrototypeToUpperCase(VMContext *ctx, const JsValue &thiz, const Argum
         return;
     }
 
-    ctx->retValue = strVal;
+    if (strVal.type == JDT_CHAR) {
+        ctx->retValue = JsValue(JDT_CHAR, toUpper(strVal.value.n32));
+        return;
+    }
+
+    auto runtime = ctx->runtime;
+    auto &su8 = runtime->getString(strVal).utf8Str();
+    if (!su8.hasLowerCase()) {
+        ctx->retValue = strVal;
+        return;
+    }
+
+    auto s = runtime->allocString(su8.len);
+    auto p1 = su8.data, p1End = su8.data + su8.len, p2 = s.data;
+    for (; p1 < p1End; p1++, p2++) {
+        if (*p1 >= 'a' && *p1 <= 'z') {
+            *p2 = *p1 + 'A' - 'a';
+        } else {
+            *p2 = *p1;
+        }
+    }
+
+    ctx->retValue = runtime->pushString(JsString(s));
+}
+
+void stringPrototypeToLocaleUpperCase(VMContext *ctx, const JsValue &thiz, const Arguments &args) {
+    stringPrototypeToUpperCase(ctx, thiz, args);
 }
 
 void stringPrototypeTrim(VMContext *ctx, const JsValue &thiz, const Arguments &args) {
@@ -1143,7 +1186,24 @@ void stringPrototypeTrim(VMContext *ctx, const JsValue &thiz, const Arguments &a
         return;
     }
 
-    ctx->retValue = strVal;
+    if (strVal.type == JDT_CHAR) {
+        if (isblank(strVal.value.n32)) {
+            ctx->retValue = jsStringValueEmpty;
+        } else {
+            ctx->retValue = strVal;
+        }
+        return;
+    }
+
+    auto runtime = ctx->runtime;
+    auto &orgStr = runtime->getString(strVal).utf8Str();
+    auto str = orgStr;
+    str.trim();
+    if (str.len != orgStr.len) {
+        ctx->retValue = runtime->pushString(str);
+    } else {
+        ctx->retValue = strVal;
+    }
 }
 
 void stringPrototypeTrimEnd(VMContext *ctx, const JsValue &thiz, const Arguments &args) {
@@ -1152,7 +1212,24 @@ void stringPrototypeTrimEnd(VMContext *ctx, const JsValue &thiz, const Arguments
         return;
     }
 
-    ctx->retValue = strVal;
+    if (strVal.type == JDT_CHAR) {
+        if (isblank(strVal.value.n32)) {
+            ctx->retValue = jsStringValueEmpty;
+        } else {
+            ctx->retValue = strVal;
+        }
+        return;
+    }
+
+    auto runtime = ctx->runtime;
+    auto &orgStr = runtime->getString(strVal).utf8Str();
+    auto str = orgStr;
+    str.trimEnd(sizedStringBlanks);
+    if (str.len != orgStr.len) {
+        ctx->retValue = runtime->pushString(str);
+    } else {
+        ctx->retValue = strVal;
+    }
 }
 
 void stringPrototypeTrimStart(VMContext *ctx, const JsValue &thiz, const Arguments &args) {
@@ -1161,7 +1238,24 @@ void stringPrototypeTrimStart(VMContext *ctx, const JsValue &thiz, const Argumen
         return;
     }
 
-    ctx->retValue = strVal;
+    if (strVal.type == JDT_CHAR) {
+        if (isblank(strVal.value.n32)) {
+            ctx->retValue = jsStringValueEmpty;
+        } else {
+            ctx->retValue = strVal;
+        }
+        return;
+    }
+
+    auto runtime = ctx->runtime;
+    auto &orgStr = runtime->getString(strVal).utf8Str();
+    auto str = orgStr;
+    str.trimStart(sizedStringBlanks);
+    if (str.len != orgStr.len) {
+        ctx->retValue = runtime->pushString(str);
+    } else {
+        ctx->retValue = strVal;
+    }
 }
 
 void stringPrototypeValueOf(VMContext *ctx, const JsValue &thiz, const Arguments &args) {

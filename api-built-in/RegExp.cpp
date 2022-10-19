@@ -9,8 +9,6 @@
 #include "objects/JsRegExp.hpp"
 
 
-LockedSizedStringWrapper toSizedStringStrict(VMContext *ctx, const JsValue &val);
-
 void regExpConstructor(VMContext *ctx, const JsValue &thiz, const Arguments &args) {
     auto runtime = ctx->runtime;
     auto strVal = args.getAt(0, jsValueUndefined);
@@ -33,8 +31,8 @@ void regExpConstructor(VMContext *ctx, const JsValue &thiz, const Arguments &arg
         return;
     }
 
-    LockedSizedStringWrapper strRe = toSizedStringStrict(ctx, strVal);
-    LockedSizedStringWrapper strFlags = toSizedStringStrict(ctx, flagsVal);
+    LockedSizedStringWrapper strRe = ctx->runtime->toSizedStringStrictly(ctx, strVal);
+    LockedSizedStringWrapper strFlags = ctx->runtime->toSizedStringStrictly(ctx, flagsVal);
     string all = stringPrintf("/%.*s/%.*s", strRe.len, strRe.data, strFlags.len, strFlags.data);
 
     uint32_t flags;

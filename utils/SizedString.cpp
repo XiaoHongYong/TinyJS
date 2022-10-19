@@ -290,8 +290,35 @@ void SizedString::trim(const SizedString &toTrim) {
 }
 
 void SizedString::trim() {
-    static SizedString SPACES(" \t\r\n");
-    trim(SPACES);
+    trim(sizedStringBlanks);
+}
+
+void SizedString::trimStart(const SizedString &toTrim) {
+    uint8_t *start = data, *end = data + len;
+    // Trim from head
+    while (start < end) {
+        if (toTrim.strlchr(*(start)) == nullptr) {
+            break;
+        }
+        ++start;
+    }
+
+    data = start;
+    len = (uint32_t)(end - start);
+}
+
+void SizedString::trimEnd(const SizedString &toTrim) {
+    // Trim from tail
+    uint8_t *start = data, *end = data + len;
+    while (start < end) {
+        if (toTrim.strlchr(*(end - 1)) == nullptr) {
+            break;
+        }
+        --end;
+    }
+
+    data = start;
+    len = (uint32_t)(end - start);
 }
 
 void SizedString::shrink(int startShrinkSize, int endShrinkSize) {
@@ -310,7 +337,7 @@ SizedString SizedString::substr(uint32_t offset, uint32_t size) const {
         return SizedString(data + offset, len - offset, _isStable);
     }
 
-    return sizedStringNull;
+    return sizedStringEmpty;
 }
 
 long SizedString::atoi(bool &successful) const {
@@ -399,6 +426,38 @@ SizedString SizedString::itoa(long num, char *str) const {
     reverse(str, i);
 
     return {i, (uint8_t *)str};
+}
+
+bool SizedString::hasLowerCase() const {
+    assert(!_isStable);
+
+    uint8_t *p = (uint8_t *)data, *last = (uint8_t *)data + len;
+
+    while (p < last) {
+        if ('a' <= *p && *p <= 'z') {
+            return true;
+        }
+
+        p++;
+    }
+
+    return false;
+}
+
+bool SizedString::hasUpperCase() const {
+    assert(!_isStable);
+
+    uint8_t *p = (uint8_t *)data, *last = (uint8_t *)data + len;
+
+    while (p < last) {
+        if ('A' <= *p && *p <= 'Z') {
+            return true;
+        }
+
+        p++;
+    }
+
+    return false;
 }
 
 void SizedString::toLowerCase() {
@@ -568,7 +627,7 @@ SizedString SizedStringUtf16::substr(uint32_t offset, uint32_t size) const {
     }
 
     if (offset >= _utf8Str._lenUtf16) {
-        return sizedStringNull;
+        return sizedStringEmpty;
     }
 
     auto start = utf8ToUtf16Seek(_utf8Str.data, _utf8Str.len, offset);
@@ -579,5 +638,5 @@ SizedString SizedStringUtf16::substr(uint32_t offset, uint32_t size) const {
         return SizedString(start, (uint32_t)(_utf8Str.data + _utf8Str.len - start), _utf8Str._isStable);
     }
 
-    return sizedStringNull;
+    return sizedStringEmpty;
 }
