@@ -28,6 +28,11 @@ TEST(JsLexer, parserNumber) {
     double v;
     uint8_t *p;
 
+    str = makeParseNumberString("9.999999999999999");
+    p = parseNumber(str, v);
+    ASSERT_EQ(v, 9.999999999999999);
+    ASSERT_EQ(p, str.data + str.len);
+
     str = makeParseNumberString("");
     p = parseNumber(str, v);
     ASSERT_EQ(v, 0);
@@ -66,7 +71,7 @@ TEST(JsLexer, parserNumber) {
     str = makeParseNumberString("0xg");
     p = parseNumber(str, v);
     ASSERT_EQ(v, 0);
-    ASSERT_EQ(p, str.data + str.len - 1);
+    ASSERT_EQ(p, str.data + 1);
 
     str = makeParseNumberString("0b");
     p = parseNumber(str, v);
@@ -156,6 +161,21 @@ TEST(JsLexer, parserNumber) {
     str = makeParseNumberString("1e+");
     p = parseNumber(str, v);
     ASSERT_EQ(v, 1);
+    ASSERT_EQ(p, str.data + str.len);
+
+    str = makeParseNumberString("999999999999998200000");
+    p = parseNumber(str, v);
+    ASSERT_EQ(v, 9999999999999982e5);
+    ASSERT_EQ(p, str.data + str.len);
+
+    str = makeParseNumberString("9.999999999999982e+67");
+    p = parseNumber(str, v);
+    ASSERT_EQ(v, 9.999999999999982e+67);
+    ASSERT_EQ(p, str.data + str.len);
+
+    str = makeParseNumberString("5e-324");
+    p = parseNumber(str, v);
+    ASSERT_EQ(v, 5e-324);
     ASSERT_EQ(p, str.data + str.len);
 }
 

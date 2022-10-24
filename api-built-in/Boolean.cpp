@@ -52,8 +52,13 @@ void booleanPrototypeToString(VMContext *ctx, const JsValue &thiz, const Argumen
     ctx->retValue = value.value.n32 ? jsStringValueTrue : jsStringValueFalse;
 }
 
+void booleanPrototypeValueOf(VMContext *ctx, const JsValue &thiz, const Arguments &args) {
+    ctx->retValue = convertBoolToJsValue(ctx, thiz, "valueOf");
+}
+
 static JsLibProperty booleanPrototypeFunctions[] = {
     { "toString", booleanPrototypeToString },
+    { "valueOf", booleanPrototypeValueOf },
 };
 
 void registerBoolean(VMRuntimeCommon *rt) {

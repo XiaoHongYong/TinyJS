@@ -465,67 +465,55 @@ string itos(int64_t value) {
     return string(buf, n);
 }
 
-uint32_t dealDecimalPointPlusCount(double &value) {
-    if (value <= 0xFFFFFFFFFFFFFFFFL) {
-        // 0xFFFFFFFFFFFFFFFFL == 1.8446744073709551e19
-        return 0;
+void roundFloatString(char *buf, uint32_t &pos, uint32_t &zeroPos) {
+    for (auto p = buf + pos - 1; p >= buf; p--) {
+        auto c = *p;
+        if (c >= '0' && c <= '8') {
+            (*p)++;
+            zeroPos = uint32_t(p - buf) + 1;
+            return;
+        } else if (c == '9') {
+            // 继续进位
+            *p = '0';
+        } else {
+            // 小数点, 继续进位
+            assert(c == '.');
+            zeroPos = uint32_t(p - buf);
+        }
     }
 
-    // 超过的数转换为 e 表示的浮点数
-    uint32_t count = 0;
-
-    while (value >= 1e50) {
-        count += 50;
-        value /= 1e50;
-    }
-
-    while (value >= 1e10) {
-        count += 10;
-        value /= 1e10;
-    }
-
-    while (value >= 10.0) {
-        value /= 10.0;
-        count += 1;
-    }
-
-    // count 至少是 19 位
-    assert(count >= 19);
-    if (count < 20 || (count == 20 && value <= 9.999999999999999)) {
-        // 小于 9.999999999999999e20 的数转换为
-        count -= 18;
-        value *= 1e18;
-    }
-
-    return count;
+    // 进位到顶部了，往右移一个字符，添加 '1'
+    memmove(buf + 1, buf, pos);
+    *buf = '1';
+    pos += 1;
+    zeroPos += 1;
 }
 
-uint32_t dealDecimalPointSubCount(double &value) {
-    double valueOrg = value;
+uint32_t parseExponentCount(char *buf, uint32_t len, int32_t &expCount) {
+    uint32_t lenNumbers = len;
+    expCount = 0;
 
-    uint32_t count = 0;
-    while (value <= 1e-50) {
-        count += 50;
-        value *= 1e50;
+    auto end = buf + len;
+    for (auto p = buf; p < end; p++) {
+        if (*p == 'e') {
+            lenNumbers = (uint32_t)(p - buf);
+
+            p++;
+            bool isNegative = *p++ == '-';
+
+            for (; p < end; p++) {
+                assert(isDigit(*p));
+                expCount = expCount * 10 + *p - '0';
+            }
+
+            if (isNegative) {
+                expCount = -expCount;
+            }
+            break;
+        }
     }
 
-    while (value <= 1e-10) {
-        count += 10;
-        value *= 1e10;
-    }
-
-    while (value < 1.0) {
-        value *= 10.0;
-        count += 1;
-    }
-
-    if (count <= 6) {
-        // count 至少是 6 位
-        value = valueOrg;
-        return 0;
-    }
-
-    return count;
+    return lenNumbers;
 }
 
 /**
@@ -533,89 +521,125 @@ uint32_t dealDecimalPointSubCount(double &value) {
  *     10.00     => 10
  *     1.11000 => 1.11
  */
-uint32_t floatToString(double value, char *buf) {
-    uint32_t i = 0;
+uint32_t floatToStringEx(double value, char *buf, uint32_t bufSize, int32_t precisionCount, uint32_t flags) {
+    assert(bufSize >= 20 && precisionCount + 3 < bufSize);
+    assert(precisionCount != 0);
+
+    precisionCount--;
+    bufSize -= 6; // 6: length of '-e+3xx'
 
     if (isnan(value)) {
-        strcpy(buf + i, "NaN");
-        return (int)i + 3;
+        strcpy(buf, "NaN");
+        return 3;
     }
 
-    if (signbit(value)) {
+    bool isNegative = signbit(value);
+    auto p = buf;
+    if (isNegative) {
         value = -value;
-        buf[i++] = '-';
+        *p++ = '-';
     }
 
     if (isinf(value)) {
-        strcpy(buf + i, "Infinity");
-        return (int)i + 8;
+        strcpy(p, "Infinity");
+        return isNegative + 8;
     }
 
-    const uint32_t PRECISION = 16;
-    uint32_t precisionCount = PRECISION;
-    uint32_t zeroCount = 0;
-
-    uint32_t decimalPointCount = dealDecimalPointPlusCount(value);
-
-    if (decimalPointCount == 0 && value > 0 && value < 1) {
-        // 快速确定 zeroCount
-        zeroCount = dealDecimalPointSubCount(value);
+    if (flags & F_FIXED_DIGITS) {
+        return isNegative + snprintf(p, bufSize, "%.*f", precisionCount, value);
     }
 
-    auto tmp = u64toa((uint64_t)value, buf + i);
-    i += tmp;
-    if ((int64_t)value > 0) {
-        precisionCount -= tmp;
-    }
-
-    if (decimalPointCount > 0 && decimalPointCount < 10) {
-        // > 0xFFFFFFFFFFFFFFFF && < 9.999999999999999e20 的数，采用正整数的显示方式
-        while (decimalPointCount-- > 0) {
-            buf[i++] = '0';
+    uint32_t lenAll = 0;
+    if (precisionCount < 0) {
+        precisionCount = 16;
+        for (; precisionCount >= 0; precisionCount--) {
+            lenAll = snprintf(p, bufSize, "%.*e", precisionCount, value);
+            if (strtod(p, nullptr) != value) {
+                precisionCount++;
+                lenAll = snprintf(p, bufSize, "%.*e", precisionCount, value);
+                break;
+            } else if (p[precisionCount + 1] == '0') {
+                // 以 '0' 结尾
+                assert(p[precisionCount + 2] == 'e');
+                break;
+            }
         }
-        buf[i] = '\0';
-        return i;
+    } else {
+        lenAll = snprintf(p, bufSize, "%.*e", precisionCount, value);
     }
 
-    value -= (uint64_t)value;
+    int32_t expCount = 0;
+    auto len = parseExponentCount(p, lenAll, expCount);
 
-    // zeroPos 用于记录最后一个非 0 的位置
-    uint32_t zeroPos = i;
 
-    if (value > 0) {
-        buf[i++] = '.';
+    if (!(flags & F_EXPONENTIAL_NOTATION)) {
+        if (expCount > 0) {
+            if ((flags & F_FIXED_PRECISION) && (precisionCount < expCount)) {
+            } else if (expCount < 20 || (expCount == 20 && value <= 9.999999999999999e20)) {
+                // 不转换为科学记数法
+                if (expCount >= precisionCount) {
+                    // 1.2345 5 => 123450
+                    if (len > 2) {
+                        memmove(p + 1, p + 2, len - 2);
+                    }
+                    len--;
+                    memset(p + len, '0', expCount - precisionCount);
+                    len += expCount - precisionCount;
 
-        while (precisionCount > 0) {
-            value *= 10;
-            int n = int(value);
-            buf[i++] = '0' + n;
-            if (n > 0) {
-                zeroPos = i;
-                value -= n;
+                    // 整数，返回
+                    return len + isNegative;
+                } else {
+                    // 1.2345 2 => 123.45
+                    memmove(p + 1, p + 2, expCount);
+                    p[expCount + 1] = '.';
+                    expCount = 0;
+                }
+            }
+        } else if (expCount < 0) {
+            if (expCount >= -6) {
+                expCount = -expCount;
 
-                precisionCount--;
-            } else if (precisionCount < PRECISION) {
-                precisionCount--;
+                // 不转换为科学记数法:
+                // 1.2345 -1 => // 0.12345
+                if (len >= 2) {
+                    memmove(p + expCount + 2, p + 2, len - 2);
+                } else {
+                    // 增加小数点的长度
+                    len += 1;
+                }
+                p[expCount + 1] = p[0];
+                p[0] = '0'; p[1] = '.';
+                memset(p + 2, '0', expCount - 1);
+                len += expCount;
+                expCount = 0;
             }
         }
     }
 
-    if (decimalPointCount > 0) {
-        buf[zeroPos++] = 'e';
-        buf[zeroPos++] = '+';
-        auto tmp = u64toa(decimalPointCount, buf + zeroPos);
-        zeroPos += tmp;
-    } else if (zeroCount > 0) {
-        buf[zeroPos++] = 'e';
-        buf[zeroPos++] = '-';
-        auto tmp = u64toa(zeroCount, buf + zeroPos);
-        zeroPos += tmp;
+    if (flags & F_TRIM_TAILING_ZERO) {
+        while (len > 0 && p[len - 1] == '0') {
+            len--;
+        }
+
+        if (p[len - 1] == '.') {
+            len--;
+        }
     }
 
-    // '\0' end
-    buf[zeroPos] = '\0';
+    if (expCount || (flags & F_EXPONENTIAL_NOTATION)) {
+        // 为科学记数法
+        if (expCount >= 0) {
+            p[len++] = 'e';
+            p[len++] = '+';
+        } else {
+            expCount = -expCount;
+            p[len++] = 'e';
+            p[len++] = '-';
+        }
+        len += u64toa(expCount, p + len);
+    }
 
-    return (uint32_t)zeroPos;
+    return len + isNegative;
 }
 
 /**
@@ -623,7 +647,11 @@ uint32_t floatToString(double value, char *buf) {
  *     10.00     => 10
  *     1.11000 => 1.11
  */
-uint32_t floatToString(double value, char *buf, int radix) {
+uint32_t floatToStringWithRadix(double value, char *buf, size_t bufSize, int radix) {
+    if (radix == 0) {
+        return floatToString(value, buf);
+    }
+
     size_t i = 0;
     size_t LOOP_COUNT = 18;
 
@@ -646,7 +674,7 @@ uint32_t floatToString(double value, char *buf, int radix) {
 
     buf[i++] = '.';
 
-    while (i < LOOP_COUNT) {
+    while (i < LOOP_COUNT && i < bufSize) {
         value *= radix;
         int n = int(value);
         buf[i++] = NUM_TABLE[n];
@@ -657,6 +685,9 @@ uint32_t floatToString(double value, char *buf, int radix) {
     }
 
     // '\0' end
+    if (zeroPos >= bufSize) {
+        zeroPos = bufSize - 1;
+    }
     buf[zeroPos] = '\0';
 
     return (uint32_t)zeroPos;
@@ -869,6 +900,29 @@ void stringFromColor(char szStr[], COLORREF clr)
 
 #include "utils/unittest.h"
 
+TEST(StringEx, roundFloatString) {
+    char buf[64];
+    uint32_t pos, zeroPos;
+
+    strcpy(buf, "1.9"); pos = 3; zeroPos = 3;
+    roundFloatString(buf, pos, zeroPos);
+    ASSERT_TRUE(SizedString(buf, pos).equal("2.0"));
+    ASSERT_EQ(pos, 3);
+    ASSERT_EQ(zeroPos, 1);
+
+    strcpy(buf, "9.9"); pos = 3; zeroPos = 3;
+    roundFloatString(buf, pos, zeroPos);
+    ASSERT_TRUE(SizedString(buf, pos).equal("10.0"));
+    ASSERT_EQ(pos, 4);
+    ASSERT_EQ(zeroPos, 2);
+
+    strcpy(buf, "9.999"); pos = 5; zeroPos = 5;
+    roundFloatString(buf, pos, zeroPos);
+    ASSERT_TRUE(SizedString(buf, pos).equal("10.000"));
+    ASSERT_EQ(pos, 6);
+    ASSERT_EQ(zeroPos, 2);
+}
+
 TEST(StringEx, floatToString) {
     char buf[64];
     uint32_t len;
@@ -891,27 +945,27 @@ TEST(StringEx, floatToString) {
     len = floatToString(1.332e-10, buf);
     ASSERT_TRUE(SizedString(buf, len).equal("1.332e-10"));
 
-    len = floatToString(4.940656458412468e-324, buf);
-    ASSERT_TRUE(SizedString(buf, len).equal("4.940656458412468e-324"));
+    len = floatToString(5e-324, buf);
+    ASSERT_TRUE(SizedString(buf, len).equal("5e-324"));
 
     len = floatToString(9.999999999999981568e20, buf);
-    ASSERT_TRUE(SizedString(buf, len).equal("999999999999998156800"));
+    ASSERT_TRUE(SizedString(buf, len).equal("999999999999998200000"));
 
     len = floatToString(1e21, buf);
     ASSERT_TRUE(SizedString(buf, len).equal("1e+21"));
 
     // 1.7976931348623157e+308
     len = floatToString(1.7976931348623157e+308, buf);
-    ASSERT_TRUE(SizedString(buf, len).equal("1.797693134862314e+308"));
+    ASSERT_TRUE(SizedString(buf, len).equal("1.7976931348623157e+308"));
 
     len = floatToString(-9.2233720368547758E+18, buf);
-    ASSERT_TRUE(SizedString(buf, len).equal("-9223372036854775808"));
+    ASSERT_TRUE(SizedString(buf, len).equal("-9223372036854776000"));
 
     len = floatToString(1 / 3.0, buf);
     ASSERT_TRUE(SizedString(buf, len).equal("0.3333333333333333"));
 
     len = floatToString(1 / 300.0, buf);
-    ASSERT_TRUE(SizedString(buf, len).equal("0.003333333333333333"));
+    ASSERT_TRUE(SizedString(buf, len).equal("0.0033333333333333335"));
 
     len = floatToString(-1 / 2.0, buf);
     ASSERT_TRUE(SizedString(buf, len).equal("-0.5"));
@@ -923,7 +977,7 @@ TEST(StringEx, floatToString) {
     ASSERT_TRUE(SizedString(buf, len).equal("-0.3333333333333333"));
 
     len = floatToString(-1 / 300.0, buf);
-    ASSERT_TRUE(SizedString(buf, len).equal("-0.003333333333333333"));
+    ASSERT_TRUE(SizedString(buf, len).equal("-0.0033333333333333335"));
 
     len = floatToString(INFINITY, buf);
     ASSERT_TRUE(SizedString(buf, len).equal("Infinity"));
@@ -936,6 +990,12 @@ TEST(StringEx, floatToString) {
 
     len = floatToString(-NAN, buf);
     ASSERT_TRUE(SizedString(buf, len).equal("NaN"));
+
+    len = floatToStringEx(1234.5, buf, sizeof(buf), 2, F_FIXED_PRECISION);
+    ASSERT_TRUE(SizedString(buf, len).equal("1.2e+3"));
+
+    len = floatToStringEx(0.1234, buf, sizeof(buf), 1, F_FIXED_PRECISION);
+    ASSERT_TRUE(SizedString(buf, len).equal("0.1"));
 }
 
 TEST(StringEx, testTrimStrRight) {

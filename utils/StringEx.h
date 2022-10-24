@@ -46,8 +46,16 @@ size_t itoa(int64_t value, char *buffer);
 size_t itoa(int64_t value, char *buffer, int radix);
 string itos(int64_t value);
 
-uint32_t floatToString(double value, char *buf);
-uint32_t floatToString(double value, char *buf, int radix);
+enum FloatToStringFlags {
+    F_TRIM_TAILING_ZERO         = 1,
+    F_EXPONENTIAL_NOTATION      = 1 << 1,
+    F_FIXED_DIGITS              = 1 << 2,
+    F_FIXED_PRECISION           = 1 << 3,
+};
+
+uint32_t floatToStringEx(double value, char *buf, uint32_t bufSize, int32_t precisionCount = -1, uint32_t flags = F_TRIM_TAILING_ZERO);
+uint32_t floatToStringWithRadix(double value, char *buf, size_t bufSize, int radix);
+inline uint32_t floatToString(double value, char *buf) { return floatToStringEx(value, buf, 32); }
 
 string stringPrintf(cstr_t format, ...);
 string stringPrintf(cstr_t format, va_list args);

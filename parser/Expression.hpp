@@ -1101,15 +1101,15 @@ public:
 
             stream.writeOpCode(OP_ASSIGN_MEMBER_INDEX);
         } else {
-            right->convertToByteCode(stream);
-
             assert(left->type == NT_IDENTIFIER);
             auto id = (JsExprIdentifier *)left;
             id->setNotBeingAssigned();
             id->convertToByteCode(stream);
             id->setBeingAssigned();
 
+            right->convertToByteCode(stream);
             stream.writeOpCode(xopr);
+
             left->convertAssignableToByteCode(nullptr, stream);
         }
     }

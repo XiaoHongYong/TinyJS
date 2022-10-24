@@ -11,6 +11,21 @@
 #include "objects/JsRegExp.hpp"
 
 
+const uint64_t MAX_UINT64 = 0xFFFFFFFFFFFFFFFFL;
+static_assert((uint64_t)-1 == MAX_UINT64);
+
+static inline int toDigit(uint8_t ch) {
+    if (isDigit(ch)) {
+        return ch - '0';
+    } else if (ch >= 'a' && ch <= 'z') {
+        return ch - 'a' + 10;
+    } else if (ch >= 'A' && ch <= 'z') {
+        return ch - 'A' + 10;
+    } else {
+        return 255;
+    }
+}
+
 uint8_t *parseNumber(uint8_t *start, uint8_t *end, double &retValue) {
     retValue = 0;
     if (start >= end) {
@@ -18,62 +33,64 @@ uint8_t *parseNumber(uint8_t *start, uint8_t *end, double &retValue) {
     }
 
     if (start + 1 < end && *start == '0' && start[1] != '.') {
-        int64_t n = 0;
+        int base = 8;
         start++;
         auto ch = *start;
         if ((ch == 'x' || ch == 'X') && start + 1 < end) {
             // Read hex numbers
             start++;
-            while (start < end) {
-                ch = *start;
-                if (isDigit(ch)) {
-                    n = n * 16 + ch - '0';
-                } else if (ch >= 'a' && ch <= 'f') {
-                    n = n * 16 + (ch - 'a' + 10);
-                } else if (ch >= 'A' && ch <= 'F') {
-                    n = n * 16 + (ch - 'A' + 10);
-                } else {
-                    break;
-                }
-                start++;
-            }
-            retValue = n;
+            base = 16;
         } else if ((ch == 'b' || ch == 'B') && start + 1 < end) {
             // Read binary numbers
             start++;
-            while (start < end) {
-                ch = *start;
-                if (ch == '0') {
-                    n = n * 2;
-                } else if (ch == '1') {
-                    n = n * 2 + 1;
-                } else {
-                    break;
-                }
-                start++;
-            }
-            retValue = n;
+            base = 2;
         } else {
             // Read octal numbers
             if ((ch == 'o' || ch == 'O') && start + 1 < end) {
                 start++;
             }
-            while (start < end) {
-                ch = *start;
-                if ('0' <= ch && ch <= '7') {
-                    n = n * 8 + ch - '0';
-                    start++;
-                } else {
-                    break;
-                }
+            base = 8;
+        }
+
+        uint64_t n = 0, exp = 0;
+        auto orgStart = start;
+        while (start < end) {
+            ch = *start;
+            int x = toDigit(ch);
+            if (x >= base) {
+                break;
             }
-            retValue = n;
+            start++;
+            uint64_t t = n * base + x;
+            if (t < n || exp > 0) {
+                // 溢出了
+                exp++;
+            } else {
+                n = t;
+            }
+        }
+
+        if (orgStart == start && *(start - 1) != '0') {
+            return orgStart - 1;
+        }
+
+        retValue = n;
+        if (exp > 0) {
+            // 溢出了
+            retValue *= pow(10, exp);
         }
     } else {
         // Number
-        int64_t n = 0;
+        uint64_t n = 0;
+        int exp = 0;
         while (start < end && isDigit(*start)) {
-            n = n * 10 + *start - '0';
+            uint64_t t = n * 10 + *start - '0';
+            if (t < n || exp > 0) {
+                // 溢出了
+                exp++;
+            } else {
+                n = t;
+            }
             start++;
         }
 
@@ -81,7 +98,7 @@ uint8_t *parseNumber(uint8_t *start, uint8_t *end, double &retValue) {
         if (start + 1 < end && *start == '.') {
             start++;
             n = 0;
-            int64_t factor = 1;
+            uint64_t factor = 1;
 
             // Numbers after .
             while (start < end) {
@@ -89,8 +106,13 @@ uint8_t *parseNumber(uint8_t *start, uint8_t *end, double &retValue) {
                     break;
                 }
 
-                n = n * 10 + *start - '0';
-                factor *= 10;
+                static_assert((uint64_t)-1 > (uint64_t)1e19);
+                static_assert((uint64_t)-1 < 1e20);
+                if (factor < (uint64_t)1e19) {
+                    // factor 没有溢出
+                    n = n * 10 + *start - '0';
+                    factor *= 10;
+                }
                 start++;
             }
 
@@ -100,9 +122,9 @@ uint8_t *parseNumber(uint8_t *start, uint8_t *end, double &retValue) {
         if (start + 1 < end && (*start == 'e' || *start == 'E')) {// E,e
             start++;
 
-            bool nagative = false;
+            int sign = 1;
             if (*start == '-') {
-                nagative = true;
+                sign = -1;
                 start++;
             } else if (*start == '+') {
                 start++;
@@ -114,10 +136,16 @@ uint8_t *parseNumber(uint8_t *start, uint8_t *end, double &retValue) {
                 start++;
             }
 
-            if (nagative) {
-                retValue /= pow(10, n);
+            exp += sign * (int)n;
+        }
+
+        if (exp != 0) {
+            if (exp == -324) {
+                // pow(10, -324) 值为 0.
+                retValue *= 1e-323;
+                retValue /= 10;
             } else {
-                retValue *= pow(10, n);
+                retValue *= pow(10, exp);
             }
         }
     }
