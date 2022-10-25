@@ -14,18 +14,6 @@
 const uint64_t MAX_UINT64 = 0xFFFFFFFFFFFFFFFFL;
 static_assert((uint64_t)-1 == MAX_UINT64);
 
-static inline int toDigit(uint8_t ch) {
-    if (isDigit(ch)) {
-        return ch - '0';
-    } else if (ch >= 'a' && ch <= 'z') {
-        return ch - 'a' + 10;
-    } else if (ch >= 'A' && ch <= 'z') {
-        return ch - 'A' + 10;
-    } else {
-        return 255;
-    }
-}
-
 uint8_t *parseNumber(uint8_t *start, uint8_t *end, double &retValue) {
     retValue = 0;
     if (start >= end) {

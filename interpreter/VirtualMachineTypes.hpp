@@ -401,6 +401,12 @@ enum JsObjectValueIndex {
 enum JsNumberValueIndex {
     JS_NUMBER_IDX_NAN               = 1,
     JS_NUMBER_IDX_INF               = 2,
+    JS_NUMBER_IDX_EPSILON           = 3,
+    JS_NUMBER_IDX_MAX_SAFE_INTEGER,
+    JS_NUMBER_IDX_MAX_VALUE,
+    JS_NUMBER_IDX_MIN_SAFE_INTEGER,
+    JS_NUMBER_IDX_MIN_VALUE,
+    JS_NUMBER_IDX_NEGATIVE_INFINITY,
 };
 
 const JsValue jsValueGlobalThis = JsValue(JDT_OBJ_GLOBAL_THIS, JS_OBJ_GLOBAL_THIS_IDX);
@@ -421,6 +427,12 @@ const JsValue jsValueTrue = JsValue(JDT_BOOL, true);
 const JsValue jsValueFalse = JsValue(JDT_BOOL, false);
 const JsValue jsValueNaN = JsValue(JDT_NUMBER, JS_NUMBER_IDX_NAN);
 const JsValue jsValueInf = JsValue(JDT_NUMBER, JS_NUMBER_IDX_INF);
+const JsValue jsValueEpsilonNumber = JsValue(JDT_NUMBER, JS_NUMBER_IDX_EPSILON);
+const JsValue jsValueMaxSafeInt = JsValue(JDT_NUMBER, JS_NUMBER_IDX_MAX_SAFE_INTEGER);
+const JsValue jsValueMaxNumber = JsValue(JDT_NUMBER, JS_NUMBER_IDX_MAX_VALUE);
+const JsValue jsValueMinSafeInt = JsValue(JDT_NUMBER, JS_NUMBER_IDX_MIN_SAFE_INTEGER);
+const JsValue jsValueMinNumber = JsValue(JDT_NUMBER, JS_NUMBER_IDX_MIN_VALUE);
+const JsValue jsValueNegInf = JsValue(JDT_NUMBER, JS_NUMBER_IDX_NEGATIVE_INFINITY);
 
 using VecJsValues = std::vector<JsValue>;
 using VecJsDoubles = std::vector<JsDouble>;

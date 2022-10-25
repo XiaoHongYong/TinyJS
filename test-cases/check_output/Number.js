@@ -179,3 +179,223 @@ f();
 9 1.234e-7 0.000 1.234000000e-7 1e-7 1.23400000e-7
 */
 
+
+// Index: 3
+function f() {
+    console.log(0, Number.EPSILON);
+    console.log(1, Number.MAX_SAFE_INTEGER);
+    console.log(2, Number.MAX_VALUE);
+    console.log(3, Number.MIN_SAFE_INTEGER);
+    console.log(4, Number.MIN_VALUE);
+    console.log(5, Number.NEGATIVE_INFINITY);
+    console.log(6, Number.NaN);
+    console.log(7, Number.POSITIVE_INFINITY);
+    console.log(8, Number.isFinite(Infinity));
+    console.log(9, Number.isFinite(NaN));
+    console.log(10, Number.isFinite(-Infinity));
+    console.log(11, Number.isFinite(0));
+    console.log(12, Number.isFinite(2e64));
+    console.log(13, Number.isFinite('1'));
+    console.log(14, Number.isFinite('0'));
+    console.log(15, Number.isFinite(null));
+    console.log(16, Number.isFinite(undefined));
+    console.log(17, Number.isFinite(Symbol()));
+    console.log(18, Number.isNaN(NaN));
+    console.log(19, Number.isNaN(Infinity));
+    console.log(20, Number.isNaN(-Infinity));
+    console.log(21, Number.isNaN(0));
+    console.log(22, Number.isNaN(2e64));
+    console.log(23, Number.isNaN('1'));
+    console.log(24, Number.isNaN('0'));
+    console.log(25, Number.isNaN(null));
+    console.log(26, Number.isNaN(undefined));
+    console.log(27, Number.isNaN(Symbol()));
+    console.log(28, Number.isInteger(NaN));
+    console.log(29, Number.isInteger(Infinity));
+    console.log(30, Number.isInteger(99999999999999999999999));
+    console.log(31, Number.isInteger(-100000));
+    console.log(32, Number.isInteger(2e64));
+    console.log(33, Number.isInteger('1'));
+    console.log(34, Number.isInteger(0.1));
+    console.log(35, Number.isInteger(null));
+    console.log(36, Number.isInteger(undefined));
+    console.log(37, Number.isInteger(Symbol()));
+    console.log(38, Number.isInteger(900719925474098.1));
+    console.log(39, Number.isInteger(9007199254740992));
+    console.log(40, Number.isInteger(5.000000000000001));
+    console.log(41, Number.isInteger(5.0000000000000001));
+    console.log(42, Number.isSafeInteger(2e64));
+    console.log(43, Number.isSafeInteger('1'));
+    console.log(44, Number.isSafeInteger(0.1));
+    console.log(45, Number.isSafeInteger(null));
+    console.log(46, Number.isSafeInteger(undefined));
+    console.log(47, Number.isSafeInteger(Symbol()));
+    console.log(48, Number.isSafeInteger(9007199254740990.9));
+    console.log(49, Number.isSafeInteger(9007199254740992));
+    console.log(50, Number.isSafeInteger(99999999999999999999999));
+    console.log(51, Number.isSafeInteger(-2323009324));
+    console.log(52, Number.isSafeInteger(-99999999999999999999999));
+    console.log(53, Number.parseFloat('1'));
+    console.log(54, Number.parseFloat(0.1));
+    console.log(55, Number.parseFloat(null));
+    console.log(56, Number.parseFloat(undefined));
+    try {
+        console.log(57, Number.parseFloat(Symbol()));
+    } catch (e) {
+        console.log(e.name + ': ' + e.message);
+    }
+    console.log(58, Number.parseFloat('9007199254740990.9'));
+    console.log(59, Number.parseFloat('90071992 54740992'));
+    console.log(60, Number.parseFloat('99999999999999999999999'));
+    console.log(61, Number.parseFloat('+2.34e+6'));
+    console.log(62, Number.parseFloat('-99999999999999999999999'));
+    console.log(63, Number.parseFloat('0xff'));
+    console.log(64, Number.parseFloat('0b1'));
+    console.log(65, Number.parseFloat('NaN'));
+    console.log(66, Number.parseFloat('Infinity'));
+    console.log(67, Number.parseFloat('-NaN'));
+    console.log(68, Number.parseFloat('-Infinity'));
+    console.log(69, Number.parseFloat('-1.234e-5'));
+    console.log(73, Number.parseInt('1'));
+    console.log(74, Number.parseInt(0.1));
+    console.log(75, Number.parseInt(null));
+    console.log(76, Number.parseInt(undefined));
+    try {
+        console.log(57, Number.parseInt(Symbol()));
+    } catch (e) {
+        console.log(e.name + ': ' + e.message);
+    }
+    console.log(78, Number.parseInt('9007199254740990.9'));
+    console.log(79, Number.parseInt('90071992 54740992'));
+    console.log(80, Number.parseInt('99999999999999999999999'));
+    console.log(81, Number.parseInt('+2.34e+6'));
+    console.log(82, Number.parseInt('-99999999999999999999999'));
+    console.log(83, Number.parseInt('0xff'));
+    console.log(84, Number.parseInt('0b1'));
+    console.log(85, Number.parseInt('NaN'));
+    console.log(86, Number.parseInt('Infinity'));
+    console.log(87, Number.parseInt('-NaN'));
+    console.log(88, Number.parseInt('-Infinity'));
+    console.log(89, Number.parseInt('-1.234e-5'));
+    console.log(94, Number.parseInt(0.1, 36));
+    console.log(95, Number.parseInt(null, 36));
+    console.log(96, Number.parseInt(undefined, 36));
+    console.log(98, Number.parseInt('9007199254740990.9', 35));
+    console.log(99, Number.parseInt('90071992 54740992', 36));
+    console.log(100, Number.parseInt('99999999999999999999999', 36));
+    console.log(101, Number.parseInt('+2.34e+6', 36));
+    console.log(102, Number.parseInt('-99999999999999999999999', 36));
+    console.log(103, Number.parseInt('0xff', 36));
+    console.log(104, Number.parseInt('0b1', 36));
+    console.log(105, Number.parseInt('NaN', 36));
+    console.log(106, Number.parseInt('Infinity', 36));
+    console.log(107, Number.parseInt('-NaN', 36));
+    console.log(108, Number.parseInt('-Infinity', 36));
+    console.log(109, Number.parseInt('-1.234e-5', 36));
+}
+f();
+/* OUTPUT
+0 2.220446049250313e-16
+1 9007199254740991
+2 1.7976931348623157e+308
+3 -9007199254740991
+4 5e-324
+5 -Infinity
+6 NaN
+7 Infinity
+8 false
+9 false
+10 false
+11 true
+12 true
+13 false
+14 false
+15 false
+16 false
+17 false
+18 true
+19 false
+20 false
+21 false
+22 false
+23 false
+24 false
+25 false
+26 false
+27 false
+28 false
+29 false
+30 true
+31 true
+32 true
+33 false
+34 false
+35 false
+36 false
+37 false
+38 false
+39 true
+40 false
+41 true
+42 false
+43 false
+44 false
+45 false
+46 false
+47 false
+48 true
+49 false
+50 false
+51 true
+52 false
+53 1
+54 0.1
+55 NaN
+56 NaN
+TypeError: Cannot convert a Symbol value to a string
+58 9007199254740991
+59 90071992
+60 1e+23
+61 2340000
+62 -1e+23
+63 0
+64 0
+65 NaN
+66 Infinity
+67 NaN
+68 -Infinity
+69 -0.00001234
+73 1
+74 0
+75 NaN
+76 NaN
+TypeError: Cannot convert a Symbol value to a string
+78 9007199254740990
+79 90071992
+80 1e+23
+81 2
+82 -1e+23
+83 255
+84 0
+85 NaN
+86 NaN
+87 NaN
+88 NaN
+89 -1
+94 0
+95 1112745
+96 86464843759093
+98 1.3039804901801701e+24
+99 705289292822
+100 1.6037326933824684e+35
+101 2
+102 -1.6037326933824684e+35
+103 43323
+104 397
+105 30191
+106 1461559270678
+107 -30191
+108 -1461559270678
+109 -1
+*/
+

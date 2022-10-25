@@ -80,6 +80,18 @@ string hexToStr(const uint8_t *data, size_t len);
 int hexToInt(int chHex);
 uint32_t hexToInt(cstr_t str);
 
+inline int toDigit(uint8_t ch) {
+    if ('0' <= ch && ch <= '9') {
+        return ch - '0';
+    } else if (ch >= 'a' && ch <= 'z') {
+        return ch - 'a' + 10;
+    } else if (ch >= 'A' && ch <= 'z') {
+        return ch - 'A' + 10;
+    } else {
+        return 255;
+    }
+}
+
 template<typename _int>
 inline cstr_t parseInt(cstr_t str, _int &value) {
     bool bNegative = false;

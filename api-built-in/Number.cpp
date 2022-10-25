@@ -36,12 +36,220 @@ void numberConstructor(VMContext *ctx, const JsValue &thiz, const Arguments &arg
 }
 
 
+void numberIsFinite(VMContext *ctx, const JsValue &thiz, const Arguments &args) {
+    auto v = args.getAt(0);
+    if (v.type == JDT_NUMBER) {
+        auto d = ctx->runtime->getDouble(v);
+        ctx->retValue = JsValue(JDT_BOOL, !isnan(d) && !isinf(d));
+    } else if (v.type == JDT_INT32) {
+        ctx->retValue = jsValueTrue;
+    } else {
+        ctx->retValue = jsValueFalse;
+    }
+}
+
+void numberIsInteger(VMContext *ctx, const JsValue &thiz, const Arguments &args) {
+    auto v = args.getAt(0);
+    if (v.type == JDT_NUMBER) {
+        auto d = ctx->runtime->getDouble(v);
+        ctx->retValue = JsValue(JDT_BOOL, !isinf(d) && (d == (int64_t)d || abs(d) >= 9007199254740992L)); // 2 ** 53
+    } else if (v.type == JDT_INT32) {
+        ctx->retValue = jsValueTrue;
+    } else {
+        ctx->retValue = jsValueFalse;
+    }
+}
+
+void numberIsSafeInteger(VMContext *ctx, const JsValue &thiz, const Arguments &args) {
+    auto v = args.getAt(0);
+    if (v.type == JDT_NUMBER) {
+        auto d = ctx->runtime->getDouble(v);
+        ctx->retValue = JsValue(JDT_BOOL, d == (int64_t)d && d < 9007199254740992L); // 2 ** 53
+    } else if (v.type == JDT_INT32) {
+        ctx->retValue = jsValueTrue;
+    } else {
+        ctx->retValue = jsValueFalse;
+    }
+}
+
+void numberParseFloat(VMContext *ctx, const JsValue &thiz, const Arguments &args) {
+    auto v = args.getAt(0);
+    while (true) {
+        if (v.type == JDT_CHAR) {
+            if (isDigit(v.value.n32)) {
+                ctx->retValue = JsValue(JDT_INT32, v.value.n32 - '0');
+            } else {
+                ctx->retValue = jsValueNaN;
+            }
+        } else if (v.type == JDT_STRING) {
+            auto str = ctx->runtime->getString(v).utf8Str();
+            double d = NAN;
+            bool negative = false;
+
+            str.trimStart(sizedStringBlanks);
+            if (str.len > 0) {
+                if (str.data[0] == '-') {
+                    negative = true;
+                    str.data++; str.len--;
+                } else if (str.data[0] == '+') {
+                    str.data++; str.len--;
+                }
+            }
+
+            if (str.startsWith(SS_INFINITY)) {
+                d = INFINITY;
+            } else if (str.startsWith(SS_INFINITY)) {
+                d = NAN;
+            } else {
+                for (int i = 0; i < str.len; i++) {
+                    auto c = str.data[i];
+                    if (!isDigit(c) && c != 'e' && c != 'E' && c != '.'  && c != '-' && c != '+') {
+                        // parseNumber 不支持 0xff, 0o123 等的解析，所以提前截断需要解析的字符串
+                        str.len = i;
+                        break;
+                    }
+                }
+
+                auto p = parseNumber(str, d);
+                if (p == str.data) {
+                    d = NAN;
+                }
+            }
+
+            if (negative) {
+                d = -d;
+            }
+
+            int32_t n = (int32_t)d;
+            if (n == d) {
+                ctx->retValue = JsValue(JDT_INT32, n);
+            } else if (isnan(d)) {
+                ctx->retValue = jsValueNaN;
+            } else {
+                ctx->retValue = ctx->runtime->pushDoubleValue(d);
+            }
+        } else if (v.isNumber()) {
+            ctx->retValue = v;
+        } else if (v.type == JDT_SYMBOL) {
+            // 抛出异常
+            ctx->runtime->toSizedStringStrictly(ctx, v);
+        } else if (v.type >= JDT_OBJECT) {
+            v = ctx->runtime->toString(ctx, v);
+            continue;
+        } else {
+            ctx->retValue = jsValueNaN;
+        }
+        return;
+    }
+}
+
+double parseInt(uint8_t *start, uint8_t *end, int base = -1) {
+    if (start >= end || base > 36) {
+        return NAN;
+    }
+
+    int sign = 1;
+    if (*start == '-') {
+        sign = -1;
+        start++;
+    } else if (*start == '+') {
+        start++;
+    }
+
+    auto orgStart = start;
+    if (*start == '0' && base == -1) {
+        start++;
+        auto ch = *start;
+        if ((ch == 'x' || ch == 'X') && start + 1 < end) {
+            // Read hex numbers
+            start++;
+            if (base != -1 && base != 16) {
+                return 0;
+            }
+            base = 16;
+        }
+    }
+
+    if (base == -1) {
+        base = 10;
+    }
+
+    uint64_t n = 0, exp = 0, maxN = ((uint64_t)-1) / base - base;
+    while (start < end) {
+        auto ch = *start;
+        int x = toDigit(ch);
+        if (x >= base) {
+            break;
+        }
+
+        start++;
+        uint64_t t = n * base + x;
+        if (t > maxN || exp > 0) {
+            // 溢出了
+            exp++;
+        } else {
+            n = t;
+        }
+    }
+
+    if (orgStart == start) {
+        return NAN;
+    }
+
+    double value = n;
+    if (exp > 0) {
+        // 溢出了
+        value *= pow(base, exp);
+    }
+
+    return value * sign;
+}
+
+void numberParseInt(VMContext *ctx, const JsValue &thiz, const Arguments &args) {
+    auto runtime = ctx->runtime;
+    auto v = args.getAt(0);
+    auto base = args.getIntAt(ctx, 1, -1);
+
+    auto str = runtime->toSizedStringStrictly(ctx, v);
+    str.trimStart(sizedStringBlanks);
+
+    auto d = parseInt(str.data, str.data + str.len, base);
+    int32_t n = (int32_t)d;
+    if (n == d) {
+        ctx->retValue = JsValue(JDT_INT32, n);
+    } else if (isnan(d)) {
+        ctx->retValue = jsValueNaN;
+    } else {
+        ctx->retValue = ctx->runtime->pushDoubleValue(d);
+    }
+}
+
 void numberIsNaN(VMContext *ctx, const JsValue &thiz, const Arguments &args) {
-    ctx->retValue = jsValueUndefined;
+    auto v = args.getAt(0);
+    if (v.type == JDT_NUMBER) {
+        auto d = ctx->runtime->getDouble(v);
+        ctx->retValue = JsValue(JDT_BOOL, isnan(d));
+    } else {
+        ctx->retValue = jsValueFalse;
+    }
 }
 
 static JsLibProperty numberFunctions[] = {
+    { "NaN", nullptr, nullptr, jsValueNaN },
+    { "EPSILON", nullptr, nullptr, jsValueEpsilonNumber },
+    { "MAX_SAFE_INTEGER", nullptr, nullptr, jsValueMaxSafeInt },
+    { "MAX_VALUE", nullptr, nullptr, jsValueMaxNumber },
+    { "MIN_SAFE_INTEGER", nullptr, nullptr, jsValueMinSafeInt },
+    { "MIN_VALUE", nullptr, nullptr, jsValueMinNumber },
+    { "NEGATIVE_INFINITY", nullptr, nullptr, jsValueNegInf },
+    { "POSITIVE_INFINITY", nullptr, nullptr, jsValueInf },
+
+    { "isFinite", numberIsFinite },
+    { "isInteger", numberIsInteger },
     { "isNaN", numberIsNaN },
+    { "isSafeInteger", numberIsSafeInteger, },
+    { "parseFloat", numberParseFloat, },
+    { "parseInt", numberParseInt, },
     { "name", nullptr, "Number" },
     { "length", nullptr, nullptr, JsValue(JDT_INT32, 1) },
     { "prototype", nullptr, nullptr, JsValue(JDT_INT32, 1) },

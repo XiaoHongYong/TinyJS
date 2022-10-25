@@ -84,6 +84,8 @@ CONST_STRINGS = [
     [ 'LastIndex', 'lastIndex' ],
     [ 'Groups', 'groups' ],
     [ 'Input', 'input' ],
+    [ 'Infinity', 'Infinity' ],
+    [ 'NaN', 'NaN' ],
     # [ '', '' ],
 ]
 

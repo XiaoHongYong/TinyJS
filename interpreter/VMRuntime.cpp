@@ -75,6 +75,24 @@ VMRuntimeCommon::VMRuntimeCommon() {
     idx = pushDoubleValue(INFINITY);
     assert(idx.value.index == jsValueInf.value.index);
 
+    idx = pushDoubleValue(2.220446049250313e-16);
+    assert(idx.value.index == jsValueEpsilonNumber.value.index);
+
+    idx = pushDoubleValue(9007199254740991);
+    assert(idx.value.index == jsValueMaxSafeInt.value.index);
+
+    idx = pushDoubleValue(1.7976931348623157e+308);
+    assert(idx.value.index == jsValueMaxNumber.value.index);
+
+    idx = pushDoubleValue(-9007199254740991);
+    assert(idx.value.index == jsValueMinSafeInt.value.index);
+
+    idx = pushDoubleValue(5e-324);
+    assert(idx.value.index == jsValueMinNumber.value.index);
+
+    idx = pushDoubleValue(-INFINITY);
+    assert(idx.value.index == jsValueNegInf.value.index);
+
     Function *rootFunc = PoolNew(_resourcePool.pool, Function)(&_resourcePool, nullptr, 0);
     globalScope = new VMGlobalScope(rootFunc->scope);
 
@@ -776,12 +794,7 @@ JsValue VMRuntime::jsObjectToString(VMContext *ctx, const JsValue &v) {
 JsValue VMRuntime::toString(VMContext *ctx, const JsValue &v) {
     JsValue val = v;
     if (val.type >= JDT_OBJECT) {
-        vm->callMember(ctx, v, SS_TOSTRING, Arguments());
-        if (ctx->retValue.type >= JDT_OBJECT) {
-            ctx->throwException(PE_TYPE_ERROR, " Cannot convert object to primitive value");
-            return jsStringValueEmpty;
-        }
-        val = ctx->retValue;
+        val = jsObjectToString(ctx, v);
     }
 
     switch (val.type) {
