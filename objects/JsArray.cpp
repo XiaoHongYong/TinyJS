@@ -554,6 +554,23 @@ void JsArray::setLength(uint32_t length) {
     }
 }
 
+void JsArray::dump(VMContext *ctx, const JsValue &thiz, VecJsValues &values) {
+    for (auto b : _blocks) {
+        values.resize(b->index + b->items.size(), jsValueUndefined);
+
+        int i = b->index;
+        for (auto &prop : b->items) {
+            if (prop.isGSetter && prop.value.type >= JDT_FUNCTION) {
+                ctx->vm->callMember(ctx, thiz, prop.value, Arguments());
+                values[i] = ctx->retValue;
+            } else {
+                values[i] = prop.value;
+            }
+            i++;
+        }
+    }
+}
+
 void JsArray::_newObject(VMContext *ctx) {
     assert(_obj == nullptr);
     _obj = new JsObject(jsValuePrototypeArray);

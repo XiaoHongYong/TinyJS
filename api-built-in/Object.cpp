@@ -59,6 +59,7 @@ SizedString objectPrototypeToSizedString(const JsValue &thiz) {
         case JDT_OBJ_GLOBAL_THIS:
         case JDT_LIB_OBJECT: return MAKE_STABLE_STR("[object Object]");
         case JDT_NATIVE_FUNCTION:
+        case JDT_BOUND_FUNCTION:
         case JDT_FUNCTION: return MAKE_STABLE_STR("[object Function]");
         default:
             assert(0);

@@ -7,6 +7,7 @@
 
 #include "BuiltIn.hpp"
 #include "objects/JsArray.hpp"
+#include "objects/JsArguments.hpp"
 
 
 static void arrayConstructor(VMContext *ctx, const JsValue &thiz, const Arguments &args) {
@@ -46,6 +47,65 @@ static JsLibProperty arrayFunctions[] = {
 
 void objectPrototypeToString(VMContext *ctx, const JsValue &thiz, const Arguments &args);
 
+void arrayPrototypeAt(VMContext *ctx, const JsValue &thiz, const Arguments &args) {
+    auto runtime = ctx->runtime;
+    auto index = args.getIntAt(ctx, 0, 0);
+
+    ctx->retValue = jsValueUndefined;
+
+    switch (thiz.type) {
+        case JDT_CHAR:
+            if (index == -1 || index == 0) {
+                ctx->retValue = thiz;
+            }
+            break;
+        case JDT_STRING: {
+            auto &str = ctx->runtime->getStringWithRandAccess(thiz);
+            if (index < 0) {
+                // 负数倒着访问
+                index += str.size();
+            }
+
+            if (index < str.size()) {
+                ctx->retValue = JsValue(JDT_CHAR, str.chartAt(index));
+            }
+            break;
+        }
+        case JDT_ARRAY: {
+            auto jsthiz = (JsArray *)runtime->getObject(thiz);
+            auto length = jsthiz->length();
+            if (index < 0) {
+                // 负数倒着访问
+                index += length;
+            }
+
+            if (index < length) {
+                ctx->retValue = jsthiz->getByIndex(ctx, thiz, index);
+            }
+            break;
+        }
+        case JDT_ARGUMENTS: {
+            auto jsthiz = (JsArguments *)runtime->getObject(thiz);
+            auto length = jsthiz->length();
+            if (index < 0) {
+                // 负数倒着访问
+                index += length;
+            }
+
+            if (index < length) {
+                ctx->retValue = jsthiz->getByIndex(ctx, thiz, index);
+            }
+            break;
+        }
+        default: {
+            if (thiz.type >= JDT_OBJECT) {
+                auto jsthiz = runtime->getObject(thiz);
+                ctx->retValue = jsthiz->getByIndex(ctx, thiz, index);
+            }
+        }
+    }
+}
+
 void arrayPrototypeToString(VMContext *ctx, const JsValue &thiz, const Arguments &args) {
     auto runtime = ctx->runtime;
 
@@ -62,6 +122,7 @@ void arrayPrototypeToString(VMContext *ctx, const JsValue &thiz, const Arguments
 }
 
 static JsLibProperty arrayPrototypeFunctions[] = {
+    { "at", arrayPrototypeAt },
     { "toString", arrayPrototypeToString },
 };
 

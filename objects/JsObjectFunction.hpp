@@ -8,42 +8,20 @@
 #ifndef JsObjectFunction_hpp
 #define JsObjectFunction_hpp
 
-#include "JsObject.hpp"
+#include "JsObjectLazy.hpp"
 
 
-class JsObjectFunction : public IJsObject {
+class JsObjectFunction : public JsObjectLazy {
 public:
     JsObjectFunction(const VecVMStackScopes &stackScopes, Function *function);
     ~JsObjectFunction();
 
-    virtual void definePropertyByName(VMContext *ctx, const SizedString &name, const JsProperty &descriptor) override;
-    virtual void definePropertyByIndex(VMContext *ctx, uint32_t index, const JsProperty &descriptor) override;
-    virtual void definePropertyBySymbol(VMContext *ctx, uint32_t index, const JsProperty &descriptor) override;
-
-    virtual void setByName(VMContext *ctx, const JsValue &thiz, const SizedString &name, const JsValue &value) override;
-    virtual void setByIndex(VMContext *ctx, const JsValue &thiz, uint32_t index, const JsValue &value) override;
-    virtual void setBySymbol(VMContext *ctx, const JsValue &thiz, uint32_t index, const JsValue &value) override;
-
-    virtual JsValue increaseByName(VMContext *ctx, const JsValue &thiz, const SizedString &name, int n, bool isPost) override;
-    virtual JsValue increaseByIndex(VMContext *ctx, const JsValue &thiz, uint32_t index, int n, bool isPost) override;
-    virtual JsValue increaseBySymbol(VMContext *ctx, const JsValue &thiz, uint32_t index, int n, bool isPost) override;
-
-    virtual JsProperty *getRawByName(VMContext *ctx, const SizedString &name, JsNativeFunction &funcGetterOut, bool includeProtoProp = true) override;
-    virtual JsProperty *getRawByIndex(VMContext *ctx, uint32_t index, bool includeProtoProp = true) override;
-    virtual JsProperty *getRawBySymbol(VMContext *ctx, uint32_t index, bool includeProtoProp = true) override;
-
-    virtual bool removeByName(VMContext *ctx, const SizedString &name) override;
-    virtual bool removeByIndex(VMContext *ctx, uint32_t index) override;
-    virtual bool removeBySymbol(VMContext *ctx, uint32_t index) override;
-
-    virtual void changeAllProperties(VMContext *ctx, int8_t configurable = -1, int8_t writable = -1) override;
-    virtual bool hasAnyProperty(VMContext *ctx, bool configurable, bool writable) override;
-    virtual void preventExtensions(VMContext *ctx) override;
-
     virtual IJsObject *clone() override;
-    virtual IJsIterator *getIteratorObject(VMContext *ctx, bool includeProtoProp = true) override;
 
     virtual void markReferIdx(VMRuntime *rt) override;
+
+protected:
+    virtual void onInitLazyProperty(VMContext *ctx, JsLazyProperty *prop) override;
 
 public:
     VecVMStackScopes            stackScopes;
@@ -52,17 +30,29 @@ public:
     Function                    *function;
 
 protected:
-    virtual void _newObject(VMContext *ctx);
+    JsLazyProperty              _props[5];
 
-    JsProperty                  _prototype;
-    JsProperty                  _name;
-    JsProperty                  _length;
-    JsProperty                  _caller;
-    JsProperty                  _arguments;
+};
 
-    JsProperty                  __proto__;
 
-    JsObject                    *_obj;
+class JsObjectBoundFunction : public JsObjectLazy {
+public:
+    JsObjectBoundFunction(const JsValue &func, const JsValue &thiz);
+    ~JsObjectBoundFunction();
+
+    virtual IJsObject *clone() override;
+    virtual void markReferIdx(VMRuntime *rt) override;
+
+    void call(VMContext *ctx, const Arguments &args, JsValue that = jsValueUndefined);
+
+protected:
+    virtual void onInitLazyProperty(VMContext *ctx, JsLazyProperty *prop) override;
+
+public:
+    JsValue                     func, thiz;
+
+protected:
+    JsLazyProperty              _props[2];
 
 };
 

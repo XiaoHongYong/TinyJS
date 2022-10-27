@@ -1324,15 +1324,18 @@ IJsNode *JSParser::_expectObjectLiteralExpression() {
                 return nullptr;
             }
 
+            SizedString funcName(name.buf, (uint32_t)(_nextToken.buf + _nextToken.len - name.buf));
             auto nameIdx = _getStringIndex(_nextToken);
             _readToken();
 
             if (name == "get") {
                 auto expr = _expectFunctionExpression(FT_GETTER);
                 obj->push(PoolNew(_pool, JsObjectPropertyGetter)(nameIdx, expr));
+                ((JsFunctionExpr *)expr)->getFunction()->name = funcName;
             } else {
                 auto expr = _expectFunctionExpression(FT_SETTER);
                 obj->push(PoolNew(_pool, JsObjectPropertySetter)(nameIdx, expr));
+                ((JsFunctionExpr *)expr)->getFunction()->name = funcName;
             }
         } else if (type == TK_NAME && (_nextToken.type == TK_COMMA || _nextToken.type == TK_CLOSE_BRACE)) {
             // name,
@@ -1372,6 +1375,7 @@ IJsNode *JSParser::_expectObjectLiteralExpression() {
         } else {
             IJsNode *name = nullptr, *value = nullptr;
             int nameIdx = -1;
+            uint8_t *nameStart = _curToken.buf;
             if (type == TK_OPEN_BRACKET) {
                 // [ expr ]
                 _readToken();
@@ -1385,6 +1389,7 @@ IJsNode *JSParser::_expectObjectLiteralExpression() {
                 nameIdx = _getStringIndex(_curToken);
                 _readToken();
             }
+            uint8_t *nameEnd = _curToken.buf;
 
             if (_curToken.type == TK_OPEN_PAREN) {
                 // 函数
@@ -1392,6 +1397,14 @@ IJsNode *JSParser::_expectObjectLiteralExpression() {
             } else {
                 _expectToken(TK_COLON);
                 value = _expectExpression();
+            }
+
+            if (value->type == NT_FUNCTION_EXPR) {
+                // 给函数赋值名字
+                auto f = ((JsFunctionExpr *)value)->getFunction();
+                if (f->name.empty()) {
+                    f->name = SizedString(nameStart, (uint32_t)(nameEnd - nameStart));
+                }
             }
 
             if (name) {

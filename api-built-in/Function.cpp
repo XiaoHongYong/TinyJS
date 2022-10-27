@@ -7,6 +7,8 @@
 
 #include "BuiltIn.hpp"
 #include "objects/JsObjectFunction.hpp"
+#include "objects/JsArray.hpp"
+#include "objects/JsArguments.hpp"
 
 
 // https://developer.mozilla.org/zh-CN/docs/Web/JavaScript/Reference/Global_Objects/Function
@@ -45,6 +47,58 @@ static JsLibProperty functionFunctions[] = {
     { "prototype", nullptr, nullptr, JsValue(JDT_INT32, 1) },
 };
 
+void functionPrototypeApply(VMContext *ctx, const JsValue &thiz, const Arguments &args) {
+    auto runtime = ctx->runtime;
+
+    auto that = args.getAt(0);
+    auto argArray = args.getAt(1);
+
+    if (argArray.type == JDT_ARRAY) {
+        auto arrObj = (JsArray *)runtime->getObject(argArray);
+        VecJsValues arr;
+        arrObj->dump(ctx, argArray, arr);
+
+        Arguments subArgs(arr.data(), (uint32_t)arr.size());
+        ctx->vm->callMember(ctx, that, thiz, subArgs);
+    } else if (argArray.type == JDT_ARGUMENTS) {
+        auto argObj = (JsArguments *)runtime->getObject(argArray);
+        ctx->vm->callMember(ctx, that, thiz, *argObj->getArguments());
+    } else {
+        ctx->throwException(PE_TYPE_ERROR, "Arguments array must be an array-like object.");
+    }
+}
+
+void functionPrototypeBind(VMContext *ctx, const JsValue &thiz, const Arguments &args) {
+    auto runtime = ctx->runtime;
+
+    // thiz 是 function, args[0] 是 this
+    if (thiz.type >= JDT_FUNCTION) {
+        if (thiz.type == JDT_LIB_OBJECT) {
+            auto obj = (JsLibObject *)runtime->getObject(thiz);
+            if (!obj->getFunction()) {
+                ctx->throwException(PE_TYPE_ERROR, "Bind must be called on a function");
+                return;
+            }
+        }
+    } else {
+        ctx->throwException(PE_TYPE_ERROR, "Bind must be called on a function");
+        return;
+    }
+
+    auto that = args.getAt(0);
+
+    auto obj = new JsObjectBoundFunction(thiz, that);
+    ctx->retValue = runtime->pushObjectValue(obj);
+}
+
+void functionPrototypeCall(VMContext *ctx, const JsValue &thiz, const Arguments &args) {
+    auto that = args.getAt(0);
+
+    Arguments subArgs(args.data + 1, args.count > 1 ? args.count - 1 : 0);
+    ctx->vm->callMember(ctx, that, thiz, subArgs);
+}
+
+
 void functionPrototypeToString(VMContext *ctx, const JsValue &thiz, const Arguments &args) {
     auto runtime = ctx->runtime;
 
@@ -78,6 +132,11 @@ void functionPrototypeToString(VMContext *ctx, const JsValue &thiz, const Argume
 }
 
 static JsLibProperty functionPrototypeFunctions[] = {
+    { "name", nullptr, "" },
+    { "length", nullptr, nullptr, JsValue(JDT_INT32, 0) },
+    { "apply", functionPrototypeApply },
+    { "bind", functionPrototypeBind },
+    { "call", functionPrototypeCall },
     { "toString", functionPrototypeToString },
 };
 

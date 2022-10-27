@@ -337,7 +337,6 @@ public:
     IConsole                    *console;
 
     VMGlobalScope               *globalScope;
-    JsValue                     globalThiz;
 
     // 全局变量的前 countImmutableGlobalVars 是不能被修改的
     uint32_t                    countImmutableGlobalVars;

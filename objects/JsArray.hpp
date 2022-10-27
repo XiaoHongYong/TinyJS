@@ -58,6 +58,9 @@ public:
     void toString(VMContext *ctx, const JsValue &thiz, BinaryOutputStream &stream);
 
     void setLength(uint32_t length);
+    uint32_t length() const { return _length; }
+
+    void dump(VMContext *ctx, const JsValue &thiz, VecJsValues &values);
 
     /**
      * 采用按 Block 存储所有的元素，平均每一个 Block 约 2 ** 14 = 16384 个元素

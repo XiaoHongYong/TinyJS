@@ -655,6 +655,8 @@ public:
         stream.writeUInt16((uint16_t)function->index);
     }
 
+    Function *getFunction() { return function; }
+
 protected:
     Function                    *function;
 
@@ -1051,6 +1053,15 @@ public:
     JsExprAssign(IJsNode *left, IJsNode *right, bool isVarDeclaration = false) : IJsNode(NT_ASSIGN), left(left), right(right) {
         if (!isVarDeclaration && left->type == NT_IDENTIFIER) {
             ((JsExprIdentifier *)left)->isModified = true;
+        }
+
+        if (right->type == NT_FUNCTION_EXPR && left->type == NT_IDENTIFIER) {
+            auto fe = (JsFunctionExpr *)right;
+            if (fe->getFunction()->name.empty()) {
+                // 给函数表达式赋值名字
+                auto id = (JsExprIdentifier *)left;
+                fe->getFunction()->name = id->name;
+            }
         }
 
         left->setBeingAssigned();

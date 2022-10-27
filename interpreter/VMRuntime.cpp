@@ -883,6 +883,7 @@ SizedString VMRuntime::toTypeName(const JsValue &value) {
         case JDT_CHAR:
         case JDT_STRING: return SS_STRING;
         case JDT_FUNCTION:
+        case JDT_BOUND_FUNCTION:
         case JDT_NATIVE_FUNCTION:
             return SS_FUNCTION;
         case JDT_LIB_OBJECT: {

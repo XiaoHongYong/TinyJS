@@ -37,12 +37,22 @@ bool parseRegexpFlags(const SizedString &flags, uint32_t &flagsOut) {
     return true;
 }
 
-JsRegExp::JsRegExp(const SizedString &str, const std::regex &re, uint32_t flags) : JsObject(jsValuePrototypeRegExp),  _strRe((cstr_t)str.data, str.len), _flags(flags), _re(re) {
+JsRegExp::JsRegExp(const SizedString &str, const std::regex &re, uint32_t flags) : JsObjectLazy(_props, CountOf(_props), jsValuePrototypeRegExp),  _strRe((cstr_t)str.data, str.len), _flags(flags), _re(re) {
     type = JDT_REGEX;
 
-    // 添加缺省的 lastIndex 属性.
-    _props[SS_LASTINDEX] = JsProperty(JsValue(JDT_INT32, 0), false, false, false, true);
+    // isGSetter, isConfigurable, isEnumerable, isWritable
+    static JsLazyProperty props[] = {
+        // 添加缺省的 lastIndex 属性.
+        { SS_LASTINDEX, JsProperty(JsValue(JDT_INT32, 0), false, false, false, true), false, },
+    };
+
+    static_assert(sizeof(props) == sizeof(props));
+    memcpy(_props, props, sizeof(props));
 }
 
 JsRegExp::~JsRegExp() {
+}
+
+IJsObject *JsRegExp::clone() {
+    return new JsRegExp(_strRe, _re, _flags);
 }

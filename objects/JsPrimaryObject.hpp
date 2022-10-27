@@ -9,42 +9,27 @@
 #define JsPrimaryObject_hpp
 
 
-#include "JsObject.hpp"
+#include "JsObjectLazy.hpp"
 #include <regex>
 
 
-class JsBooleanObject : public JsObject {
+template<int protoIndex_, JsDataType type_>
+class JsPrimaryObject_ : public JsObjectLazy {
 public:
-    JsBooleanObject(const JsValue &value) : JsObject(jsValuePrototypeBool), _value(value) {
-        type = JDT_OBJ_BOOL;
+    JsPrimaryObject_(const JsValue &value) : JsObjectLazy(nullptr, 0, JsValue(JDT_LIB_OBJECT, protoIndex_)), _value(value) {
+        type = type_;
     }
 
     virtual void markReferIdx(VMRuntime *rt) override {
         rt->markReferIdx(_value);
 
-        JsObject::markReferIdx(rt);
+        JsObjectLazy::markReferIdx(rt);
     }
 
     JsValue value() { return _value; }
 
-protected:
-    JsValue                     _value;
-
-};
-
-
-class JsNumberObject : public JsObject {
-public:
-    JsNumberObject(const JsValue &value) : JsObject(jsValuePrototypeNumber), _value(value) {
-        type = JDT_OBJ_NUMBER;
-    }
-
-    JsValue value() { return _value; }
-
-    virtual void markReferIdx(VMRuntime *rt) override {
-        rt->markReferIdx(_value);
-
-        JsObject::markReferIdx(rt);
+    virtual IJsObject *clone() override {
+        return new JsPrimaryObject_<protoIndex_, type_>(_value);
     }
 
 protected:
@@ -52,24 +37,8 @@ protected:
 
 };
 
-
-class JsStringObject : public JsObject {
-public:
-    JsStringObject(const JsValue &value) : JsObject(jsValuePrototypeString), _value(value) {
-        type = JDT_OBJ_STRING;
-    }
-
-    JsValue value() { return _value; }
-
-    virtual void markReferIdx(VMRuntime *rt) override {
-        rt->markReferIdx(_value);
-
-        JsObject::markReferIdx(rt);
-    }
-
-protected:
-    JsValue                     _value;
-
-};
+using JsBooleanObject = JsPrimaryObject_<JS_OBJ_PROTOTYPE_IDX_BOOL, JDT_OBJ_BOOL>;
+using JsNumberObject = JsPrimaryObject_<JS_OBJ_PROTOTYPE_IDX_NUMBER, JDT_OBJ_NUMBER>;
+using JsStringObject = JsPrimaryObject_<JS_OBJ_PROTOTYPE_IDX_STRING, JDT_OBJ_STRING>;
 
 #endif /* JsPrimaryObject_hpp */

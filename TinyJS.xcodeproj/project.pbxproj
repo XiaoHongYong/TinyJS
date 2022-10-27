@@ -13,6 +13,7 @@
 		C0443AB128E7254000CBF6DB /* SizedString.cpp in Sources */ = {isa = PBXBuildFile; fileRef = C0443AB028E7254000CBF6DB /* SizedString.cpp */; };
 		C06EE43F28F40406000F0E41 /* JsObject.cpp in Sources */ = {isa = PBXBuildFile; fileRef = C06EE43E28F40406000F0E41 /* JsObject.cpp */; };
 		C06EE44328F40552000F0E41 /* IJsIterator.cpp in Sources */ = {isa = PBXBuildFile; fileRef = C06EE44128F40552000F0E41 /* IJsIterator.cpp */; };
+		C06EE44629091177000F0E41 /* JsObjectLazy.cpp in Sources */ = {isa = PBXBuildFile; fileRef = C06EE44529091177000F0E41 /* JsObjectLazy.cpp */; };
 		C08597AD28D0D4D500577A8E /* libThirdPartiesSDK.a in Frameworks */ = {isa = PBXBuildFile; fileRef = C08597AA28D0D4C200577A8E /* libThirdPartiesSDK.a */; };
 		C085981A28D0D54C00577A8E /* main.cpp in Sources */ = {isa = PBXBuildFile; fileRef = C08597B028D0D54C00577A8E /* main.cpp */; };
 		C085981B28D0D54C00577A8E /* Symbol.cpp in Sources */ = {isa = PBXBuildFile; fileRef = C08597B328D0D54C00577A8E /* Symbol.cpp */; };
@@ -59,7 +60,6 @@
 		C085984528D0D54C00577A8E /* IJsObject.cpp in Sources */ = {isa = PBXBuildFile; fileRef = C085980728D0D54C00577A8E /* IJsObject.cpp */; };
 		C085984628D0D54C00577A8E /* JsArray.cpp in Sources */ = {isa = PBXBuildFile; fileRef = C085980828D0D54C00577A8E /* JsArray.cpp */; };
 		C085984728D0D54C00577A8E /* JsLibObject.cpp in Sources */ = {isa = PBXBuildFile; fileRef = C085980A28D0D54C00577A8E /* JsLibObject.cpp */; };
-		C085984828D0D54C00577A8E /* JsPrimaryObject.cpp in Sources */ = {isa = PBXBuildFile; fileRef = C085980B28D0D54C00577A8E /* JsPrimaryObject.cpp */; };
 		C085984928D0D54C00577A8E /* Statement.cpp in Sources */ = {isa = PBXBuildFile; fileRef = C085981028D0D54C00577A8E /* Statement.cpp */; };
 		C085984A28D0D54C00577A8E /* Lexer.cpp in Sources */ = {isa = PBXBuildFile; fileRef = C085981128D0D54C00577A8E /* Lexer.cpp */; };
 		C085984B28D0D54C00577A8E /* ByteCodeStream.cpp in Sources */ = {isa = PBXBuildFile; fileRef = C085981328D0D54C00577A8E /* ByteCodeStream.cpp */; };
@@ -109,6 +109,8 @@
 		C06EE44028F40495000F0E41 /* JsDummyObject.hpp */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.cpp.h; path = JsDummyObject.hpp; sourceTree = "<group>"; };
 		C06EE44128F40552000F0E41 /* IJsIterator.cpp */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.cpp.cpp; path = IJsIterator.cpp; sourceTree = "<group>"; };
 		C06EE44228F40552000F0E41 /* IJsIterator.hpp */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.cpp.h; path = IJsIterator.hpp; sourceTree = "<group>"; };
+		C06EE44429091177000F0E41 /* JsObjectLazy.hpp */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.cpp.h; path = JsObjectLazy.hpp; sourceTree = "<group>"; };
+		C06EE44529091177000F0E41 /* JsObjectLazy.cpp */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.cpp.cpp; path = JsObjectLazy.cpp; sourceTree = "<group>"; };
 		C08597A528D0D4C200577A8E /* ThirdPartiesSDK.xcodeproj */ = {isa = PBXFileReference; lastKnownFileType = "wrapper.pb-project"; name = ThirdPartiesSDK.xcodeproj; path = "../third-parties/ThirdPartiesSDK.xcodeproj"; sourceTree = "<group>"; };
 		C08597B028D0D54C00577A8E /* main.cpp */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = sourcecode.cpp.cpp; path = main.cpp; sourceTree = "<group>"; };
 		C08597B228D0D54C00577A8E /* BuiltIn.hpp */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = sourcecode.cpp.h; path = BuiltIn.hpp; sourceTree = "<group>"; };
@@ -187,7 +189,6 @@
 		C085980828D0D54C00577A8E /* JsArray.cpp */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = sourcecode.cpp.cpp; path = JsArray.cpp; sourceTree = "<group>"; };
 		C085980928D0D54C00577A8E /* JsArguments.hpp */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = sourcecode.cpp.h; path = JsArguments.hpp; sourceTree = "<group>"; };
 		C085980A28D0D54C00577A8E /* JsLibObject.cpp */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = sourcecode.cpp.cpp; path = JsLibObject.cpp; sourceTree = "<group>"; };
-		C085980B28D0D54C00577A8E /* JsPrimaryObject.cpp */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = sourcecode.cpp.cpp; path = JsPrimaryObject.cpp; sourceTree = "<group>"; };
 		C085980C28D0D54C00577A8E /* JsRegExp.hpp */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = sourcecode.cpp.h; path = JsRegExp.hpp; sourceTree = "<group>"; };
 		C085980E28D0D54C00577A8E /* Expression.hpp */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = sourcecode.cpp.h; path = Expression.hpp; sourceTree = "<group>"; };
 		C085980F28D0D54C00577A8E /* Parser.hpp */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = sourcecode.cpp.h; path = Parser.hpp; sourceTree = "<group>"; };
@@ -435,7 +436,8 @@
 				C085980428D0D54C00577A8E /* JsLibObject.hpp */,
 				C085980628D0D54C00577A8E /* JsObjectFunction.cpp */,
 				C085980028D0D54C00577A8E /* JsObjectFunction.hpp */,
-				C085980B28D0D54C00577A8E /* JsPrimaryObject.cpp */,
+				C06EE44529091177000F0E41 /* JsObjectLazy.cpp */,
+				C06EE44429091177000F0E41 /* JsObjectLazy.hpp */,
 				C085980528D0D54C00577A8E /* JsPrimaryObject.hpp */,
 				C08597FF28D0D54C00577A8E /* JsRegExp.cpp */,
 				C085980C28D0D54C00577A8E /* JsRegExp.hpp */,
@@ -565,6 +567,7 @@
 			buildActionMask = 2147483647;
 			files = (
 				C06EE44328F40552000F0E41 /* IJsIterator.cpp in Sources */,
+				C06EE44629091177000F0E41 /* JsObjectLazy.cpp in Sources */,
 				C0443AAF28E5229C00CBF6DB /* CharEncoding.cpp in Sources */,
 				C085984628D0D54C00577A8E /* JsArray.cpp in Sources */,
 				C085983728D0D54C00577A8E /* CharEncodingMac.mm in Sources */,
@@ -620,7 +623,6 @@
 				C085984228D0D54C00577A8E /* JsRegExp.cpp in Sources */,
 				C085984728D0D54C00577A8E /* JsLibObject.cpp in Sources */,
 				C085983328D0D54C00577A8E /* Base64.cpp in Sources */,
-				C085984828D0D54C00577A8E /* JsPrimaryObject.cpp in Sources */,
 				C085982B28D0D54C00577A8E /* CommonString.cpp in Sources */,
 			);
 			runOnlyForDeploymentPostprocessing = 0;

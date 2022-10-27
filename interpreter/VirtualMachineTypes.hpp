@@ -212,6 +212,7 @@ enum JsDataType : uint8_t {
 
     // 函数 开始
     JDT_FUNCTION,
+    JDT_BOUND_FUNCTION,
     JDT_NATIVE_FUNCTION,
     JDT_LIB_OBJECT,
 };
@@ -240,6 +241,7 @@ struct JsValue {
     inline bool isValid() const { return type > JDT_NOT_INITIALIZED; }
     inline bool isString() const { return type == JDT_CHAR || type == JDT_STRING; }
     inline bool isNumber() const { return type == JDT_INT32 || type == JDT_NUMBER; }
+    inline bool isFunction() const { return type >= JDT_FUNCTION; }
     inline bool equal(const JsValue &other) const { return *(uint64_t *)this == *(uint64_t *)&other; }
 };
 

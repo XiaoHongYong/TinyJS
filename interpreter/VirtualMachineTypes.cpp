@@ -57,6 +57,7 @@ const char *jsDataTypeToString(JsDataType type) {
         "JDT_OBJ_GLOBAL_THIS",
 
         "JDT_FUNCTION",
+        "JDT_BOUND_FUNCTION",
         "JDT_NATIVE_FUNCTION",
         "JDT_LIB_OBJECT",
     };

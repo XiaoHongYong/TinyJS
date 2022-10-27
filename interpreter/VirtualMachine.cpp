@@ -370,7 +370,7 @@ void JsVirtualMachine::eval(cstr_t code, size_t len, VMContext *vmctx, VecVMStac
     }
 
     VecVMStackFrames stackFrames;
-    call(func, vmctx, stackScopes, runtime->globalThiz, args);
+    call(func, vmctx, stackScopes, jsValueGlobalThis, args);
 }
 
 void JsVirtualMachine::dump(cstr_t code, size_t len, BinaryOutputStream &stream) {
@@ -400,25 +400,39 @@ void JsVirtualMachine::callMember(VMContext *ctx, const JsValue &thiz, const Siz
 
 void JsVirtualMachine::callMember(VMContext *ctx, const JsValue &thiz, const JsValue &memberFunc, const Arguments &args) {
     auto runtime = ctx->runtime;
-    if (memberFunc.type == JDT_NATIVE_FUNCTION) {
-        auto f = runtime->getNativeFunction(memberFunc.value.index);
-        ctx->stackScopesForNativeFunctionCall = nullptr;
-        f(ctx, thiz, args);
-    } else if (memberFunc.type == JDT_LIB_OBJECT) {
-        auto obj = (JsLibObject *)runtime->getObject(memberFunc);
-        auto f = obj->getFunction();
-        if (f) {
+    switch (memberFunc.type) {
+        case JDT_NATIVE_FUNCTION: {
+            auto f = runtime->getNativeFunction(memberFunc.value.index);
+            ctx->stackScopesForNativeFunctionCall = nullptr;
             f(ctx, thiz, args);
-        } else {
+            break;
+        }
+        case JDT_LIB_OBJECT: {
+            auto obj = (JsLibObject *)runtime->getObject(memberFunc);
+            auto f = obj->getFunction();
+            if (f) {
+                f(ctx, thiz, args);
+            } else {
+                ctx->throwException(PE_TYPE_ERROR, "value is not a function");
+                assert(0);
+            }
+            break;
+        }
+        case JDT_FUNCTION: {
+            auto f = (JsObjectFunction *)runtime->getObject(memberFunc);
+            call(f->function, ctx, f->stackScopes, thiz, args);
+            break;
+        }
+        case JDT_BOUND_FUNCTION: {
+            auto f = (JsObjectBoundFunction *)runtime->getObject(memberFunc);
+            f->call(ctx, args);
+            break;
+        }
+        default: {
             ctx->throwException(PE_TYPE_ERROR, "value is not a function");
             assert(0);
+            break;
         }
-    } else if (memberFunc.type == JDT_FUNCTION) {
-        auto f = (JsObjectFunction *)runtime->getObject(memberFunc);
-        call(f->function, ctx, f->stackScopes, thiz, args);
-    } else {
-        ctx->throwException(PE_TYPE_ERROR, "value is not a function");
-        assert(0);
     }
 }
 
@@ -671,7 +685,7 @@ void JsVirtualMachine::call(Function *function, VMContext *ctx, VecVMStackScopes
                 break;
             }
             case OP_PREPARE_VAR_THIS:
-                functionScope->vars[VAR_IDX_THIS] = thiz;
+                functionScope->vars[VAR_IDX_THIS] = thiz.type <= JDT_UNDEFINED ? jsValueGlobalThis : thiz;
                 break;
             case OP_PREPARE_VAR_ARGUMENTS: {
                 functionScope->vars[VAR_IDX_ARGUMENTS] = runtime->pushObjectValue(new JsArguments(functionScope, &functionScope->args));
@@ -841,20 +855,25 @@ void JsVirtualMachine::call(Function *function, VMContext *ctx, VecVMStackScopes
                 switch (func.type) {
                     case JDT_FUNCTION: {
                         auto f = (JsObjectFunction *)runtime->getObject(func);
-                        call(f->function, ctx, f->stackScopes, runtime->globalThiz, args);
+                        call(f->function, ctx, f->stackScopes, jsValueGlobalThis, args);
+                        break;
+                    }
+                    case JDT_BOUND_FUNCTION: {
+                        auto f = (JsObjectBoundFunction *)runtime->getObject(func);
+                        f->call(ctx, args);
                         break;
                     }
                     case JDT_NATIVE_FUNCTION: {
                         auto f = runtime->getNativeFunction(func.value.index);
                         ctx->stackScopesForNativeFunctionCall = &stackScopes;
-                        f(ctx, runtime->globalThiz, args);
+                        f(ctx, jsValueGlobalThis, args);
                         break;
                     }
                     case JDT_LIB_OBJECT: {
                         auto f = (JsLibObject *)runtime->getObject(func);
                         if (f->getFunction()) {
                             ctx->stackScopesForNativeFunctionCall = &stackScopes;
-                            f->getFunction()(ctx, runtime->globalThiz, args);
+                            f->getFunction()(ctx, jsValueGlobalThis, args);
                         } else {
                             ctx->throwException(PE_TYPE_ERROR, "? is not a function.");
                         }
@@ -878,6 +897,11 @@ void JsVirtualMachine::call(Function *function, VMContext *ctx, VecVMStackScopes
                     case JDT_FUNCTION: {
                         auto f = (JsObjectFunction *)runtime->getObject(func);
                         call(f->function, ctx, f->stackScopes, thiz, args);
+                        break;
+                    }
+                    case JDT_BOUND_FUNCTION: {
+                        auto f = (JsObjectBoundFunction *)runtime->getObject(func);
+                        f->call(ctx, args);
                         break;
                     }
                     case JDT_NATIVE_FUNCTION: {
@@ -917,14 +941,14 @@ void JsVirtualMachine::call(Function *function, VMContext *ctx, VecVMStackScopes
                 if (depth + 1 == stackScopes.size()) {
                     // 当前函数的子函数
                     auto targFunction = function->functions[index];
-                    call(targFunction, ctx, stackScopes, runtime->globalThiz, args);
+                    call(targFunction, ctx, stackScopes, jsValueGlobalThis, args);
                 } else {
                     // 父函数的子函数
                     auto scope = stackScopes.at(depth);
                     auto targFunction = scope->scopeDsc->function->functions[index];
                     VecVMStackScopes targetStackScopes;
                     targetStackScopes.insert(targetStackScopes.begin(), stackScopes.begin(), stackScopes.begin() + depth + 1);
-                    call(targFunction, ctx, targetStackScopes, runtime->globalThiz, args);
+                    call(targFunction, ctx, targetStackScopes, jsValueGlobalThis, args);
                 }
                 stack.resize(posArgs);
                 stack.push_back(ctx->retValue);
@@ -1555,6 +1579,7 @@ void JsVirtualMachine::call(Function *function, VMContext *ctx, VecVMStackScopes
                     case JDT_CHAR: stack.push_back(jsStringValueString); break;
                     case JDT_STRING: stack.push_back(jsStringValueString); break;
                     case JDT_FUNCTION:
+                    case JDT_BOUND_FUNCTION:
                     case JDT_NATIVE_FUNCTION:
                         stack.push_back(jsStringValueFunction);
                         break;
@@ -1597,6 +1622,12 @@ void JsVirtualMachine::call(Function *function, VMContext *ctx, VecVMStackScopes
                         }
                         thizVal = runtime->pushObjectValue(new JsObject(prototype));
                         call(obj->function, ctx, obj->stackScopes, thizVal, args);
+                        break;
+                    }
+                    case JDT_BOUND_FUNCTION: {
+                        auto f = (JsObjectBoundFunction *)runtime->getObject(func);
+                        thizVal = runtime->pushObjectValue(new JsObject(jsValuePrototypeObject));
+                        f->call(ctx, args, thizVal);
                         break;
                     }
                     case JDT_LIB_OBJECT: {

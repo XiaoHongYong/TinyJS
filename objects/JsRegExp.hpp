@@ -8,7 +8,7 @@
 #ifndef JsRegExp_hpp
 #define JsRegExp_hpp
 
-#include "JsObject.hpp"
+#include "JsObjectLazy.hpp"
 #include <regex>
 
 
@@ -25,7 +25,7 @@ enum RegexpFlags {
 
 bool parseRegexpFlags(const SizedString &flags, uint32_t &flagsOut);
 
-class JsRegExp : public JsObject {
+class JsRegExp : public JsObjectLazy {
 public:
     JsRegExp(const SizedString &str, const std::regex &re, uint32_t flags);
     ~JsRegExp();
@@ -35,7 +35,11 @@ public:
     std::regex &getRegexp() { return _re; }
     uint32_t flags() const { return _flags; }
 
+    virtual IJsObject *clone() override;
+
 protected:
+    JsLazyProperty              _props[1];
+
     string                      _strRe;
     std::regex                  _re;
     uint32_t                    _flags;

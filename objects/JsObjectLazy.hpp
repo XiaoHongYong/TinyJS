@@ -1,20 +1,26 @@
 //
-//  JsArguments.hpp
+//  JsObjectLazy.hpp
 //  TinyJS
 //
-//  Created by henry_xiao on 2022/8/2.
+//  Created by henry_xiao on 2022/8/11.
 //
 
-#ifndef JsArguments_hpp
-#define JsArguments_hpp
+#ifndef JsObjectLazy_hpp
+#define JsObjectLazy_hpp
 
 #include "JsObject.hpp"
 
 
-class JsArguments : public IJsObject {
+struct JsLazyProperty {
+    SizedString             name;
+    JsProperty              prop;
+    bool                    isLazyInit;
+};
+
+class JsObjectLazy : public IJsObject {
 public:
-    JsArguments(VMScope *scope, Arguments *args);
-    ~JsArguments();
+    JsObjectLazy(JsLazyProperty *props, uint32_t countProps, const JsValue &__proto__ = jsValuePrototypeObject);
+    ~JsObjectLazy();
 
     virtual void definePropertyByName(VMContext *ctx, const SizedString &name, const JsProperty &descriptor) override;
     virtual void definePropertyByIndex(VMContext *ctx, uint32_t index, const JsProperty &descriptor) override;
@@ -40,28 +46,27 @@ public:
     virtual bool hasAnyProperty(VMContext *ctx, bool configurable, bool writable) override;
     virtual void preventExtensions(VMContext *ctx) override;
 
-    virtual IJsObject *clone() override;
-    virtual bool isOfIterable() override { return true; }
     virtual IJsIterator *getIteratorObject(VMContext *ctx, bool includeProtoProp = true) override;
 
     virtual void markReferIdx(VMRuntime *rt) override;
 
-    Arguments *getArguments() { return _args; }
-
-    uint32_t length() const { return _args->count; }
-
 protected:
     void _newObject(VMContext *ctx);
 
-    friend class JsArgumentsIterator;
+    void setProperties(JsLazyProperty *props, uint32_t countProps) {
+        _props = props;
+        _propsEnd = props + countProps;
+    }
 
-protected:
-    VMScope                     *_scope;
-    Arguments                   *_args;
-    VecJsProperties             *_argsDescriptors;
+    virtual void onInitLazyProperty(VMContext *ctx, JsLazyProperty *prop) { assert(0); }
+
+    JsLazyProperty              *_props, *_propsEnd;
+    uint32_t                    _countProps;
+
+    JsProperty                  __proto__;
+
     JsObject                    *_obj;
-    JsProperty                  _length;
 
 };
 
-#endif /* JsArguments_hpp */
+#endif /* JsObjectLazy_hpp */
