@@ -257,7 +257,7 @@ struct KeywordCompareLess {
 };
 
 static cstr_t PARSE_ERROR_NAMES[] = {
-    "PE_OK",
+    "OK",
     "Error: ",
     "SyntaxError: ",
     "TypeError: ",
@@ -265,13 +265,13 @@ static cstr_t PARSE_ERROR_NAMES[] = {
     "ReferenceError: ",
 };
 
-cstr_t parseErrorToString(JsErrorType err) {
+cstr_t parseErrorToString(JsError err) {
     assert(err >= 0 && err < CountOf(PARSE_ERROR_NAMES));
 
     return PARSE_ERROR_NAMES[err];
 }
 
-ParseException::ParseException(JsErrorType err, cstr_t format, ...) {
+ParseException::ParseException(JsError err, cstr_t format, ...) {
     error = err;
     va_list args;
 
@@ -965,5 +965,5 @@ void JSLexer::_parseError(cstr_t format, ...) {
     auto message = stringPrintf(format, args);
     va_end(args);
 
-    throw ParseException(PE_SYNTAX_ERROR, "%s", message.c_str());
+    throw ParseException(JE_SYNTAX_ERROR, "%s", message.c_str());
 }

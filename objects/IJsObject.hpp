@@ -161,7 +161,7 @@ protected:
         assert(prop);
         // 自身的属性，可以直接修改
         if (!prop->merge(descriptor)) {
-            ctx->throwException(PE_TYPE_ERROR, "Cannot redefine property: %.*s", (int)name.len, name.data);
+            ctx->throwException(JE_TYPE_ERROR, "Cannot redefine property: %.*s", (int)name.len, name.data);
         }
     }
 
@@ -169,7 +169,7 @@ protected:
         assert(prop);
         // 自身的属性，可以直接修改
         if (!prop->merge(descriptor)) {
-            ctx->throwException(PE_TYPE_ERROR, "Cannot redefine property: %d", index);
+            ctx->throwException(JE_TYPE_ERROR, "Cannot redefine property: %d", index);
         }
     }
 
@@ -178,7 +178,7 @@ protected:
         // 自身的属性，可以直接修改
         if (!prop->merge(descriptor)) {
             auto name = ctx->runtime->toSizedString(ctx, JsValue(JDT_SYMBOL, index));
-            ctx->throwException(PE_TYPE_ERROR, "Cannot redefine property: %.*s", (int)name.len, name.data);
+            ctx->throwException(JE_TYPE_ERROR, "Cannot redefine property: %.*s", (int)name.len, name.data);
         }
     }
 

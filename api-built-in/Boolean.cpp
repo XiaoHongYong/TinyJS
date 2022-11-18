@@ -39,7 +39,7 @@ inline JsValue convertBoolToJsValue(VMContext *ctx, const JsValue &thiz, const c
         return obj->value();
     }
 
-    ctx->throwException(PE_TYPE_ERROR, "Boolean.prototype.%s requires that 'this' be a Boolean", funcName);
+    ctx->throwException(JE_TYPE_ERROR, "Boolean.prototype.%s requires that 'this' be a Boolean", funcName);
     return jsValueNotInitialized;
 }
 

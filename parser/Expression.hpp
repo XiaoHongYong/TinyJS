@@ -313,7 +313,7 @@ public:
 
     virtual void setBeingAssigned() {
         if (isOptional) {
-            throw ParseException(PE_SYNTAX_ERROR, "Invalid left-hand side in assignment");
+            throw ParseException(JE_SYNTAX_ERROR, "Invalid left-hand side in assignment");
         }
         isBeingAssigned = true;
     }
@@ -695,7 +695,7 @@ public:
         isBeingAssigned = true;
         expr->setBeingAssigned();
         if (expr->type == NT_ASSIGN) {
-            throw ParseException(PE_SYNTAX_ERROR, "Invalid destructuring assignment target");
+            throw ParseException(JE_SYNTAX_ERROR, "Invalid destructuring assignment target");
         }
     }
 
@@ -752,7 +752,7 @@ public:
             auto item = *it;
             if (item->type == NT_ARRAY_ITEM_SPREAD) {
                 if (it + 1 != nodes.end()) {
-                    throw ParseException(PE_SYNTAX_ERROR, "Rest element must be last element");
+                    throw ParseException(JE_SYNTAX_ERROR, "Rest element must be last element");
                 }
             }
             item->setBeingAssigned();
@@ -867,7 +867,7 @@ public:
     JsObjectPropertyGetter(uint32_t nameIdx, IJsNode *expr) : IJsNode(NT_OBJECT_PROPERTY), nameIdx(nameIdx), expr(expr) { }
 
     virtual void setBeingAssigned() {
-        throw ParseException(PE_SYNTAX_ERROR, "Invalid destructuring assignment target");
+        throw ParseException(JE_SYNTAX_ERROR, "Invalid destructuring assignment target");
     }
 
     virtual void convertToByteCode(ByteCodeStream &stream) {
@@ -893,7 +893,7 @@ public:
     }
 
     virtual void setBeingAssigned() {
-        throw ParseException(PE_SYNTAX_ERROR, "Invalid destructuring assignment target");
+        throw ParseException(JE_SYNTAX_ERROR, "Invalid destructuring assignment target");
     }
 
 protected:
@@ -940,7 +940,7 @@ public:
         isBeingAssigned = true;
         expr->setBeingAssigned();
         if (expr->type == NT_ASSIGN) {
-            throw ParseException(PE_SYNTAX_ERROR, "`...` must be followed by an assignable reference in assignment contexts");
+            throw ParseException(JE_SYNTAX_ERROR, "`...` must be followed by an assignable reference in assignment contexts");
         }
     }
 
@@ -969,7 +969,7 @@ public:
 
     void checkCanBeExpression() {
         if (!isBeingAssigned && !canBeExpression()) {
-            throw ParseException(PE_SYNTAX_ERROR, "Invalid shorthand property initializer");
+            throw ParseException(JE_SYNTAX_ERROR, "Invalid shorthand property initializer");
         }
     }
 
@@ -980,7 +980,7 @@ public:
             auto item = *it;
             if (item->type == NT_OBJECT_PROPERTY_SPREAD) {
                 if (it + 1 != nodes.end()) {
-                    throw ParseException(PE_SYNTAX_ERROR, "Rest element must be last element");
+                    throw ParseException(JE_SYNTAX_ERROR, "Rest element must be last element");
                 }
             }
             item->setBeingAssigned();

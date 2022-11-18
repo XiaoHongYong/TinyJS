@@ -59,7 +59,7 @@ void stringFromCodePoint(VMContext *ctx, const JsValue &thiz, const Arguments &a
             utf32CodeToUtf8((uint32_t)code, str);
         } else {
             SizedStringWrapper str(code);
-            ctx->throwException(PE_RANGE_ERROR, "Invalid code point %.*s", str.len, str.data);
+            ctx->throwException(JE_RANGE_ERROR, "Invalid code point %.*s", str.len, str.data);
             return;
         }
     }
@@ -86,7 +86,7 @@ inline JsValue convertStringToJsValue(VMContext *ctx, const JsValue &thiz, const
         return obj->value();
     }
 
-    ctx->throwException(PE_TYPE_ERROR, "String.prototype.%s requires that 'this' be a String", funcName);
+    ctx->throwException(JE_TYPE_ERROR, "String.prototype.%s requires that 'this' be a String", funcName);
     return jsValueNotInitialized;
 }
 
@@ -195,7 +195,7 @@ void stringPrototypeCodePointAt(VMContext *ctx, const JsValue &thiz, const Argum
 
 JsValue toStringStrict(VMContext *ctx, const JsValue &val) {
     if (val.type == JDT_SYMBOL) {
-        ctx->throwException(PE_TYPE_ERROR, "Cannot convert a Symbol value to a string");
+        ctx->throwException(JE_TYPE_ERROR, "Cannot convert a Symbol value to a string");
         return jsValueUndefined;
     }
 
@@ -209,7 +209,7 @@ void stringPrototypeConcat(VMContext *ctx, const JsValue &thiz, const Arguments 
     }
 
     auto other = toStringStrict(ctx, args.getAt(0, jsStringValueEmpty));
-    if (ctx->error != PE_OK) {
+    if (ctx->error != JE_OK) {
         return;
     }
 
@@ -225,7 +225,7 @@ void stringPrototypeEndsWith(VMContext *ctx, const JsValue &thiz, const Argument
 
     auto s = runtime->toSizedString(ctx, strVal);
     auto with = args.getStringAt(ctx, 0, SS_UNDEFINED);
-    if (ctx->error != PE_OK) {
+    if (ctx->error != JE_OK) {
         return;
     }
 
@@ -269,7 +269,7 @@ void stringPrototypeIncludes(VMContext *ctx, const JsValue &thiz, const Argument
 
     auto s = runtime->toSizedString(ctx, strVal);
     auto p = args.getStringAt(ctx, 0, SS_UNDEFINED);
-    if (ctx->error != PE_OK) {
+    if (ctx->error != JE_OK) {
         return;
     }
 
@@ -286,7 +286,7 @@ void stringPrototypeIndexOf(VMContext *ctx, const JsValue &thiz, const Arguments
     int32_t index = args.getIntAt(ctx, 1);
 
     auto p = args.getStringAt(ctx, 0, SS_UNDEFINED);
-    if (ctx->error != PE_OK) {
+    if (ctx->error != JE_OK) {
         return;
     }
 
@@ -481,7 +481,7 @@ void stringPrototypeMatchAll(VMContext *ctx, const JsValue &thiz, const Argument
         auto &re = regexp->getRegexp();
         auto flags = regexp->flags();
         if (!isFlagSet(flags, RegexpFlags::RF_GLOBAL_SEARCH)) {
-            ctx->throwException(PE_TYPE_ERROR, "String.prototype.matchAll called with a non-global RegExp argument");
+            ctx->throwException(JE_TYPE_ERROR, "String.prototype.matchAll called with a non-global RegExp argument");
             return;
         }
 
@@ -520,13 +520,13 @@ void stringPrototypePadEnd(VMContext *ctx, const JsValue &thiz, const Arguments 
     auto str = runtime->toSizedString(ctx, strVal);
     auto lenVal = args.getAt(0);
     auto len = runtime->toNumber(ctx, lenVal);
-    if (str.len >= len || isnan(len) || ctx->error != PE_OK) {
+    if (str.len >= len || isnan(len) || ctx->error != JE_OK) {
         ctx->retValue = strVal;
         return;
     }
 
     if (isinf(len) || len >= LEN_MAX_STRING) {
-        ctx->throwException(PE_RANGE_ERROR, "Invalid string length");
+        ctx->throwException(JE_RANGE_ERROR, "Invalid string length");
         return;
     }
 
@@ -568,13 +568,13 @@ void stringPrototypePadStart(VMContext *ctx, const JsValue &thiz, const Argument
     auto str = runtime->toSizedString(ctx, strVal);
     auto lenVal = args.getAt(0);
     auto len = runtime->toNumber(ctx, lenVal);
-    if (str.len >= len || isnan(len) || ctx->error != PE_OK) {
+    if (str.len >= len || isnan(len) || ctx->error != JE_OK) {
         ctx->retValue = strVal;
         return;
     }
 
     if (isinf(len) || len >= LEN_MAX_STRING) {
-        ctx->throwException(PE_RANGE_ERROR, "Invalid string length");
+        ctx->throwException(JE_RANGE_ERROR, "Invalid string length");
         return;
     }
 
@@ -618,13 +618,13 @@ void stringPrototypeRepeat(VMContext *ctx, const JsValue &thiz, const Arguments 
     auto countVal = args.getAt(0);
     auto count = runtime->toNumber(ctx, countVal);
     if (isinf(count) || count < 0) {
-        ctx->throwExceptionFormatJsValue(PE_RANGE_ERROR, "Invalid count value: %.*s", countVal);
+        ctx->throwExceptionFormatJsValue(JE_RANGE_ERROR, "Invalid count value: %.*s", countVal);
         return;
     }
 
     auto n = (uint32_t)count;
     if (n * str.len  >= LEN_MAX_STRING) {
-        ctx->throwException(PE_RANGE_ERROR, "Invalid string length");
+        ctx->throwException(JE_RANGE_ERROR, "Invalid string length");
         return;
     }
 
@@ -661,7 +661,7 @@ void doStringReplaceWithFunction(VMContext *ctx, const SizedString &str, const J
 
     Arguments args(argvs.data(), (uint32_t)argvs.size());
     ctx->vm->callMember(ctx, jsValueGlobalThis, replacementFunc, args);
-    if (ctx->error != PE_OK) {
+    if (ctx->error != JE_OK) {
         return;
     }
 
@@ -728,7 +728,7 @@ public:
         } else {
             regexp = nullptr;
             pattern = ctx->runtime->toSizedStringStrictly(ctx, patternVal);
-            if (ctx->error != PE_OK) {
+            if (ctx->error != JE_OK) {
                 return;
             }
         }
@@ -786,7 +786,7 @@ void stringPrototypeReplace(VMContext *ctx, const JsValue &thiz, const Arguments
             doStringReplaceWithFunction(ctx, str, strVal, matchBegin, matchEnd, matches, replacementVal, ret, offset);
         } else {
             auto replacement = runtime->toSizedStringStrictly(ctx, replacementVal);
-            if (ctx->error != PE_OK) {
+            if (ctx->error != JE_OK) {
                 return;
             }
             doStringReplaceWithString(ctx, str, matchBegin, matchEnd, matches, replacement, ret);
@@ -810,7 +810,7 @@ void stringPrototypeReplaceAll(VMContext *ctx, const JsValue &thiz, const Argume
     StringSearch pattern(ctx, args.getAt(0));
     if (pattern.regexp) {
         if (!isFlagSet(pattern.regexp->flags(), RegexpFlags::RF_GLOBAL_SEARCH)) {
-            ctx->throwException(PE_TYPE_ERROR, "String.prototype.replaceAll called with a non-global RegExp argument");
+            ctx->throwException(JE_TYPE_ERROR, "String.prototype.replaceAll called with a non-global RegExp argument");
             return;
         }
     }
@@ -821,7 +821,7 @@ void stringPrototypeReplaceAll(VMContext *ctx, const JsValue &thiz, const Argume
     LockedSizedStringWrapper replacement;
     if (replacementVal.type != JDT_FUNCTION) {
         replacement = runtime->toSizedStringStrictly(ctx, replacementVal);
-        if (ctx->error != PE_OK) {
+        if (ctx->error != JE_OK) {
             return;
         }
     }

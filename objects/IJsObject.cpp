@@ -28,7 +28,7 @@ void IJsObject::defineProperty(VMContext *ctx, const JsValue &nameOrg, const JsP
 
     switch (name.type) {
         case JDT_NOT_INITIALIZED:
-            ctx->throwException(PE_TYPE_ERROR, "Cannot access '?' before initialization");
+            ctx->throwException(JE_TYPE_ERROR, "Cannot access '?' before initialization");
             break;
         case JDT_UNDEFINED: definePropertyByName(ctx, SS_UNDEFINED, descriptor); break;
         case JDT_NULL: definePropertyByName(ctx, SS_NULL, descriptor); break;
@@ -52,7 +52,7 @@ void IJsObject::defineProperty(VMContext *ctx, const JsValue &nameOrg, const JsP
         }
         case JDT_SYMBOL: definePropertyBySymbol(ctx, name.value.index, descriptor); break;
         default: {
-            ctx->throwException(PE_TYPE_ERROR, "Cannot convert object to primitive value");
+            ctx->throwException(JE_TYPE_ERROR, "Cannot convert object to primitive value");
         }
     }
 }
@@ -67,7 +67,7 @@ bool IJsObject::getOwnPropertyDescriptor(VMContext *ctx, const JsValue &nameOrg,
 
     switch (name.type) {
         case JDT_NOT_INITIALIZED:
-            ctx->throwException(PE_TYPE_ERROR, "Cannot access '?' before initialization");
+            ctx->throwException(JE_TYPE_ERROR, "Cannot access '?' before initialization");
             break;
         case JDT_UNDEFINED: return getOwnPropertyDescriptorByName(ctx, SS_UNDEFINED, descriptorOut);
         case JDT_NULL: return getOwnPropertyDescriptorByName(ctx, SS_NULL, descriptorOut);
@@ -89,7 +89,7 @@ bool IJsObject::getOwnPropertyDescriptor(VMContext *ctx, const JsValue &nameOrg,
         case JDT_SYMBOL:
             return getOwnPropertyDescriptorBySymbol(ctx, name.value.index, descriptorOut);
         default: {
-            ctx->throwException(PE_TYPE_ERROR, "Cannot convert object to primitive value");
+            ctx->throwException(JE_TYPE_ERROR, "Cannot convert object to primitive value");
         }
     }
 
@@ -99,7 +99,7 @@ bool IJsObject::getOwnPropertyDescriptor(VMContext *ctx, const JsValue &nameOrg,
 JsProperty *IJsObject::getRaw(VMContext *ctx, const JsValue &name, JsNativeFunction &funcGetterOut, bool includeProtoProp) {
     switch (name.type) {
         case JDT_NOT_INITIALIZED:
-            ctx->throwException(PE_TYPE_ERROR, "Cannot access '?' before initialization");
+            ctx->throwException(JE_TYPE_ERROR, "Cannot access '?' before initialization");
             return nullptr;
         case JDT_UNDEFINED: return getRawByName(ctx, SS_UNDEFINED, funcGetterOut, includeProtoProp); break;
         case JDT_NULL: return getRawByName(ctx, SS_NULL, funcGetterOut, includeProtoProp); break;
@@ -130,7 +130,7 @@ JsProperty *IJsObject::getRaw(VMContext *ctx, const JsValue &name, JsNativeFunct
         default: {
             assert(name.type >= JDT_OBJECT);
             auto nameNew = ctx->runtime->jsObjectToString(ctx, name);
-            if (ctx->error != PE_OK) {
+            if (ctx->error != JE_OK) {
                 return nullptr;
             }
             return getRaw(ctx, nameNew, funcGetterOut, includeProtoProp);
@@ -181,7 +181,7 @@ void IJsObject::set(VMContext *ctx, const JsValue &thiz, const JsValue &nameOrg,
 
     switch (name.type) {
         case JDT_NOT_INITIALIZED:
-            ctx->throwException(PE_TYPE_ERROR, "Cannot access '?' before initialization");
+            ctx->throwException(JE_TYPE_ERROR, "Cannot access '?' before initialization");
             return;
         case JDT_UNDEFINED: setByName(ctx, thiz, SS_UNDEFINED, value); break;
         case JDT_NULL: setByName(ctx, thiz, SS_NULL, value); break;
@@ -212,7 +212,7 @@ void IJsObject::set(VMContext *ctx, const JsValue &thiz, const JsValue &nameOrg,
             setBySymbol(ctx, thiz, name.value.index, value);
             break;
         default: {
-            ctx->throwException(PE_TYPE_ERROR, "Cannot convert object to primitive value");
+            ctx->throwException(JE_TYPE_ERROR, "Cannot convert object to primitive value");
             return;
         }
     }
@@ -226,7 +226,7 @@ JsValue IJsObject::increase(VMContext *ctx, const JsValue &thiz, const JsValue &
 
     switch (name.type) {
         case JDT_NOT_INITIALIZED:
-            ctx->throwException(PE_TYPE_ERROR, "Cannot access '?' before initialization");
+            ctx->throwException(JE_TYPE_ERROR, "Cannot access '?' before initialization");
             return jsValueNaN;
         case JDT_UNDEFINED: return increaseByName(ctx, thiz, SS_UNDEFINED, n, isPost);
         case JDT_NULL: return increaseByName(ctx, thiz, SS_NULL, n, isPost);
@@ -254,7 +254,7 @@ JsValue IJsObject::increase(VMContext *ctx, const JsValue &thiz, const JsValue &
         case JDT_SYMBOL:
             return increaseBySymbol(ctx, thiz, name.value.index, n, isPost);
         default: {
-            ctx->throwException(PE_TYPE_ERROR, "Cannot convert object to primitive value");
+            ctx->throwException(JE_TYPE_ERROR, "Cannot convert object to primitive value");
             return jsValueNaN;
         }
     }
@@ -268,7 +268,7 @@ bool IJsObject::remove(VMContext *ctx, const JsValue &propOrg) {
 
     switch (prop.type) {
         case JDT_NOT_INITIALIZED:
-            ctx->throwException(PE_TYPE_ERROR, "Cannot access '?' before initialization");
+            ctx->throwException(JE_TYPE_ERROR, "Cannot access '?' before initialization");
             break;
         case JDT_UNDEFINED: return removeByName(ctx, SS_UNDEFINED);
         case JDT_NULL: return removeByName(ctx, SS_NULL);
@@ -291,7 +291,7 @@ bool IJsObject::remove(VMContext *ctx, const JsValue &propOrg) {
         case JDT_SYMBOL:
             return removeBySymbol(ctx, prop.value.index);
         default: {
-            ctx->throwException(PE_TYPE_ERROR, "Cannot convert object to primitive value");
+            ctx->throwException(JE_TYPE_ERROR, "Cannot convert object to primitive value");
             break;
         }
     }

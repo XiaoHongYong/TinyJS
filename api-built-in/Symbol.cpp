@@ -43,7 +43,7 @@ inline JsValue convertSymbolToJsValue(VMContext *ctx, const JsValue &thiz, const
         return obj->value();
     }
 
-    ctx->throwException(PE_TYPE_ERROR, "Symbol.prototype.%s requires that 'this' be a Symbol", funcName);
+    ctx->throwException(JE_TYPE_ERROR, "Symbol.prototype.%s requires that 'this' be a Symbol", funcName);
     return jsValueNotInitialized;
 }
 

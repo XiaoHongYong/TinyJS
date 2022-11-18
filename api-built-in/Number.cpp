@@ -264,7 +264,7 @@ inline JsValue convertNumberToJsValue(VMContext *ctx, const JsValue &thiz, const
         return obj->value();
     }
 
-    ctx->throwException(PE_TYPE_ERROR, "Number.prototype.%s requires that 'this' be a Number", funcName);
+    ctx->throwException(JE_TYPE_ERROR, "Number.prototype.%s requires that 'this' be a Number", funcName);
     return jsValueNotInitialized;
 }
 
@@ -284,7 +284,7 @@ void numberPrototypeToExponential(VMContext *ctx, const JsValue &thiz, const Arg
     } else {
         auto fractionDigits = args.getIntAt(ctx, 0);
         if (fractionDigits < 0 || fractionDigits > 100) {
-            ctx->throwException(PE_RANGE_ERROR, "toExponential() argument must be between 0 and 100");
+            ctx->throwException(JE_RANGE_ERROR, "toExponential() argument must be between 0 and 100");
             return;
         }
 
@@ -307,7 +307,7 @@ void numberPrototypeToFixed(VMContext *ctx, const JsValue &thiz, const Arguments
 
     auto precision = args.getIntAt(ctx, 0, 0);
     if (precision < 0 || precision > 100) {
-        ctx->throwException(PE_RANGE_ERROR, "toFixed() digits argument must be between 0 and 100");
+        ctx->throwException(JE_RANGE_ERROR, "toFixed() digits argument must be between 0 and 100");
         return;
     }
 
@@ -336,7 +336,7 @@ void numberPrototypeToPrecision(VMContext *ctx, const JsValue &thiz, const Argum
     } else {
         auto precision = args.getIntAt(ctx, 0);
         if (precision <= 0 || precision > 100) {
-            ctx->throwException(PE_RANGE_ERROR, "toPrecision() argument must be between 1 and 100");
+            ctx->throwException(JE_RANGE_ERROR, "toPrecision() argument must be between 1 and 100");
             return;
         }
 
@@ -358,7 +358,7 @@ void numberPrototypeToString(VMContext *ctx, const JsValue &thiz, const Argument
     if (args.count > 0) {
         radix = (int)runtime->toNumber(ctx, args[0]);
         if (radix < 2 || radix > 36) {
-            ctx->throwException(PE_RANGE_ERROR, "toString() radix argument must be between 2 and 36");
+            ctx->throwException(JE_RANGE_ERROR, "toString() radix argument must be between 2 and 36");
             return;
         }
     }

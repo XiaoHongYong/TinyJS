@@ -184,18 +184,28 @@ enum OpCode {
 
 const char *opCodeToString(OpCode code);
 
-// JsError 用于记录更为详细的错误信息.
 enum JsError {
     JE_OK,                              // 正常，无错误.
+    JE_ERROR,
+    JE_SYNTAX_ERROR,
+    JE_TYPE_ERROR,
+    JE_RANGE_ERROR,
+    JE_REFERECNE_ERROR,
+
+    //
+    // 下面的错误是非标准的，更详细的错误定义:
+    //
     JE_TYPE_NO_PROP_SETTER,             // 没有 Property setter 属性
     JE_TYPE_PROP_READ_ONLY,             // Property 的 writable 为 false，不能修改.
     JE_TYPE_PREVENTED_EXTENSION,        // prevented extension, 不能修改
     JE_TYPE_INVALID_LENGTH,             // 设置 length 的值不正确
     JE_TYPE_LENGTH_NOT_WRITABLE,        // length 不可更改
-    JE_TYPE_PROP_NO_DELETABLE,       // 属性不可被删除
+    JE_TYPE_PROP_NO_DELETABLE,          // 属性不可被删除
     JE_NOT_SUPPORTED,                   // 不支持的操作
     JE_MAX_STACK_EXCEEDED,              // 函数调用堆栈超限
 };
+
+cstr_t parseErrorToString(JsError err);
 
 enum JsDataType : uint8_t {
     JDT_NOT_INITIALIZED = 0,

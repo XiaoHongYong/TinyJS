@@ -40,17 +40,17 @@ SizedString objectPrototypeToSizedString(const JsValue &thiz);
 void throwModifyPropertyException(VMContext *ctx, JsError err, JsValue thiz, int index) {
     if (err == JE_TYPE_PROP_READ_ONLY) {
         auto s = objectPrototypeToSizedString(thiz);
-        ctx->throwException(PE_TYPE_ERROR, "Cannot assign to read only property '%d' of object '%.*s'", index, s.len, s.data);
+        ctx->throwException(JE_TYPE_ERROR, "Cannot assign to read only property '%d' of object '%.*s'", index, s.len, s.data);
     } else if (err == JE_TYPE_NO_PROP_SETTER) {
         auto s = objectPrototypeToSizedString(thiz);
-        ctx->throwException(PE_TYPE_ERROR, "Cannot set property %d of %.*s which has only a getter", index, s.len, s.data);
+        ctx->throwException(JE_TYPE_ERROR, "Cannot set property %d of %.*s which has only a getter", index, s.len, s.data);
     } else if (err == JE_MAX_STACK_EXCEEDED) {
-        ctx->throwException(PE_TYPE_ERROR, "Maximum call stack size exceeded");
+        ctx->throwException(JE_TYPE_ERROR, "Maximum call stack size exceeded");
     } else if (err == JE_TYPE_PREVENTED_EXTENSION) {
-        ctx->throwException(PE_TYPE_ERROR, "Cannot add property 0, object is not extensible");
+        ctx->throwException(JE_TYPE_ERROR, "Cannot add property 0, object is not extensible");
     } else if (err == JE_TYPE_PROP_NO_DELETABLE) {
         auto s = objectPrototypeToSizedString(thiz);
-        ctx->throwException(PE_TYPE_ERROR, "Cannot delete property '%d' of %.*s", index, s.len, s.data);
+        ctx->throwException(JE_TYPE_ERROR, "Cannot delete property '%d' of %.*s", index, s.len, s.data);
     } else {
         assert(0);
     }
@@ -60,7 +60,7 @@ void setPropByIndexEx(VMContext *ctx, JsValue thiz, IJsObject *obj, JsValue valu
     if (value.type == JDT_NOT_INITIALIZED) {
         if (!obj->removeByIndex(ctx, index)) {
             auto s = objectPrototypeToSizedString(thiz);
-            ctx->throwException(PE_TYPE_ERROR, "Cannot delete property '%d' of %.*s", index, s.len, s.data);
+            ctx->throwException(JE_TYPE_ERROR, "Cannot delete property '%d' of %.*s", index, s.len, s.data);
         }
     } else {
         auto err = obj->setByIndex(ctx, thiz, index, value);
@@ -76,13 +76,13 @@ void arrayLikeAction(VMContext *ctx, JsValue thiz, T action) {
 
     if (thiz.type < JDT_OBJECT) {
         if (thiz.type <= JDT_NULL) {
-            ctx->throwException(PE_TYPE_ERROR, "Cannot convert undefined or null to object");
+            ctx->throwException(JE_TYPE_ERROR, "Cannot convert undefined or null to object");
         } else if (thiz.type == JDT_CHAR) {
             action(0, thiz);
         } else if (thiz.type == JDT_STRING) {
             auto &str = runtime->getStringWithRandAccess(thiz);
             auto length = str.size();
-            for (uint32_t i = 0; i < length && ctx->error == PE_OK; i++) {
+            for (uint32_t i = 0; i < length && ctx->error == JE_OK; i++) {
                 action(i, JsValue(JDT_CHAR, str.chartAt(i)));
             }
         }
@@ -95,7 +95,7 @@ void arrayLikeAction(VMContext *ctx, JsValue thiz, T action) {
         return;
     }
 
-    for (int i = 0; i < length && ctx->error == PE_OK; i++) {
+    for (int i = 0; i < length && ctx->error == JE_OK; i++) {
         auto value = obj->getByIndex(ctx, thiz, i, jsValueNotInitialized);
         if (value.type > JDT_NOT_INITIALIZED) {
             action(i, value);
@@ -109,7 +109,7 @@ void arrayLikeActionEx(VMContext *ctx, JsValue thiz, T action, int start = 0) {
 
     if (thiz.type < JDT_OBJECT) {
         if (thiz.type <= JDT_NULL) {
-            ctx->throwException(PE_TYPE_ERROR, "Cannot convert undefined or null to object");
+            ctx->throwException(JE_TYPE_ERROR, "Cannot convert undefined or null to object");
         } else if (thiz.type == JDT_CHAR) {
             if (start <= 0) {
                 action(0, thiz);
@@ -161,7 +161,7 @@ void arrayLikeActionExReverse(VMContext *ctx, JsValue thiz, T action, int fromIn
 
     if (thiz.type < JDT_OBJECT) {
         if (thiz.type <= JDT_NULL) {
-            ctx->throwException(PE_TYPE_ERROR, "Cannot convert undefined or null to object");
+            ctx->throwException(JE_TYPE_ERROR, "Cannot convert undefined or null to object");
         } else if (thiz.type == JDT_CHAR) {
             action(0, thiz);
         } else if (thiz.type == JDT_STRING) {
@@ -231,7 +231,7 @@ static void arrayConstructor(VMContext *ctx, const JsValue &thiz, const Argument
         if (len.type == JDT_NUMBER) {
             auto v = runtime->getDouble(len);
             if (v != (uint32_t)v) {
-                ctx->throwException(PE_RANGE_ERROR, "Invalid array length");
+                ctx->throwException(JE_RANGE_ERROR, "Invalid array length");
                 ctx->retValue = jsValueUndefined;
                 return;
             }
@@ -274,7 +274,7 @@ void arrayFrom(VMContext *ctx, const JsValue &thiz, const Arguments &args) {
 
         ctx->retValue = arr;
     } else if (!callback.isFunction()) {
-        ctx->throwExceptionFormatJsValue(PE_TYPE_ERROR, "%.*s is not a function", callback);
+        ctx->throwExceptionFormatJsValue(JE_TYPE_ERROR, "%.*s is not a function", callback);
         return;
     } else {
         auto arrObj = new JsArray();
@@ -319,7 +319,7 @@ void arrayPrototypeAt(VMContext *ctx, const JsValue &thiz, const Arguments &args
     IJsObject *obj = nullptr;
 
     if (thiz.type <= JDT_NULL) {
-        ctx->throwException(PE_TYPE_ERROR, "Cannot convert undefined or null to object");
+        ctx->throwException(JE_TYPE_ERROR, "Cannot convert undefined or null to object");
         return;
     }
 
@@ -377,7 +377,7 @@ void arrayPrototypeAt(VMContext *ctx, const JsValue &thiz, const Arguments &args
     }
 }
 
-#define validateThiz(apiName) if (thiz.type <= JDT_NULL) { ctx->throwException(PE_TYPE_ERROR, "Array.prototype." apiName " called on null or undefined"); return; }
+#define validateThiz(apiName) if (thiz.type <= JDT_NULL) { ctx->throwException(JE_TYPE_ERROR, "Array.prototype." apiName " called on null or undefined"); return; }
 
 JsValue newPrimaryObject(VMRuntime *runtime, const JsValue &thiz) {
     IJsObject *obj = nullptr;
@@ -436,7 +436,7 @@ void arrayPrototypeCopyWithin(VMContext *ctx, const JsValue &thiz, const Argumen
 
     if (thiz.type < JDT_OBJECT) {
         if (thiz.type <= JDT_NULL) {
-            ctx->throwException(PE_TYPE_ERROR, "Cannot convert undefined or null to object");
+            ctx->throwException(JE_TYPE_ERROR, "Cannot convert undefined or null to object");
         } else if (thiz.isString()) {
             auto length = thiz.type == JDT_CHAR ? 1 : runtime->getStringLength(thiz);
             normalizeStart(target, length);
@@ -446,7 +446,7 @@ void arrayPrototypeCopyWithin(VMContext *ctx, const JsValue &thiz, const Argumen
             if (start >= length || target >= length || start >= end) {
                 ctx->retValue = newPrimaryObject(runtime, thiz);
             } else {
-                ctx->throwException(PE_TYPE_ERROR, "Cannot assign to read only property '%d' of object '[object String]'", target);
+                ctx->throwException(JE_TYPE_ERROR, "Cannot assign to read only property '%d' of object '[object String]'", target);
             }
         } else {
             ctx->retValue = newPrimaryObject(runtime, thiz);
@@ -472,7 +472,7 @@ void arrayPrototypeCopyWithin(VMContext *ctx, const JsValue &thiz, const Argumen
 
     if (target < start) {
         // 往左复制
-        for (int i = start; i < end && ctx->error == PE_OK; i++) {
+        for (int i = start; i < end && ctx->error == JE_OK; i++) {
             auto value = obj->getByIndex(ctx, thiz, i, jsValueNotInitialized);
             setPropByIndexEx(ctx, thiz, obj, value, target++);
         }
@@ -483,7 +483,7 @@ void arrayPrototypeCopyWithin(VMContext *ctx, const JsValue &thiz, const Argumen
             end -= target + 1 - length;
             target = length - 1;
         }
-        for (int i = end - 1; i >= start && ctx->error == PE_OK; i--) {
+        for (int i = end - 1; i >= start && ctx->error == JE_OK; i--) {
             auto value = obj->getByIndex(ctx, thiz, i, jsValueNotInitialized);
             setPropByIndexEx(ctx, thiz, obj, value, target--);
         }
@@ -582,7 +582,7 @@ void arrayPrototypeEntries(VMContext *ctx, const JsValue &thiz, const Arguments 
     IJsObject *obj = nullptr;
 
     if (thiz.type <= JDT_NULL) {
-        ctx->throwException(PE_TYPE_ERROR, "Cannot convert undefined or null to object");
+        ctx->throwException(JE_TYPE_ERROR, "Cannot convert undefined or null to object");
         return;
     }
 
@@ -634,7 +634,7 @@ void arrayPrototypeEvery(VMContext *ctx, const JsValue &thiz, const Arguments &a
     arrayLikeActionEx(ctx, thiz, [ctx, vm, &result, callback, thisArg, thiz](int index, JsValue item) {
         ArgumentsX args(item, JsValue(JDT_INT32, index), thiz);
         vm->callMember(ctx, thisArg, callback, args);
-        if (ctx->error == PE_OK && ctx->runtime->testTrue(ctx->retValue)) {
+        if (ctx->error == JE_OK && ctx->runtime->testTrue(ctx->retValue)) {
             return false;
         }
 
@@ -652,7 +652,7 @@ void arrayPrototypeFill(VMContext *ctx, const JsValue &thiz, const Arguments &ar
 
     if (thiz.type < JDT_OBJECT) {
         if (thiz.type <= JDT_NULL) {
-            ctx->throwException(PE_TYPE_ERROR, "Cannot convert undefined or null to object");
+            ctx->throwException(JE_TYPE_ERROR, "Cannot convert undefined or null to object");
             return;
         } else {
             retValue = newPrimaryObject(runtime, thiz);
@@ -676,7 +676,7 @@ void arrayPrototypeFill(VMContext *ctx, const JsValue &thiz, const Arguments &ar
     normalizeEnd(end, length);
 
     if (start < end) {
-        for (int i = start; i < end && ctx->error == PE_OK; i++) {
+        for (int i = start; i < end && ctx->error == JE_OK; i++) {
             auto ret = obj->setByIndex(ctx, retValue, i, value);
             if (ret != JE_OK) {
                 throwModifyPropertyException(ctx, ret, retValue, i);
@@ -699,7 +699,7 @@ void arrayPrototypeFilter(VMContext *ctx, const JsValue &thiz, const Arguments &
     arrayLikeAction(ctx, thiz, [ctx, vm, callback, thisArg, thiz, arrObj](int index, JsValue item) {
         ArgumentsX args(item, JsValue(JDT_INT32, index), thiz);
         vm->callMember(ctx, thisArg, callback, args);
-        if (ctx->error == PE_OK && ctx->runtime->testTrue(ctx->retValue)) {
+        if (ctx->error == JE_OK && ctx->runtime->testTrue(ctx->retValue)) {
             arrObj->push(ctx, item);
         }
     });
@@ -716,7 +716,7 @@ void arrayPrototypeFind(VMContext *ctx, const JsValue &thiz, const Arguments &ar
     arrayLikeActionEx<false>(ctx, thiz, [ctx, vm, &result, callback, thisArg, thiz](int index, JsValue item) {
         ArgumentsX args(item, JsValue(JDT_INT32, index), thiz);
         vm->callMember(ctx, thisArg, callback, args);
-        if (ctx->error == PE_OK && ctx->runtime->testTrue(ctx->retValue)) {
+        if (ctx->error == JE_OK && ctx->runtime->testTrue(ctx->retValue)) {
             result = item;
             return true;
         }
@@ -735,7 +735,7 @@ void arrayPrototypeFindIndex(VMContext *ctx, const JsValue &thiz, const Argument
     arrayLikeActionEx<false>(ctx, thiz, [ctx, vm, &result, callback, thisArg, thiz](int index, JsValue item) {
         ArgumentsX args(item, JsValue(JDT_INT32, index), thiz);
         vm->callMember(ctx, thisArg, callback, args);
-        if (ctx->error == PE_OK && ctx->runtime->testTrue(ctx->retValue)) {
+        if (ctx->error == JE_OK && ctx->runtime->testTrue(ctx->retValue)) {
             result = index;
             return true;
         }
@@ -754,7 +754,7 @@ void arrayPrototypeFindLast(VMContext *ctx, const JsValue &thiz, const Arguments
     arrayLikeActionExReverse<false>(ctx, thiz, [ctx, vm, &result, callback, thisArg, thiz](int index, JsValue item) {
         ArgumentsX args(item, JsValue(JDT_INT32, index), thiz);
         vm->callMember(ctx, thisArg, callback, args);
-        if (ctx->error == PE_OK && ctx->runtime->testTrue(ctx->retValue)) {
+        if (ctx->error == JE_OK && ctx->runtime->testTrue(ctx->retValue)) {
             result = item;
             return true;
         }
@@ -773,7 +773,7 @@ void arrayPrototypeFindLastIndex(VMContext *ctx, const JsValue &thiz, const Argu
     arrayLikeActionExReverse<false>(ctx, thiz, [ctx, vm, &result, callback, thisArg, thiz](int index, JsValue item) {
         ArgumentsX args(item, JsValue(JDT_INT32, index), thiz);
         vm->callMember(ctx, thisArg, callback, args);
-        if (ctx->error == PE_OK && ctx->runtime->testTrue(ctx->retValue)) {
+        if (ctx->error == JE_OK && ctx->runtime->testTrue(ctx->retValue)) {
             result = index;
             return true;
         }
@@ -785,7 +785,7 @@ void arrayPrototypeFindLastIndex(VMContext *ctx, const JsValue &thiz, const Argu
 
 void arrayPrototypeFlat(VMContext *ctx, const JsValue &thiz, const Arguments &args) {
     auto depth = args.getIntAt(ctx, 0);
-    if (ctx->error != PE_OK) {
+    if (ctx->error != JE_OK) {
         return;
     }
 
@@ -807,7 +807,7 @@ void arrayPrototypeFlat(VMContext *ctx, const JsValue &thiz, const Arguments &ar
 void arrayPrototypeFlatMap(VMContext *ctx, const JsValue &thiz, const Arguments &args) {
     auto callback = args.getAt(0);
     if (!callback.isFunction()) {
-        ctx->throwException(PE_TYPE_ERROR, "flatMap mapper function is not callable");
+        ctx->throwException(JE_TYPE_ERROR, "flatMap mapper function is not callable");
         return;
     }
 
@@ -896,7 +896,7 @@ void arrayPrototypeJoin(VMContext *ctx, const JsValue &thiz, const Arguments &ar
     auto runtime = ctx->runtime;
     auto sep = args.getAt(0);
     auto sepStr = runtime->toSizedStringStrictly(ctx, sep);
-    if (ctx->error != PE_OK) {
+    if (ctx->error != JE_OK) {
         return;
     }
 
@@ -908,7 +908,7 @@ void arrayPrototypeJoin(VMContext *ctx, const JsValue &thiz, const Arguments &ar
 
     arrayLikeActionEx<false>(ctx, thiz, [ctx, runtime, &stream, &sepStr](int index, JsValue item) {
         auto s = runtime->toSizedStringStrictly(ctx, item);
-        if (ctx->error != PE_OK) {
+        if (ctx->error != JE_OK) {
             return true;
         }
 
@@ -946,7 +946,7 @@ void arrayPrototypeKeys(VMContext *ctx, const JsValue &thiz, const Arguments &ar
 
     if (thiz.type < JDT_OBJECT) {
         if (thiz.type <= JDT_NULL) {
-            ctx->throwException(PE_TYPE_ERROR, "Cannot convert undefined or null to object");
+            ctx->throwException(JE_TYPE_ERROR, "Cannot convert undefined or null to object");
             return;
         } else if (thiz.type == JDT_CHAR) {
             length = 1;
@@ -998,13 +998,13 @@ void arrayPrototypeMap(VMContext *ctx, const JsValue &thiz, const Arguments &arg
 
     if (thiz.type < JDT_OBJECT) {
         if (thiz.type <= JDT_NULL) {
-            ctx->throwException(PE_TYPE_ERROR, "Cannot convert undefined or null to object");
+            ctx->throwException(JE_TYPE_ERROR, "Cannot convert undefined or null to object");
         } else if (thiz.type == JDT_CHAR) {
             action(0, thiz);
         } else if (thiz.type == JDT_STRING) {
             auto &str = runtime->getStringWithRandAccess(thiz);
             auto length = str.size();
-            for (uint32_t i = 0; i < length && ctx->error == PE_OK; i++) {
+            for (uint32_t i = 0; i < length && ctx->error == JE_OK; i++) {
                 action(i, JsValue(JDT_CHAR, str.chartAt(i)));
             }
         }
@@ -1012,7 +1012,7 @@ void arrayPrototypeMap(VMContext *ctx, const JsValue &thiz, const Arguments &arg
         IJsObject *obj = runtime->getObject(thiz);
         int32_t length = 0;
         if (obj->getLength(ctx, length)) {
-            for (int i = 0; i < length && ctx->error == PE_OK; i++) {
+            for (int i = 0; i < length && ctx->error == JE_OK; i++) {
                 auto value = obj->getByIndex(ctx, thiz, i, jsValueNotInitialized);
                 if (value.type == JDT_NOT_INITIALIZED) {
                     arrObj->push(ctx, jsValueUndefined);
@@ -1031,15 +1031,15 @@ void arrayPrototypePop(VMContext *ctx, const JsValue &thiz, const Arguments &arg
 
     if (thiz.type < JDT_OBJECT) {
         if (thiz.type <= JDT_NULL) {
-            ctx->throwException(PE_TYPE_ERROR, "Cannot convert undefined or null to object");
+            ctx->throwException(JE_TYPE_ERROR, "Cannot convert undefined or null to object");
         } else if (thiz.type == JDT_CHAR) {
-            ctx->throwException(PE_TYPE_ERROR, "Cannot delete property '0' of [object String]");
+            ctx->throwException(JE_TYPE_ERROR, "Cannot delete property '0' of [object String]");
         } else if (thiz.type == JDT_STRING) {
             auto len = runtime->getStringLength(thiz);
             if (len == 0) {
-                ctx->throwException(PE_TYPE_ERROR, "Cannot assign to read only property 'length' of object '[object String]'");
+                ctx->throwException(JE_TYPE_ERROR, "Cannot assign to read only property 'length' of object '[object String]'");
             } else {
-                ctx->throwException(PE_TYPE_ERROR, "Cannot delete property '%d' of [object String]", len - 1);
+                ctx->throwException(JE_TYPE_ERROR, "Cannot delete property '%d' of [object String]", len - 1);
             }
         } else {
             ctx->retValue = jsValueUndefined;
@@ -1061,7 +1061,7 @@ void arrayPrototypePop(VMContext *ctx, const JsValue &thiz, const Arguments &arg
         auto v = obj->getByIndex(ctx, thiz, index);
         if (!obj->removeByIndex(ctx, index)) {
             auto s = objectPrototypeToSizedString(thiz);
-            ctx->throwException(PE_TYPE_ERROR, "Cannot delete property '%d' of %.*s", index, s.len, s.data);
+            ctx->throwException(JE_TYPE_ERROR, "Cannot delete property '%d' of %.*s", index, s.len, s.data);
         } else {
             ctx->retValue = v;
             obj->setByName(ctx, thiz, SS_LENGTH, JsValue(JDT_INT32, index));
@@ -1074,9 +1074,9 @@ void arrayPrototypePush(VMContext *ctx, const JsValue &thiz, const Arguments &ar
 
     if (thiz.type < JDT_OBJECT) {
         if (thiz.type <= JDT_NULL) {
-            ctx->throwException(PE_TYPE_ERROR, "Cannot convert undefined or null to object");
+            ctx->throwException(JE_TYPE_ERROR, "Cannot convert undefined or null to object");
         } else if (thiz.type == JDT_CHAR || thiz.type == JDT_STRING) {
-            ctx->throwException(PE_TYPE_ERROR, "Cannot assign to read only property 'length' of object '[object String]'");
+            ctx->throwException(JE_TYPE_ERROR, "Cannot assign to read only property 'length' of object '[object String]'");
         } else {
             ctx->retValue = JsValue(JDT_INT32, 1);
         }
@@ -1103,7 +1103,7 @@ void arrayPrototypePush(VMContext *ctx, const JsValue &thiz, const Arguments &ar
             }
         }
 
-        if (ctx->error == PE_OK) {
+        if (ctx->error == JE_OK) {
             auto err = obj->setByName(ctx, thiz, SS_LENGTH, JsValue(JDT_INT32, length));
             if (err != JE_OK) {
                 throwModifyPropertyException(ctx, err, thiz, length - 1);
@@ -1119,7 +1119,7 @@ void arrayPrototypeReduce(VMContext *ctx, const JsValue &thiz, const Arguments &
     auto vm = ctx->vm;
     auto callback = args.getAt(0);
     if (!callback.isFunction()) {
-        ctx->throwExceptionFormatJsValue(PE_TYPE_ERROR, "%.*s is not a function", callback);
+        ctx->throwExceptionFormatJsValue(JE_TYPE_ERROR, "%.*s is not a function", callback);
         return;
     }
 
@@ -1127,7 +1127,7 @@ void arrayPrototypeReduce(VMContext *ctx, const JsValue &thiz, const Arguments &
 
     if (thiz.type < JDT_OBJECT) {
         if (thiz.type <= JDT_NULL) {
-            ctx->throwException(PE_TYPE_ERROR, "Cannot convert undefined or null to object");
+            ctx->throwException(JE_TYPE_ERROR, "Cannot convert undefined or null to object");
         } else if (thiz.type == JDT_CHAR) {
             if (args.count == 1) {
                 ctx->retValue = thiz;
@@ -1142,7 +1142,7 @@ void arrayPrototypeReduce(VMContext *ctx, const JsValue &thiz, const Arguments &
             uint32_t i = 0;
             if (args.count == 1) {
                 if (length == 0) {
-                    ctx->throwException(PE_TYPE_ERROR, "Reduce of empty array with no initial value");
+                    ctx->throwException(JE_TYPE_ERROR, "Reduce of empty array with no initial value");
                     return;
                 }
 
@@ -1150,7 +1150,7 @@ void arrayPrototypeReduce(VMContext *ctx, const JsValue &thiz, const Arguments &
                 i = 1;
             }
 
-            for (; i < length && ctx->error == PE_OK; i++) {
+            for (; i < length && ctx->error == JE_OK; i++) {
                 ArgumentsX args(accumulator, JsValue(JDT_CHAR, str.chartAt(i)), JsValue(JDT_INT32, i), thiz);
                 vm->callMember(ctx, jsValueGlobalThis, callback, args);
                 accumulator = ctx->retValue;
@@ -1174,11 +1174,11 @@ void arrayPrototypeReduce(VMContext *ctx, const JsValue &thiz, const Arguments &
     }
 
     if (accumulator.type == JDT_NOT_INITIALIZED) {
-        ctx->throwException(PE_TYPE_ERROR, "Reduce of empty array with no initial value");
+        ctx->throwException(JE_TYPE_ERROR, "Reduce of empty array with no initial value");
         return;
     }
 
-    for (; i < length && ctx->error == PE_OK; i++) {
+    for (; i < length && ctx->error == JE_OK; i++) {
         auto value = obj->getByIndex(ctx, thiz, i, jsValueNotInitialized);
         if (value.type > JDT_NOT_INITIALIZED) {
             ArgumentsX args(accumulator, value, JsValue(JDT_INT32, i), thiz);
@@ -1195,7 +1195,7 @@ void arrayPrototypeReduceRight(VMContext *ctx, const JsValue &thiz, const Argume
     auto vm = ctx->vm;
     auto callback = args.getAt(0);
     if (!callback.isFunction()) {
-        ctx->throwExceptionFormatJsValue(PE_TYPE_ERROR, "%.*s is not a function", callback);
+        ctx->throwExceptionFormatJsValue(JE_TYPE_ERROR, "%.*s is not a function", callback);
         return;
     }
 
@@ -1203,7 +1203,7 @@ void arrayPrototypeReduceRight(VMContext *ctx, const JsValue &thiz, const Argume
 
     if (thiz.type < JDT_OBJECT) {
         if (thiz.type <= JDT_NULL) {
-            ctx->throwException(PE_TYPE_ERROR, "Cannot convert undefined or null to object");
+            ctx->throwException(JE_TYPE_ERROR, "Cannot convert undefined or null to object");
         } else if (thiz.type == JDT_CHAR) {
             if (args.count == 1) {
                 ctx->retValue = thiz;
@@ -1218,14 +1218,14 @@ void arrayPrototypeReduceRight(VMContext *ctx, const JsValue &thiz, const Argume
             int32_t i = length - 1;
             if (args.count == 1) {
                 if (length == 0) {
-                    ctx->throwException(PE_TYPE_ERROR, "Reduce of empty array with no initial value");
+                    ctx->throwException(JE_TYPE_ERROR, "Reduce of empty array with no initial value");
                     return;
                 }
 
                 accumulator = JsValue(JDT_CHAR, str.chartAt(i--));
             }
 
-            for (; i >= 0 && ctx->error == PE_OK; i--) {
+            for (; i >= 0 && ctx->error == JE_OK; i--) {
                 ArgumentsX args(accumulator, JsValue(JDT_CHAR, str.chartAt(i)), JsValue(JDT_INT32, i), thiz);
                 vm->callMember(ctx, jsValueGlobalThis, callback, args);
                 accumulator = ctx->retValue;
@@ -1249,11 +1249,11 @@ void arrayPrototypeReduceRight(VMContext *ctx, const JsValue &thiz, const Argume
     }
 
     if (accumulator.type == JDT_NOT_INITIALIZED) {
-        ctx->throwException(PE_TYPE_ERROR, "Reduce of empty array with no initial value");
+        ctx->throwException(JE_TYPE_ERROR, "Reduce of empty array with no initial value");
         return;
     }
 
-    for (; i >= 0 && ctx->error == PE_OK; i--) {
+    for (; i >= 0 && ctx->error == JE_OK; i--) {
         auto value = obj->getByIndex(ctx, thiz, i, jsValueNotInitialized);
         if (value.type > JDT_NOT_INITIALIZED) {
             ArgumentsX args(accumulator, value, JsValue(JDT_INT32, i), thiz);
@@ -1270,15 +1270,15 @@ void arrayPrototypeReverse(VMContext *ctx, const JsValue &thiz, const Arguments 
 
     if (thiz.type < JDT_OBJECT) {
         if (thiz.type <= JDT_NULL) {
-            ctx->throwException(PE_TYPE_ERROR, "Cannot convert undefined or null to object");
+            ctx->throwException(JE_TYPE_ERROR, "Cannot convert undefined or null to object");
         } else if (thiz.type == JDT_CHAR) {
-            ctx->throwException(PE_TYPE_ERROR, "Cannot assign to read only property '0' of object '[object String]'");
+            ctx->throwException(JE_TYPE_ERROR, "Cannot assign to read only property '0' of object '[object String]'");
         } else if (thiz.type == JDT_STRING) {
             auto len = runtime->getStringLength(thiz);
             if (len == 0) {
                 ctx->retValue = newPrimaryObject(runtime, thiz);
             } else {
-                ctx->throwException(PE_TYPE_ERROR, "Cannot assign to read only property '0' of object '[object String]'");
+                ctx->throwException(JE_TYPE_ERROR, "Cannot assign to read only property '0' of object '[object String]'");
             }
         } else {
             ctx->retValue = newPrimaryObject(runtime, thiz);
@@ -1300,7 +1300,7 @@ void arrayPrototypeReverse(VMContext *ctx, const JsValue &thiz, const Arguments 
     }
 
     length--;
-    for (uint32_t i = 0; i < length && ctx->error == PE_OK; i++, length--) {
+    for (uint32_t i = 0; i < length && ctx->error == JE_OK; i++, length--) {
         auto left = obj->getByIndex(ctx, thiz, i, jsValueNotInitialized);
         auto right = obj->getByIndex(ctx, thiz, length, jsValueNotInitialized);
         setPropByIndexEx(ctx, thiz, obj, right, i);
@@ -1315,15 +1315,15 @@ void arrayPrototypeShift(VMContext *ctx, const JsValue &thiz, const Arguments &a
 
     if (thiz.type < JDT_OBJECT) {
         if (thiz.type <= JDT_NULL) {
-            ctx->throwException(PE_TYPE_ERROR, "Cannot convert undefined or null to object");
+            ctx->throwException(JE_TYPE_ERROR, "Cannot convert undefined or null to object");
         } else if (thiz.type == JDT_CHAR) {
-            ctx->throwException(PE_TYPE_ERROR, "Cannot delete property '0' of [object String]");
+            ctx->throwException(JE_TYPE_ERROR, "Cannot delete property '0' of [object String]");
         } else if (thiz.type == JDT_STRING) {
             auto len = runtime->getStringLength(thiz);
             if (len == 0) {
-                ctx->throwException(PE_TYPE_ERROR, "Cannot assign to read only property 'length' of object '[object String]'");
+                ctx->throwException(JE_TYPE_ERROR, "Cannot assign to read only property 'length' of object '[object String]'");
             } else {
-                ctx->throwException(PE_TYPE_ERROR, "Cannot assign to read only property '0' of object '[object String]'");
+                ctx->throwException(JE_TYPE_ERROR, "Cannot assign to read only property '0' of object '[object String]'");
             }
         } else {
             ctx->retValue = jsValueUndefined;
@@ -1354,11 +1354,11 @@ void arrayPrototypeShift(VMContext *ctx, const JsValue &thiz, const Arguments &a
         ctx->retValue = jsValueUndefined;
     } else {
         auto ret = obj->getByIndex(ctx, thiz, 0);
-        for (int32_t i = 1; i < length && ctx->error == PE_OK; i++) {
+        for (int32_t i = 1; i < length && ctx->error == JE_OK; i++) {
             auto v = obj->getByIndex(ctx, thiz, i, jsValueNotInitialized);
             setPropByIndexEx(ctx, thiz, obj, v, i - 1);
         }
-        if (ctx->error == PE_OK) {
+        if (ctx->error == JE_OK) {
             if (obj->removeByIndex(ctx, length - 1)) {
                 obj->setByName(ctx, thiz, SS_LENGTH, JsValue(JDT_INT32, length - 1));
             } else {
@@ -1377,7 +1377,7 @@ void arrayPrototypeSlice(VMContext *ctx, const JsValue &thiz, const Arguments &a
 
     if (thiz.type < JDT_OBJECT) {
         if (thiz.type <= JDT_NULL) {
-            ctx->throwException(PE_TYPE_ERROR, "Cannot convert undefined or null to object");
+            ctx->throwException(JE_TYPE_ERROR, "Cannot convert undefined or null to object");
             return;
         }
 
@@ -1419,7 +1419,7 @@ void arrayPrototypeSlice(VMContext *ctx, const JsValue &thiz, const Arguments &a
     auto *arrObj = new JsArray();
     auto arr = runtime->pushObjectValue(arrObj);
 
-    for (int32_t i = start; i < end && ctx->error == PE_OK; i++) {
+    for (int32_t i = start; i < end && ctx->error == JE_OK; i++) {
         auto v = obj->getByIndex(ctx, thiz, i, jsValueNotInitialized);
         arrObj->push(ctx, v);
     }
@@ -1436,7 +1436,7 @@ void arrayPrototypeSome(VMContext *ctx, const JsValue &thiz, const Arguments &ar
     arrayLikeActionEx(ctx, thiz, [ctx, vm, &result, callback, thisArg, thiz](int index, JsValue item) {
         ArgumentsX args(item, JsValue(JDT_INT32, index), thiz);
         vm->callMember(ctx, thisArg, callback, args);
-        if (ctx->error == PE_OK && ctx->runtime->testTrue(ctx->retValue)) {
+        if (ctx->error == JE_OK && ctx->runtime->testTrue(ctx->retValue)) {
             result = true;
             return true;
         }
@@ -1451,15 +1451,15 @@ void arrayPrototypeSort(VMContext *ctx, const JsValue &thiz, const Arguments &ar
 
     if (thiz.type < JDT_OBJECT) {
         if (thiz.type <= JDT_NULL) {
-            ctx->throwException(PE_TYPE_ERROR, "Cannot convert undefined or null to object");
+            ctx->throwException(JE_TYPE_ERROR, "Cannot convert undefined or null to object");
         } else if (thiz.type == JDT_CHAR) {
-            ctx->throwException(PE_TYPE_ERROR, "Cannot assign to read only property '0' of object '[object String]'");
+            ctx->throwException(JE_TYPE_ERROR, "Cannot assign to read only property '0' of object '[object String]'");
         } else if (thiz.type == JDT_STRING) {
             auto len = runtime->getStringLength(thiz);
             if (len == 0) {
                 ctx->retValue = newPrimaryObject(runtime, thiz);
             } else {
-                ctx->throwException(PE_TYPE_ERROR, "Cannot assign to read only property '0' of object '[object String]'");
+                ctx->throwException(JE_TYPE_ERROR, "Cannot assign to read only property '0' of object '[object String]'");
             }
         } else {
             ctx->retValue = newPrimaryObject(runtime, thiz);
@@ -1484,7 +1484,7 @@ void arrayPrototypeSort(VMContext *ctx, const JsValue &thiz, const Arguments &ar
 
     VecJsValues values;
     int countNotInit = 0, countUndefined = 0;
-    for (uint32_t i = 0; i < length && ctx->error == PE_OK; i++) {
+    for (uint32_t i = 0; i < length && ctx->error == JE_OK; i++) {
         auto v = obj->getByIndex(ctx, thiz, i, jsValueNotInitialized);
         if (v.type == JDT_NOT_INITIALIZED) {
             countNotInit++;
@@ -1501,29 +1501,29 @@ void arrayPrototypeSort(VMContext *ctx, const JsValue &thiz, const Arguments &ar
         stable_sort(values.begin(), values.end(), [vm, ctx, callback](const JsValue &a, const JsValue &b) {
             ArgumentsX args(a, b);
             vm->callMember(ctx, jsValueGlobalThis, callback, args);
-            return ctx->error == PE_OK && ctx->runtime->testTrue(ctx->retValue);
+            return ctx->error == JE_OK && ctx->runtime->testTrue(ctx->retValue);
         });
     } else {
         stable_sort(values.begin(), values.end(), [vm, ctx, callback](const JsValue &a, const JsValue &b) {
-            return ctx->error == PE_OK && convertToStringLessCmp(ctx, a, b);
+            return ctx->error == JE_OK && convertToStringLessCmp(ctx, a, b);
         });
     }
 
     // 排好序的属性
     int i = 0;
-    for (; i < (int)values.size() && ctx->error == PE_OK; i++) {
+    for (; i < (int)values.size() && ctx->error == JE_OK; i++) {
         obj->setByIndex(ctx, thiz, i, values[i]);
     }
 
     // undefined
     countUndefined += i;
-    for (; i < countUndefined && ctx->error == PE_OK; i++) {
+    for (; i < countUndefined && ctx->error == JE_OK; i++) {
         obj->setByIndex(ctx, thiz, i, jsValueUndefined);
     }
 
     // empty
     countNotInit += i;
-    for (; i < countNotInit && ctx->error == PE_OK; i++) {
+    for (; i < countNotInit && ctx->error == JE_OK; i++) {
         if (!obj->removeByIndex(ctx, i)) {
             throwModifyPropertyException(ctx, JE_TYPE_PROP_NO_DELETABLE, thiz, i);
             break;
@@ -1545,7 +1545,7 @@ void arrayPrototypeSplice(VMContext *ctx, const JsValue &thiz, const Arguments &
 
     if (thiz.type < JDT_OBJECT) {
         if (thiz.type <= JDT_NULL) {
-            ctx->throwException(PE_TYPE_ERROR, "Cannot convert undefined or null to object");
+            ctx->throwException(JE_TYPE_ERROR, "Cannot convert undefined or null to object");
             return;
         }
 
@@ -1554,16 +1554,16 @@ void arrayPrototypeSplice(VMContext *ctx, const JsValue &thiz, const Arguments &
             normalizeStart(start, length);
 
             if (start >= length) {
-                ctx->throwException(PE_TYPE_ERROR, "Cannot assign to read only property 'length' of object '[object String]'");
+                ctx->throwException(JE_TYPE_ERROR, "Cannot assign to read only property 'length' of object '[object String]'");
             } else if (deleteCount >= length || start + deleteCount >= length) {
-                ctx->throwException(PE_TYPE_ERROR, "Cannot delete property '%d' of [object String]", length - 1);
+                ctx->throwException(JE_TYPE_ERROR, "Cannot delete property '%d' of [object String]", length - 1);
             } else {
-                ctx->throwException(PE_TYPE_ERROR, "Cannot assign to read only property '%d' of object '[object String]'",
+                ctx->throwException(JE_TYPE_ERROR, "Cannot assign to read only property '%d' of object '[object String]'",
                                     deleteCount >= args.count - 2 ? start : length - 1);
             }
         }
 
-        if (ctx->error == PE_OK) {
+        if (ctx->error == JE_OK) {
             auto *arrObj = new JsArray();
             auto arr = runtime->pushObjectValue(arrObj);
             ctx->retValue = arr;
@@ -1591,7 +1591,7 @@ void arrayPrototypeSplice(VMContext *ctx, const JsValue &thiz, const Arguments &
     auto arr = runtime->pushObjectValue(arrObj);
 
     // 将要删除的元素保存下来
-    for (int i = 0; i < deleteCount && ctx->error == PE_OK; i++) {
+    for (int i = 0; i < deleteCount && ctx->error == JE_OK; i++) {
         auto v = obj->getByIndex(ctx, thiz, i + start);
         arrObj->push(ctx, v);
     }
@@ -1602,7 +1602,7 @@ void arrayPrototypeSplice(VMContext *ctx, const JsValue &thiz, const Arguments &
         // 往右移动
         int src = length - 1, dst = length - 1 + insertCount - deleteCount;
         int srcBegin = start + deleteCount;
-        for (; src >= srcBegin && ctx->error == PE_OK; src--, dst--) {
+        for (; src >= srcBegin && ctx->error == JE_OK; src--, dst--) {
             auto v = obj->getByIndex(ctx, thiz, src, jsValueNotInitialized);
             setPropByIndexEx(ctx, thiz, obj, v, dst);
         }
@@ -1612,13 +1612,13 @@ void arrayPrototypeSplice(VMContext *ctx, const JsValue &thiz, const Arguments &
         // 往左移动
         int src = start + deleteCount;
         int dst = start + insertCount;
-        for (; src < length && ctx->error == PE_OK; src++, dst++) {
+        for (; src < length && ctx->error == JE_OK; src++, dst++) {
             auto v = obj->getByIndex(ctx, thiz, src, jsValueNotInitialized);
             setPropByIndexEx(ctx, thiz, obj, v, dst);
         }
 
         // 删除最后的元素
-        for (; dst < length && ctx->error == PE_OK; dst++) {
+        for (; dst < length && ctx->error == JE_OK; dst++) {
             if (!obj->removeByIndex(ctx, dst)) {
                 throwModifyPropertyException(ctx, JE_TYPE_PROP_NO_DELETABLE, thiz, dst);
             }
@@ -1626,18 +1626,18 @@ void arrayPrototypeSplice(VMContext *ctx, const JsValue &thiz, const Arguments &
     }
 
     // 插入
-    for (int32_t i = 0; i < insertCount && ctx->error == PE_OK; i++) {
+    for (int32_t i = 0; i < insertCount && ctx->error == JE_OK; i++) {
         auto err = obj->setByIndex(ctx, thiz, start + i, args[i + 2]);
         if (err != JE_OK) {
             throwModifyPropertyException(ctx, err, thiz, start + i);
         }
     }
 
-    if (ctx->error == PE_OK) {
+    if (ctx->error == JE_OK) {
         length += insertCount - deleteCount;
         auto err = obj->setByName(ctx, thiz, SS_LENGTH, JsValue(JDT_INT32, length));
         if (err != JE_OK) {
-            ctx->throwException(PE_TYPE_ERROR, "Cannot assign to read only property 'length' of object");
+            ctx->throwException(JE_TYPE_ERROR, "Cannot assign to read only property 'length' of object");
         }
     }
 
@@ -1664,15 +1664,15 @@ void arrayPrototypeUnshift(VMContext *ctx, const JsValue &thiz, const Arguments 
 
     if (thiz.type < JDT_OBJECT) {
         if (thiz.type <= JDT_NULL) {
-            ctx->throwException(PE_TYPE_ERROR, "Cannot convert undefined or null to object");
+            ctx->throwException(JE_TYPE_ERROR, "Cannot convert undefined or null to object");
             return;
         }
 
         if (thiz.isString()) {
             if (args.count == 0) {
-                ctx->throwException(PE_TYPE_ERROR, "Cannot assign to read only property 'length' of object '[object String]'");
+                ctx->throwException(JE_TYPE_ERROR, "Cannot assign to read only property 'length' of object '[object String]'");
             } else {
-                ctx->throwException(PE_TYPE_ERROR, "Cannot assign to read only property '%d' of object '[object String]'", thiz.type == JDT_CHAR ? 1 : runtime->getStringLength(thiz) - 1);
+                ctx->throwException(JE_TYPE_ERROR, "Cannot assign to read only property '%d' of object '[object String]'", thiz.type == JDT_CHAR ? 1 : runtime->getStringLength(thiz) - 1);
             }
         }
 
@@ -1688,13 +1688,13 @@ void arrayPrototypeUnshift(VMContext *ctx, const JsValue &thiz, const Arguments 
         // 移动
         // 往右移动
         int src = length - 1, dst = length - 1 + args.count;
-        for (; src >= 0 && ctx->error == PE_OK; src--, dst--) {
+        for (; src >= 0 && ctx->error == JE_OK; src--, dst--) {
             auto v = obj->getByIndex(ctx, thiz, src, jsValueNotInitialized);
             setPropByIndexEx(ctx, thiz, obj, v, dst);
         }
 
         // 插入
-        for (int32_t i = 0; i < args.count && ctx->error == PE_OK; i++) {
+        for (int32_t i = 0; i < args.count && ctx->error == JE_OK; i++) {
             obj->setByIndex(ctx, thiz, i, args[i]);
         }
     }
@@ -1744,7 +1744,7 @@ void arrayPrototypeValues(VMContext *ctx, const JsValue &thiz, const Arguments &
 
     if (thiz.type < JDT_OBJECT) {
         if (thiz.type <= JDT_NULL) {
-            ctx->throwException(PE_TYPE_ERROR, "Cannot convert undefined or null to object");
+            ctx->throwException(JE_TYPE_ERROR, "Cannot convert undefined or null to object");
             return;
         }
 

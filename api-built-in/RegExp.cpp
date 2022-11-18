@@ -19,7 +19,7 @@ void regExpConstructor(VMContext *ctx, const JsValue &thiz, const Arguments &arg
     auto flagsVal = args.getAt(1, jsValueUndefined);
     if (flagsVal.type >= JDT_OBJECT) {
         flagsVal = runtime->jsObjectToString(ctx, flagsVal);
-        if (ctx->error != PE_OK) {
+        if (ctx->error != JE_OK) {
             return;
         }
     }
@@ -27,7 +27,7 @@ void regExpConstructor(VMContext *ctx, const JsValue &thiz, const Arguments &arg
     if (flagsVal.type == JDT_UNDEFINED) {
         flagsVal = jsStringValueEmpty;
     } else if (!flagsVal.isString()) {
-        ctx->throwExceptionFormatJsValue(PE_SYNTAX_ERROR, "Invalid flags supplied to RegExp constructor '%.*s'", flagsVal);
+        ctx->throwExceptionFormatJsValue(JE_SYNTAX_ERROR, "Invalid flags supplied to RegExp constructor '%.*s'", flagsVal);
         return;
     }
 
@@ -37,7 +37,7 @@ void regExpConstructor(VMContext *ctx, const JsValue &thiz, const Arguments &arg
 
     uint32_t flags;
     if (!parseRegexpFlags(strFlags, flags)) {
-        ctx->throwExceptionFormatJsValue(PE_SYNTAX_ERROR, "Invalid flags supplied to RegExp constructor '%.*s'", flagsVal);
+        ctx->throwExceptionFormatJsValue(JE_SYNTAX_ERROR, "Invalid flags supplied to RegExp constructor '%.*s'", flagsVal);
         return;
     }
     std::regex re((cstr_t)strRe.data, strRe.len, (std::regex::flag_type)flags);
@@ -55,7 +55,7 @@ static JsLibProperty regExpFunctions[] = {
 
 void regExpPrototypeToString(VMContext *ctx, const JsValue &thiz, const Arguments &args) {
     if (thiz.type != JDT_REGEX) {
-        ctx->throwException(PE_TYPE_ERROR, "RegExp.prototype.toString requires that 'this' be a RegExp");
+        ctx->throwException(JE_TYPE_ERROR, "RegExp.prototype.toString requires that 'this' be a RegExp");
         return;
     }
 

@@ -261,12 +261,12 @@ VMContext::VMContext(VMRuntime *runtime) : runtime(runtime) {
     curFunctionScope = nullptr;
     isReturnedForTry = false;
 
-    errorInTry = PE_OK;
-    error = PE_OK;
+    errorInTry = JE_OK;
+    error = JE_OK;
 }
 
-void VMContext::throwException(JsErrorType err, cstr_t format, ...) {
-    if (error != PE_OK) {
+void VMContext::throwException(JsError err, cstr_t format, ...) {
+    if (error != JE_OK) {
         return;
     }
 
@@ -281,7 +281,7 @@ void VMContext::throwException(JsErrorType err, cstr_t format, ...) {
     throwException(err, newJsError(this, err, errValue));
 }
 
-void VMContext::throwException(JsErrorType err, JsValue errorMessage) {
+void VMContext::throwException(JsError err, JsValue errorMessage) {
     this->error = err;
     this->errorMessage = errorMessage;
 
@@ -290,14 +290,14 @@ void VMContext::throwException(JsErrorType err, JsValue errorMessage) {
         isReturnedForTry = false;
     }
 
-    if (errorInTry != PE_OK) {
+    if (errorInTry != JE_OK) {
         // 在 finally 中抛出异常，会清除上一次的异常内容
-        errorInTry = PE_OK;
+        errorInTry = JE_OK;
         errorMessageInTry = jsValueUndefined;
     }
 }
 
-void VMContext::throwExceptionFormatJsValue(JsErrorType err, cstr_t format, const JsValue &value) {
+void VMContext::throwExceptionFormatJsValue(JsError err, cstr_t format, const JsValue &value) {
     auto s = runtime->toSizedString(this, value);
     throwException(err, format, s.len, s.data);
 }
@@ -418,7 +418,7 @@ void JsVirtualMachine::callMember(VMContext *ctx, const JsValue &thiz, const JsV
             if (f) {
                 f(ctx, thiz, args);
             } else {
-                ctx->throwException(PE_TYPE_ERROR, "value is not a function");
+                ctx->throwException(JE_TYPE_ERROR, "value is not a function");
                 assert(0);
             }
             break;
@@ -434,7 +434,7 @@ void JsVirtualMachine::callMember(VMContext *ctx, const JsValue &thiz, const JsV
             break;
         }
         default: {
-            ctx->throwExceptionFormatJsValue(PE_TYPE_ERROR, "%.*s is not a function", memberFunc);
+            ctx->throwExceptionFormatJsValue(JE_TYPE_ERROR, "%.*s is not a function", memberFunc);
             break;
         }
     }
@@ -444,13 +444,13 @@ JsValue JsVirtualMachine::getMemberDot(VMContext *ctx, const JsValue &thiz, cons
     auto runtime = ctx->runtime;
     switch (thiz.type) {
         case JDT_NOT_INITIALIZED:
-            ctx->throwException(PE_REFERECNE_ERROR, "Cannot access '?' before initialization");
+            ctx->throwException(JE_REFERECNE_ERROR, "Cannot access '?' before initialization");
             break;
         case JDT_UNDEFINED:
-            ctx->throwException(PE_TYPE_ERROR, "Cannot read properties of undefined (reading '%.*s')", (int)name.len, name.data);
+            ctx->throwException(JE_TYPE_ERROR, "Cannot read properties of undefined (reading '%.*s')", (int)name.len, name.data);
             break;
         case JDT_NULL:
-            ctx->throwException(PE_TYPE_ERROR, "Cannot read properties of null (reading '%.*s')", (int)name.len, name.data);
+            ctx->throwException(JE_TYPE_ERROR, "Cannot read properties of null (reading '%.*s')", (int)name.len, name.data);
             break;
         case JDT_BOOL:
             return runtime->objPrototypeBoolean->getByName(ctx, thiz, name, defVal);
@@ -485,13 +485,13 @@ void JsVirtualMachine::setMemberDot(VMContext *ctx, const JsValue &thiz, const S
     auto runtime = ctx->runtime;
     switch (thiz.type) {
         case JDT_NOT_INITIALIZED:
-            ctx->throwException(PE_REFERECNE_ERROR, "Cannot access '?' before initialization");
+            ctx->throwException(JE_REFERECNE_ERROR, "Cannot access '?' before initialization");
             break;
         case JDT_UNDEFINED:
-            ctx->throwException(PE_TYPE_ERROR, "Cannot set properties of undefined (setting '%.*s')", (int)name.len, name.data);
+            ctx->throwException(JE_TYPE_ERROR, "Cannot set properties of undefined (setting '%.*s')", (int)name.len, name.data);
             break;
         case JDT_NULL:
-            ctx->throwException(PE_TYPE_ERROR, "Cannot set properties of null (setting '%.*s')", (int)name.len, name.data);
+            ctx->throwException(JE_TYPE_ERROR, "Cannot set properties of null (setting '%.*s')", (int)name.len, name.data);
             break;
         case JDT_BOOL:
             runtime->objPrototypeBoolean->setByName(ctx, thiz, name, value);
@@ -521,13 +521,13 @@ JsValue JsVirtualMachine::getMemberIndex(VMContext *ctx, const JsValue &thiz, co
     auto runtime = ctx->runtime;
     switch (thiz.type) {
         case JDT_NOT_INITIALIZED:
-            ctx->throwException(PE_REFERECNE_ERROR, "Cannot access '?' before initialization");
+            ctx->throwException(JE_REFERECNE_ERROR, "Cannot access '?' before initialization");
             break;
         case JDT_UNDEFINED:
-            ctx->throwException(PE_TYPE_ERROR, "Cannot read properties of undefined");
+            ctx->throwException(JE_TYPE_ERROR, "Cannot read properties of undefined");
             break;
         case JDT_NULL:
-            ctx->throwException(PE_TYPE_ERROR, "Cannot read properties of null");
+            ctx->throwException(JE_TYPE_ERROR, "Cannot read properties of null");
         case JDT_BOOL:
             return runtime->objPrototypeBoolean->get(ctx, thiz, name);
         case JDT_INT32:
@@ -551,13 +551,13 @@ JsValue JsVirtualMachine::getMemberIndex(VMContext *ctx, const JsValue &thiz, co
 void JsVirtualMachine::setMemberIndex(VMContext *ctx, const JsValue &thiz, const JsValue &name, const JsValue &value) {
     switch (thiz.type) {
         case JDT_NOT_INITIALIZED:
-            ctx->throwException(PE_REFERECNE_ERROR, "Cannot access '?' before initialization");
+            ctx->throwException(JE_REFERECNE_ERROR, "Cannot access '?' before initialization");
             break;
         case JDT_UNDEFINED:
-            ctx->throwException(PE_TYPE_ERROR, "Cannot set properties of undefined");
+            ctx->throwException(JE_TYPE_ERROR, "Cannot set properties of undefined");
             break;
         case JDT_NULL:
-            ctx->throwException(PE_TYPE_ERROR, "Cannot set properties of null");
+            ctx->throwException(JE_TYPE_ERROR, "Cannot set properties of null");
             break;
         case JDT_BOOL:
         case JDT_INT32:
@@ -631,7 +631,7 @@ JsValue searchIdentifierByName(VMContext *ctx, VecVMStackScopes &stackScopes, co
         }
     }
 
-    ctx->throwException(PE_REFERECNE_ERROR, "%.*s is not defined", (int)name.len, name.data);
+    ctx->throwException(JE_REFERECNE_ERROR, "%.*s is not defined", (int)name.len, name.data);
     return jsValueUndefined;
 }
 
@@ -746,7 +746,7 @@ void JsVirtualMachine::call(Function *function, VMContext *ctx, VecVMStackScopes
                 break;
             }
             case OP_THROW: {
-                ctx->throwException(PE_ERROR, stack.back());
+                ctx->throwException(JE_ERROR, stack.back());
                 stack.pop_back();
                 break;
             }
@@ -846,7 +846,7 @@ void JsVirtualMachine::call(Function *function, VMContext *ctx, VecVMStackScopes
             case OP_SET_WITH_OBJ: {
                 auto obj = stack.back(); stack.pop_back();
                 if (obj.type <= JDT_NULL) {
-                    ctx->throwException(PE_TYPE_ERROR, "Cannot convert undefined or null to object");
+                    ctx->throwException(JE_TYPE_ERROR, "Cannot convert undefined or null to object");
                     break;
                 }
                 scopeLocal->withValue = obj;
@@ -884,7 +884,7 @@ void JsVirtualMachine::call(Function *function, VMContext *ctx, VecVMStackScopes
                             ctx->stackScopesForNativeFunctionCall = &stackScopes;
                             f->getFunction()(ctx, jsValueGlobalThis, args);
                         } else {
-                            ctx->throwException(PE_TYPE_ERROR, "? is not a function.");
+                            ctx->throwException(JE_TYPE_ERROR, "? is not a function.");
                         }
                         break;
                     }
@@ -925,14 +925,14 @@ void JsVirtualMachine::call(Function *function, VMContext *ctx, VecVMStackScopes
                         if (f) {
                             f(ctx, thiz, args);
                         } else {
-                            ctx->throwException(PE_TYPE_ERROR, "value is not a function");
+                            ctx->throwException(JE_TYPE_ERROR, "value is not a function");
                             assert(0);
                         }
                         break;
                     }
                     default: {
                         auto type = runtime->toTypeName(func);
-                        ctx->throwException(PE_TYPE_ERROR, "%.*s is not a function", type.len, type.data);
+                        ctx->throwException(JE_TYPE_ERROR, "%.*s is not a function", type.len, type.data);
                         break;
                     }
                 }
@@ -1028,7 +1028,7 @@ void JsVirtualMachine::call(Function *function, VMContext *ctx, VecVMStackScopes
                 if (v.type == JDT_NOT_INITIALIZED) {
                     auto declare = globalScope->scopeDsc->getVarDeclarationByIndex(idx);
                     assert(declare);
-                    ctx->throwException(PE_REFERECNE_ERROR, "%.*s is not defined", (int)declare->name.len, declare->name.data);
+                    ctx->throwException(JE_REFERECNE_ERROR, "%.*s is not defined", (int)declare->name.len, declare->name.data);
                     break;
                 }
                 stack.push_back(v);
@@ -1521,7 +1521,7 @@ void JsVirtualMachine::call(Function *function, VMContext *ctx, VecVMStackScopes
                 if (right.type < JDT_OBJECT) {
                     auto s1 = runtime->toSizedString(ctx, left);
                     auto s2 = runtime->toSizedString(ctx, right);
-                    ctx->throwException(PE_TYPE_ERROR, "Cannot use 'in' operator to search for '%.*s' in %.*s",
+                    ctx->throwException(JE_TYPE_ERROR, "Cannot use 'in' operator to search for '%.*s' in %.*s",
                         (int)s1.len, s1.data, (int)s2.len, s2.data);
                     break;
                 }
@@ -1620,7 +1620,7 @@ void JsVirtualMachine::call(Function *function, VMContext *ctx, VecVMStackScopes
                         auto obj = (JsObjectFunction *)runtime->getObject(func);
                         assert(obj->type == JDT_FUNCTION);
                         if (obj->function->isMemberFunction) {
-                            ctx->throwException(PE_TYPE_ERROR, "? is not a constructor");
+                            ctx->throwException(JE_TYPE_ERROR, "? is not a constructor");
                             break;
                         }
 
@@ -1642,7 +1642,7 @@ void JsVirtualMachine::call(Function *function, VMContext *ctx, VecVMStackScopes
                         auto obj = (JsLibObject *)runtime->getObject(func);
                         assert(obj->type == JDT_LIB_OBJECT);
                         if (!obj->getFunction()) {
-                            ctx->throwException(PE_TYPE_ERROR, "? is not a constructor");
+                            ctx->throwException(JE_TYPE_ERROR, "? is not a constructor");
                             break;
                         }
 
@@ -1656,7 +1656,7 @@ void JsVirtualMachine::call(Function *function, VMContext *ctx, VecVMStackScopes
                         thizVal = ctx->retValue;
                     }
                     default:
-                        ctx->throwException(PE_TYPE_ERROR, "? is not a constructor");
+                        ctx->throwException(JE_TYPE_ERROR, "? is not a constructor");
                         break;
                 }
 
@@ -1773,18 +1773,18 @@ void JsVirtualMachine::call(Function *function, VMContext *ctx, VecVMStackScopes
                 if (obj.type == JDT_CHAR || obj.type == JDT_STRING) {
                     it = newJsStringIterator(ctx, obj, true);
                 } else if (obj.type <= JDT_NUMBER) {
-                    ctx->throwExceptionFormatJsValue(PE_TYPE_ERROR, "%.*s is not iterable", obj);
+                    ctx->throwExceptionFormatJsValue(JE_TYPE_ERROR, "%.*s is not iterable", obj);
                     break;
                 } else if (obj.type == JDT_SYMBOL) {
                     if (code == OP_ITERATOR_OF_CREATE) {
-                        ctx->throwExceptionFormatJsValue(PE_TYPE_ERROR, "%.*s is not iterable", obj);
+                        ctx->throwExceptionFormatJsValue(JE_TYPE_ERROR, "%.*s is not iterable", obj);
                         break;
                     }
                     it = new EmptyJsIterator();
                 } else {
                     auto pobj = runtime->getObject(obj);
                     if (code == OP_ITERATOR_OF_CREATE && !pobj->isOfIterable()) {
-                        ctx->throwExceptionFormatJsValue(PE_TYPE_ERROR, "%.*s is not iterable", obj);
+                        ctx->throwExceptionFormatJsValue(JE_TYPE_ERROR, "%.*s is not iterable", obj);
                         break;
                     } else {
                         assert(pobj);
@@ -1876,11 +1876,11 @@ void JsVirtualMachine::call(Function *function, VMContext *ctx, VecVMStackScopes
                     // 没有 try finally 了
                     bytecode = endBytecode;
                     ctx->isReturnedForTry = false;
-                } else if (ctx->errorInTry != PE_OK) {
+                } else if (ctx->errorInTry != JE_OK) {
                     // 恢复 try 中的异常标志
                     ctx->error = ctx->errorInTry;
                     ctx->errorMessage = ctx->errorMessageInTry;
-                    ctx->errorInTry = PE_OK;
+                    ctx->errorInTry = JE_OK;
                     ctx->errorMessageInTry = jsValueUndefined;
                     stack.push_back(ctx->errorMessage);
                 }
@@ -1888,7 +1888,7 @@ void JsVirtualMachine::call(Function *function, VMContext *ctx, VecVMStackScopes
             }
         }
 
-        if (ctx->error != PE_OK) {
+        if (ctx->error != JE_OK) {
             // 有异常发生
 
             // 异常会清除 return 相关内容
@@ -1910,7 +1910,7 @@ void JsVirtualMachine::call(Function *function, VMContext *ctx, VecVMStackScopes
                     bytecode = function->bytecode + action.addrCatch;
 
                     // 清除异常标志
-                    ctx->error = PE_OK;
+                    ctx->error = JE_OK;
 
                     if (action.addrFinally == 0) {
                         // 没有 finally
@@ -1923,7 +1923,7 @@ void JsVirtualMachine::call(Function *function, VMContext *ctx, VecVMStackScopes
                     // 跳转到 finally 的位置
                     ctx->errorInTry = ctx->error;
                     ctx->errorMessageInTry = ctx->errorMessage;
-                    ctx->error = PE_OK;
+                    ctx->error = JE_OK;
 
                     assert(action.addrFinally != 0);
                     bytecode = function->bytecode + action.addrFinally;

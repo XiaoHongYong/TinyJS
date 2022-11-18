@@ -35,7 +35,7 @@ JsValue increaseJsValue(VMContext *ctx, JsValue &v, int inc, bool isPost) {
             break;
         }
         case JDT_SYMBOL: {
-            ctx->throwException(PE_TYPE_ERROR, " Cannot convert a Symbol value to a number");
+            ctx->throwException(JE_TYPE_ERROR, " Cannot convert a Symbol value to a number");
             break;
         }
         case JDT_CHAR: {
@@ -74,10 +74,10 @@ inline JsValue increaseMemberDot(VMContext *ctx, const JsValue &obj, SizedString
     switch (obj.type) {
         case JDT_NOT_INITIALIZED:
         case JDT_UNDEFINED:
-            ctx->throwException(PE_TYPE_ERROR, "Cannot read properties of undefined (reading '%.*s')", (int)name.len, name.data);
+            ctx->throwException(JE_TYPE_ERROR, "Cannot read properties of undefined (reading '%.*s')", (int)name.len, name.data);
             return jsValueNaN;
         case JDT_NULL:
-            ctx->throwException(PE_TYPE_ERROR, "Cannot read properties of null (reading '%.*s')", (int)name.len, name.data);
+            ctx->throwException(JE_TYPE_ERROR, "Cannot read properties of null (reading '%.*s')", (int)name.len, name.data);
             return jsValueNaN;
         case JDT_BOOL:
         case JDT_INT32:
@@ -103,10 +103,10 @@ inline JsValue increaseMemberIndex(VMContext *ctx, const JsValue &obj, JsValue &
     switch (obj.type) {
         case JDT_NOT_INITIALIZED:
         case JDT_UNDEFINED:
-            ctx->throwExceptionFormatJsValue(PE_TYPE_ERROR, "Cannot read properties of undefined (reading '%.*s')", index);
+            ctx->throwExceptionFormatJsValue(JE_TYPE_ERROR, "Cannot read properties of undefined (reading '%.*s')", index);
             return jsValueNaN;
         case JDT_NULL:
-            ctx->throwExceptionFormatJsValue(PE_TYPE_ERROR, "Cannot read properties of null (reading '%.*s')", index);
+            ctx->throwExceptionFormatJsValue(JE_TYPE_ERROR, "Cannot read properties of null (reading '%.*s')", index);
             return jsValueNaN;
         case JDT_BOOL:
         case JDT_INT32:
@@ -145,7 +145,7 @@ JsValue bitNotOperation(VMContext *ctx, JsValue &v) {
             break;
         case JDT_NUMBER: n = doubleToInt32(runtime->getDouble(v)); break;
         case JDT_SYMBOL:
-            ctx->throwException(PE_TYPE_ERROR, " Cannot convert a Symbol value to a number");
+            ctx->throwException(JE_TYPE_ERROR, " Cannot convert a Symbol value to a number");
             break;
         default: {
             double d;

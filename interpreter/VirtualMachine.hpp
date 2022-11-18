@@ -27,7 +27,7 @@ using VecVMStackScopes = std::vector<VMScope *>;
 using StackJsValues = std::vector<JsValue>;
 using VecVMStackFrames = std::vector<VMFunctionFramePtr>;
 
-JsValue newJsError(VMContext *ctx, JsErrorType errType, const JsValue &message = jsValueUndefined);
+JsValue newJsError(VMContext *ctx, JsError errType, const JsValue &message = jsValueUndefined);
 
 enum VMMiscFlags {
     COMMON_STRINGS              = 1,
@@ -179,9 +179,9 @@ private:
 public:
     VMContext(VMRuntime *runtime);
 
-    void throwException(JsErrorType err, cstr_t format, ...);
-    void throwException(JsErrorType err, JsValue errorMessage);
-    void throwExceptionFormatJsValue(JsErrorType err, cstr_t format, const JsValue &value);
+    void throwException(JsError err, cstr_t format, ...);
+    void throwException(JsError err, JsValue errorMessage);
+    void throwExceptionFormatJsValue(JsError err, cstr_t format, const JsValue &value);
 
     JsVirtualMachine            *vm;
     VMScope                     *curFunctionScope;
@@ -198,11 +198,11 @@ public:
     bool                        isReturnedForTry; // 如果 return 在 try 中，并且有 fainaly 会设置此标志
     JsValue                     retValue; // 函数的返回值
 
-    JsErrorType                 errorInTry;
+    JsError                 errorInTry;
     JsValue                     errorMessageInTry;
 
     JsValue                     errorMessage;
-    JsErrorType                 error;
+    JsError                 error;
 
 };
 

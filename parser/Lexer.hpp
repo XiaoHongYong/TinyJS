@@ -111,25 +111,14 @@ enum TokenType : uint8_t {
     TK_TEMPLATE_TAIL
 };
 
-enum JsErrorType {
-    PE_OK                   = 0,
-    PE_ERROR,
-    PE_SYNTAX_ERROR,
-    PE_TYPE_ERROR,
-    PE_RANGE_ERROR,
-    PE_REFERECNE_ERROR,
-};
-
-cstr_t parseErrorToString(JsErrorType err);
-
 /**
  * 在代码解析阶段可抛出异常，不能在执行 bytecode 阶段抛出异常.
  */
 class ParseException : public std::exception {
 public:
-    ParseException(JsErrorType err, cstr_t format, ...);
+    ParseException(JsError err, cstr_t format, ...);
 
-    JsErrorType             error;
+    JsError             error;
     string                  message;
 
 };

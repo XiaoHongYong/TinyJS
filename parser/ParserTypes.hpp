@@ -136,7 +136,7 @@ public:
     // 用于判断 Array/Object 是否可以作为一个表达式.
     // 带 shorthand property initializer 的是不能作为表达式的，比如: { x=y }
     virtual bool canBeExpression() { return true; }
-    virtual void setBeingAssigned() { throw ParseException(PE_SYNTAX_ERROR, "Invalid destructuring assignment target"); }
+    virtual void setBeingAssigned() { throw ParseException(JE_SYNTAX_ERROR, "Invalid destructuring assignment target"); }
 
     virtual void convertToByteCode(ByteCodeStream &stream) { }
 

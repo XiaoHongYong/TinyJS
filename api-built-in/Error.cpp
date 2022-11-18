@@ -42,15 +42,15 @@ static string getStack(VMContext *ctx) {
 }
 
 // https://developer.mozilla.org/zh-CN/docs/Web/JavaScript/Reference/Global_Objects/Error
-JsValue newJsError(VMContext *ctx, JsErrorType errType, const JsValue &message) {
+JsValue newJsError(VMContext *ctx, JsError errType, const JsValue &message) {
     auto runtime = ctx->runtime;
 
     JsValue proto = __errorPrototype;
     switch (errType) {
-        case PE_SYNTAX_ERROR: proto = __syntaxErrorPrototype; break;
-        case PE_TYPE_ERROR: proto = __typeErrorPrototype; break;
-        case PE_RANGE_ERROR: proto = __rangeErrorPrototype; break;
-        case PE_REFERECNE_ERROR: proto = __referenceErrorPrototype; break;
+        case JE_SYNTAX_ERROR: proto = __syntaxErrorPrototype; break;
+        case JE_TYPE_ERROR: proto = __typeErrorPrototype; break;
+        case JE_RANGE_ERROR: proto = __rangeErrorPrototype; break;
+        case JE_REFERECNE_ERROR: proto = __referenceErrorPrototype; break;
         default: break;
     }
 
@@ -63,19 +63,19 @@ JsValue newJsError(VMContext *ctx, JsErrorType errType, const JsValue &message) 
     return err;
 }
 
-void errorConstructor(VMContext *ctx, JsErrorType errType, const Arguments &args) {
+void errorConstructor(VMContext *ctx, JsError errType, const Arguments &args) {
     JsValue message = jsValueUndefined;
     if (args.count > 0) {
         message = args[0];
     }
 
-    ctx->retValue = newJsError(ctx, PE_OK, message);
+    ctx->retValue = newJsError(ctx, JE_OK, message);
 }
 
 // Error
 
 static void errorConstructor(VMContext *ctx, const JsValue &thiz, const Arguments &args) {
-    errorConstructor(ctx, PE_OK, args);
+    errorConstructor(ctx, JE_OK, args);
 }
 
 static JsLibProperty errorFunctions[] = {
@@ -114,7 +114,7 @@ static JsLibProperty errorPrototypeFunctions[] = {
 // SyntaxError
 
 static void syntaxErrorConstructor(VMContext *ctx, const JsValue &thiz, const Arguments &args) {
-    errorConstructor(ctx, PE_REFERECNE_ERROR, args);
+    errorConstructor(ctx, JE_REFERECNE_ERROR, args);
 }
 
 static JsLibProperty syntaxErrorFunctions[] = {
@@ -132,7 +132,7 @@ static JsLibProperty syntaxErrorPrototypeFunctions[] = {
 // TypeError
 
 static void typeErrorConstructor(VMContext *ctx, const JsValue &thiz, const Arguments &args) {
-    errorConstructor(ctx, PE_TYPE_ERROR, args);
+    errorConstructor(ctx, JE_TYPE_ERROR, args);
 }
 
 static JsLibProperty typeErrorFunctions[] = {
@@ -150,7 +150,7 @@ static JsLibProperty typeErrorPrototypeFunctions[] = {
 // ReferenceError
 
 static void referenceErrorConstructor(VMContext *ctx, const JsValue &thiz, const Arguments &args) {
-    errorConstructor(ctx, PE_REFERECNE_ERROR, args);
+    errorConstructor(ctx, JE_REFERECNE_ERROR, args);
 }
 
 static JsLibProperty referenceErrorFunctions[] = {
@@ -168,7 +168,7 @@ static JsLibProperty referenceErrorPrototypeFunctions[] = {
 // RangeError
 
 static void rangeErrorConstructor(VMContext *ctx, const JsValue &thiz, const Arguments &args) {
-    errorConstructor(ctx, PE_REFERECNE_ERROR, args);
+    errorConstructor(ctx, JE_REFERECNE_ERROR, args);
 }
 
 static JsLibProperty rangeErrorFunctions[] = {

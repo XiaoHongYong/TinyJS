@@ -319,11 +319,11 @@ bool JsGlobalThis::removeBySymbol(VMContext *ctx, uint32_t index) {
 }
 
 void JsGlobalThis::changeAllProperties(VMContext *ctx, int8_t configurable, int8_t writable) {
-    ctx->throwException(PE_TYPE_ERROR, "Cannot freeze");
+    ctx->throwException(JE_TYPE_ERROR, "Cannot freeze");
 }
 
 void JsGlobalThis::preventExtensions(VMContext *ctx) {
-    ctx->throwException(PE_TYPE_ERROR, "Cannot prevent extensions");
+    ctx->throwException(JE_TYPE_ERROR, "Cannot prevent extensions");
 }
 
 IJsObject *JsGlobalThis::clone() {

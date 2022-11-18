@@ -752,7 +752,7 @@ bool VMRuntime::toNumber(VMContext *ctx, const JsValue &item, double &out) {
         Arguments noArgs;
         vm->callMember(ctx, v, SS_TOSTRING, noArgs);
         if (ctx->retValue.type >= JDT_OBJECT) {
-            ctx->throwException(PE_TYPE_ERROR, " Cannot convert object to primitive value");
+            ctx->throwException(JE_TYPE_ERROR, " Cannot convert object to primitive value");
             return false;
         }
         v = ctx->retValue;
@@ -760,7 +760,7 @@ bool VMRuntime::toNumber(VMContext *ctx, const JsValue &item, double &out) {
 
     switch (v.type) {
         case JDT_NOT_INITIALIZED:
-            ctx->throwException(PE_REFERECNE_ERROR, "Cannot access variable before initialization");
+            ctx->throwException(JE_REFERECNE_ERROR, "Cannot access variable before initialization");
             out = NAN;
             return false;
         case JDT_UNDEFINED:
@@ -786,7 +786,7 @@ bool VMRuntime::toNumber(VMContext *ctx, const JsValue &item, double &out) {
             out = getDouble(v);
             return true;
         case JDT_SYMBOL:
-            ctx->throwException(PE_TYPE_ERROR, "Cannot convert a Symbol value to a number");
+            ctx->throwException(JE_TYPE_ERROR, "Cannot convert a Symbol value to a number");
             out = NAN;
             return false;
         default:
@@ -809,7 +809,7 @@ JsValue VMRuntime::jsObjectToString(VMContext *ctx, const JsValue &v) {
     assert(v.type >= JDT_OBJECT);
     vm->callMember(ctx, v, SS_TOSTRING, Arguments());
     if (ctx->retValue.type >= JDT_OBJECT) {
-        ctx->throwException(PE_TYPE_ERROR, " Cannot convert object to primitive value");
+        ctx->throwException(JE_TYPE_ERROR, " Cannot convert object to primitive value");
         return jsStringValueEmpty;
     }
     return ctx->retValue;
@@ -823,7 +823,7 @@ JsValue VMRuntime::toString(VMContext *ctx, const JsValue &v) {
 
     switch (val.type) {
         case JDT_NOT_INITIALIZED:
-            ctx->throwException(PE_TYPE_ERROR, "Cannot access '?' before initialization");
+            ctx->throwException(JE_TYPE_ERROR, "Cannot access '?' before initialization");
             break;
         case JDT_UNDEFINED: return jsStringValueUndefined;
         case JDT_NULL: return jsStringValueNull;
@@ -850,7 +850,7 @@ JsValue VMRuntime::toString(VMContext *ctx, const JsValue &v) {
             return pushString(SizedString(symbolValues[index].toString()));
         }
         default: {
-            ctx->throwException(PE_TYPE_ERROR, "Cannot convert object to primitive value");
+            ctx->throwException(JE_TYPE_ERROR, "Cannot convert object to primitive value");
         }
     }
 
@@ -862,7 +862,7 @@ LockedSizedStringWrapper VMRuntime::toSizedString(VMContext *ctx, const JsValue 
     if (val.type >= JDT_OBJECT) {
         vm->callMember(ctx, v, SS_TOSTRING, Arguments());
         if (ctx->retValue.type >= JDT_OBJECT) {
-            ctx->throwException(PE_TYPE_ERROR, " Cannot convert object to primitive value");
+            ctx->throwException(JE_TYPE_ERROR, " Cannot convert object to primitive value");
             return SizedString();
         }
         val = ctx->retValue;
@@ -879,7 +879,7 @@ LockedSizedStringWrapper VMRuntime::toSizedString(VMContext *ctx, const JsValue 
         case JDT_STRING: return getUtf8String(val);
         case JDT_SYMBOL: {
             if (isStrict) {
-                ctx->throwException(PE_TYPE_ERROR, "Cannot convert a Symbol value to a string");
+                ctx->throwException(JE_TYPE_ERROR, "Cannot convert a Symbol value to a string");
                 return LockedSizedStringWrapper();
             }
             auto index = val.value.n32;
@@ -887,7 +887,7 @@ LockedSizedStringWrapper VMRuntime::toSizedString(VMContext *ctx, const JsValue 
             return LockedSizedStringWrapper(symbolValues[index].toString());
         }
         default: {
-            ctx->throwException(PE_TYPE_ERROR, "Cannot convert object to primitive value");
+            ctx->throwException(JE_TYPE_ERROR, "Cannot convert object to primitive value");
         }
     }
 

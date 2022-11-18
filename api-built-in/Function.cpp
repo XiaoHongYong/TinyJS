@@ -64,7 +64,7 @@ void functionPrototypeApply(VMContext *ctx, const JsValue &thiz, const Arguments
         auto argObj = (JsArguments *)runtime->getObject(argArray);
         ctx->vm->callMember(ctx, that, thiz, *argObj->getArguments());
     } else {
-        ctx->throwException(PE_TYPE_ERROR, "Arguments array must be an array-like object.");
+        ctx->throwException(JE_TYPE_ERROR, "Arguments array must be an array-like object.");
     }
 }
 
@@ -76,12 +76,12 @@ void functionPrototypeBind(VMContext *ctx, const JsValue &thiz, const Arguments 
         if (thiz.type == JDT_LIB_OBJECT) {
             auto obj = (JsLibObject *)runtime->getObject(thiz);
             if (!obj->getFunction()) {
-                ctx->throwException(PE_TYPE_ERROR, "Bind must be called on a function");
+                ctx->throwException(JE_TYPE_ERROR, "Bind must be called on a function");
                 return;
             }
         }
     } else {
-        ctx->throwException(PE_TYPE_ERROR, "Bind must be called on a function");
+        ctx->throwException(JE_TYPE_ERROR, "Bind must be called on a function");
         return;
     }
 
@@ -128,7 +128,7 @@ void functionPrototypeToString(VMContext *ctx, const JsValue &thiz, const Argume
         }
     }
 
-    ctx->throwException(PE_TYPE_ERROR, "Function.prototype.toString requires that 'this' be a Function");
+    ctx->throwException(JE_TYPE_ERROR, "Function.prototype.toString requires that 'this' be a Function");
 }
 
 static JsLibProperty functionPrototypeFunctions[] = {

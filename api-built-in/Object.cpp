@@ -85,7 +85,7 @@ void objectDefineProperty(VMContext *ctx, const JsValue &thiz, const Arguments &
     auto runtime = ctx->runtime;
 
     if (args.count < 3 || args[2].type != JDT_OBJECT) {
-        ctx->throwException(PE_TYPE_ERROR, "Property description must be an object");
+        ctx->throwException(JE_TYPE_ERROR, "Property description must be an object");
         return;
     }
 
@@ -94,7 +94,7 @@ void objectDefineProperty(VMContext *ctx, const JsValue &thiz, const Arguments &
     auto descriptor = args[2];
 
     if (obj.type < JDT_OBJECT) {
-        ctx->throwException(PE_TYPE_ERROR, "Object.defineProperty called on non-object");
+        ctx->throwException(JE_TYPE_ERROR, "Object.defineProperty called on non-object");
         return;
     }
 
@@ -109,18 +109,18 @@ void objectDefineProperty(VMContext *ctx, const JsValue &thiz, const Arguments &
 
     if (get.type < JDT_FUNCTION && get.type > JDT_UNDEFINED) {
         auto str = definePropertyXetterToString(ctx, get);
-        ctx->throwException(PE_TYPE_ERROR, "Getter must be a function: %.*s", (int)str.len, str.data);
+        ctx->throwException(JE_TYPE_ERROR, "Getter must be a function: %.*s", (int)str.len, str.data);
         return;
     }
 
     if (set.type < JDT_FUNCTION && set.type > JDT_UNDEFINED) {
         auto str = definePropertyXetterToString(ctx, set);
-        ctx->throwException(PE_TYPE_ERROR, "Setter must be a function: %.*s", (int)str.len, str.data);
+        ctx->throwException(JE_TYPE_ERROR, "Setter must be a function: %.*s", (int)str.len, str.data);
         return;
     }
 
     if ((get.isValid() || set.isValid()) && (writable.isValid() || value.isValid())) {
-        ctx->throwException(PE_TYPE_ERROR, "Invalid property descriptor. Cannot both specify accessors and a value or writable attribute, #<Object>");
+        ctx->throwException(JE_TYPE_ERROR, "Invalid property descriptor. Cannot both specify accessors and a value or writable attribute, #<Object>");
     }
 
     JsProperty propDescriptor(jsValueNotInitialized, -1, -1, -1, -1);
@@ -148,18 +148,18 @@ void objectDefineProperty(VMContext *ctx, const JsValue &thiz, const Arguments &
 // https://developer.mozilla.org/en-US/docs/Web/JavaScript/Reference/Global_Objects/Object/defineProperties
 void objectDefineProperties(VMContext *ctx, const JsValue &thiz, const Arguments &args) {
     if (args.count == 0 || args[0].type < JDT_OBJECT) {
-        ctx->throwException(PE_TYPE_ERROR, "Object.defineProperties called on non-object");
+        ctx->throwException(JE_TYPE_ERROR, "Object.defineProperties called on non-object");
         return;
     }
 
     if (args.count == 1 || args[1].type <= JDT_NULL) {
-        ctx->throwException(PE_TYPE_ERROR, "Cannot convert undefined or null to object");
+        ctx->throwException(JE_TYPE_ERROR, "Cannot convert undefined or null to object");
         return;
     }
 
     auto runtime = ctx->runtime;
     if (args[1].type < JDT_OBJECT) {
-        ctx->throwExceptionFormatJsValue(PE_TYPE_ERROR, "Property description must be an object: %.*s", args[1]);
+        ctx->throwExceptionFormatJsValue(JE_TYPE_ERROR, "Property description must be an object: %.*s", args[1]);
         return;
     }
 
@@ -179,14 +179,14 @@ void objectDefineProperties(VMContext *ctx, const JsValue &thiz, const Arguments
 // https://developer.mozilla.org/zh-CN/docs/Web/JavaScript/Reference/Global_Objects/Object/create
 void objectCreate(VMContext *ctx, const JsValue &thiz, const Arguments &args) {
     if (args.count == 0) {
-        ctx->throwException(PE_TYPE_ERROR, "Object prototype may only be an Object or null: undefined");
+        ctx->throwException(JE_TYPE_ERROR, "Object prototype may only be an Object or null: undefined");
         return;
     }
 
     auto runtime = ctx->runtime;
     auto proto = args[0];
     if (proto.type < JDT_OBJECT && proto.type != JDT_NULL) {
-        ctx->throwExceptionFormatJsValue(PE_TYPE_ERROR, "Object prototype may only be an Object or null: %.*s", proto);
+        ctx->throwExceptionFormatJsValue(JE_TYPE_ERROR, "Object prototype may only be an Object or null: %.*s", proto);
     }
 
     auto obj = new JsObject(proto);
@@ -199,7 +199,7 @@ void objectCreate(VMContext *ctx, const JsValue &thiz, const Arguments &args) {
 
 void objectAssign(VMContext *ctx, const JsValue &thiz, const Arguments &args) {
     if (args.count == 0 || args[0].type <= JDT_NULL) {
-        ctx->throwException(PE_TYPE_ERROR, "Cannot convert undefined or null to object");
+        ctx->throwException(JE_TYPE_ERROR, "Cannot convert undefined or null to object");
         return;
     }
 
@@ -209,7 +209,7 @@ void objectAssign(VMContext *ctx, const JsValue &thiz, const Arguments &args) {
         case JDT_BOOL: targ = runtime->pushObjectValue(new JsBooleanObject(targ)); break;
         case JDT_INT32: targ = runtime->pushObjectValue(new JsNumberObject(targ)); break;
         case JDT_NUMBER: targ = runtime->pushObjectValue(new JsNumberObject(targ)); break;
-        case JDT_SYMBOL: ctx->throwException(PE_TYPE_ERROR, "Not supported Object.assign for symbol"); return;
+        case JDT_SYMBOL: ctx->throwException(JE_TYPE_ERROR, "Not supported Object.assign for symbol"); return;
         case JDT_CHAR: targ = runtime->pushObjectValue(new JsStringObject(targ)); break;
         case JDT_STRING: targ = runtime->pushObjectValue(new JsStringObject(targ)); break;
         default: break;
@@ -224,7 +224,7 @@ void objectAssign(VMContext *ctx, const JsValue &thiz, const Arguments &args) {
 
 void objectEntries(VMContext *ctx, const JsValue &thiz, const Arguments &args) {
     if (args.count == 0 || args[0].type <= JDT_NULL) {
-        ctx->throwException(PE_TYPE_ERROR, "Cannot convert undefined or null to object");
+        ctx->throwException(JE_TYPE_ERROR, "Cannot convert undefined or null to object");
         return;
     }
 
@@ -313,7 +313,7 @@ void objectGetOwnPropertyDescriptor(VMContext *ctx, const JsValue &thiz, const A
     ctx->retValue = jsValueUndefined;
 
     if (args.count < 1 || args[0].type <= JDT_NULL) {
-        ctx->throwException(PE_TYPE_ERROR, "Cannot convert undefined or null to object");
+        ctx->throwException(JE_TYPE_ERROR, "Cannot convert undefined or null to object");
         return;
     } else if (args.count < 2) {
         return;
@@ -387,7 +387,7 @@ void objectFreeze(VMContext *ctx, const JsValue &thiz, const Arguments &args) {
 
 void objectFromEntries(VMContext *ctx, const JsValue &thiz, const Arguments &args) {
     if (args.count == 0 || args[0].type <= JDT_NULL) {
-        ctx->throwException(PE_TYPE_ERROR, "undefined is not iterable");
+        ctx->throwException(JE_TYPE_ERROR, "undefined is not iterable");
         return;
     }
 
@@ -401,7 +401,7 @@ void objectFromEntries(VMContext *ctx, const JsValue &thiz, const Arguments &arg
         auto obj = runtime->getObject(entries);
         if (!obj->isOfIterable()) {
             auto name = runtime->toTypeName(entries);
-            ctx->throwException(PE_TYPE_ERROR, "%.*s is not iterable (cannot read property Symbol(Symbol.iterator))",
+            ctx->throwException(JE_TYPE_ERROR, "%.*s is not iterable (cannot read property Symbol(Symbol.iterator))",
                                 name.len, name.data);
             return;
         }
@@ -409,7 +409,7 @@ void objectFromEntries(VMContext *ctx, const JsValue &thiz, const Arguments &arg
     } else {
         auto name = runtime->toTypeName(entries);
         auto s = runtime->toSizedString(ctx, entries);
-        ctx->throwException(PE_TYPE_ERROR, "%.*s %.*s is not iterable (cannot read property Symbol(Symbol.iterator))",
+        ctx->throwException(JE_TYPE_ERROR, "%.*s %.*s is not iterable (cannot read property Symbol(Symbol.iterator))",
                             name.len, name.data, s.len, s.data);
         return;
     }
@@ -420,7 +420,7 @@ void objectFromEntries(VMContext *ctx, const JsValue &thiz, const Arguments &arg
     JsValue item;
     while (it->nextOf(item)) {
         if (item.type < JDT_OBJECT) {
-            ctx->throwExceptionFormatJsValue(PE_TYPE_ERROR, "Iterator value %.*s is not an entry object", item);
+            ctx->throwExceptionFormatJsValue(JE_TYPE_ERROR, "Iterator value %.*s is not an entry object", item);
             return;
         } else {
             auto entry = runtime->getObject(item);
@@ -433,7 +433,7 @@ void objectFromEntries(VMContext *ctx, const JsValue &thiz, const Arguments &arg
 
 void objectGetOwnPropertyDescriptors(VMContext *ctx, const JsValue &thiz, const Arguments &args) {
     if (args.count == 0 || args[0].type <= JDT_NULL) {
-        ctx->throwException(PE_TYPE_ERROR, "Cannot convert undefined or null to object");
+        ctx->throwException(JE_TYPE_ERROR, "Cannot convert undefined or null to object");
         return;
     }
 
@@ -455,7 +455,7 @@ void objectGetOwnPropertyDescriptors(VMContext *ctx, const JsValue &thiz, const 
 
 void objectGetOwnPropertyNames(VMContext *ctx, const JsValue &thiz, const Arguments &args) {
     if (args.count == 0 || args[0].type <= JDT_NULL) {
-        ctx->throwException(PE_TYPE_ERROR, "Cannot convert undefined or null to object");
+        ctx->throwException(JE_TYPE_ERROR, "Cannot convert undefined or null to object");
         return;
     }
 
@@ -479,10 +479,10 @@ JsValue get__proto__(VMContext *ctx, const JsValue &value) {
     switch (value.type) {
         case JDT_NOT_INITIALIZED:
         case JDT_UNDEFINED:
-            ctx->throwException(PE_TYPE_ERROR, "Cannot read properties of undefined (reading '__proto__')");
+            ctx->throwException(JE_TYPE_ERROR, "Cannot read properties of undefined (reading '__proto__')");
             break;
         case JDT_NULL:
-            ctx->throwException(PE_TYPE_ERROR, "Cannot read properties of null (reading '__proto__')");
+            ctx->throwException(JE_TYPE_ERROR, "Cannot read properties of null (reading '__proto__')");
             break;
         case JDT_BOOL:
             return jsValuePrototypeBool;
@@ -507,7 +507,7 @@ JsValue get__proto__(VMContext *ctx, const JsValue &value) {
 
 void objectGetPrototypeOf(VMContext *ctx, const JsValue &thiz, const Arguments &args) {
     if (args.count == 0 || args[0].type <= JDT_NULL) {
-        ctx->throwException(PE_TYPE_ERROR, "Cannot convert undefined or null to object");
+        ctx->throwException(JE_TYPE_ERROR, "Cannot convert undefined or null to object");
         return;
     }
 
@@ -553,7 +553,7 @@ void hasOwnProperty(VMContext *ctx, const JsValue &obj, const JsValue &name) {
 
 void objectHasOwn(VMContext *ctx, const JsValue &thiz, const Arguments &args) {
     if (args.count == 0 || args[0].type <= JDT_NULL) {
-        ctx->throwException(PE_TYPE_ERROR, "Cannot convert undefined or null to object");
+        ctx->throwException(JE_TYPE_ERROR, "Cannot convert undefined or null to object");
         return;
     }
 
@@ -638,7 +638,7 @@ void objectIsSealed(VMContext *ctx, const JsValue &thiz, const Arguments &args) 
 void objectKeys(VMContext *ctx, const JsValue &thiz, const Arguments &args) {
     auto obj = args.getAt(0);
     if (obj.type <= JDT_NULL) {
-        ctx->throwException(PE_TYPE_ERROR, "Cannot convert undefined or null to object");
+        ctx->throwException(JE_TYPE_ERROR, "Cannot convert undefined or null to object");
         return;
     }
 
@@ -658,7 +658,7 @@ void objectKeys(VMContext *ctx, const JsValue &thiz, const Arguments &args) {
 
 void objectPreventExtensions(VMContext *ctx, const JsValue &thiz, const Arguments &args) {
     if (args.count == 0 || args[0].type <= JDT_NULL) {
-        ctx->throwException(PE_TYPE_ERROR, "Cannot convert undefined or null to object");
+        ctx->throwException(JE_TYPE_ERROR, "Cannot convert undefined or null to object");
         return;
     }
 
@@ -689,12 +689,12 @@ void objectSetPrototypeOf(VMContext *ctx, const JsValue &thiz, const Arguments &
     auto prototype = args.getAt(1);
 
     if (obj.type <= JDT_NULL) {
-        ctx->throwException(PE_TYPE_ERROR, "Object.setPrototypeOf called on null or undefined");
+        ctx->throwException(JE_TYPE_ERROR, "Object.setPrototypeOf called on null or undefined");
         return;
     }
 
     if (prototype.type != JDT_NULL && prototype.type < JDT_OBJECT) {
-        ctx->throwExceptionFormatJsValue(PE_TYPE_ERROR, "Object prototype may only be an Object or null: %.*s", prototype);
+        ctx->throwExceptionFormatJsValue(JE_TYPE_ERROR, "Object prototype may only be an Object or null: %.*s", prototype);
         return;
     }
 
@@ -712,7 +712,7 @@ void objectValues(VMContext *ctx, const JsValue &thiz, const Arguments &args) {
     auto runtime = ctx->runtime;
 
     if (obj.type <= JDT_NULL) {
-        ctx->throwException(PE_TYPE_ERROR, "Cannot convert undefined or null to object");
+        ctx->throwException(JE_TYPE_ERROR, "Cannot convert undefined or null to object");
         return;
     }
 
@@ -764,7 +764,7 @@ void objectPrototypeToString(VMContext *ctx, const JsValue &thiz, const Argument
 
 void objectPrototypeHasOwnProperty(VMContext *ctx, const JsValue &thiz, const Arguments &args) {
     if (thiz.type <= JDT_NULL) {
-        ctx->throwException(PE_TYPE_ERROR, "Cannot convert undefined or null to object");
+        ctx->throwException(JE_TYPE_ERROR, "Cannot convert undefined or null to object");
         return;
     }
 

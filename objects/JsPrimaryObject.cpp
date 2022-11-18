@@ -20,12 +20,12 @@ void JsStringObject::definePropertyByName(VMContext *ctx, const SizedString &nam
         bool successful = false;
         auto index = name.atoi(successful);
         if (successful && index >= 0 && index < _length) {
-            ctx->throwException(PE_TYPE_ERROR, "Cannot redefine property: %d", index);
+            ctx->throwException(JE_TYPE_ERROR, "Cannot redefine property: %d", index);
         }
     }
 
     if (name.equal(SS_LENGTH)) {
-        ctx->throwException(PE_TYPE_ERROR, "Cannot redefine property: length");
+        ctx->throwException(JE_TYPE_ERROR, "Cannot redefine property: length");
         return;
     }
 
@@ -36,7 +36,7 @@ void JsStringObject::definePropertyByIndex(VMContext *ctx, uint32_t index, const
     _updateLength(ctx);
 
     if (index < _length) {
-        ctx->throwException(PE_TYPE_ERROR, "Cannot redefine property: %d", index);
+        ctx->throwException(JE_TYPE_ERROR, "Cannot redefine property: %d", index);
         return;
     }
 

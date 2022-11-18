@@ -170,7 +170,7 @@ void JsArray::definePropertyByName(VMContext *ctx, const SizedString &name, cons
     }
 
     if (name.equal(SS_LENGTH)) {
-        ctx->throwException(PE_TYPE_ERROR, "Cannot redefine property: length");
+        ctx->throwException(JE_TYPE_ERROR, "Cannot redefine property: length");
         return;
     }
 
@@ -219,7 +219,7 @@ JsError JsArray::setByName(VMContext *ctx, const JsValue &thiz, const SizedStrin
         auto tmp = ctx->runtime->toNumber(ctx, value);
         auto length = (uint32_t)tmp;
         if (length != tmp) {
-            ctx->throwException(PE_RANGE_ERROR, "Invalid array length");
+            ctx->throwException(JE_RANGE_ERROR, "Invalid array length");
             return JE_TYPE_INVALID_LENGTH;
         }
 
@@ -624,17 +624,17 @@ void JsArray::sort(VMContext *ctx, const JsValue &callback) {
         stable_sort(values.begin(), values.end(), [vm, ctx, callback](const JsValue &a, const JsValue &b) {
             ArgumentsX args(a, b);
             vm->callMember(ctx, jsValueGlobalThis, callback, args);
-            return ctx->error == PE_OK && ctx->runtime->testTrue(ctx->retValue);
+            return ctx->error == JE_OK && ctx->runtime->testTrue(ctx->retValue);
         });
     } else {
         stable_sort(values.begin(), values.end(), [vm, ctx, callback](const JsValue &a, const JsValue &b) {
-            return ctx->error == PE_OK && convertToStringLessCmp(ctx, a, b);
+            return ctx->error == JE_OK && convertToStringLessCmp(ctx, a, b);
         });
     }
 
     // 排好序的属性
     int i = 0;
-    while (i < (int)values.size() && ctx->error == PE_OK) {
+    while (i < (int)values.size() && ctx->error == JE_OK) {
         auto b = findToModifyBlock(i);
         assert(b->index == i);
         int end = b->index + ARRAY_BLOCK_SIZE;
@@ -658,13 +658,13 @@ void JsArray::sort(VMContext *ctx, const JsValue &callback) {
                     ArgumentsX args(value);
                     ctx->vm->callMember(ctx, self, prop.setter, args);
                 } else {
-                    ctx->throwException(PE_TYPE_ERROR,
+                    ctx->throwException(JE_TYPE_ERROR,
                         "Cannot set property %d of [object Array] which has only a getter", index);
                 }
             } else if (prop.isWritable) {
                 prop.value = value;
             } else {
-                ctx->throwException(PE_TYPE_ERROR,
+                ctx->throwException(JE_TYPE_ERROR,
                         "Cannot assign to read only property '%d' of object '[object Array]'", index);
             }
         }
@@ -694,13 +694,13 @@ void JsArray::sort(VMContext *ctx, const JsValue &callback) {
                     ArgumentsX args(jsValueUndefined);
                     ctx->vm->callMember(ctx, self, prop.setter, args);
                 } else {
-                    ctx->throwException(PE_TYPE_ERROR,
+                    ctx->throwException(JE_TYPE_ERROR,
                         "Cannot set property %d of [object Array] which has only a getter", index);
                 }
             } else if (prop.isWritable) {
                 prop.value = jsValueUndefined;
             } else {
-                ctx->throwException(PE_TYPE_ERROR,
+                ctx->throwException(JE_TYPE_ERROR,
                         "Cannot assign to read only property '%d' of object '[object Array]'", index);
             }
         }
@@ -708,7 +708,7 @@ void JsArray::sort(VMContext *ctx, const JsValue &callback) {
 
     // empty
     countNotInit += i;
-    while (i < countNotInit && ctx->error == PE_OK) {
+    while (i < countNotInit && ctx->error == JE_OK) {
         auto b = findBlock(i);
         auto &items = b->items;
         int end = b->index + (int)items.size();
@@ -719,12 +719,12 @@ void JsArray::sort(VMContext *ctx, const JsValue &callback) {
             if (prop.isConfigurable) {
                 prop = JsProperty(jsValueNotInitialized);
             } else {
-                ctx->throwException(PE_TYPE_ERROR, "Cannot delete property '%d' of [object Array]", i);
+                ctx->throwException(JE_TYPE_ERROR, "Cannot delete property '%d' of [object Array]", i);
                 break;
             }
         }
 
-        if (ctx->error == PE_OK) {
+        if (ctx->error == JE_OK) {
             // 从 index 之后的元素都是 jsValueNotInitialized，可以直接删除
             items.resize(start, jsPropertyNotInitialized);
         }
@@ -839,7 +839,7 @@ JsError JsArray::extend(VMContext *ctx, const JsValue &other, uint32_t depth) {
                 } else {
                     values.push_back(value);
                     if (values.size() > 0x1000000) {
-                        ctx->throwException(PE_RANGE_ERROR, "Maximum call stack size exceeded");
+                        ctx->throwException(JE_RANGE_ERROR, "Maximum call stack size exceeded");
                         return JE_MAX_STACK_EXCEEDED;
                     }
                 }

@@ -10,13 +10,13 @@
 
 
 inline bool throwSymbolConvertException(VMContext *ctx, bool isToNumber = true) {
-    ctx->throwException(PE_TYPE_ERROR,
+    ctx->throwException(JE_TYPE_ERROR,
         isToNumber ? "Cannot convert a Symbol value to a number" : "Cannot convert a Symbol value to a string");
     return false;
 }
 
 inline void throwSymbolConvertStringException(VMContext *ctx) {
-    ctx->throwException(PE_TYPE_ERROR, "Cannot convert a Symbol value to a string");
+    ctx->throwException(JE_TYPE_ERROR, "Cannot convert a Symbol value to a string");
 }
 
 struct BinaryOpSub {
@@ -860,7 +860,7 @@ inline void assignMemberIndexOperation(VMContext *ctx, VMRuntime *runtime, const
 
     if (index.type >= JDT_OBJECT) {
         ctx->vm->callMember(ctx, obj, SS_TOSTRING, Arguments());
-        if (ctx->error != PE_OK) {
+        if (ctx->error != JE_OK) {
             return;
         }
         index = ctx->retValue;
@@ -872,12 +872,12 @@ inline void assignMemberIndexOperation(VMContext *ctx, VMRuntime *runtime, const
 
 inline bool instanceOf(VMContext *ctx, VMRuntime *rt, const JsValue &left, const JsValue &right) {
     if (right.type < JDT_OBJECT) {
-        ctx->throwException(PE_TYPE_ERROR, "Right-hand side of 'instanceof' is not an object");
+        ctx->throwException(JE_TYPE_ERROR, "Right-hand side of 'instanceof' is not an object");
         return false;
     }
 
     if (right.type < JDT_FUNCTION) {
-        ctx->throwException(PE_TYPE_ERROR, "Right-hand side of 'instanceof' is not callable");
+        ctx->throwException(JE_TYPE_ERROR, "Right-hand side of 'instanceof' is not callable");
         return false;
     }
 
