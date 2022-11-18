@@ -14,6 +14,8 @@
 class IJsIterator : public IJsObject {
 public:
     IJsIterator() {
+        __proto__ = JsProperty(jsValueNotInitialized, false, false, false, true);
+        _obj = nullptr;
         type = JDT_ITERATOR;
         referIdx = 0;
         nextFreeIdx = 0;
@@ -21,7 +23,7 @@ public:
     virtual ~IJsIterator() {}
 
     virtual bool nextOf(JsValue &valueOut) { return false; }
-    virtual bool next(SizedString *strKeyOut = nullptr, JsValue *keyOut = nullptr, JsValue *valueOut = nullptr) = 0;
+    virtual bool next(SizedString *strKeyOut = nullptr, JsValue *keyOut = nullptr, JsValue *valueOut = nullptr) { return false; }
 
     inline bool nextKey(SizedString &keyOut) { return next(&keyOut); }
     inline bool nextKey(JsValue &keyOut) { return next(nullptr, &keyOut); }
@@ -37,9 +39,9 @@ public:
     virtual void definePropertyByIndex(VMContext *ctx, uint32_t index, const JsProperty &descriptor) override;
     virtual void definePropertyBySymbol(VMContext *ctx, uint32_t index, const JsProperty &descriptor) override;
 
-    virtual void setByName(VMContext *ctx, const JsValue &thiz, const SizedString &name, const JsValue &value) override;
-    virtual void setByIndex(VMContext *ctx, const JsValue &thiz, uint32_t index, const JsValue &value) override;
-    virtual void setBySymbol(VMContext *ctx, const JsValue &thiz, uint32_t index, const JsValue &value) override;
+    virtual JsError setByName(VMContext *ctx, const JsValue &thiz, const SizedString &name, const JsValue &value) override;
+    virtual JsError setByIndex(VMContext *ctx, const JsValue &thiz, uint32_t index, const JsValue &value) override;
+    virtual JsError setBySymbol(VMContext *ctx, const JsValue &thiz, uint32_t index, const JsValue &value) override;
 
     virtual JsValue increaseByName(VMContext *ctx, const JsValue &thiz, const SizedString &name, int n, bool isPost) override;
     virtual JsValue increaseByIndex(VMContext *ctx, const JsValue &thiz, uint32_t index, int n, bool isPost) override;
@@ -78,7 +80,9 @@ protected:
 
 class EmptyJsIterator : public IJsIterator {
 public:
-    virtual bool next(SizedString *strKeyOut = nullptr, JsValue *keyOut = nullptr, JsValue *valueOut = nullptr) override { return false; }
+    EmptyJsIterator() {
+        _isOfIterable = true;
+    }
 
 };
 

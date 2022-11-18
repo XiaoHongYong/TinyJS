@@ -237,8 +237,12 @@ public:
 
     void dump(BinaryOutputStream &stream);
 
-    IdentifierDeclare *addVarDeclaration(const Token &token, bool isConst = false, bool isScopeVar = false);
-    void addArgumentDeclaration(const Token &token, int index);
+    IdentifierDeclare *addVarDeclaration(const SizedString &name, bool isConst = false, bool isScopeVar = false);
+    IdentifierDeclare *addVarDeclaration(const Token &token, bool isConst = false, bool isScopeVar = false) {
+        return addVarDeclaration(tokenToSizedString(token), isConst, isScopeVar);
+    }
+    void addArgumentDeclaration(const SizedString &name, int index);
+    void addArgumentDeclaration(const Token &token, int index) { addArgumentDeclaration(tokenToSizedString(token), index); }
     void addImplicitVarDeclaration(JsExprIdentifier *id);
     void addFunctionDeclaration(const Token &name, Function *child);
     IdentifierDeclare *getVarDeclarationByIndex(int index);

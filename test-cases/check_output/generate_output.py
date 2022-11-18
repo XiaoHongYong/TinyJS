@@ -182,7 +182,7 @@ def python_value_to_js_string(v):
     else:
         return str(v)
 
-def obj_arr_to_string(properties, is_arr=False):
+def obj_arr_to_string(properties, arr_len=-1):
     # Array
     # a.append(', '.join([prop.get('value', '##') for prop in properties]))
     if properties is None:
@@ -194,12 +194,23 @@ def obj_arr_to_string(properties, is_arr=False):
 
     try:
         for prop in properties:
+            typ = prop.get('type')
+            if typ == 'accessor':
+                a.append('...')
+                continue
+
             name = prop.get('name')
             value = prop.get('value')
-            if is_arr and name.isdigit():
+            if arr_len > 0 and name.isdigit():
+                for _i in range(len(a), int(name)):
+                    # 补齐中间缺的元素
+                    a.append('undefined')
                 a.append(value)
             else:
                 p.append(name + ': ' + value)
+        if arr_len > 0:
+            for _ in range(len(a), arr_len):
+                a.append('undefined')
     except e:
         print(properties)
         raise e
@@ -208,10 +219,15 @@ def obj_arr_to_string(properties, is_arr=False):
     a.extend(p)
     a = ', '.join(a)
 
-    if is_arr:
+    if arr_len != -1:
         return '[' + a + ']'
     else:
         return '{' + a + '}'
+
+def _parse_array_length(desc):
+    # desc: Array(5)
+    assert(desc.startswith('Array('))
+    return int(desc[6:].partition(')')[0])
 
 def args_to_string(args):
     a = []
@@ -252,10 +268,11 @@ def args_to_string(args):
                 # { "description": "/a/", "className": "RegExp", "type": "object" }
                 a.append(description)
             elif className == 'Array':
-                # { "type": "object", "className": "Array", "preview": { "properties": [{ "type": "number", "name": "3", "value": "NaN" } ] } }
+                # { 'description': 'Array(5)', "type": "object", "className": "Array", "preview": { "properties": [{ "type": "number", "name": "3", "value": "NaN" } ] } }
+                arr_len = _parse_array_length(arg.get('description'))
                 preview = arg.get('preview')
                 properties = preview.get('properties')
-                a.append(obj_arr_to_string(properties, is_arr=True))
+                a.append(obj_arr_to_string(properties, arr_len))
             elif className in ['Boolean', 'String', 'Number']:
                 preview = arg.get('preview')
                 properties = preview.get('properties')
@@ -274,6 +291,7 @@ def args_to_string(args):
 class ChromeRunner(object):
 
     def __init__(self):
+        # '/Applications/Google Chrome.app/Contents/MacOS/Google Chrome' '--remote-debugging-port=9222' '--headless'
         self._process = subprocess.Popen(['/Applications/Google Chrome.app/Contents/MacOS/Google Chrome', '--remote-debugging-port=9222', '--headless']) #, '--headless'
         self._chrome = None
 

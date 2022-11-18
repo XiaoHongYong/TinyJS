@@ -97,7 +97,7 @@ void JsLibObject::definePropertyBySymbol(VMContext *ctx, uint32_t index, const J
     _obj->definePropertyBySymbol(ctx, index, descriptor);
 }
 
-void JsLibObject::setByName(VMContext *ctx, const JsValue &thiz, const SizedString &name, const JsValue &value) {
+JsError JsLibObject::setByName(VMContext *ctx, const JsValue &thiz, const SizedString &name, const JsValue &value) {
     if (thiz.type < JDT_OBJECT) {
         // Primitive types 不能被修改，但是其 setter 函数会被调用
         if (_obj) {
@@ -109,7 +109,7 @@ void JsLibObject::setByName(VMContext *ctx, const JsValue &thiz, const SizedStri
                 ctx->vm->callMember(ctx, thiz, prop->setter, args);
             }
         }
-        return;
+        return JE_OK;
     }
 
     auto first = std::lower_bound(_libProps, _libPropsEnd, name, JsLibFunctionLessCmp());
@@ -120,27 +120,28 @@ void JsLibObject::setByName(VMContext *ctx, const JsValue &thiz, const SizedStri
         if (first->functionSet) {
             first->functionSet(ctx, thiz, ArgumentsX(value));
         } else {
-            set(ctx, &first->prop, thiz, value);
+            return set(ctx, &first->prop, thiz, value);
         }
     } else {
         if (!_obj) {
             _newObject(ctx);
         }
 
-        _obj->setByName(ctx, thiz, name, value);
+        return _obj->setByName(ctx, thiz, name, value);
     }
+    return JE_OK;
 }
 
-void JsLibObject::setByIndex(VMContext *ctx, const JsValue &thiz, uint32_t index, const JsValue &value) {
+JsError JsLibObject::setByIndex(VMContext *ctx, const JsValue &thiz, uint32_t index, const JsValue &value) {
     NumberToSizedString name(index);
-    setByName(ctx, thiz, name, value);
+    return setByName(ctx, thiz, name, value);
 }
 
-void JsLibObject::setBySymbol(VMContext *ctx, const JsValue &thiz, uint32_t index, const JsValue &value) {
+JsError JsLibObject::setBySymbol(VMContext *ctx, const JsValue &thiz, uint32_t index, const JsValue &value) {
     if (!_obj) {
         _newObject(ctx);
     }
-    _obj->setBySymbol(ctx, thiz, index, value);
+    return _obj->setBySymbol(ctx, thiz, index, value);
 }
 
 JsValue JsLibObject::increaseByName(VMContext *ctx, const JsValue &thiz, const SizedString &name, int n, bool isPost) {

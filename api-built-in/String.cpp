@@ -313,7 +313,7 @@ void stringPrototypeLastIndexOf(VMContext *ctx, const JsValue &thiz, const Argum
         return;
     }
 
-    int32_t index = args.getIntAt(ctx, 1, 0x7FFFFFFF);
+    int32_t index = args.getIntAt(ctx, 1, MAX_INT32);
 
     auto p = args.getStringAt(ctx, 0, SS_UNDEFINED);
 
@@ -411,9 +411,10 @@ void stringPrototypeMatch(VMContext *ctx, const JsValue &thiz, const Arguments &
 
 class StringMatchAllIterator : public IJsIterator {
 public:
-    StringMatchAllIterator(VMContext *ctx, std::regex &re, uint32_t flags, const SizedString &str, const JsValue &strVal) : _ctx(ctx), _re(re), _flags(flags), _strBegin(str.data), _strEnd(str.data + str.len), _strVal(strVal), _offset(0) { }
-
-    virtual bool isOfIterable() override { return true; }
+    StringMatchAllIterator(VMContext *ctx, std::regex &re, uint32_t flags, const SizedString &str, const JsValue &strVal) : _ctx(ctx), _re(re), _flags(flags), _strBegin(str.data), _strEnd(str.data + str.len), _strVal(strVal), _offset(0)
+    {
+        _isOfIterable = true;
+    }
 
     virtual bool nextOf(JsValue &valueOut) override {
         auto runtime = _ctx->runtime;
@@ -903,7 +904,7 @@ void stringPrototypeSlice(VMContext *ctx, const JsValue &thiz, const Arguments &
     }
 
     int32_t start = args.getIntAt(ctx, 0);
-    int32_t end = args.getIntAt(ctx, 1, 0x7FFFFFFF);
+    int32_t end = args.getIntAt(ctx, 1, MAX_INT32);
     auto runtime = ctx->runtime;
 
     if (strVal.type == JDT_CHAR) {
@@ -940,12 +941,12 @@ void stringPrototypeSplit(VMContext *ctx, const JsValue &thiz, const Arguments &
 
     auto runtime = ctx->runtime;
     auto sep = args.getAt(0);
-    auto limit = args.getIntAt(ctx, 1, 0x7FFFFFFF);
+    auto limit = args.getIntAt(ctx, 1, MAX_INT32);
     auto arrObj = new JsArray();
     auto arr = runtime->pushObjectValue(arrObj);
 
     if (limit < 0) {
-        limit = 0x7FFFFFFF;
+        limit = MAX_INT32;
     } else if (limit == 0) {
         ctx->retValue = arr;
         return;
@@ -1044,7 +1045,7 @@ void stringPrototypeSubstr(VMContext *ctx, const JsValue &thiz, const Arguments 
     }
 
     int32_t start = args.getIntAt(ctx, 0);
-    int32_t length = args.getIntAt(ctx, 1, 0x7FFFFFFF);
+    int32_t length = args.getIntAt(ctx, 1, MAX_INT32);
 
     auto runtime = ctx->runtime;
     if (strVal.type == JDT_CHAR) {
@@ -1076,7 +1077,7 @@ void stringPrototypeSubstring(VMContext *ctx, const JsValue &thiz, const Argumen
     }
 
     int32_t start = args.getIntAt(ctx, 0);
-    int32_t end = args.getIntAt(ctx, 1, 0x7FFFFFFF);
+    int32_t end = args.getIntAt(ctx, 1, MAX_INT32);
     if (start < 0) { start = 0; }
     if (end < 0) { end = 0; }
 

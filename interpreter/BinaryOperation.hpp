@@ -903,4 +903,12 @@ inline bool instanceOf(VMContext *ctx, VMRuntime *rt, const JsValue &left, const
     return false;
 }
 
+inline bool convertToStringLessCmp(VMContext *ctx, JsValue left, JsValue right) {
+    auto rt = ctx->runtime;
+    auto s1 = rt->toSizedString(ctx, left);
+    auto s2 = rt->toSizedString(ctx, right);
+
+    return s1.cmp(s2) < 0;
+}
+
 #endif /* BinaryOperation_hpp */

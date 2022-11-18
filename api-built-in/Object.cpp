@@ -55,9 +55,11 @@ SizedString objectPrototypeToSizedString(const JsValue &thiz) {
         case JDT_OBJ_BOOL: return MAKE_STABLE_STR("[object Boolean]");
         case JDT_OBJ_NUMBER: return MAKE_STABLE_STR("[object Number]");
         case JDT_OBJ_STRING: return MAKE_STABLE_STR("[object String]");
+        case JDT_OBJ_SYMBOL: return MAKE_STABLE_STR("[object Symbol]");
         case JDT_ARRAY: return MAKE_STABLE_STR("[object Array]");
         case JDT_OBJ_GLOBAL_THIS:
         case JDT_LIB_OBJECT: return MAKE_STABLE_STR("[object Object]");
+        case JDT_ITERATOR: return MAKE_STABLE_STR("[object Iterator]");
         case JDT_NATIVE_FUNCTION:
         case JDT_BOUND_FUNCTION:
         case JDT_FUNCTION: return MAKE_STABLE_STR("[object Function]");
@@ -796,6 +798,7 @@ void objectPrototypeValueOf(VMContext *ctx, const JsValue &thiz, const Arguments
         case JDT_OBJ_BOOL: ret = ((JsBooleanObject *)runtime->getObject(thiz))->value(); break;
         case JDT_OBJ_NUMBER: ret = ((JsNumberObject *)runtime->getObject(thiz))->value(); break;
         case JDT_OBJ_STRING: ret = ((JsStringObject *)runtime->getObject(thiz))->value(); break;
+        case JDT_OBJ_SYMBOL: ret = ((JsSymbolObject *)runtime->getObject(thiz))->value(); break;
         default: break;
     }
 

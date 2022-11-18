@@ -144,6 +144,7 @@ public:
     JsValue pushSymbolValue(JsSymbol &value);
     JsValue pushString(const JsString &str);
     JsValue pushString(const SizedString &str);
+    JsValue pushString(const LinkedString *str);
 
     VMScope *newScope(Scope *scope);
     ResourcePool *newResourcePool();
@@ -277,6 +278,7 @@ public:
 
     bool isEmptyString(const JsValue &v);
     uint32_t getStringLength(const JsValue &v);
+    bool isNan(const JsValue &v);
 
     bool testTrue(const JsValue &v);
 

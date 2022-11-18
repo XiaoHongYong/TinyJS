@@ -54,6 +54,7 @@ const char *jsDataTypeToString(JsDataType type) {
         "JDT_OBJ_BOOL",
         "JDT_OBJ_NUMBER",
         "JDT_OBJ_STRING",
+        "JDT_OBJ_SYMBOL",
         "JDT_OBJ_GLOBAL_THIS",
 
         "JDT_FUNCTION",

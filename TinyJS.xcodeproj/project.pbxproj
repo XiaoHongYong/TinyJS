@@ -67,6 +67,7 @@
 		C085984D28D0D54C00577A8E /* Expression.cpp in Sources */ = {isa = PBXBuildFile; fileRef = C085981828D0D54C00577A8E /* Expression.cpp */; };
 		C085984E28D0D54C00577A8E /* Parser.cpp in Sources */ = {isa = PBXBuildFile; fileRef = C085981928D0D54C00577A8E /* Parser.cpp */; };
 		C085985128D9A0A100577A8E /* JsGlobalThis.cpp in Sources */ = {isa = PBXBuildFile; fileRef = C085985028D9A0A100577A8E /* JsGlobalThis.cpp */; };
+		C0A3AF2E29167B4900BBEE8E /* JsPrimaryObject.cpp in Sources */ = {isa = PBXBuildFile; fileRef = C0A3AF2D29167B4900BBEE8E /* JsPrimaryObject.cpp */; };
 /* End PBXBuildFile section */
 
 /* Begin PBXContainerItemProxy section */
@@ -204,6 +205,7 @@
 		C085981928D0D54C00577A8E /* Parser.cpp */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = sourcecode.cpp.cpp; path = Parser.cpp; sourceTree = "<group>"; };
 		C085984F28D9A08F00577A8E /* JsGlobalThis.hpp */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.cpp.h; path = JsGlobalThis.hpp; sourceTree = "<group>"; };
 		C085985028D9A0A100577A8E /* JsGlobalThis.cpp */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.cpp.cpp; path = JsGlobalThis.cpp; sourceTree = "<group>"; };
+		C0A3AF2D29167B4900BBEE8E /* JsPrimaryObject.cpp */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.cpp.cpp; path = JsPrimaryObject.cpp; sourceTree = "<group>"; };
 /* End PBXFileReference section */
 
 /* Begin PBXFrameworksBuildPhase section */
@@ -439,6 +441,7 @@
 				C06EE44529091177000F0E41 /* JsObjectLazy.cpp */,
 				C06EE44429091177000F0E41 /* JsObjectLazy.hpp */,
 				C085980528D0D54C00577A8E /* JsPrimaryObject.hpp */,
+				C0A3AF2D29167B4900BBEE8E /* JsPrimaryObject.cpp */,
 				C08597FF28D0D54C00577A8E /* JsRegExp.cpp */,
 				C085980C28D0D54C00577A8E /* JsRegExp.hpp */,
 				C06EE44128F40552000F0E41 /* IJsIterator.cpp */,
@@ -597,6 +600,7 @@
 				C085983128D0D54C00577A8E /* os.cpp in Sources */,
 				C085983E28D0D54C00577A8E /* ConstStrings.cpp in Sources */,
 				C085981A28D0D54C00577A8E /* main.cpp in Sources */,
+				C0A3AF2E29167B4900BBEE8E /* JsPrimaryObject.cpp in Sources */,
 				C085981C28D0D54C00577A8E /* RegExp.cpp in Sources */,
 				C085984328D0D54C00577A8E /* JsArguments.cpp in Sources */,
 				C085982F28D0D54C00577A8E /* LinkedString.cpp in Sources */,

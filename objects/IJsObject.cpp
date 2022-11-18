@@ -152,6 +152,8 @@ JsValue IJsObject::get(VMContext *ctx, const JsValue &thiz, const JsValue &nameO
                 return jsValueUndefined;
             }
             return ctx->retValue;
+        } else if (prop->value.type == JDT_NOT_INITIALIZED) {
+            return defVal;
         }
         return prop->value;
     }
@@ -295,6 +297,17 @@ bool IJsObject::remove(VMContext *ctx, const JsValue &propOrg) {
     }
 
     return true;
+}
+
+bool IJsObject::getLength(VMContext *ctx, int32_t &lengthOut) {
+    auto n = ctx->runtime->toNumber(ctx, this->getByName(ctx, self, SS_LENGTH));
+    if (!isnan(n)) {
+        // Array like.
+        lengthOut = (int32_t)n;
+        return true;
+    }
+
+    return false;
 }
 
 /**

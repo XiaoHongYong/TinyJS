@@ -145,18 +145,39 @@ uint8_t *parseNumber(const SizedString &str, double &retValue) {
     return parseNumber(str.data, str.data + str.len, retValue);
 }
 
-bool jsStringToNumber(const SizedString &str, double &retValue) {
-    auto tmp = str;
-    tmp.trim();
-    if (tmp.len == 0) {
+bool jsStringToNumber(const SizedString &org, double &retValue) {
+    auto str = org;
+    str.trim();
+    if (str.len == 0) {
         retValue = 0;
         return true;
     }
 
-    auto p = parseNumber(tmp, retValue);
-    if (p != tmp.data + tmp.len) {
+    bool negative = false;
+
+    if (str.len > 0) {
+        if (str.data[0] == '-') {
+            negative = true;
+            str.data++; str.len--;
+        } else if (str.data[0] == '+') {
+            str.data++; str.len--;
+        }
+    }
+
+    if (str.equal(SS_INFINITY)) {
+        retValue = INFINITY;
+    } else if (str.equal(SS_INFINITY)) {
         retValue = NAN;
-        return false;
+    } else {
+        auto p = parseNumber(str, retValue);
+        if (p != str.data + str.len) {
+            retValue = NAN;
+            return false;
+        }
+    }
+
+    if (negative) {
+        retValue = -retValue;
     }
 
     return true;

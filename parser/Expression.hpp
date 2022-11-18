@@ -727,7 +727,7 @@ public:
 
     virtual void convertToByteCode(ByteCodeStream &stream) {
         assert(!isBeingAssigned);
-        stream.writeOpCode(OP_ARRAY_PUSH_UNDEFINED_VALUE);
+        stream.writeOpCode(OP_ARRAY_PUSH_EMPTY_VALUE);
     }
 
     virtual void convertAssignableToByteCode(IJsNode *valueOpt, ByteCodeStream &stream) {
@@ -1074,9 +1074,7 @@ public:
         left->convertAssignableToByteCode(right, stream);
     }
 
-protected:
-    friend class JsExprArrayItem;
-
+public:
     IJsNode                         *left, *right;
 
 };

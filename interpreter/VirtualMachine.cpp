@@ -194,11 +194,11 @@ JsValue VMGlobalScope::get(VMContext *ctx, uint32_t index) {
     return vars[index];
 }
 
-void VMGlobalScope::set(VMContext *ctx, uint32_t index, const JsValue &value) {
+JsError VMGlobalScope::set(VMContext *ctx, uint32_t index, const JsValue &value) {
     assert(index < vars.size());
 
     if (index < ctx->runtime->countImmutableGlobalVars) {
-        return;
+        return JE_TYPE_PROP_READ_ONLY;
     }
 
     if (index < varProperties.size()) {
@@ -208,13 +208,18 @@ void VMGlobalScope::set(VMContext *ctx, uint32_t index, const JsValue &value) {
         if (prop->isGSetter) {
             if (prop->setter.type >= JDT_FUNCTION) {
                 ctx->vm->callMember(ctx, jsValueGlobalThis, prop->setter, Arguments());
+            } else {
+                return JE_TYPE_NO_PROP_SETTER;
             }
         } else if (prop->isWritable) {
             vars[index] = value;
+        } else {
+            return JE_TYPE_PROP_READ_ONLY;
         }
     } else {
         vars[index] = value;
     }
+    return JE_OK;
 }
 
 JsValue VMGlobalScope::increase(VMContext *ctx, uint32_t index, int inc, bool isPost) {
@@ -429,8 +434,7 @@ void JsVirtualMachine::callMember(VMContext *ctx, const JsValue &thiz, const JsV
             break;
         }
         default: {
-            ctx->throwException(PE_TYPE_ERROR, "value is not a function");
-            assert(0);
+            ctx->throwExceptionFormatJsValue(PE_TYPE_ERROR, "%.*s is not a function", memberFunc);
             break;
         }
     }
@@ -490,16 +494,21 @@ void JsVirtualMachine::setMemberDot(VMContext *ctx, const JsValue &thiz, const S
             ctx->throwException(PE_TYPE_ERROR, "Cannot set properties of null (setting '%.*s')", (int)name.len, name.data);
             break;
         case JDT_BOOL:
-            return runtime->objPrototypeBoolean->setByName(ctx, thiz, name, value);
+            runtime->objPrototypeBoolean->setByName(ctx, thiz, name, value);
+            break;
         case JDT_INT32:
-            return runtime->objPrototypeNumber->setByName(ctx, thiz, name, value);
+            runtime->objPrototypeNumber->setByName(ctx, thiz, name, value);
+            break;
         case JDT_NUMBER:
-            return runtime->objPrototypeNumber->setByName(ctx, thiz, name, value);
+            runtime->objPrototypeNumber->setByName(ctx, thiz, name, value);
+            break;
         case JDT_CHAR:
         case JDT_STRING:
-            return runtime->objPrototypeString->setByName(ctx, thiz, name, value);
+            runtime->objPrototypeString->setByName(ctx, thiz, name, value);
+            break;
         case JDT_SYMBOL:
-            return runtime->objPrototypeSymbol->setByName(ctx, thiz, name, value);
+            runtime->objPrototypeSymbol->setByName(ctx, thiz, name, value);
+            break;
         default: {
             auto jsthiz = ctx->runtime->getObject(thiz);
             jsthiz->setByName(ctx, thiz, name, value);
@@ -987,7 +996,6 @@ void JsVirtualMachine::call(Function *function, VMContext *ctx, VecVMStackScopes
                 auto count = readUInt16(bytecode);
                 auto start = stack.end() - count;
                 stack.erase(start, stack.end());
-                stack.pop_back();
                 break;
             }
             case OP_PUSH_UNDFINED: {
@@ -1735,11 +1743,11 @@ void JsVirtualMachine::call(Function *function, VMContext *ctx, VecVMStackScopes
                 a->push(ctx, item);
                 break;
             }
-            case OP_ARRAY_PUSH_UNDEFINED_VALUE: {
+            case OP_ARRAY_PUSH_EMPTY_VALUE: {
                 auto arr = stack.back();
                 assert(arr.type == JDT_ARRAY);
                 auto a = (JsArray *)runtime->getObject(arr);
-                a->push(ctx, jsValueUndefined);
+                a->pushEmpty();
                 break;
             }
             case OP_ARRAY_ASSING_CREATE: {

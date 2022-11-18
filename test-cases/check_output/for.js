@@ -80,9 +80,9 @@ f3();
 // Index: 2
 //// for in with in
 function f4() {
-    var a = [1, 2, 3, 5, 7];
+    var a = [1, 2, 3, 5, 7], i;
     a['x'] = 10;
-    for (var i in 1 in (console.log(21), [2]), console.log(22), console.log(23), a) {
+    for (i in 1 in (console.log(21), [2]), console.log(22), console.log(23), a) {
         console.log(i);
     }
 }
@@ -460,5 +460,29 @@ xx
 ===
 0 1
 1 2
+*/
+
+
+// Index: 17
+//// for of array
+function f() {
+    var a = [1,,,2];
+    for (var i of a) {
+        console.log(i);
+    }
+    console.log('===');
+    for (var i in a) {
+        console.log(i, a[i]);
+    }
+}
+f();
+/* OUTPUT
+1
+undefined
+undefined
+2
+===
+0 1
+3 2
 */
 

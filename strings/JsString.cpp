@@ -15,6 +15,7 @@ class JsStringIterator : public IJsIterator {
 public:
     JsStringIterator(VMContext *ctx, const JsValue &str, bool includeProtoProp) : _keyBuf(0) {
         assert(str.type == JDT_STRING);
+        _isOfIterable = true;
         _ctx = ctx;
         _str = str;
         _pos = 0;
@@ -84,6 +85,7 @@ class JsCharIterator : public IJsIterator {
 public:
     JsCharIterator(VMContext *ctx, const JsValue &str, bool includeProtoProp) : _keyBuf(0) {
         assert(str.type == JDT_CHAR);
+        _isOfIterable = true;
         _ctx = ctx;
         _str = str;
         _end = false;

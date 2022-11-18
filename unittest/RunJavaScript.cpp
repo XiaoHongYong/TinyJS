@@ -15,6 +15,7 @@
 class StringStreamConsole : public IConsole {
 public:
     virtual void log(const SizedString &message) override {
+        printf("%.*s\n", message.len, message.data);
         stream.write(message);
         stream.writeUInt8('\n');
     }

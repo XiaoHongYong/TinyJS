@@ -26,9 +26,9 @@ public:
     virtual void definePropertyByIndex(VMContext *ctx, uint32_t index, const JsProperty &descriptor) override;
     virtual void definePropertyBySymbol(VMContext *ctx, uint32_t index, const JsProperty &descriptor) override;
 
-    virtual void setByName(VMContext *ctx, const JsValue &thiz, const SizedString &name, const JsValue &value) override;
-    virtual void setByIndex(VMContext *ctx, const JsValue &thiz, uint32_t index, const JsValue &value) override;
-    virtual void setBySymbol(VMContext *ctx, const JsValue &thiz, uint32_t index, const JsValue &value) override;
+    virtual JsError setByName(VMContext *ctx, const JsValue &thiz, const SizedString &name, const JsValue &value) override;
+    virtual JsError setByIndex(VMContext *ctx, const JsValue &thiz, uint32_t index, const JsValue &value) override;
+    virtual JsError setBySymbol(VMContext *ctx, const JsValue &thiz, uint32_t index, const JsValue &value) override;
 
     virtual JsValue increaseByName(VMContext *ctx, const JsValue &thiz, const SizedString &name, int n, bool isPost) override;
     virtual JsValue increaseByIndex(VMContext *ctx, const JsValue &thiz, uint32_t index, int n, bool isPost) override;
@@ -47,18 +47,31 @@ public:
     virtual void preventExtensions(VMContext *ctx) override;
 
     virtual IJsObject *clone() override;
-    virtual bool isOfIterable() override { return true; }
     virtual IJsIterator *getIteratorObject(VMContext *ctx, bool includeProtoProp = true) override;
 
     virtual void markReferIdx(VMRuntime *rt) override;
 
-    void push(VMContext *ctx, const JsValue &value);
-    void push(VMContext *ctx, const JsValue *first, uint32_t count);
+    virtual bool getLength(VMContext *ctx, int32_t &lengthOut) override { lengthOut = _length; return true; }
+
+    IJsIterator *getIteratorObjectAll(VMContext *ctx);
+
+    std::tuple<JsValue, JsError, int> popFront(VMContext *ctx);
+    void sort(VMContext *ctx, const JsValue &callback);
+
+    void pushEmpty();
+    JsError push(VMContext *ctx, const JsValue &value);
+    JsError push(VMContext *ctx, const JsValue *first, uint32_t count);
+    JsError extend(VMContext *ctx, const JsArray *other);
+    JsError extend(VMContext *ctx, const JsValue &other, uint32_t depth);
+
+    void reverse(VMContext *ctx);
 
     void toString(VMContext *ctx, const JsValue &thiz, BinaryOutputStream &stream);
 
     void setLength(uint32_t length);
     uint32_t length() const { return _length; }
+
+    JsArray *cloneArrayOnly();
 
     void dump(VMContext *ctx, const JsValue &thiz, VecJsValues &values);
 
@@ -68,9 +81,10 @@ public:
      */
     struct Block {
         uint32_t                index; // 此块的起始 index
+        bool                    hasPropDescriptor; // 此 block 中有无 Getter/Setter
         DequeJsProperties       items; // items 的数量 >= setters 的数量
 
-        Block() { index = 0; }
+        Block() { index = 0; hasPropDescriptor = false; }
         ~Block() { }
     };
     using VecBlocks = vector<Block *>;
@@ -82,7 +96,20 @@ protected:
     Block *findBlock(uint32_t index);
     Block *findToModifyBlock(uint32_t index);
 
+    std::pair<JsError, int> popFront(VMContext *ctx, Block *b);
+    JsValue front(VMContext *ctx, Block *b);
+
     void reserveSize(uint32_t length);
+
+    inline JsError set(VMContext *ctx, JsProperty *prop, const JsValue &thiz, const JsValue &value) {
+        assert(prop);
+        if (prop->isConfigurable == -1) {
+            *prop = JsProperty(value);
+            return JE_OK;
+        } else {
+            return IJsObject::set(ctx, prop, thiz, value);
+        }
+    }
 
     friend class JsArrayIterator;
 

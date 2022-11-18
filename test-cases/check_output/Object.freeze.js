@@ -337,8 +337,8 @@ function f() {
     console.log(d);
 }
 f();
-/* OUTPUT-FIXED
-{ x: [object Object] }
+/* OUTPUT
+{x: Object}
 */
 
 
@@ -351,8 +351,8 @@ function f() {
     console.log(d);
 }
 f();
-/* OUTPUT-FIXED
-{ x: [object Object] }
+/* OUTPUT
+{x: Object}
 */
 
 

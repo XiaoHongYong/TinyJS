@@ -86,7 +86,14 @@ public:
         args[2] = three;
     }
 
-    JsValue                     args[3];
+    ArgumentsX(const JsValue &one, const JsValue &two, const JsValue &three, const JsValue &four) : ArgumentsX(3) {
+        args[0] = one;
+        args[1] = two;
+        args[2] = three;
+        args[3] = four;
+    }
+
+    JsValue                     args[4];
 
 };
 
@@ -130,7 +137,7 @@ public:
     VecJsProperties             varProperties;
 
     JsValue get(VMContext *ctx, uint32_t index);
-    void set(VMContext *ctx, uint32_t index, const JsValue &value);
+    JsError set(VMContext *ctx, uint32_t index, const JsValue &value);
     JsValue increase(VMContext *ctx, uint32_t index, int inc, bool isPost);
     bool remove(VMContext *ctx, uint32_t index);
 

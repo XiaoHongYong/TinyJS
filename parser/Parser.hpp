@@ -92,7 +92,10 @@ protected:
     IJsNode *_expectParenExpression();
     IJsNode *_expectParenCondition();
     IJsNode *_expectRawTemplateCall(IJsNode *func);
-    IJsNode *_expectArrowFunction(IJsNode *parenExpr);
+    JsNodeParameters *_convertParenExprsToFormalPrameters(JsParenExpr *exprParen);
+    IJsNode *_convertExprToVariableDeclaration(IJsNode *expr);
+    void _convertToArrayAssignable(JsExprArray *exprArr);
+    void _convertToObjectAssignable(JsExprObject *exprObject);
 
     JsExprIdentifier *_newExprIdentifier(const Token &token);
 

@@ -685,6 +685,30 @@ JsValue VMRuntime::pushString(const SizedString &str) {
     }
 }
 
+JsValue VMRuntime::pushString(const LinkedString *str) {
+    uint32_t len = 0;
+    for (auto p = str; p != nullptr; p = p->next) {
+        len += p->len;
+    }
+
+    if (str->len <= 1) {
+        if (str->len == 0) {
+            return jsStringValueEmpty;
+        } else {
+            return JsValue(JDT_CHAR, str->data[0]);
+        }
+    }
+
+    auto tmp = allocString(len);
+    auto data = tmp.data;
+    for (auto p = str; p != nullptr; p = p->next) {
+        memcpy(data, p->data, p->len);
+        data += p->len;
+    }
+
+    return pushString(JsString(tmp));
+}
+
 VMScope *VMRuntime::newScope(Scope *scope) {
     _newAllocatedCount++;
 
@@ -846,8 +870,6 @@ LockedSizedStringWrapper VMRuntime::toSizedString(VMContext *ctx, const JsValue 
 
     switch (val.type) {
         case JDT_NOT_INITIALIZED:
-            ctx->throwException(PE_TYPE_ERROR, "Cannot access '?' before initialization");
-            break;
         case JDT_UNDEFINED: return SS_UNDEFINED;
         case JDT_NULL: return SS_NULL;
         case JDT_BOOL: return LockedSizedStringWrapper(val.value.n32 ? SS_TRUE : SS_FALSE);
@@ -933,6 +955,10 @@ uint32_t VMRuntime::getStringLength(const JsValue &value) {
     }
 
     return len;
+}
+
+bool VMRuntime::isNan(const JsValue &v) {
+    return v.type == JDT_NUMBER && isnan(getDouble(v));
 }
 
 bool VMRuntime::testTrue(const JsValue &value) {

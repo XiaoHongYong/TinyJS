@@ -11,19 +11,23 @@
 #include "VirtualMachine.hpp"
 
 
-inline JsValue getPropertyValue(VMContext *ctx, const JsProperty *prop, const JsValue &thiz) {
+inline JsValue getPropertyValue(VMContext *ctx, const JsProperty *prop, JsValue thiz, JsValue defVal = jsValueUndefined) {
     if (prop->isGSetter && prop->value.type >= JDT_FUNCTION) {
         ctx->vm->callMember(ctx, thiz, prop->value, Arguments());
         return ctx->retValue;
+    } else if (prop->value.type == JDT_NOT_INITIALIZED) {
+        return defVal;
     } else {
         return prop->value;
     }
 }
 
-inline JsValue getPropertyValue(VMContext *ctx, const JsProperty &prop, const JsValue &thiz) {
+inline JsValue getPropertyValue(VMContext *ctx, const JsProperty &prop, JsValue thiz, JsValue defVal = jsValueUndefined) {
     if (prop.isGSetter && prop.value.type >= JDT_FUNCTION) {
         ctx->vm->callMember(ctx, thiz, prop.value, Arguments());
         return ctx->retValue;
+    } else if (prop.value.type == JDT_NOT_INITIALIZED) {
+        return defVal;
     } else {
         return prop.value;
     }
@@ -37,6 +41,7 @@ public:
     IJsObject() {
         type = JDT_NOT_INITIALIZED;
         isPreventedExtensions = false;
+        _isOfIterable = false;
         referIdx = 0;
         nextFreeIdx = 0;
     }
@@ -58,9 +63,9 @@ public:
     virtual void definePropertyByIndex(VMContext *ctx, uint32_t index, const JsProperty &descriptor) = 0;
     virtual void definePropertyBySymbol(VMContext *ctx, uint32_t index, const JsProperty &descriptor) = 0;
 
-    virtual void setByName(VMContext *ctx, const JsValue &thiz, const SizedString &name, const JsValue &value) = 0;
-    virtual void setByIndex(VMContext *ctx, const JsValue &thiz, uint32_t index, const JsValue &value) = 0;
-    virtual void setBySymbol(VMContext *ctx, const JsValue &thiz, uint32_t index, const JsValue &value) = 0;
+    virtual JsError setByName(VMContext *ctx, const JsValue &thiz, const SizedString &name, const JsValue &value) = 0;
+    virtual JsError setByIndex(VMContext *ctx, const JsValue &thiz, uint32_t index, const JsValue &value) = 0;
+    virtual JsError setBySymbol(VMContext *ctx, const JsValue &thiz, uint32_t index, const JsValue &value) = 0;
 
     virtual JsValue increaseByName(VMContext *ctx, const JsValue &thiz, const SizedString &name, int n, bool isPost) = 0;
     virtual JsValue increaseByIndex(VMContext *ctx, const JsValue &thiz, uint32_t index, int n, bool isPost) = 0;
@@ -81,10 +86,12 @@ public:
 
     virtual IJsObject *clone() = 0;
 
-    virtual bool isOfIterable() { return false; }
+    virtual bool isOfIterable() { return _isOfIterable; }
     virtual IJsIterator *getIteratorObject(VMContext *ctx, bool includeProtoProp = true) = 0;
 
     virtual void markReferIdx(VMRuntime *rt) = 0;
+
+    virtual bool getLength(VMContext *ctx, int32_t &lengthOut);
 
     bool getOwnPropertyDescriptorByName(VMContext *ctx, const SizedString &name, JsProperty &descriptorOut) {
         JsNativeFunction funcGetter = nullptr;
@@ -136,7 +143,7 @@ public:
     JsValue getByIndex(VMContext *ctx, const JsValue &thiz, uint32_t index, const JsValue &defVal = jsValueUndefined) {
         auto prop = getRawByIndex(ctx, index, true);
         if (prop) {
-            return getPropertyValue(ctx, prop, thiz);
+            return getPropertyValue(ctx, prop, thiz, defVal);
         }
         return defVal;
     }
@@ -144,7 +151,7 @@ public:
     JsValue getBySymbol(VMContext *ctx, const JsValue &thiz, uint32_t index, const JsValue &defVal = jsValueUndefined) {
         auto prop = getRawBySymbol(ctx, index, true);
         if (prop) {
-            return getPropertyValue(ctx, prop, thiz);
+            return getPropertyValue(ctx, prop, thiz, defVal);
         }
         return defVal;
     }
@@ -175,7 +182,7 @@ protected:
         }
     }
 
-    inline void set(VMContext *ctx, JsProperty *prop, const JsValue &thiz, const JsValue &value) {
+    inline JsError set(VMContext *ctx, JsProperty *prop, const JsValue &thiz, const JsValue &value) {
         assert(prop);
         // 自身的属性，可以直接修改
         if (prop->isGSetter) {
@@ -183,10 +190,15 @@ protected:
                 // 调用 setter 函数
                 ArgumentsX args(value);
                 ctx->vm->callMember(ctx, thiz, prop->setter, args);
+                return JE_OK;
             }
+            return JE_TYPE_NO_PROP_SETTER;
         } else if (prop->isWritable) {
             prop->value = value;
+            return JE_OK;
         }
+
+        return JE_TYPE_PROP_READ_ONLY;
     }
 
 public:
@@ -253,6 +265,7 @@ public:
 public:
     JsDataType                  type;
     bool                        isPreventedExtensions;
+    bool                        _isOfIterable;
 
     int8_t                      referIdx;
     uint32_t                    nextFreeIdx;

@@ -6,6 +6,7 @@
 //
 
 #include "BuiltIn.hpp"
+#include "objects/JsPrimaryObject.hpp"
 
 
 // https://developer.mozilla.org/zh-CN/docs/Web/JavaScript/Reference/Global_Objects/Symbol
@@ -34,13 +35,20 @@ static JsLibProperty symbolFunctions[] = {
     { "prototype", nullptr, nullptr, JsValue(JDT_INT32, 1) },
 };
 
-void symbolPrototypeToString(VMContext *ctx, const JsValue &thiz, const Arguments &args) {
-    if (thiz.type != JDT_SYMBOL) {
-        ctx->throwException(PE_TYPE_ERROR, "Symbol.prototype.toString requires that 'this' be a Symbol");
-        return;
+inline JsValue convertSymbolToJsValue(VMContext *ctx, const JsValue &thiz, const char *funcName) {
+    if (thiz.type == JDT_SYMBOL) {
+        return thiz;
+    } else if (thiz.type == JDT_OBJ_SYMBOL) {
+        auto obj = (JsSymbolObject *)ctx->runtime->getObject(thiz);
+        return obj->value();
     }
 
-    ctx->retValue = jsValueUndefined;
+    ctx->throwException(PE_TYPE_ERROR, "Symbol.prototype.%s requires that 'this' be a Symbol", funcName);
+    return jsValueNotInitialized;
+}
+
+void symbolPrototypeToString(VMContext *ctx, const JsValue &thiz, const Arguments &args) {
+    ctx->retValue = convertSymbolToJsValue(ctx, thiz, "toString");
 }
 
 static JsLibProperty symbolPrototypeFunctions[] = {

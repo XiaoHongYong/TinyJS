@@ -49,11 +49,10 @@ void JsObjectLazy::definePropertyBySymbol(VMContext *ctx, uint32_t index, const 
     _obj->definePropertyBySymbol(ctx, index, descriptor);
 }
 
-void JsObjectLazy::setByName(VMContext *ctx, const JsValue &thiz, const SizedString &name, const JsValue &value) {
+JsError JsObjectLazy::setByName(VMContext *ctx, const JsValue &thiz, const SizedString &name, const JsValue &value) {
     for (auto p = _props; p < _propsEnd; p++) {
         if (name.equal(p->name)) {
-            set(ctx, &p->prop, thiz, value);
-            return;
+            return set(ctx, &p->prop, thiz, value);
         }
     }
 
@@ -61,21 +60,21 @@ void JsObjectLazy::setByName(VMContext *ctx, const JsValue &thiz, const SizedStr
         _newObject(ctx);
     }
 
-    _obj->setByName(ctx, thiz, name, value);
+    return _obj->setByName(ctx, thiz, name, value);
 }
 
-void JsObjectLazy::setByIndex(VMContext *ctx, const JsValue &thiz, uint32_t index, const JsValue &value) {
+JsError JsObjectLazy::setByIndex(VMContext *ctx, const JsValue &thiz, uint32_t index, const JsValue &value) {
     if (!_obj) {
         _newObject(ctx);
     }
-    _obj->setByIndex(ctx, thiz, index, value);
+    return _obj->setByIndex(ctx, thiz, index, value);
 }
 
-void JsObjectLazy::setBySymbol(VMContext *ctx, const JsValue &thiz, uint32_t index, const JsValue &value) {
+JsError JsObjectLazy::setBySymbol(VMContext *ctx, const JsValue &thiz, uint32_t index, const JsValue &value) {
     if (!_obj) {
         _newObject(ctx);
     }
-    _obj->setBySymbol(ctx, thiz, index, value);
+    return _obj->setBySymbol(ctx, thiz, index, value);
 }
 
 JsValue JsObjectLazy::increaseByName(VMContext *ctx, const JsValue &thiz, const SizedString &name, int n, bool isPost) {

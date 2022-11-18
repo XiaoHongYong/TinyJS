@@ -121,13 +121,11 @@ void Scope::dump(BinaryOutputStream &stream) {
     }
 }
 
-IdentifierDeclare *Scope::addVarDeclaration(const Token &token, bool isConst, bool isScopeVar) {
-    auto nameStr = tokenToSizedString(token);
-
+IdentifierDeclare *Scope::addVarDeclaration(const SizedString &nameStr, bool isConst, bool isScopeVar) {
     auto it = varDeclares.find(nameStr);
     if (it == varDeclares.end()) {
         auto &pool = function->resourcePool->pool;
-        auto node = PoolNew(pool, IdentifierDeclare)(token, this);
+        auto node = PoolNew(pool, IdentifierDeclare)(nameStr, this);
         node->isConst = isConst;
         node->isScopeVar = isScopeVar;
 
@@ -143,16 +141,16 @@ IdentifierDeclare *Scope::addVarDeclaration(const Token &token, bool isConst, bo
     }
 }
 
-void Scope::addArgumentDeclaration(const Token &token, int index) {
+void Scope::addArgumentDeclaration(const SizedString &name, int index) {
     assert(isFunctionScope);
     assert(index + 1 > countArguments);
 
     countArguments = index + 1;
 
-    auto it = varDeclares.find(tokenToSizedString(token));
+    auto it = varDeclares.find(name);
     if (it == varDeclares.end()) {
         auto &pool = function->resourcePool->pool;
-        auto node = PoolNew(pool, IdentifierDeclare)(token, this);
+        auto node = PoolNew(pool, IdentifierDeclare)(name, this);
         node->isConst = false;
         node->varStorageType = VST_ARGUMENT;
         node->storageIndex = index;

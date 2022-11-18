@@ -85,6 +85,7 @@ protected:
 JsArguments::JsArguments(VMScope *scope, Arguments *args) {
     type = JDT_ARGUMENTS;
 
+    _isOfIterable = true;
     _scope = scope;
     _args = args;
     _argsDescriptors = nullptr;
@@ -149,28 +150,26 @@ void JsArguments::definePropertyBySymbol(VMContext *ctx, uint32_t index, const J
     _obj->definePropertyBySymbol(ctx, index, descriptor);
 }
 
-void JsArguments::setByName(VMContext *ctx, const JsValue &thiz, const SizedString &name, const JsValue &value) {
+JsError JsArguments::setByName(VMContext *ctx, const JsValue &thiz, const SizedString &name, const JsValue &value) {
     if (name.len > 0 && isDigit(name.data[0])) {
         bool successful = false;
         auto n = name.atoi(successful);
         if (successful && n < _args->count) {
-            setByIndex(ctx, thiz, uint32_t(n), value);
-            return;
+            return setByIndex(ctx, thiz, uint32_t(n), value);
         }
     }
 
     if (name.equal(SS_LENGTH)) {
-        set(ctx, &_length, thiz, value);
-        return;
+        return set(ctx, &_length, thiz, value);
     }
 
     if (!_obj) {
         _newObject(ctx);
     }
-    _obj->setByName(ctx, thiz, name, value);
+    return _obj->setByName(ctx, thiz, name, value);
 }
 
-void JsArguments::setByIndex(VMContext *ctx, const JsValue &thiz, uint32_t index, const JsValue &value) {
+JsError JsArguments::setByIndex(VMContext *ctx, const JsValue &thiz, uint32_t index, const JsValue &value) {
     if (index >= _args->count) {
         NumberToSizedString name(index);
         return setByName(ctx, thiz, name, value);
@@ -178,21 +177,23 @@ void JsArguments::setByIndex(VMContext *ctx, const JsValue &thiz, uint32_t index
 
     if (_argsDescriptors) {
         auto prop = &_argsDescriptors->at(index);
-        set(ctx, prop, thiz, value);
-        if (!prop->isGSetter && prop->isWritable) {
+        auto ret = set(ctx, prop, thiz, value);
+        if (ret == JE_OK) {
             // 同步修改到 _args 中
             _args->data[index] = value;
         }
+        return ret;
     } else {
         (*_args)[index] = value;
+        return JE_OK;
     }
 }
 
-void JsArguments::setBySymbol(VMContext *ctx, const JsValue &thiz, uint32_t index, const JsValue &value) {
+JsError JsArguments::setBySymbol(VMContext *ctx, const JsValue &thiz, uint32_t index, const JsValue &value) {
     if (!_obj) {
         _newObject(ctx);
     }
-    _obj->setBySymbol(ctx, thiz, index, value);
+    return _obj->setBySymbol(ctx, thiz, index, value);
 }
 
 JsValue JsArguments::increaseByName(VMContext *ctx, const JsValue &thiz, const SizedString &name, int n, bool isPost) {

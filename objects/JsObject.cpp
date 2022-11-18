@@ -152,14 +152,14 @@ void JsObject::definePropertyBySymbol(VMContext *ctx, uint32_t index, const JsPr
     (*_symbolProps)[index] = descriptor.defineProperty();
 }
 
-void JsObject::setByName(VMContext *ctx, const JsValue &thiz, const SizedString &name, const JsValue &value) {
+JsError JsObject::setByName(VMContext *ctx, const JsValue &thiz, const SizedString &name, const JsValue &value) {
     auto it = _props.find(name);
     if (it == _props.end()) {
         if (name.equal(SS___PROTO__)) {
             if (!isPreventedExtensions) {
-                set(ctx, &__proto__, thiz, value);
+                return set(ctx, &__proto__, thiz, value);
             }
-            return;
+            return JE_TYPE_PREVENTED_EXTENSION;
         }
 
         // 查找 prototye 的属性
@@ -174,36 +174,38 @@ void JsObject::setByName(VMContext *ctx, const JsValue &thiz, const SizedString 
             if (prop->isGSetter) {
                 if (prop->setter.isValid()) {
                     // prototype 带 setter 的可以直接返回用于修改调用
-                    set(ctx, prop, thiz, value);
+                    return set(ctx, prop, thiz, value);
                 }
-                return;
+                return JE_TYPE_NO_PROP_SETTER;
             } else if (!prop->isWritable) {
-                return;
+                return JE_TYPE_PROP_READ_ONLY;
             }
         }
 
         if (!isPreventedExtensions) {
             // 添加新属性
             _props[copyPropertyIfNeed(name)] = value;
+            return JE_OK;
         }
+        return JE_TYPE_PREVENTED_EXTENSION;
     } else {
-        set(ctx, &(*it).second, thiz, value);
+        return set(ctx, &(*it).second, thiz, value);
     }
 }
 
-void JsObject::setByIndex(VMContext *ctx, const JsValue &thiz, uint32_t index, const JsValue &value) {
+JsError JsObject::setByIndex(VMContext *ctx, const JsValue &thiz, uint32_t index, const JsValue &value) {
     NumberToSizedString name(index);
-    setByName(ctx, thiz, name, value);
+    return setByName(ctx, thiz, name, value);
 }
 
-void JsObject::setBySymbol(VMContext *ctx, const JsValue &thiz, uint32_t index, const JsValue &value) {
+JsError JsObject::setBySymbol(VMContext *ctx, const JsValue &thiz, uint32_t index, const JsValue &value) {
     auto prop = getRawBySymbol(ctx, index, false);
     if (prop) {
         // 修改已经存在的
-        set(ctx, prop, thiz, value);
+        return set(ctx, prop, thiz, value);
     } else {
         if (isPreventedExtensions) {
-            return;
+            return JE_TYPE_PREVENTED_EXTENSION;
         }
         // 添加新属性
         if (!_symbolProps) {
@@ -211,6 +213,7 @@ void JsObject::setBySymbol(VMContext *ctx, const JsValue &thiz, uint32_t index, 
         }
 
         (*_symbolProps)[index] = value;
+        return JE_OK;
     }
 }
 

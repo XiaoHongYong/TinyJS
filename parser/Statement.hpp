@@ -28,6 +28,26 @@ class JsNodeVarDeclarationList : public JsNodes {
 public:
     JsNodeVarDeclarationList(ResourcePool *resourcePool) : JsNodes(resourcePool, NT_VAR_DECLARTION_LIST) { }
 
+    virtual void convertToByteCode(ByteCodeStream &stream) {
+        int countPop = 0;
+
+        for (auto item : nodes) {
+            item->convertToByteCode(stream);
+            if (item->type == NT_ASSIGN) {
+                // 需要将栈顶元素 pop
+                countPop++;
+            }
+        }
+
+        if (countPop == 1) {
+            stream.writeOpCode(OP_POP_STACK_TOP);
+        } else if (countPop > 1) {
+            stream.writeOpCode(OP_POP_STACK_TOP_N);
+            assert(countPop <= 0xFFFF);
+            stream.writeUInt16((uint16_t)countPop);
+        }
+    }
+
 };
 
 class JsStmtBlock : public JsNodes {

@@ -7,6 +7,7 @@
 
 #include "WebAPI.hpp"
 #include "interpreter/VirtualMachineTypes.hpp"
+#include "objects/JsArray.hpp"
 
 
 using SetUInts = set<uint32_t>;
@@ -25,7 +26,7 @@ void dumpObject(VMContext *ctx, const JsValue &obj, string &out, SetUInts &histo
     auto runtime = ctx->runtime;
 
     IJsObject *pobj = runtime->getObject(obj);
-    std::shared_ptr<IJsIterator> it(pobj->getIteratorObject(ctx, false));
+    std::shared_ptr<IJsIterator> it(obj.type == JDT_ARRAY ? ((JsArray *)pobj)->getIteratorObjectAll(ctx) : pobj->getIteratorObject(ctx, false));
 
     SizedString key;
     JsValue value;
@@ -34,6 +35,16 @@ void dumpObject(VMContext *ctx, const JsValue &obj, string &out, SetUInts &histo
 
     while (it->next(&key, nullptr, &value)) {
         auto s = runtime->toSizedString(ctx, value);
+        if (value.type == JDT_OBJ_BOOL) { s = SizedString("Boolean"); }
+        else if (value.type == JDT_OBJ_NUMBER) { s = SizedString("Number"); }
+        else if (value.type == JDT_OBJ_STRING) { s = SizedString("String"); }
+        else if (value.type == JDT_OBJ_SYMBOL) { s = SizedString("Symbol"); }
+        else if (value.type == JDT_OBJECT) { s = SizedString("Object"); }
+        else if (value.type == JDT_ARRAY) {
+            auto arr = (JsArray *)runtime->getObject(value);
+            s = LockedSizedStringWrapper(stringPrintf("Array(%d)", arr->length()));
+        }
+
         if (isArray && key.isNumeric()) {
             vs.push_back(string((cstr_t)s.data, s.len));
         } else {

@@ -134,11 +134,10 @@ void JsGlobalThis::definePropertyBySymbol(VMContext *ctx, uint32_t index, const 
     _obj->definePropertyBySymbol(ctx, index, descriptor);
 }
 
-void JsGlobalThis::setByName(VMContext *ctx, const JsValue &thiz, const SizedString &name, const JsValue &value) {
+JsError JsGlobalThis::setByName(VMContext *ctx, const JsValue &thiz, const SizedString &name, const JsValue &value) {
     auto declare = _scopeDesc->getVarDeclarationByName(name);
     if (declare) {
-        _scope->set(ctx, declare->storageIndex, value);
-        return;
+        return _scope->set(ctx, declare->storageIndex, value);
     }
 
     // 查找 prototye 的属性
@@ -153,29 +152,31 @@ void JsGlobalThis::setByName(VMContext *ctx, const JsValue &thiz, const SizedStr
         if (prop->isGSetter) {
             if (prop->setter.isValid()) {
                 // prototype 带 setter 的可以直接返回用于修改调用
-                set(ctx, prop, thiz, value);
+                return set(ctx, prop, thiz, value);
+            } else {
+                return JE_TYPE_NO_PROP_SETTER;
             }
-            return;
         } else if (!prop->isWritable) {
-            return;
+            return JE_TYPE_PROP_READ_ONLY;
         }
     }
 
     auto index = _newIdentifier(name);
 
     _scope->vars.resize(_scopeDesc->countLocalVars, jsValueUndefined);
-    _scope->set(ctx, index, value);
+    return _scope->set(ctx, index, value);
 }
 
-void JsGlobalThis::setByIndex(VMContext *ctx, const JsValue &thiz, uint32_t index, const JsValue &value) {
+JsError JsGlobalThis::setByIndex(VMContext *ctx, const JsValue &thiz, uint32_t index, const JsValue &value) {
     // 不支持 index 的访问
+    return JE_NOT_SUPPORTED;
 }
 
-void JsGlobalThis::setBySymbol(VMContext *ctx, const JsValue &thiz, uint32_t index, const JsValue &value) {
+JsError JsGlobalThis::setBySymbol(VMContext *ctx, const JsValue &thiz, uint32_t index, const JsValue &value) {
     if (!_obj) {
         _newObject(ctx);
     }
-    _obj->setBySymbol(ctx, thiz, index, value);
+    return _obj->setBySymbol(ctx, thiz, index, value);
 }
 
 JsValue JsGlobalThis::increaseByName(VMContext *ctx, const JsValue &thiz, const SizedString &name, int n, bool isPost) {

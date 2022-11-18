@@ -297,7 +297,7 @@ IJsNode *JSParser::_tryForInStatment() {
         // for (var
         _readToken();
 
-        auto node =_expectVariableDeclarationList(type, true);
+        auto node = _expectVariableDeclarationList(type, true);
         assert(node->type == NT_VAR_DECLARTION_LIST);
         countVars = node->count();
         var = node->nodes[0];
@@ -859,12 +859,35 @@ IJsNode *JSParser::_expectExpression(Precedence pred, bool enableIn) {
         case TK_OPEN_BRACKET:
             expr = _expectArrayLiteralExpression();
             break;
-        case TK_OPEN_PAREN:
+        case TK_OPEN_PAREN: {
+            auto tokenStart = _curToken;
             expr = _expectParenExpression();
             if (_curToken.type == TK_ARROW) {
-                expr = _expectArrowFunction(expr);
+                auto childFunction = _enterFunction(tokenStart);
+                assert(expr->type == NT_PAREN_EXPRESSION);
+                childFunction->params = _convertParenExprsToFormalPrameters((JsParenExpr *)expr);
+
+                _readToken();
+                if (_curToken.type == TK_OPEN_BRACE) {
+                    while (_curToken.type != TK_CLOSE_BRACE) {
+                        if (_curToken.type == TK_EOF) {
+                            _parseError("Unexpected end of input");
+                            break;
+                        }
+
+                        childFunction->astNodes.push_back(_expectStatment());
+                    }
+                    _readToken();
+                } else {
+                    auto e = _expectExpression();
+                    childFunction->astNodes.push_back(PoolNew(_pool, JsStmtReturnValue)(e));
+                }
+
+                _leaveFunction();
+                expr = PoolNew(_pool, JsFunctionExpr)(childFunction);
             }
             break;
+        }
         case TK_TEMPLATE_NO_SUBSTITUTION:
         case TK_STRING: {
             if (_curToken.len == 1) {
@@ -1269,9 +1292,129 @@ IJsNode *JSParser::_expectRawTemplateCall(IJsNode *func) {
     return expr;
 }
 
-IJsNode *JSParser::_expectArrowFunction(IJsNode *parenExpr) {
+IJsNode *JSParser::_convertExprToVariableDeclaration(IJsNode *expr) {
+    switch (expr->type) {
+        case NT_IDENTIFIER: {
+            auto *id = (JsExprIdentifier *)expr;
+            _curFuncScope->addVarDeclaration(id->name);
+            expr = PoolNew(_pool, JsExprAssignWithStackTop)(id, nullptr);
+            break;
+        }
+        case NT_ASSIGN: {
+            auto *assign = (JsExprAssign *)expr;
+            auto left = assign->left, right = assign->right;
+            if (assign->left->type == NT_IDENTIFIER) {
+                auto *id = (JsExprIdentifier *)left;
+                _curFuncScope->addVarDeclaration(id->name);
+                expr = PoolNew(_pool, JsExprAssignWithStackTop)(id, nullptr);
+            } else {
+                if (left->type == NT_ARRAY) {
+                    _convertToArrayAssignable((JsExprArray *)expr);
+                } else if (left->type == NT_OBJECT) {
+                    _convertToObjectAssignable((JsExprObject *)expr);
+                } else {
+                    assert(0);
+                }
+
+                expr = PoolNew(_pool, JsExprAssignWithStackTop)(left, right);
+            }
+            break;
+        }
+        case NT_ARRAY:
+            _convertToArrayAssignable((JsExprArray *)expr);
+
+            // 需要扩展参数
+            expr = PoolNew(_pool, JsExprAssignWithStackTop)(expr, nullptr);
+            break;
+        case NT_OBJECT:
+            _convertToObjectAssignable((JsExprObject *)expr);
+
+            // 需要扩展参数
+            expr = PoolNew(_pool, JsExprAssignWithStackTop)(expr, nullptr);
+            break;
+        default:
+            // TODO: 需要重新指定抛出异常的位置在 expr
+            _parseError("Invalid destructuring assignment target");
+            break;
+    }
+
+    return expr;
+}
+
+void JSParser::_convertToArrayAssignable(JsExprArray *exprArr) {
+    auto end = exprArr->nodes.end();
+    for (auto it = exprArr->nodes.begin(); it != end; ++it) {
+        *it = _convertExprToVariableDeclaration(*it);
+    }
+}
+
+void JSParser::_convertToObjectAssignable(JsExprObject *exprObject) {
     assert(0);
-    return nullptr;
+//    for (auto expr : exprArr->nodes) {
+//        _convertExprToVariableDeclaration(expr);
+//    }
+}
+
+JsNodeParameters *JSParser::_convertParenExprsToFormalPrameters(JsParenExpr *exprParen) {
+    auto params = PoolNew(_pool, JsNodeParameters)(_resPool);
+    int index = 0;
+
+    for (auto expr : exprParen->nodes) {
+        switch (expr->type) {
+            case NT_IDENTIFIER: {
+                auto *id = (JsExprIdentifier *)expr;
+                _curFuncScope->addArgumentDeclaration(id->name, index);
+                // ??? JsExprIdentifier 并未被赋值，引用，需要从 _headIdRefs 中删除
+                // assert(_headIdRefs == left);
+                // _headIdRefs = ((JsExprIdentifier *)left)->next;
+                break;
+            }
+            case NT_ASSIGN: {
+                auto *assign = (JsExprAssign *)expr;
+                auto left = assign->left, right = assign->right;
+                if (assign->left->type == NT_IDENTIFIER) {
+                    auto *id = (JsExprIdentifier *)left;
+                    _curFuncScope->addArgumentDeclaration(id->name, index);
+                    expr = PoolNew(_pool, JsNodeUseDefaultParameter)(left, right, index);
+                } else {
+                    if (left->type == NT_ARRAY) {
+                        _convertToArrayAssignable((JsExprArray *)expr);
+                    } else if (left->type == NT_OBJECT) {
+                        _convertToObjectAssignable((JsExprObject *)expr);
+                    } else {
+                        assert(0);
+                    }
+
+                    auto e = PoolNew(_pool, JsExprAssignWithStackTop)(left, right);
+                    expr = PoolNew(_pool, JsNodeAssignWithParameter)(e, index);
+                }
+                break;
+            }
+            case NT_ARRAY:
+                _convertToArrayAssignable((JsExprArray *)expr);
+
+                // 需要扩展参数
+                expr = PoolNew(_pool, JsNodeAssignWithParameter)(expr, index);
+                break;
+            case NT_OBJECT:
+                _convertToObjectAssignable((JsExprObject *)expr);
+
+                // 需要扩展参数
+                expr = PoolNew(_pool, JsNodeAssignWithParameter)(expr, index);
+                break;
+            default:
+                // TODO: 需要重新指定抛出异常的位置在 expr
+                _parseError("Invalid destructuring assignment target");
+                break;
+        }
+
+        params->push(expr);
+        index++;
+    }
+
+    params->setBeingAssigned();
+
+    return params;
 }
 
 IJsNode *JSParser::_expectParenExpression() {
@@ -1444,7 +1587,6 @@ IJsNode *JSParser::_expectArrayLiteralExpression() {
             _readToken();
             arr->push(PoolNew(_pool, JsExprArrayItemSpread)(_expectExpression()));
         } else if (type == TK_COMMA) {
-            _readToken();
             arr->push(PoolNew(_pool, JsExprArrayItemEmpty));
         } else {
             arr->push(PoolNew(_pool, JsExprArrayItem)(_expectExpression()));

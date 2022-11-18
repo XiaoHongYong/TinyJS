@@ -151,7 +151,7 @@ class VMContext;
     OP_ITEM(OP_ARRAY_CREATE, ""), \
     OP_ITEM(OP_ARRAY_SPREAD_VALUE, ""), \
     OP_ITEM(OP_ARRAY_PUSH_VALUE, ""), \
-    OP_ITEM(OP_ARRAY_PUSH_UNDEFINED_VALUE, ""), \
+    OP_ITEM(OP_ARRAY_PUSH_EMPTY_VALUE, ""), \
     \
     /* 将数据赋值给 Array */\
     OP_ITEM(OP_ARRAY_ASSING_CREATE, ""), \
@@ -184,6 +184,19 @@ enum OpCode {
 
 const char *opCodeToString(OpCode code);
 
+// JsError 用于记录更为详细的错误信息.
+enum JsError {
+    JE_OK,                              // 正常，无错误.
+    JE_TYPE_NO_PROP_SETTER,             // 没有 Property setter 属性
+    JE_TYPE_PROP_READ_ONLY,             // Property 的 writable 为 false，不能修改.
+    JE_TYPE_PREVENTED_EXTENSION,        // prevented extension, 不能修改
+    JE_TYPE_INVALID_LENGTH,             // 设置 length 的值不正确
+    JE_TYPE_LENGTH_NOT_WRITABLE,        // length 不可更改
+    JE_TYPE_PROP_NO_DELETABLE,       // 属性不可被删除
+    JE_NOT_SUPPORTED,                   // 不支持的操作
+    JE_MAX_STACK_EXCEEDED,              // 函数调用堆栈超限
+};
+
 enum JsDataType : uint8_t {
     JDT_NOT_INITIALIZED = 0,
     JDT_UNDEFINED,
@@ -206,6 +219,7 @@ enum JsDataType : uint8_t {
     JDT_OBJ_BOOL,
     JDT_OBJ_NUMBER,
     JDT_OBJ_STRING,
+    JDT_OBJ_SYMBOL,
     JDT_OBJ_GLOBAL_THIS,
 
     JDT_ITERATOR,
@@ -342,6 +356,7 @@ struct JsString {
 static_assert(sizeof(JsString) == 32);
 
 const uint32_t LEN_MAX_STRING = 1024 * 124 * 512;
+const int32_t MAX_INT32 = 0x7FFFFFFF;
 
 /**
  * JsProperty 定义了 Object 的基本属性

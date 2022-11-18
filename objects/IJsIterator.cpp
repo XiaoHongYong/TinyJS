@@ -74,24 +74,24 @@ void IJsIterator::definePropertyBySymbol(VMContext *ctx, uint32_t index, const J
     _obj->definePropertyBySymbol(ctx, index, descriptor);
 }
 
-void IJsIterator::setByName(VMContext *ctx, const JsValue &thiz, const SizedString &name, const JsValue &value) {
+JsError IJsIterator::setByName(VMContext *ctx, const JsValue &thiz, const SizedString &name, const JsValue &value) {
     if (!_obj) {
         _newObject(ctx);
     }
 
-    _obj->setByName(ctx, thiz, name, value);
+    return _obj->setByName(ctx, thiz, name, value);
 }
 
-void IJsIterator::setByIndex(VMContext *ctx, const JsValue &thiz, uint32_t index, const JsValue &value) {
+JsError IJsIterator::setByIndex(VMContext *ctx, const JsValue &thiz, uint32_t index, const JsValue &value) {
     NumberToSizedString name(index);
-    setByName(ctx, thiz, name, value);
+    return setByName(ctx, thiz, name, value);
 }
 
-void IJsIterator::setBySymbol(VMContext *ctx, const JsValue &thiz, uint32_t index, const JsValue &value) {
+JsError IJsIterator::setBySymbol(VMContext *ctx, const JsValue &thiz, uint32_t index, const JsValue &value) {
     if (!_obj) {
         _newObject(ctx);
     }
-    _obj->setBySymbol(ctx, thiz, index, value);
+    return _obj->setBySymbol(ctx, thiz, index, value);
 }
 
 JsValue IJsIterator::increaseByName(VMContext *ctx, const JsValue &thiz, const SizedString &name, int n, bool isPost) {
