@@ -29,6 +29,7 @@ void registerSymbol(VMRuntimeCommon *rt);
 void registerObjFunction(VMRuntimeCommon *rt);
 void registerErrorAPIs(VMRuntimeCommon *rt);
 void registerEval(VMRuntimeCommon *rt);
+void registerObjMath(VMRuntimeCommon *rt);
 
 
 void registerBuiltIns(VMRuntimeCommon *rt) {
@@ -43,4 +44,5 @@ void registerBuiltIns(VMRuntimeCommon *rt) {
     registerObjFunction(rt);
     registerErrorAPIs(rt);
     registerEval(rt);
+    registerObjMath(rt);
 }

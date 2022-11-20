@@ -336,7 +336,7 @@ void JsVirtualMachine::run(cstr_t code, size_t len, VMRuntime *runtime) {
             printf("** NOT FREED **\n");
         }
 #else
-        runtime->gc();
+        runtime->garbageCollect();
 #endif
     }
 }
