@@ -12,6 +12,7 @@
 		C0443AAF28E5229C00CBF6DB /* CharEncoding.cpp in Sources */ = {isa = PBXBuildFile; fileRef = C0443AAE28E51F9800CBF6DB /* CharEncoding.cpp */; };
 		C0443AB128E7254000CBF6DB /* SizedString.cpp in Sources */ = {isa = PBXBuildFile; fileRef = C0443AB028E7254000CBF6DB /* SizedString.cpp */; };
 		C05589AD29291D1500CBDBD7 /* Math.cpp in Sources */ = {isa = PBXBuildFile; fileRef = C05589AC29291D1500CBDBD7 /* Math.cpp */; };
+		C05589AF2929DC0C00CBDBD7 /* JSON.cpp in Sources */ = {isa = PBXBuildFile; fileRef = C05589AE2929DC0C00CBDBD7 /* JSON.cpp */; };
 		C06EE43F28F40406000F0E41 /* JsObject.cpp in Sources */ = {isa = PBXBuildFile; fileRef = C06EE43E28F40406000F0E41 /* JsObject.cpp */; };
 		C06EE44328F40552000F0E41 /* IJsIterator.cpp in Sources */ = {isa = PBXBuildFile; fileRef = C06EE44128F40552000F0E41 /* IJsIterator.cpp */; };
 		C06EE44629091177000F0E41 /* JsObjectLazy.cpp in Sources */ = {isa = PBXBuildFile; fileRef = C06EE44529091177000F0E41 /* JsObjectLazy.cpp */; };
@@ -107,6 +108,7 @@
 		C0443AAE28E51F9800CBF6DB /* CharEncoding.cpp */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.cpp.cpp; path = CharEncoding.cpp; sourceTree = "<group>"; };
 		C0443AB028E7254000CBF6DB /* SizedString.cpp */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.cpp.cpp; path = SizedString.cpp; sourceTree = "<group>"; };
 		C05589AC29291D1500CBDBD7 /* Math.cpp */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.cpp.cpp; path = Math.cpp; sourceTree = "<group>"; };
+		C05589AE2929DC0C00CBDBD7 /* JSON.cpp */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.cpp.cpp; path = JSON.cpp; sourceTree = "<group>"; };
 		C06EE43D28F40406000F0E41 /* JsObject.hpp */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.cpp.h; path = JsObject.hpp; sourceTree = "<group>"; };
 		C06EE43E28F40406000F0E41 /* JsObject.cpp */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.cpp.cpp; path = JsObject.cpp; sourceTree = "<group>"; };
 		C06EE44028F40495000F0E41 /* JsDummyObject.hpp */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.cpp.h; path = JsDummyObject.hpp; sourceTree = "<group>"; };
@@ -293,6 +295,7 @@
 				C08597B528D0D54C00577A8E /* Error.cpp */,
 				C08597BD28D0D54C00577A8E /* eval.cpp */,
 				C08597B828D0D54C00577A8E /* Function.cpp */,
+				C05589AE2929DC0C00CBDBD7 /* JSON.cpp */,
 				C05589AC29291D1500CBDBD7 /* Math.cpp */,
 				C08597BE28D0D54C00577A8E /* Number.cpp */,
 				C08597B628D0D54C00577A8E /* Object.cpp */,
@@ -589,6 +592,7 @@
 				C085984B28D0D54C00577A8E /* ByteCodeStream.cpp in Sources */,
 				C085984128D0D54C00577A8E /* VMRuntime.cpp in Sources */,
 				C085983528D0D54C00577A8E /* StringEx.cpp in Sources */,
+				C05589AF2929DC0C00CBDBD7 /* JSON.cpp in Sources */,
 				C085982E28D0D54C00577A8E /* WebAPI.cpp in Sources */,
 				C085981D28D0D54C00577A8E /* Error.cpp in Sources */,
 				C085983228D0D54C00577A8E /* FileApi.cpp in Sources */,
@@ -768,6 +772,7 @@
 				HEADER_SEARCH_PATHS = (
 					"${SRCROOT}/../third-parties/googletest/include",
 					"${SRCROOT}",
+					"${SRCROOT}/../third-parties/rapidjson",
 				);
 				LIBRARY_SEARCH_PATHS = (
 					"$(inherited)",
@@ -784,6 +789,7 @@
 				HEADER_SEARCH_PATHS = (
 					"${SRCROOT}/../third-parties/googletest/include",
 					"${SRCROOT}",
+					"${SRCROOT}/../third-parties/rapidjson",
 				);
 				LIBRARY_SEARCH_PATHS = (
 					"$(inherited)",

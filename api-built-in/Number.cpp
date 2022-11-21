@@ -395,6 +395,8 @@ void registerNumber(VMRuntimeCommon *rt) {
 
     SET_PROTOTYPE(numberFunctions, jsValuePrototypeNumber);
 
-    rt->setGlobalObject("Number",
-        new JsLibObject(rt, numberFunctions, CountOf(numberFunctions), numberConstructor));
+    auto obj = new JsLibObject(rt, numberFunctions, CountOf(numberFunctions), numberConstructor);
+    rt->setGlobalObject("Number", obj);
+
+    rt->setGlobalValue("isFinite", obj->getByName(nullptr, obj->self, SizedString("isFinite")));
 }
