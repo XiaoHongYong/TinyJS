@@ -138,6 +138,39 @@ int32_t Arguments::getIntAt(VMContext *ctx, uint32_t index, int32_t defVal) cons
     }
 }
 
+int64_t Arguments::getInt64At(VMContext *ctx, uint32_t index, int64_t defVal) const {
+    if (index < capacity) {
+        auto v = data[index];
+        if (v.type == JDT_INT32) {
+            return v.value.n32;
+        }
+
+        double d = ctx->runtime->toNumber(ctx, v);
+        if (isnan(d)) {
+            return 0;
+        } else if (isinf(d)) {
+            return 0x7FFFFFFFFFFFFFFF;
+        } else {
+            return (int64_t)d;
+        }
+    } else {
+        return defVal;
+    }
+}
+
+double Arguments::getDoubleAt(VMContext *ctx, uint32_t index, double defVal) const {
+    if (index < capacity) {
+        auto v = data[index];
+        if (v.type == JDT_INT32) {
+            return v.value.n32;
+        }
+
+        return ctx->runtime->toNumber(ctx, v);
+    } else {
+        return defVal;
+    }
+}
+
 LockedSizedStringWrapper Arguments::getStringAt(VMContext *ctx, uint32_t index, const SizedString &defVal) const {
     if (index < capacity) {
         auto v = data[index];

@@ -1,7 +1,11 @@
 #include "UtilsTypes.h"
 #include "DateTime.h"
 #include "StringEx.h"
+#include <chrono>
+#include <math.h>
 
+
+using namespace std::chrono;
 
 static const int _MonthDays[12] = {
     0,
@@ -31,182 +35,258 @@ inline int getDaysToMonth(int year, int month) {
     return n;
 }
 
-DateTime::DateTime() {
-    this->day = 0;
-    this->month = 0;
-    this->year = 0;
-    this->hour = 0;
-    this->minute = 0;
-    this->second = 0;
-    this->ms = 0;
+int64_t getTimeInMillisecond() {
+    system_clock::time_point now = system_clock::now();
+    auto now_ms = std::chrono::time_point_cast<std::chrono::milliseconds>(now);
+    return now_ms.time_since_epoch().count();
 }
 
-DateTime::DateTime(int year, int month, int day) {
-    this->day = (uint8_t)day;
-    this->month = (uint8_t)month;
-    this->year = (uint16_t)year;
-    this->hour = 0;
-    this->minute = 0;
-    this->second = 0;
-    this->ms = 0;
+DateTime::DateTime(bool localTime) : DateTime(getTimeInMillisecond(), localTime) {
 }
 
-DateTime::DateTime(int year, int month, int day, int hour, int minute, int second, int ms) {
-    this->day = (uint8_t)day;
-    this->month = (uint8_t)month;
-    this->year = (uint16_t)year;
-    this->hour = (uint8_t)hour;
-    this->minute = (uint8_t)minute;
-    this->second = (uint8_t)second;
-    this->ms = (uint16_t)ms;
+tm *msToTm(int64_t timeInMs, bool isLocalTime) {
+    time_t t = timeInMs / 1000;
+    return isLocalTime ? localtime(&t) : gmtime(&t);
 }
 
-uint32_t DateTime::getTime() {
-    if (month <= 0 || month > 12)
-        return 0;
-
-    uint32_t nAllDays = getDaysToYear(year) + day - 1;
-
-    nAllDays += getDaysToMonth(year, month);
-
-    return (nAllDays - getDaysToYear(1970)) * SECOND_IN_ONE_DAY + ((hour * 60 + minute) * 60 + second);
+DateTime::DateTime(int64_t timeInMs, bool localTime) : DateTime(msToTm(timeInMs, localTime), timeInMs % 1000, localTime) {
 }
 
-void DateTime::fromTime(uint32_t timeInMillis) {
-    ms = 0;
+DateTime::DateTime(struct tm *tm, int ms, bool localTime) : DateTime(tm->tm_year + 1900, tm->tm_mon + 1, tm->tm_mday, tm->tm_hour, tm->tm_min, tm->tm_sec, (int)ms, tm->tm_wday, localTime) {
+}
 
-    second = timeInMillis % 60;
-    timeInMillis /= 60;
+DateTime::DateTime(int year, int month, int day, int hour, int minute, int second, int ms, int dayOfWeek, bool isLocalTime) {
+    _day = day;
+    _month = month;
+    _year = year;
+    _hour = hour;
+    _minute = minute;
+    _second = second;
+    _ms = ms;
+    _timeZoneOffset = 0;
+    _isLocalTime = isLocalTime;
 
-    minute = timeInMillis % 60;
-    timeInMillis /= 60;
-
-    hour = timeInMillis % 24;
-    timeInMillis /= 24;
-
-    // Now, timeInMillis is Days.
-    uint32_t daysTotal = timeInMillis + getDaysToYear(1970);
-
-    // estimate the start year.
-    year = timeInMillis / 365 + 1970;
-    uint32_t daysToYear = getDaysToYear(year);
-    while (daysToYear <= daysTotal)
-    {
-        daysToYear += 365;
-        if (isLeapYear(year))
-            daysToYear++;
-        year++;
+    if (dayOfWeek == -1) {
+        auto t = getTime();
+        dayOfWeek = isLocalTime ? localtime(&t)->tm_wday : gmtime(&t)->tm_wday;
     }
-    year--;
-
-    int dayOfYear = daysTotal - getDaysToYear(year);
-    assert(dayOfYear >= 0);
-    for (month = 1; month <= 12; month++)
-    {
-        if ((int)dayOfYear < getDaysToMonth(year, month))
-            break;
-    }
-    month--;
-
-    day = dayOfYear - getDaysToMonth(year, month);
-    day++;
+    _dayOfWeek = (int8_t)dayOfWeek;
 }
 
-string DateTime::toUtcDateString()
-{
-    char szDate[64];
-    sprintf(szDate, "%04d-%02d-%02d", year, month, day);
-    return szDate;
+time_t DateTime::getTime() const {
+    struct tm t = {};
+    t.tm_year = _year - 1900;
+    t.tm_mon = _month - 1;
+    t.tm_mday = _day;
+    t.tm_hour = _hour;
+    t.tm_min = _minute;
+    t.tm_sec = _second;
+
+    return _isLocalTime ? timelocal(&t) : timegm(&t);
 }
 
-string DateTime::toUtcDateTimeString()
-{
-    char szDate[64];
-    sprintf(szDate, "%04d-%02d-%02d %02d:%02d.%02d", year, month, day, hour, minute, second);
-    return szDate;
+void DateTime::fromTime(time_t time) {
+    auto tm = _isLocalTime ? localtime(&time) : gmtime(&time);
+    _year = tm->tm_year + 1900;
+    _month = tm->tm_mon + 1;
+    _day = tm->tm_mday;
+    _hour = tm->tm_hour;
+    _minute = tm->tm_min;
+    _second = tm->tm_sec;
+    _ms = 0;
 }
 
-bool DateTime::fromString(cstr_t szDate)
-{
-    // year
-    szDate = parseInt(szDate, year);
-    if (*szDate != '-' && *szDate != '/')
-        return false;
-    szDate++;
+int64_t DateTime::getTimeInMs() const {
+    return getTime() * 1000 + _ms;
+}
 
-    // month
-    szDate = parseInt(szDate, month);
-    if (*szDate != '-' && *szDate != '/')
-        return false;
-    szDate++;
+void DateTime::fromTimeInMs(int64_t milliseconds) {
+    fromTime(milliseconds / 1000);
+    _ms = milliseconds % 1000;
+}
 
-    // day
-    szDate = parseInt(szDate, day);
+string DateTime::toDateString() const {
+    char str[64];
+    sprintf(str, "%04d-%02d-%02d", _year, _month, _day);
+    return str;
+}
 
-    while (*szDate == ' ')
-        szDate++;
+string DateTime::toDateTimeString() const {
+    char str[64];
+    sprintf(str, "%04d-%02d-%02d %02d:%02d.%02d", _year, _month, _day, _hour, _minute, _second);
+    return str;
+}
 
-    if (!*szDate)
-    {
-        ms = hour = minute = second = 0;
+bool DateTime::_parseEndCheck(cstr_t start, cstr_t end, cstr_t &p, bool datePart) {
+    p = ignoreSpace(p, end);
+    if (p == end) {
+        update();
         return true;
     }
 
-    // hour
-    szDate = parseInt(szDate, hour);
-    if (*szDate != ':')
+    if (*p == 'Z') {
+        p++;
+        p = ignoreSpace(p, end);
+        if (p == end) {
+            _isLocalTime = false;
+            update();
+            return true;
+        } else {
+            p = start;
+            return true;
+        }
+    } else if (!datePart && (*p == '+' || *p == '-')) {
+        // 时区
+        // +hh:mm
+        int h = 0, m = 0;
+        int sign = *p == '+' ? -1 : 1;
+        p++;
+        p = parseInt(p, end, h);
+        if (*p == ':') {
+            p++;
+            p = ignoreSpace(p, end);
+            p = parseInt(p, end, m);
+            p = ignoreSpace(p, end);
+            if (p == end) {
+                _isLocalTime = false;
+                _hour += h * sign;
+                _minute += m * sign;
+                update();
+                return true;
+            }
+        }
+
+        // 错误格式
+        p = start;
         return false;
-    szDate++;
+    }
 
-    // minute
-    szDate = parseInt(szDate, minute);
-    if (*szDate != ':' && *szDate != '.')
+    return false;
+}
+
+static bool expectDateNumber(cstr_t start, cstr_t end, int min, int max, cstr_t &p, int &n) {
+    p = ignoreSpace(p, end);
+    auto tmp = parseInt(p, end, n);
+    if (tmp == p || n > max || n < min) {
+        p = start;
         return false;
-    szDate++;
+    }
 
-    // second
-    parseInt(szDate, second);
-
-    ms = 0;
+    p = tmp;
+    p = ignoreSpace(p, end);
     return true;
 }
 
-DateTime DateTime::getCurrentDate()
-{
-#ifdef _WIN32
-    SYSTEMTIME    sysTime;
+cstr_t DateTime::parse(cstr_t start, uint32_t length) {
+    memset(this, 0, sizeof(*this));
 
-    GetSystemTime(&sysTime);
+    _month = 1;
+    _day = 1;
+    _isLocalTime = false;
 
-    return DateTime(sysTime.wYear, sysTime.wMonth, sysTime.wDay, sysTime.wHour, sysTime.wMinute, sysTime.wSecond, sysTime.wMilliseconds);
-#else
-    time_t        ltime;
-    tm            *ptm;
+    auto p = start;
+    auto end = start + length;
 
-    time(&ltime);
-    ptm = gmtime(&ltime);
+    int *fields[] =   { &_year, &_month, &_day };
+    int fieldsMin[] = { 0,      1,       1 };
+    int fieldsMax[] = { 275760, 12,      31 };
+    int exactLength[] = { 4,    7,       10};
 
-    return DateTime(ptm->tm_year + 1900, ptm->tm_mon + 1, ptm->tm_mday, ptm->tm_hour, ptm->tm_min, ptm->tm_sec, 0);
-#endif
+    for (int i = 0; i < CountOf(fields); i++) {
+        if (!expectDateNumber(start, end, fieldsMin[i], fieldsMax[i], p, *fields[i])) {
+            return p;
+        }
+
+        if (p == end) {
+            if (p - start != exactLength[i]) _isLocalTime = true;
+            update();
+            return p;
+        }
+
+        if (_parseEndCheck(start, end, p)) {
+            return p;
+        }
+
+        if (i < CountOf(fields) - 1) {
+            if ((*p != '-' && *p != '/')) {
+                return start;
+            }
+
+            if (*p != '-') _isLocalTime = true;
+            p++;
+        }
+    }
+
+    if (*p == 'T') {
+        p++;
+    }
+    _isLocalTime = true;
+
+    int *timeFields[] =   { &_hour, &_minute, &_second, &_ms };
+    int timeFieldsMin[] = { 0,      0,        0,        0 };
+    int timeFieldsMax[] = { 24,     59,       59,       999 };
+
+    for (int i = 0; i < CountOf(timeFields); i++) {
+        if (!expectDateNumber(start, end, timeFieldsMin[i], timeFieldsMax[i], p, *timeFields[i])) {
+            return p;
+        }
+
+        if (i > 0 && _hour == 24 && *timeFields[i] > 0) {
+            // 非法的时间 24:x:y:z
+            return start;
+        }
+
+        if (_parseEndCheck(start, end, p, false)) {
+            return p;
+        }
+
+        if (i < 2) {
+            if (*p != ':' && *p != '.') {
+                return start;
+            }
+            p++;
+        } else if (i == 2) {
+            // 接下来是毫秒
+            if (*p == '.') {
+                // 按照小数处理
+                p++;
+                auto tmp = parseInt(p, end, _ms);
+                if (tmp > p) {
+                    int len = (int)(tmp - p);
+                    _ms = (int)(pow(10, -len + 3) * _ms);
+
+                    if (_hour == 24 && _ms > 0) {
+                        // 格式错误
+                        return start;
+                    } else if (_parseEndCheck(start, end, tmp, false)) {
+                        return end;
+                    }
+                }
+
+                // 格式错误
+                return start;
+            } else if (*p != ':') {
+                // 不是毫秒
+                return start;
+            }
+            p++;
+        }
+    }
+
+    return start;
 }
 
-DateTime DateTime::getLocalTime()
-{
-#ifdef _WIN32
-    SYSTEMTIME    sysTime;
+bool DateTime::fromString(cstr_t str, uint32_t length) {
+    auto p = parse(str, length);
+    return p == str + length;
+}
 
-    ::getLocalTime(&sysTime);
+DateTime DateTime::utcTime() {
+    return DateTime(::getTimeInMillisecond(), false);
+}
 
-    return DateTime(sysTime.wYear, sysTime.wMonth, sysTime.wDay, sysTime.wHour, sysTime.wMinute, sysTime.wSecond, sysTime.wMilliseconds);
-#else
-    time_t        ltime;
-    tm            *ptm;
-
-    time(&ltime);
-    ptm = localtime(&ltime);
-
-    return DateTime(ptm->tm_year + 1900, ptm->tm_mon + 1, ptm->tm_mday, ptm->tm_hour, ptm->tm_min, ptm->tm_sec, 0);
-#endif
+DateTime DateTime::localTime() {
+    return DateTime(::getTimeInMillisecond(), true);
 }
 
 bool DateTime::isLeapYear(int year)
@@ -222,113 +302,17 @@ bool DateTime::isLeapYear(int year)
     return true;
 }
 
+void DateTime::update() {
+    struct tm t = {};
+    t.tm_year = _year - 1900;
+    t.tm_mon = _month - 1;
+    t.tm_mday = _day;
+    t.tm_hour = _hour;
+    t.tm_min = _minute;
+    t.tm_sec = _second;
 
-//////////////////////////////////////////////////////////////////////////
-// CPPUnit test
-#ifdef _CPPUNIT_TEST
+    int64_t time = _isLocalTime ? timelocal(&t) : timegm(&t);
+    time = time * 1000 + _ms;
 
-#include <time.h>
-
-IMPLEMENT_CPPUNIT_TEST_REG(DateTime)
-
-class CTestCaseCBaseDate : public CppUnit::TestFixture
-{
-    CPPUNIT_TEST_SUITE(CTestCaseCBaseDate);
-    CPPUNIT_TEST(testFromTime);
-    CPPUNIT_TEST(testFromString);
-    CPPUNIT_TEST_SUITE_END();
-
-protected:
-    void testFromTime()
-    {
-        time_t    timeCur = 0;
-        time(&timeCur);
-        tm *tmCur = gmtime(&timeCur);
-        DateTime t;
-        t.fromTime((uint32_t)timeCur);
-
-        ASSERT_TRUE(tmCur->tm_year + 1900 == t.year);
-        ASSERT_TRUE(tmCur->tm_mon + 1 == t.month);
-        ASSERT_TRUE(tmCur->tm_mday == t.day);
-        ASSERT_TRUE(tmCur->tm_hour == t.hour);
-        ASSERT_TRUE(tmCur->tm_min == t.minute);
-        ASSERT_TRUE(tmCur->tm_sec == t.second);
-        ASSERT_TRUE(0 == t.ms);
-        ASSERT_TRUE(timeCur == t.getTime());
-
-        t.month = 12;
-        DateTime t2;
-        t2.fromTime(t.getTime());
-        ASSERT_TRUE(t2.month = t.month);
-        ASSERT_TRUE(t2.getTime() == t.getTime());
-
-        for (int year = 1999; year < 2001; year++)
-        {
-            DateTime    date(year, 1, 1);
-            uint32_t time = date.getTime();
-
-            DateTime    date2;
-            date2.fromTime(time);
-
-            ASSERT_TRUE(date2.year == year);
-        }
-
-        int vYear[] = { 1970, 1988, 2000, 2100 };
-
-        for (int i = 0; i < CountOf(vYear); i++)
-        {
-            int year = vYear[i];
-            for (int month = 1; month <= 12; month++)
-            {
-                int dayToMonthStart = getDaysToMonth(year, month);
-                int dayToMOnthEnd;
-                if (month == 12)
-                    dayToMOnthEnd = dayToMonthStart + 31;
-                else
-                    dayToMOnthEnd = getDaysToMonth(year, month + 1);
-                for (int day = 1; day <= dayToMOnthEnd - dayToMonthStart; day++)
-                {
-                    DateTime    date(year, month, day);
-                    uint32_t time = date.getTime();
-
-                    DateTime    date2;
-                    date2.fromTime(time);
-
-                    ASSERT_TRUE(date2.year == year);
-                    ASSERT_TRUE(date2.month == month);
-                    ASSERT_TRUE(date2.day == day);
-                }
-            }
-        }
-    }
-
-    void testFromString()
-    {
-        cstr_t vDate[] = { "2010-01-27", "1970-12-31", "2010-10-27" };
-
-        for (int i = 0; i < CountOf(vDate); i++)
-        {
-            DateTime    date;
-
-            date.fromString(vDate[i]);
-            string str = date.toUtcDateString();
-            ASSERT_TRUE(str == vDate[i]);
-        }
-
-        cstr_t vDateTime[] = { "2010-01-27 10:12.01", "1970-12-31 10:02.15", "2010-10-27 10:22.59" };
-
-        for (int i = 0; i < CountOf(vDateTime); i++)
-        {
-            DateTime    date;
-
-            date.fromString(vDateTime[i]);
-            string str = date.toUtcDateTimeString();
-            ASSERT_TRUE(str == vDateTime[i]);
-        }
-    }
-
-};
-
-CPPUNIT_TEST_SUITE_REGISTRATION(CTestCaseCBaseDate);
-
-#endif // _CPPUNIT_TEST
+    fromTimeInMs(time);
+}

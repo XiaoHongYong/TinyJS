@@ -86,6 +86,7 @@ CONST_STRINGS = [
     [ 'Input', 'input' ],
     [ 'Infinity', 'Infinity' ],
     [ 'NaN', 'NaN' ],
+    [ 'InvalidDate', 'Invalid Date' ],
     # [ '', '' ],
 ]
 

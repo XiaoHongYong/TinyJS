@@ -47,8 +47,9 @@ const char *jsDataTypeToString(JsDataType type) {
         "JDT_ITERATOR",
 
         "JDT_OBJECT",
-        "JDT_REGEX",
         "JDT_ARRAY",
+        "JDT_REGEX",
+        "JDT_DATE",
         "JDT_ARGUMENTS",
 
         "JDT_OBJ_BOOL",

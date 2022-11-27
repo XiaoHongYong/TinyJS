@@ -50,7 +50,9 @@ public:
     Arguments &operator = (const Arguments &other);
     JsValue &operator[](uint32_t n) const { assert(n < capacity); return data[n]; }
     JsValue getAt(uint32_t n, const JsValue &defValue = jsValueUndefined) const { return n < capacity ? data[n] : defValue; }
-    int32_t getIntAt(VMContext *ctx, uint32_t index, int defVal = 0) const;
+    int32_t getIntAt(VMContext *ctx, uint32_t index, int32_t defVal = 0) const;
+    int64_t getInt64At(VMContext *ctx, uint32_t index, int64_t defVal = 0) const;
+    double getDoubleAt(VMContext *ctx, uint32_t index, double defVal = 0) const;
     LockedSizedStringWrapper getStringAt(VMContext *ctx, uint32_t index, const SizedString &defVal = sizedStringEmpty) const;
 
     void copy(const Arguments &other, uint32_t minSize = 0);

@@ -31,6 +31,7 @@ void registerErrorAPIs(VMRuntimeCommon *rt);
 void registerEval(VMRuntimeCommon *rt);
 void registerObjMath(VMRuntimeCommon *rt);
 void registerJSON(VMRuntimeCommon *rt);
+void registerDate(VMRuntimeCommon *rt);
 
 
 void registerBuiltIns(VMRuntimeCommon *rt) {
@@ -47,4 +48,5 @@ void registerBuiltIns(VMRuntimeCommon *rt) {
     registerEval(rt);
     registerObjMath(rt);
     registerJSON(rt);
+    registerDate(rt);
 }

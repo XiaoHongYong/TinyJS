@@ -92,6 +92,41 @@ inline int toDigit(uint8_t ch) {
     }
 }
 
+inline cstr_t ignoreSpace(cstr_t str, cstr_t end) {
+    while (str < end && isSpace(*str)) {
+        str++;
+    }
+
+    return str;
+}
+
+template<typename _int>
+inline cstr_t parseInt(cstr_t str, cstr_t end, _int &value) {
+    bool isNegative = false;
+
+    if (str + 1 < end && *str == '-') {
+        if (!isDigit(str[1])) {
+            // 下一位必须是数字，否则失败
+            return str;
+        }
+        isNegative = true;
+        str++;
+    }
+
+    value = 0;
+    while (str < end && isDigit(*str)) {
+        value *= 10;
+        value += *str - '0';
+        str++;
+    }
+
+    if (isNegative) {
+        value = -value;
+    }
+
+    return str;
+}
+
 template<typename _int>
 inline cstr_t parseInt(cstr_t str, _int &value) {
     bool bNegative = false;
