@@ -494,7 +494,8 @@ void arrayPrototypeCopyWithin(VMContext *ctx, const JsValue &thiz, const Argumen
 
 class EntriesArrayLikeObjIterator: public IJsIterator {
 public:
-    EntriesArrayLikeObjIterator(VMContext *ctx, IJsObject *obj, uint32_t length) : _ctx(ctx), _obj(obj), _length(length) {
+    EntriesArrayLikeObjIterator(VMContext *ctx, IJsObject *obj, uint32_t length) : IJsIterator(false, false), _ctx(ctx), _obj(obj), _length(length)
+    {
         _index = 0;
         _isOfIterable = true;
     }
@@ -536,7 +537,7 @@ protected:
 
 class EntriesIterator : public IJsIterator {
 public:
-    EntriesIterator(VMContext *ctx, IJsIterator *other) : _ctx(ctx), _other(other) {
+    EntriesIterator(VMContext *ctx, IJsIterator *other) : IJsIterator(false, false), _ctx(ctx), _other(other) {
         _index = 0;
         _isOfIterable = true;
     }
@@ -922,7 +923,7 @@ void arrayPrototypeJoin(VMContext *ctx, const JsValue &thiz, const Arguments &ar
 
 class IndexIterator: public IJsIterator {
 public:
-    IndexIterator(uint32_t length) {
+    IndexIterator(uint32_t length) : IJsIterator(false, false) {
         _index = 0;
         _length = length;
         _isOfIterable = true;
@@ -1707,7 +1708,7 @@ void arrayPrototypeUnshift(VMContext *ctx, const JsValue &thiz, const Arguments 
 
 class ValuesArrayLikeObjIterator : public IJsIterator {
 public:
-    ValuesArrayLikeObjIterator(VMContext *ctx, IJsObject *obj, uint32_t length) : _ctx(ctx), _obj(obj), _length(length) {
+    ValuesArrayLikeObjIterator(VMContext *ctx, IJsObject *obj, uint32_t length) : IJsIterator(false, false), _ctx(ctx), _obj(obj), _length(length) {
         _index = 0;
         _isOfIterable = true;
     }

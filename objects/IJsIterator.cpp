@@ -14,11 +14,10 @@
  */
 class JsIteratorOfIterator : public IJsIterator {
 public:
-    JsIteratorOfIterator(VMContext *ctx, IJsIterator *it, bool includeProtoProp) {
+    JsIteratorOfIterator(VMContext *ctx, IJsIterator *it, bool includeProtoProp, bool includeNoneEnumerable) : IJsIterator(includeProtoProp, includeNoneEnumerable) {
         _ctx = ctx;
         _it = it;
         _itObj = nullptr;
-        _includeProtoProp = includeProtoProp;
     }
 
     ~JsIteratorOfIterator() {
@@ -34,7 +33,7 @@ public:
     virtual bool next(SizedString *strKeyOut = nullptr, JsValue *keyOut = nullptr, JsValue *valueOut = nullptr) override {
         if (_itObj == nullptr) {
             if (_it->_obj) {
-                _itObj = _it->_obj->getIteratorObject(_ctx, _includeProtoProp);
+                _itObj = _it->_obj->getIteratorObject(_ctx, _includeProtoProp, _includeNoneEnumerable);
             } else {
                 return false;
             }
@@ -48,7 +47,6 @@ protected:
     IJsIterator                     *_it;
 
     IJsIterator                     *_itObj;
-    bool                            _includeProtoProp;
 
 };
 
@@ -200,8 +198,8 @@ IJsObject *IJsIterator::clone() {
     return nullptr;
 }
 
-IJsIterator *IJsIterator::getIteratorObject(VMContext *ctx, bool includeProtoProp) {
-    return new JsIteratorOfIterator(ctx, this, includeProtoProp);
+IJsIterator *IJsIterator::getIteratorObject(VMContext *ctx, bool includeProtoProp, bool includeNoneEnumerable) {
+    return new JsIteratorOfIterator(ctx, this, includeProtoProp, includeNoneEnumerable);
 }
 
 void IJsIterator::markReferIdx(VMRuntime *rt) {

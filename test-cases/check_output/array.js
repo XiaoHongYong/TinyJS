@@ -1233,7 +1233,9 @@ set 0:  b
 set 2:  x
 get 0 b
 get 2 x
-12 {_0: b, _2: x, length: 3} b undefined x
+get 2 x
+get 0 b
+12 {0: b, 2: x, _0: b, _2: x, length: 3} b undefined x
 */
 
 

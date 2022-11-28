@@ -315,7 +315,8 @@ bool IJsObject::getLength(VMContext *ctx, int32_t &lengthOut) {
  */
 class JsObjectIterator : public IJsIterator {
 public:
-    JsObjectIterator(VMContext *ctx, JsObject *obj, bool includeProtoProp) {
+    JsObjectIterator(VMContext *ctx, JsObject *obj, bool includeProtoProp, bool includeNoneEnumerable) : IJsIterator(includeProtoProp, includeNoneEnumerable)
+    {
         _ctx = ctx;
         _obj = obj;
         _it = obj->_props.begin();
@@ -345,7 +346,7 @@ public:
             }
 
             auto &prop = (*_it).second;
-            if (prop.isEnumerable) {
+            if (prop.isEnumerable || _includeNoneEnumerable) {
                 break;
             }
             _it++;

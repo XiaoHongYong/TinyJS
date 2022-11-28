@@ -24,12 +24,12 @@ SizedString copyPropertyIfNeed(SizedString name) {
  */
 class JsObjectIterator : public IJsIterator {
 public:
-    JsObjectIterator(VMContext *ctx, JsObject *obj, bool includeProtoProp) {
+    JsObjectIterator(VMContext *ctx, JsObject *obj, bool includeProtoProp, bool includeNoneEnumerable) : IJsIterator(includeProtoProp, includeNoneEnumerable)
+    {
         _ctx = ctx;
         _obj = obj;
         _it = obj->_props.begin();
         _itProto = nullptr;
-        _includeProtoProp = includeProtoProp;
     }
 
     virtual bool next(SizedString *strKeyOut = nullptr, JsValue *keyOut = nullptr, JsValue *valueOut = nullptr) override {
@@ -54,7 +54,7 @@ public:
             }
 
             auto &prop = (*_it).second;
-            if (prop.isEnumerable) {
+            if (prop.isEnumerable || _includeNoneEnumerable) {
                 break;
             }
             _it++;
@@ -82,7 +82,6 @@ protected:
     JsObject                        *_obj;
     MapNameToJsProperty::iterator   _it;
     IJsIterator                     *_itProto;
-    bool                            _includeProtoProp;
 
 };
 
@@ -423,8 +422,8 @@ IJsObject *JsObject::clone() {
     return obj;
 }
 
-IJsIterator *JsObject::getIteratorObject(VMContext *ctx, bool includeProtoProp) {
-    auto it = new JsObjectIterator(ctx, this, includeProtoProp);
+IJsIterator *JsObject::getIteratorObject(VMContext *ctx, bool includeProtoProp, bool includeNoneEnumerable) {
+    auto it = new JsObjectIterator(ctx, this, includeProtoProp, includeNoneEnumerable);
     return it;
 }
 

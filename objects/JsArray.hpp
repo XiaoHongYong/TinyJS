@@ -47,13 +47,11 @@ public:
     virtual void preventExtensions(VMContext *ctx) override;
 
     virtual IJsObject *clone() override;
-    virtual IJsIterator *getIteratorObject(VMContext *ctx, bool includeProtoProp = true) override;
+    virtual IJsIterator *getIteratorObject(VMContext *ctx, bool includeProtoProp = true, bool includeNoneEnumerable = false) override;
 
     virtual void markReferIdx(VMRuntime *rt) override;
 
     virtual bool getLength(VMContext *ctx, int32_t &lengthOut) override { lengthOut = _length; return true; }
-
-    IJsIterator *getIteratorObjectAll(VMContext *ctx);
 
     std::tuple<JsValue, JsError, int> popFront(VMContext *ctx);
     void sort(VMContext *ctx, const JsValue &callback);

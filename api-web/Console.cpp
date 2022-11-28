@@ -26,7 +26,7 @@ void dumpObject(VMContext *ctx, const JsValue &obj, string &out, SetUInts &histo
     auto runtime = ctx->runtime;
 
     IJsObject *pobj = runtime->getObject(obj);
-    std::shared_ptr<IJsIterator> it(obj.type == JDT_ARRAY ? ((JsArray *)pobj)->getIteratorObjectAll(ctx) : pobj->getIteratorObject(ctx, false));
+    std::shared_ptr<IJsIterator> it(pobj->getIteratorObject(ctx, false, true));
 
     SizedString key;
     JsValue value;
@@ -34,6 +34,8 @@ void dumpObject(VMContext *ctx, const JsValue &obj, string &out, SetUInts &histo
     vector<string> kvs;
 
     while (it->next(&key, nullptr, &value)) {
+        if (obj.type == JDT_ARRAY && key.equal(SS_LENGTH)) continue;
+
         auto s = runtime->toSizedString(ctx, value);
         if (value.type == JDT_OBJ_BOOL) { s = SizedString("Boolean"); }
         else if (value.type == JDT_OBJ_NUMBER) { s = SizedString("Number"); }

@@ -13,12 +13,12 @@
  */
 class JsArgumentsIterator : public IJsIterator {
 public:
-    JsArgumentsIterator(VMContext *ctx, JsArguments *args, bool includeProtoProp) : _keyBuf(0) {
+    JsArgumentsIterator(VMContext *ctx, JsArguments *args, bool includeProtoProp, bool includeNoneEnumerable) : IJsIterator(includeProtoProp, includeNoneEnumerable), _keyBuf(0)
+    {
         _ctx = ctx;
         _args = args;
         _pos = 0;
         _itObj = nullptr;
-        _includeProtoProp = includeProtoProp;
     }
 
     ~JsArgumentsIterator() {
@@ -45,7 +45,7 @@ public:
             if (_includeProtoProp) {
                 if (_itObj == nullptr) {
                     if (!_args->_obj) return false;
-                    _itObj = _args->_obj->getIteratorObject(_ctx, true);
+                    _itObj = _args->_obj->getIteratorObject(_ctx, true, _includeNoneEnumerable);
                 }
                 return _itObj->next(strKeyOut, keyOut, valueOut);
             }
@@ -78,7 +78,6 @@ protected:
     NumberToSizedString             _keyBuf;
 
     IJsIterator                     *_itObj;
-    bool                            _includeProtoProp;
 
 };
 
@@ -372,8 +371,8 @@ IJsObject *JsArguments::clone() {
     return nullptr;
 }
 
-IJsIterator *JsArguments::getIteratorObject(VMContext *ctx, bool includeProtoProp) {
-    return new JsArgumentsIterator(ctx, this, includeProtoProp);
+IJsIterator *JsArguments::getIteratorObject(VMContext *ctx, bool includeProtoProp, bool includeNoneEnumerable) {
+    return new JsArgumentsIterator(ctx, this, includeProtoProp, includeNoneEnumerable);
 }
 
 void JsArguments::markReferIdx(VMRuntime *rt) {

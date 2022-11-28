@@ -51,7 +51,7 @@ public:
     virtual bool hasAnyProperty(VMContext *ctx, bool configurable, bool writable) override { return true; }
 
     virtual IJsObject *clone() override;
-    virtual IJsIterator *getIteratorObject(VMContext *ctx, bool includeProtoProp = true) override;
+    virtual IJsIterator *getIteratorObject(VMContext *ctx, bool includeProtoProp = true, bool includeNoneEnumerable = false) override;
 
     virtual void markReferIdx(VMRuntime *rt) override;
 

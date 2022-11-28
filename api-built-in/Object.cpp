@@ -24,16 +24,13 @@ static void objectConstructor(VMContext *ctx, const JsValue &thiz, const Argumen
 
 using IJsIteratorPtr = shared_ptr<IJsIterator>;
 
-IJsIteratorPtr getJsIteratorPtr(VMContext *ctx, const JsValue &obj, bool includeProtoProps = false, bool onIterateOf = false) {
+IJsIteratorPtr getJsIteratorPtr(VMContext *ctx, const JsValue &obj, bool includeNoneEnumerable = false, bool includeProtoProps = false) {
     IJsIterator *it = nullptr;
     if (obj.type == JDT_CHAR || obj.type == JDT_STRING) {
-        it = newJsStringIterator(ctx, obj, includeProtoProps);
+        it = newJsStringIterator(ctx, obj, includeProtoProps, includeNoneEnumerable);
     } else if (obj.type >= JDT_OBJECT) {
         auto pobj = ctx->runtime->getObject(obj);
-        if (onIterateOf && !pobj->isOfIterable()) {
-            return nullptr;
-        }
-        it = pobj->getIteratorObject(ctx, includeProtoProps);
+        it = pobj->getIteratorObject(ctx, includeProtoProps, includeNoneEnumerable);
     } else {
         return nullptr;
     }
@@ -442,7 +439,7 @@ void objectGetOwnPropertyDescriptors(VMContext *ctx, const JsValue &thiz, const 
     auto descsObj = new JsObject();
     auto descs = ctx->runtime->pushObjectValue(descsObj);
 
-    auto it = getJsIteratorPtr(ctx, obj);
+    auto it = getJsIteratorPtr(ctx, obj, true);
     if (it) {
         JsValue name, value;
         while (it->next(nullptr, &name, &value)) {
@@ -464,7 +461,7 @@ void objectGetOwnPropertyNames(VMContext *ctx, const JsValue &thiz, const Argume
     auto namesObj = new JsArray();
     auto names = ctx->runtime->pushObjectValue(namesObj);
 
-    auto it = getJsIteratorPtr(ctx, obj);
+    auto it = getJsIteratorPtr(ctx, obj, true);
     if (it) {
         JsValue name, value;
         while (it->next(nullptr, &name, nullptr)) {

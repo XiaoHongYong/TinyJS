@@ -13,7 +13,10 @@
 
 class IJsIterator : public IJsObject {
 public:
-    IJsIterator() {
+    IJsIterator(bool includeProtoProp, bool includeNoneEnumerable) {
+        _includeProtoProp = includeProtoProp;
+        _includeNoneEnumerable = includeNoneEnumerable;
+
         __proto__ = JsProperty(jsValueNotInitialized, false, false, false, true);
         _obj = nullptr;
         type = JDT_ITERATOR;
@@ -60,7 +63,7 @@ public:
     virtual void preventExtensions(VMContext *ctx) override;
 
     virtual IJsObject *clone() override;
-    virtual IJsIterator *getIteratorObject(VMContext *ctx, bool includeProtoProp = true) override;
+    virtual IJsIterator *getIteratorObject(VMContext *ctx, bool includeProtoProp = true, bool includeNoneEnumerable = false) override;
 
     virtual void markReferIdx(VMRuntime *rt) override;
 
@@ -73,14 +76,17 @@ protected:
     JsProperty                  __proto__;
     JsObject                    *_obj;
 
-    bool                        _done;
     JsValue                     _curValue;
+
+    bool                        _done;
+    bool                        _includeProtoProp;
+    bool                        _includeNoneEnumerable;
 
 };
 
 class EmptyJsIterator : public IJsIterator {
 public:
-    EmptyJsIterator() {
+    EmptyJsIterator() : IJsIterator(false, false) {
         _isOfIterable = true;
     }
 

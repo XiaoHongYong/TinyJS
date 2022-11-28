@@ -63,7 +63,7 @@ public:
     virtual void preventExtensions(VMContext *ctx) override;
 
     virtual IJsObject *clone() override;
-    virtual IJsIterator *getIteratorObject(VMContext *ctx, bool includeProtoProp = true) override;
+    virtual IJsIterator *getIteratorObject(VMContext *ctx, bool includeProtoProp = true, bool includeNoneEnumerable = false) override;
 
     virtual void markReferIdx(VMRuntime *rt) override;
 

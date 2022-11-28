@@ -220,9 +220,9 @@ void JsObjectLazy::preventExtensions(VMContext *ctx) {
     }
 }
 
-IJsIterator *JsObjectLazy::getIteratorObject(VMContext *ctx, bool includeProtoProp) {
+IJsIterator *JsObjectLazy::getIteratorObject(VMContext *ctx, bool includeProtoProp, bool includeNoneEnumerable) {
     if (_obj) {
-        return _obj->getIteratorObject(ctx, includeProtoProp);
+        return _obj->getIteratorObject(ctx, includeProtoProp, includeNoneEnumerable);
     }
 
     return new EmptyJsIterator();

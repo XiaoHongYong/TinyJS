@@ -11,7 +11,7 @@
 #include "JsObject.hpp"
 
 
-IJsIterator *newJsStringIterator(VMContext *ctx, const JsValue &str, bool includeProtoProps);
+IJsIterator *newJsStringIterator(VMContext *ctx, const JsValue &str, bool includeProtoProps, bool includeNoneEnumerable = false);
 
 JsValue getStringMemberIndex(VMContext *ctx, const JsValue &thiz, const JsValue &name);
 

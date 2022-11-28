@@ -411,7 +411,7 @@ void stringPrototypeMatch(VMContext *ctx, const JsValue &thiz, const Arguments &
 
 class StringMatchAllIterator : public IJsIterator {
 public:
-    StringMatchAllIterator(VMContext *ctx, std::regex &re, uint32_t flags, const SizedString &str, const JsValue &strVal) : _ctx(ctx), _re(re), _flags(flags), _strBegin(str.data), _strEnd(str.data + str.len), _strVal(strVal), _offset(0)
+    StringMatchAllIterator(VMContext *ctx, std::regex &re, uint32_t flags, const SizedString &str, const JsValue &strVal) : IJsIterator(false, false), _ctx(ctx), _re(re), _flags(flags), _strBegin(str.data), _strEnd(str.data + str.len), _strVal(strVal), _offset(0)
     {
         _isOfIterable = true;
     }

@@ -87,6 +87,15 @@ CONST_STRINGS = [
     [ 'Infinity', 'Infinity' ],
     [ 'NaN', 'NaN' ],
     [ 'InvalidDate', 'Invalid Date' ],
+    [ 'dotAll', 'dotAll' ],
+    [ 'flags', 'flags' ],
+    [ 'global', 'global' ],
+    [ 'hasIndices', 'hasIndices' ],
+    [ 'ignoreCase', 'ignoreCase' ],
+    [ 'multiline', 'multiline' ],
+    [ 'source', 'source' ],
+    [ 'sticky', 'sticky' ],
+    [ 'unicode', 'unicode' ],
     # [ '', '' ],
 ]
 

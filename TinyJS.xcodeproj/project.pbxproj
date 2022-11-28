@@ -15,6 +15,7 @@
 		C05589AD29291D1500CBDBD7 /* Math.cpp in Sources */ = {isa = PBXBuildFile; fileRef = C05589AC29291D1500CBDBD7 /* Math.cpp */; };
 		C05589AF2929DC0C00CBDBD7 /* JSON.cpp in Sources */ = {isa = PBXBuildFile; fileRef = C05589AE2929DC0C00CBDBD7 /* JSON.cpp */; };
 		C05589B1292B48D900CBDBD7 /* Date.cpp in Sources */ = {isa = PBXBuildFile; fileRef = C05589B0292B48D900CBDBD7 /* Date.cpp */; };
+		C06DEEA429332F1C0062C606 /* Reflect.cpp in Sources */ = {isa = PBXBuildFile; fileRef = C06DEEA329332F1C0062C606 /* Reflect.cpp */; };
 		C06EE43F28F40406000F0E41 /* JsObject.cpp in Sources */ = {isa = PBXBuildFile; fileRef = C06EE43E28F40406000F0E41 /* JsObject.cpp */; };
 		C06EE44328F40552000F0E41 /* IJsIterator.cpp in Sources */ = {isa = PBXBuildFile; fileRef = C06EE44128F40552000F0E41 /* IJsIterator.cpp */; };
 		C06EE44629091177000F0E41 /* JsObjectLazy.cpp in Sources */ = {isa = PBXBuildFile; fileRef = C06EE44529091177000F0E41 /* JsObjectLazy.cpp */; };
@@ -113,6 +114,7 @@
 		C05589AC29291D1500CBDBD7 /* Math.cpp */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.cpp.cpp; path = Math.cpp; sourceTree = "<group>"; };
 		C05589AE2929DC0C00CBDBD7 /* JSON.cpp */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.cpp.cpp; path = JSON.cpp; sourceTree = "<group>"; };
 		C05589B0292B48D900CBDBD7 /* Date.cpp */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.cpp.cpp; path = Date.cpp; sourceTree = "<group>"; };
+		C06DEEA329332F1C0062C606 /* Reflect.cpp */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.cpp.cpp; path = Reflect.cpp; sourceTree = "<group>"; };
 		C06EE43D28F40406000F0E41 /* JsObject.hpp */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.cpp.h; path = JsObject.hpp; sourceTree = "<group>"; };
 		C06EE43E28F40406000F0E41 /* JsObject.cpp */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.cpp.cpp; path = JsObject.cpp; sourceTree = "<group>"; };
 		C06EE44028F40495000F0E41 /* JsDummyObject.hpp */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.cpp.h; path = JsDummyObject.hpp; sourceTree = "<group>"; };
@@ -306,6 +308,7 @@
 				C08597BE28D0D54C00577A8E /* Number.cpp */,
 				C08597B628D0D54C00577A8E /* Object.cpp */,
 				C08597B428D0D54C00577A8E /* RegExp.cpp */,
+				C06DEEA329332F1C0062C606 /* Reflect.cpp */,
 				C08597B728D0D54C00577A8E /* String.cpp */,
 				C08597B328D0D54C00577A8E /* Symbol.cpp */,
 			);
@@ -609,6 +612,7 @@
 				C085982A28D0D54C00577A8E /* JsString.cpp in Sources */,
 				C085982128D0D54C00577A8E /* Array.cpp in Sources */,
 				C085982228D0D54C00577A8E /* BuiltIn.cpp in Sources */,
+				C06DEEA429332F1C0062C606 /* Reflect.cpp in Sources */,
 				C085982D28D0D54C00577A8E /* Console.cpp in Sources */,
 				C05589AD29291D1500CBDBD7 /* Math.cpp in Sources */,
 				C0443AAC28DE07D900CBF6DB /* Window.cpp in Sources */,

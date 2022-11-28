@@ -13,7 +13,7 @@
  */
 class JsStringIterator : public IJsIterator {
 public:
-    JsStringIterator(VMContext *ctx, const JsValue &str, bool includeProtoProp) : _keyBuf(0) {
+    JsStringIterator(VMContext *ctx, const JsValue &str, bool includeProtoProp, bool includeNoneEnumerable) : IJsIterator(includeProtoProp, includeNoneEnumerable), _keyBuf(0) {
         assert(str.type == JDT_STRING);
         _isOfIterable = true;
         _ctx = ctx;
@@ -21,7 +21,6 @@ public:
         _pos = 0;
         _itObj = nullptr;
         _len = _ctx->runtime->getStringLength(str);
-        _includeProtoProp = includeProtoProp;
     }
 
     virtual bool nextOf(JsValue &valueOut) override {
@@ -40,7 +39,7 @@ public:
         if (_pos >= _len) {
             if (_includeProtoProp) {
                 if (_itObj == nullptr) {
-                    _itObj = _ctx->runtime->objPrototypeString->getIteratorObject(_ctx, true);
+                    _itObj = _ctx->runtime->objPrototypeString->getIteratorObject(_ctx, true, _includeNoneEnumerable);
                 }
                 return _itObj->next(strKeyOut, keyOut, valueOut);
             }
@@ -74,7 +73,6 @@ protected:
     NumberToSizedString             _keyBuf;
 
     IJsIterator                     *_itObj;
-    bool                            _includeProtoProp;
 
 };
 
@@ -83,14 +81,13 @@ protected:
  */
 class JsCharIterator : public IJsIterator {
 public:
-    JsCharIterator(VMContext *ctx, const JsValue &str, bool includeProtoProp) : _keyBuf(0) {
+    JsCharIterator(VMContext *ctx, const JsValue &str, bool includeProtoProp, bool includeNoneEnumerable) : IJsIterator(includeProtoProp, includeNoneEnumerable), _keyBuf(0) {
         assert(str.type == JDT_CHAR);
         _isOfIterable = true;
         _ctx = ctx;
         _str = str;
         _end = false;
         _itObj = nullptr;
-        _includeProtoProp = includeProtoProp;
     }
 
     virtual bool nextOf(JsValue &valueOut) override {
@@ -108,7 +105,7 @@ public:
         if (_end) {
             if (_includeProtoProp) {
                 if (_itObj == nullptr) {
-                    _itObj = _ctx->runtime->objPrototypeString->getIteratorObject(_ctx, true);
+                    _itObj = _ctx->runtime->objPrototypeString->getIteratorObject(_ctx, true, _includeNoneEnumerable);
                 }
                 return _itObj->next(strKeyOut, keyOut, valueOut);
             }
@@ -138,15 +135,14 @@ protected:
     SizedStringWrapper              _keyBuf;
 
     IJsIterator                     *_itObj;
-    bool                            _includeProtoProp;
 
 };
 
-IJsIterator *newJsStringIterator(VMContext *ctx, const JsValue &str, bool includeProtoProps) {
+IJsIterator *newJsStringIterator(VMContext *ctx, const JsValue &str, bool includeProtoProps, bool includeNoneEnumerable) {
     if (str.type == JDT_STRING) {
-        return new JsStringIterator(ctx, str, includeProtoProps);
+        return new JsStringIterator(ctx, str, includeProtoProps, includeNoneEnumerable);
     } else if (str.type == JDT_CHAR) {
-        return new JsCharIterator(ctx, str, includeProtoProps);
+        return new JsCharIterator(ctx, str, includeProtoProps, includeNoneEnumerable);
     } else {
         assert(0);
     }

@@ -87,7 +87,7 @@ public:
     virtual IJsObject *clone() = 0;
 
     virtual bool isOfIterable() { return _isOfIterable; }
-    virtual IJsIterator *getIteratorObject(VMContext *ctx, bool includeProtoProp = true) = 0;
+    virtual IJsIterator *getIteratorObject(VMContext *ctx, bool includeProtoProp = true, bool includeNoneEnumerable = false) = 0;
 
     virtual void markReferIdx(VMRuntime *rt) = 0;
 

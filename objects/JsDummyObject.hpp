@@ -42,7 +42,7 @@ public:
     virtual bool hasAnyProperty(VMContext *ctx, bool configurable, bool writable) override { return false; }
 
     virtual IJsObject *clone() override { return new JsDummyObject(); }
-    virtual IJsIterator *getIteratorObject(VMContext *ctx, bool includeProtoProp = true) override { return nullptr; }
+    virtual IJsIterator *getIteratorObject(VMContext *ctx, bool includeProtoProp = true, bool includeNoneEnumerable = false) override { return nullptr; }
 
     virtual void markReferIdx(VMRuntime *rt) override { }
 

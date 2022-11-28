@@ -32,6 +32,7 @@ void registerEval(VMRuntimeCommon *rt);
 void registerObjMath(VMRuntimeCommon *rt);
 void registerJSON(VMRuntimeCommon *rt);
 void registerDate(VMRuntimeCommon *rt);
+void registerReflect(VMRuntimeCommon *rt);
 
 
 void registerBuiltIns(VMRuntimeCommon *rt) {
@@ -49,4 +50,5 @@ void registerBuiltIns(VMRuntimeCommon *rt) {
     registerObjMath(rt);
     registerJSON(rt);
     registerDate(rt);
+    registerReflect(rt);
 }

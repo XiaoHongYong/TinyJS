@@ -10,18 +10,13 @@
 
 class JsGlobalThisIterator : public IJsIterator {
 public:
-    JsGlobalThisIterator(VMContext *ctx, VMGlobalScope *scope, bool includeProtoProp) {
+    JsGlobalThisIterator(VMContext *ctx, VMGlobalScope *scope, bool includeProtoProp, bool includeNoneEnumerable) : IJsIterator(includeProtoProp, includeNoneEnumerable) {
         _ctx = ctx;
         _scope = scope;
         _scopeDesc = scope->scopeDsc;
-        _itObj = nullptr;
-        _includeProtoProp = includeProtoProp;
     }
 
     ~JsGlobalThisIterator() {
-        if (_itObj) {
-            delete _itObj;
-        }
     }
 
     virtual bool next(SizedString *strKeyOut = nullptr, JsValue *keyOut = nullptr, JsValue *valueOut = nullptr) override {
@@ -33,7 +28,7 @@ public:
             auto index = (*_it).second->storageIndex;
             if (index < _scope->varProperties.size()) {
                 auto prop = &_scope->varProperties[index];
-                if (!prop->isEnumerable) {
+                if (!prop->isEnumerable && !_includeNoneEnumerable) {
                     ++_it;
                     continue;;
                 }
@@ -75,9 +70,6 @@ protected:
     VMGlobalScope                   *_scope;
     Scope                           *_scopeDesc;
     MapNameToIdentifiers::iterator  _it;
-
-    IJsIterator                     *_itObj;
-    bool                            _includeProtoProp;
 
 };
 
@@ -331,9 +323,9 @@ IJsObject *JsGlobalThis::clone() {
     return nullptr;
 }
 
-IJsIterator *JsGlobalThis::getIteratorObject(VMContext *ctx, bool includeProtoProp) {
+IJsIterator *JsGlobalThis::getIteratorObject(VMContext *ctx, bool includeProtoProp, bool includeNoneEnumerable) {
     if (_obj) {
-        return _obj->getIteratorObject(ctx, includeProtoProp);
+        return _obj->getIteratorObject(ctx, includeProtoProp, includeNoneEnumerable);
     }
 
     return new EmptyJsIterator();

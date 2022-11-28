@@ -40,14 +40,13 @@ inline uint32_t roundIndexToBlock(uint32_t index) {
  */
 class JsArrayIterator : public IJsIterator {
 public:
-    JsArrayIterator(VMContext *ctx, JsArray *arr, bool includeProtoProp, bool includeNoneEnumerable = false) : _keyBuf(0) {
+    JsArrayIterator(VMContext *ctx, JsArray *arr, bool includeProtoProp, bool includeNoneEnumerable) :  IJsIterator(includeProtoProp, includeNoneEnumerable), _keyBuf(0)
+    {
         _isOfIterable = true;
         _ctx = ctx;
         _arr = arr;
         _pos = 0;
         _itObj = nullptr;
-        _includeProtoProp = includeProtoProp;
-        _includeNoneEnumerable = includeNoneEnumerable;
     }
 
     ~JsArrayIterator() {
@@ -73,14 +72,23 @@ public:
         JsProperty *prop = nullptr;
         while (true) {
             if (_pos >= _len()) {
+                if (_pos == _len() && _includeNoneEnumerable) {
+                    // length
+                    _pos++;
+                    if (strKeyOut) { *strKeyOut = SS_LENGTH; }
+                    if (keyOut) { *keyOut = jsStringValueLength; }
+                    if (valueOut) { *valueOut = JsValue(JDT_INT32, _len()); }
+                    return true;
+                }
+
                 if (_itObj == nullptr) {
                     if (_arr->_obj) {
-                        _itObj = _arr->_obj->getIteratorObject(_ctx, _includeProtoProp);
+                        _itObj = _arr->_obj->getIteratorObject(_ctx, _includeProtoProp, _includeNoneEnumerable);
                     } else {
                         if (_includeProtoProp) {
                             // _arr 的 __proto__ 一定没有修改，使用系统的. 如果修改了 __proto__ 就会创建 _obj.
                             // 使用 proto 的 iterator.
-                            _itObj = _ctx->runtime->objPrototypeArray->getIteratorObject(_ctx);
+                            _itObj = _ctx->runtime->objPrototypeArray->getIteratorObject(_ctx, _includeProtoProp, _includeNoneEnumerable);
                         } else {
                             return false;
                         }
@@ -126,8 +134,6 @@ protected:
     NumberToSizedString             _keyBuf;
 
     IJsIterator                     *_itObj;
-    bool                            _includeProtoProp;
-    bool                            _includeNoneEnumerable;
 
 };
 
@@ -469,12 +475,8 @@ IJsObject *JsArray::clone() {
     return nullptr;
 }
 
-IJsIterator *JsArray::getIteratorObject(VMContext *ctx, bool includeProtoProp) {
-    return new JsArrayIterator(ctx, this, includeProtoProp);
-}
-
-IJsIterator *JsArray::getIteratorObjectAll(VMContext *ctx) {
-    return new JsArrayIterator(ctx, this, false, true);
+IJsIterator *JsArray::getIteratorObject(VMContext *ctx, bool includeProtoProp, bool includeNoneEnumerable) {
+    return new JsArrayIterator(ctx, this, includeProtoProp, includeNoneEnumerable);
 }
 
 void JsArray::markReferIdx(VMRuntime *rt) {

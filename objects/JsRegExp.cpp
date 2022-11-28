@@ -41,9 +41,18 @@ JsRegExp::JsRegExp(const SizedString &str, const std::regex &re, uint32_t flags)
     type = JDT_REGEX;
 
     // isGSetter, isConfigurable, isEnumerable, isWritable
-    static JsLazyProperty props[] = {
+    JsLazyProperty props[] = {
         // 添加缺省的 lastIndex 属性.
         { SS_LASTINDEX, JsProperty(JsValue(JDT_INT32, 0), false, false, false, true), false, },
+        { SS_DOTALL, JsProperty(JsValue(JDT_BOOL, flags &RF_DOT_ALL), false, false, false, false), false, },
+        { SS_FLAGS, JsProperty(JsValue(JDT_BOOL, false), flags, false, false, false), false, },
+        { SS_GLOBAL, JsProperty(JsValue(JDT_BOOL, flags &RF_GLOBAL_SEARCH), false, false, false, false), false, },
+        { SS_HASINDICES, JsProperty(JsValue(JDT_BOOL, flags &RF_INDEX), false, false, false, false), false, },
+        { SS_IGNORECASE, JsProperty(JsValue(JDT_BOOL, flags &RF_CASE_INSENSITIVE), false, false, false, false), false, },
+        { SS_MULTILINE, JsProperty(JsValue(JDT_BOOL, flags &RF_MULTILINE), false, false, false, false), false, },
+        { SS_SOURCE, JsProperty(JsValue(JDT_BOOL, false), false, false, false, false), false, },
+        { SS_STICKY, JsProperty(JsValue(JDT_BOOL, flags &RF_STICKY), false, false, false, false), false, },
+        { SS_UNICODE, JsProperty(JsValue(JDT_BOOL, flags &RF_UNICODE), false, false, false, false), false, },
     };
 
     static_assert(sizeof(props) == sizeof(props));
@@ -51,6 +60,11 @@ JsRegExp::JsRegExp(const SizedString &str, const std::regex &re, uint32_t flags)
 }
 
 JsRegExp::~JsRegExp() {
+}
+
+void JsRegExp::setLastIndex(int index) {
+    assert(_props[0].name.equal(SS_LASTINDEX));
+    _props[0].prop.value.value.n32 = index;
 }
 
 IJsObject *JsRegExp::clone() {

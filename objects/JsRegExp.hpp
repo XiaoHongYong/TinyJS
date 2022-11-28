@@ -35,10 +35,12 @@ public:
     std::regex &getRegexp() { return _re; }
     uint32_t flags() const { return _flags; }
 
+    void setLastIndex(int index);
+
     virtual IJsObject *clone() override;
 
 protected:
-    JsLazyProperty              _props[1];
+    JsLazyProperty              _props[10];
 
     string                      _strRe;
     std::regex                  _re;
