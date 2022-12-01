@@ -8,6 +8,7 @@
 #include <time.h>
 #include <sys/time.h>
 #include <unistd.h>
+#include <chrono>
 #include "UtilsTypes.h"
 #include "SizedString.h"
 #include "StringEx.h"
@@ -18,10 +19,14 @@ time_t getTimeInSecond() {
     return time(nullptr);
 }
 
-uint32_t getTickCount() {
-    timeval tim;
-    gettimeofday(&tim, nullptr);
-    return (uint32_t)(tim.tv_sec * 1000 + tim.tv_usec / 1000);
+int64_t getTickCount() {
+#ifdef WIN32
+    return ::GetTickCount();
+#else
+    auto now = std::chrono::steady_clock::now();
+    auto now_ms = std::chrono::time_point_cast<std::chrono::milliseconds>(now);
+    return now_ms.time_since_epoch().count();
+#endif
 }
 
 #ifndef _WIN32

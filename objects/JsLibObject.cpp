@@ -33,8 +33,7 @@ JsLibObject::JsLibObject(VMRuntimeCommon *rt, JsLibProperty *libProps, int count
     for (auto p = _libProps; p != _libPropsEnd; p++) {
         p->name.setStable();
         if (p->function) {
-            auto idx = rt->pushNativeFunction(p->function, p->name);
-            p->prop.value = JsValue(JDT_NATIVE_FUNCTION, idx);
+            p->prop.value = rt->pushNativeFunction(p->function, p->name);
         } else if (p->strValue) {
             p->prop.value = rt->pushStringValue(makeStableStr(p->strValue));
         }

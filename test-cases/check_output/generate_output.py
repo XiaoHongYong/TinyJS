@@ -294,6 +294,7 @@ class ChromeRunner(object):
         # '/Applications/Google Chrome.app/Contents/MacOS/Google Chrome' '--remote-debugging-port=9222' '--headless'
         self._process = subprocess.Popen(['/Applications/Google Chrome.app/Contents/MacOS/Google Chrome', '--remote-debugging-port=9222', '--headless']) #, '--headless'
         self._chrome = None
+        self._wait_duration = 0
 
         for i in range(30):
             time.sleep(0.2)
@@ -321,6 +322,11 @@ class ChromeRunner(object):
             code = '<script>{}</script>'.format(code)
             fp.write(code)
 
+        if 'setTimeout' in code or 'setInterval' in code:
+            self._wait_duration = 0.5 # 页面加载后额为等 0.5 秒
+        else:
+            self._wait_duration = 0
+
         return self.open_page_with_logs('file://' + fn)
 
     def open_page_with_logs(self, url):
@@ -329,8 +335,9 @@ class ChromeRunner(object):
         self._chrome.Page.navigate(url=url)
 
         logs = []
-        while True:
-            msg = self._chrome.wait_message(5)
+        end_time = time.time() + 5
+        while time.time() < end_time:
+            msg = self._chrome.wait_message(end_time - time.time())
             if msg is None:
                 break
             method = msg.get('method')
@@ -343,7 +350,10 @@ class ChromeRunner(object):
                 line.append(args_to_string(args))
                 logs.append(' '.join(line))
             elif method == 'Page.frameStoppedLoading':
-                break
+                if self._wait_duration > 0:
+                    end_time = time.time() + self._wait_duration
+                else:
+                    break
             elif method == 'Runtime.exceptionThrown':
                 # print(json.dumps(msg, indent=1))
                 exception = msg['params']['exceptionDetails']['exception']

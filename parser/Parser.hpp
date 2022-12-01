@@ -101,6 +101,7 @@ protected:
 
     void _expectToken(TokenType expected);
     void _expectSemiColon();
+    void _unexpectToken();
 
     bool _canInsertSemicolon() {
         // !isStrict

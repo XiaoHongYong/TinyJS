@@ -63,13 +63,19 @@ int main(int argc, const char * argv[]) {
 
     auto runtime = vm.defaultRuntime();
     auto ctx = runtime->mainVmCtx;
-    stackScopes.push_back(runtime->globalScope);
-    ctx->curFunctionScope = runtime->globalScope;
 
-    vm.eval(code, strlen(code), ctx, stackScopes, args);
+    vm.run(code, strlen(code), runtime);
     if (ctx->error) {
         auto err = runtime->toSizedString(ctx, ctx->errorMessage);
         printf("Got exception: %.*s\n", int(err.len), err.data);
+    }
+
+    for (int i = 0; i < 3; i++) {
+        if (vm.onRunTasks()) {
+            i = 0;
+        } else {
+            Sleep(1);
+        }
     }
 
 //    code = "g('y');";

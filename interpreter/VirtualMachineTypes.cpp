@@ -50,6 +50,7 @@ const char *jsDataTypeToString(JsDataType type) {
         "JDT_ARRAY",
         "JDT_REGEX",
         "JDT_DATE",
+        "JDT_PROMISE",
         "JDT_ARGUMENTS",
 
         "JDT_OBJ_BOOL",

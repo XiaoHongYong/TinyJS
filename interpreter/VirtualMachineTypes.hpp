@@ -17,6 +17,7 @@ class IJsObject;
 class JsObject;
 class IJsIterator;
 class VMContext;
+class VMRuntime;
 
 #define OP_CODE_DEFINES \
     OP_ITEM(OP_INVALID, "not_used"), \
@@ -225,6 +226,7 @@ enum JsDataType : uint8_t {
     JDT_ARRAY,
     JDT_REGEX,
     JDT_DATE,
+    JDT_PROMISE,
     JDT_ARGUMENTS,
 
     JDT_OBJ_BOOL,
@@ -411,6 +413,19 @@ struct JsProperty {
     }
 };
 
+class VmTask {
+public:
+    /**
+     * 返回 false 表示没有任务需要执行
+     */
+    virtual bool run() = 0;
+
+    virtual void markReferIdx(VMRuntime *rt) = 0;
+
+};
+
+using VmTaskPtr = std::shared_ptr<VmTask>;
+using ListVmTaskPtrs = list<VmTaskPtr>;
 
 enum JsObjectValueIndex {
     JS_OBJ_GLOBAL_THIS_IDX                  = 1,

@@ -111,6 +111,15 @@ bool runJavascript(const string &code, string &output) {
 
     vm.run(code.c_str(), code.size(), runtime);
 
+    // 循环至少 3 次以上，因为后执行的 task 可能会添加新的 task.
+    for (int i = 0; i < 3; i++) {
+        if (vm.onRunTasks()) {
+            i = 0;
+        } else {
+            Sleep(1);
+        }
+    }
+
     auto msg = console->getOutput();
     output.assign((const char *)msg.data, msg.len);
 

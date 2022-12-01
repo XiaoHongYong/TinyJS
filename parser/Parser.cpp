@@ -411,7 +411,7 @@ IJsNode *JSParser::_expectSwitchStmt() {
     _expectToken(TK_OPEN_BRACE);
     while (_curToken.type != TK_CLOSE_BRACE) {
         if (_curToken.type == TK_EOF) {
-            _parseError("Unexpected token: %d", _curToken.type);
+            _unexpectToken();
         }
 
         if (_curToken.type == TK_CASE) {
@@ -640,6 +640,15 @@ void JSParser::_expectSemiColon() {
     }
 }
 
+void JSParser::_unexpectToken() {
+    int len = int(_bufEnd - _curToken.buf);
+    if (len > 100) {
+        len = 100;
+    }
+
+    _parseError("Unexpected token: %.*s, at: %.*s", _curToken.len, _curToken.buf, len, _curToken.buf);
+}
+
 IJsNode *JSParser::_expectFunctionDeclaration() {
     auto parentScope = _curScope;
     auto child = _enterFunction(_curToken);
@@ -861,14 +870,22 @@ IJsNode *JSParser::_expectExpression(Precedence pred, bool enableIn) {
             break;
         case TK_OPEN_PAREN: {
             auto tokenStart = _curToken;
-            expr = _expectParenExpression();
+            _readToken();
+            if (_curToken.type == TK_CLOSE_PAREN) {
+                _readToken();
+                expr = nullptr;
+            } else {
+                expr = _expectParenExpression();
+            }
+
             if (_curToken.type == TK_ARROW) {
                 auto childFunction = _enterFunction(tokenStart);
-                assert(expr->type == NT_PAREN_EXPRESSION);
+                assert(expr == nullptr || expr->type == NT_PAREN_EXPRESSION);
                 childFunction->params = _convertParenExprsToFormalPrameters((JsParenExpr *)expr);
 
                 _readToken();
                 if (_curToken.type == TK_OPEN_BRACE) {
+                    _readToken();
                     while (_curToken.type != TK_CLOSE_BRACE) {
                         if (_curToken.type == TK_EOF) {
                             _parseError("Unexpected end of input");
@@ -885,6 +902,8 @@ IJsNode *JSParser::_expectExpression(Precedence pred, bool enableIn) {
 
                 _leaveFunction();
                 expr = PoolNew(_pool, JsFunctionExpr)(childFunction);
+            } else if (expr == nullptr) {
+                _unexpectToken();
             }
             break;
         }
@@ -941,7 +960,7 @@ IJsNode *JSParser::_expectExpression(Precedence pred, bool enableIn) {
                 if (isTokenNameEqual(_curToken, NAME_TARGET)) {
                     expr = PoolNew(_pool, JsExprNewTarget);
                 } else {
-                    _parseError("Unexpected token.");
+                    _unexpectToken();
                 }
                 break;
             }
@@ -998,7 +1017,7 @@ IJsNode *JSParser::_expectExpression(Precedence pred, bool enableIn) {
             // templateLiteral(stream);
             break;
         default:
-            _parseError("Unexpected token: %.*s", _curToken.len, _curToken.buf);
+            _unexpectToken();
             break;
     }
 
@@ -1357,6 +1376,11 @@ void JSParser::_convertToObjectAssignable(JsExprObject *exprObject) {
 
 JsNodeParameters *JSParser::_convertParenExprsToFormalPrameters(JsParenExpr *exprParen) {
     auto params = PoolNew(_pool, JsNodeParameters)(_resPool);
+
+    if (exprParen == nullptr) {
+        return params;
+    }
+
     int index = 0;
 
     for (auto expr : exprParen->nodes) {
@@ -1418,8 +1442,6 @@ JsNodeParameters *JSParser::_convertParenExprsToFormalPrameters(JsParenExpr *exp
 }
 
 IJsNode *JSParser::_expectParenExpression() {
-    _expectToken(TK_OPEN_PAREN);
-
     auto parenExpr = PoolNew(_pool, JsParenExpr)(_resPool);
 
     parenExpr->push(_expectExpression());
@@ -1463,7 +1485,7 @@ IJsNode *JSParser::_expectObjectLiteralExpression() {
         } else if (type == TK_NAME && (_nextToken.type != TK_COLON && _nextToken.type != TK_OPEN_PAREN) && (name == "get" || name == "set")) {
             // getter, setter
             if (!canTokenBeMemberName(_nextToken.type)) {
-                _parseError("Unexpected token: %.*s", _curToken.len, _curToken.buf);
+                _unexpectToken();
                 return nullptr;
             }
 
@@ -1526,7 +1548,7 @@ IJsNode *JSParser::_expectObjectLiteralExpression() {
                 _expectToken(TK_CLOSE_BRACKET);
             } else {
                 if (!canTokenBeMemberName(type)) {
-                    _parseError("Unexpected token: %.*s", _curToken.len, _curToken.buf);
+                    _unexpectToken();
                     return nullptr;
                 }
                 nameIdx = _getStringIndex(_curToken);

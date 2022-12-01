@@ -96,6 +96,9 @@ CONST_STRINGS = [
     [ 'source', 'source' ],
     [ 'sticky', 'sticky' ],
     [ 'unicode', 'unicode' ],
+    [ 'resolve', 'resolve' ],
+    [ 'reject', 'reject' ],
+    [ 'then', 'then' ],
     # [ '', '' ],
 ]
 

@@ -335,11 +335,25 @@ void VMContext::throwExceptionFormatJsValue(JsError err, cstr_t format, const Js
     throwException(err, format, s.len, s.data);
 }
 
-JsVirtualMachine::JsVirtualMachine() {
+JsVirtualMachine::JsVirtualMachine() : _runtimeCommon(this) {
     _runtime.init(this, &_runtimeCommon);
 }
 
 JsVirtualMachine::~JsVirtualMachine() {
+}
+
+void JsVirtualMachine::registerTask(VmTaskPtr task) {
+    _tasks.push_back(task);
+}
+
+bool JsVirtualMachine::onRunTasks() {
+    bool hasTasks = false;
+    for (auto &task : _tasks) {
+        if (task->run()) {
+            hasTasks = true;
+        }
+    }
+    return hasTasks;
 }
 
 void JsVirtualMachine::run(cstr_t code, size_t len, VMRuntime *runtime) {
@@ -361,6 +375,10 @@ void JsVirtualMachine::run(cstr_t code, size_t len, VMRuntime *runtime) {
     }
 
     if (runtime->shouldGarbageCollect()) {
+        for (auto &task : _tasks) {
+            task->markReferIdx(runtime);
+        }
+
 #if DEBUG
         auto countAllocated = runtime->countAllocated();
         auto countFreed = runtime->garbageCollect();

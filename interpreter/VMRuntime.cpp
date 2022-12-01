@@ -48,7 +48,7 @@ public:
 
 };
 
-VMRuntimeCommon::VMRuntimeCommon() {
+VMRuntimeCommon::VMRuntimeCommon(JsVirtualMachine *vm) : vm(vm) {
     objPrototypeString = nullptr;
     objPrototypeNumber = nullptr;
     objPrototypeBoolean = nullptr;

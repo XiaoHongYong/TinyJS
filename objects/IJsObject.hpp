@@ -275,4 +275,11 @@ public:
 
 };
 
+inline void markReferIdx(VMRuntime *rt, IJsObject *obj) {
+    if (obj->referIdx != rt->nextReferIdx()) {
+        obj->referIdx = rt->nextReferIdx();
+        obj->markReferIdx(rt);
+    }
+}
+
 #endif /* IJsObject_hpp */

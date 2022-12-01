@@ -9,7 +9,7 @@
 
 time_t getTimeInSecond();
 
-uint32_t getTickCount();
+int64_t getTickCount();
 
 void Sleep(uint32_t milliseconds);
 

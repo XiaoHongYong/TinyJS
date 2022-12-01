@@ -59,7 +59,7 @@ private:
     VMRuntimeCommon &operator=(const VMRuntimeCommon &);
 
 public:
-    VMRuntimeCommon();
+    VMRuntimeCommon(JsVirtualMachine *vm);
     virtual ~VMRuntimeCommon();
 
     void dump(BinaryOutputStream &stream);
@@ -75,10 +75,10 @@ public:
     }
 
     JsValue pushObjectValue(IJsObject *value);
-    uint32_t pushNativeFunction(JsNativeFunction f, const SizedString &name) {
+    JsValue pushNativeFunction(JsNativeFunction f, const SizedString &name) {
         uint32_t n = (uint32_t)nativeFunctions.size();
         nativeFunctions.push_back(JsNativeFunctionInfo(f, name));
-        return n;
+        return JsValue(JDT_NATIVE_FUNCTION, n);
     }
 
     JsValue pushDoubleValue(double value);
@@ -91,6 +91,8 @@ public:
     using VecDoubles = std::vector<double>;
     using MapStringToIdx = std::unordered_map<SizedString, uint32_t, SizedStringHash, SizedStrCmpEqual>;
     using MapDoubleToIdx = std::unordered_map<double, uint32_t>;
+
+    JsVirtualMachine            *vm;
 
     MapStringToIdx              mapStrings;
     MapDoubleToIdx              mapDoubles;
@@ -295,7 +297,7 @@ public:
     bool shouldGarbageCollect() { return _newAllocatedCount >= _gcAllocatedCountThreshold; }
     void setGarbageCollectThreshold(uint32_t count) { _gcAllocatedCountThreshold = count; }
 
-    uint8_t nextReferIdx() const { return _nextRefIdx; }
+    inline uint8_t nextReferIdx() const { return _nextRefIdx; }
 
     void markReferIdx(const JsValue &val);
     void markReferIdx(VMScope *scope);

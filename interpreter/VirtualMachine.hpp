@@ -200,11 +200,11 @@ public:
     bool                        isReturnedForTry; // 如果 return 在 try 中，并且有 fainaly 会设置此标志
     JsValue                     retValue; // 函数的返回值
 
-    JsError                 errorInTry;
+    JsError                     errorInTry;
     JsValue                     errorMessageInTry;
 
     JsValue                     errorMessage;
-    JsError                 error;
+    JsError                     error;
 
 };
 
@@ -218,6 +218,9 @@ public:
     JsVirtualMachine();
     virtual ~JsVirtualMachine();
 
+    void registerTask(VmTaskPtr task);
+
+    bool onRunTasks();
     void run(cstr_t code, size_t len, VMRuntime *runtime = nullptr);
 
     void eval(cstr_t code, size_t len, VMContext *ctx, VecVMStackScopes &stackScopes, const Arguments &args);
@@ -239,6 +242,8 @@ protected:
     void call(Function *function, VMContext *ctx, VecVMStackScopes &stackScopes, const JsValue &thiz, const Arguments &args);
 
 protected:
+    ListVmTaskPtrs              _tasks;
+
     VMRuntimeCommon             _runtimeCommon;
 
     VMRuntime                   _runtime;
