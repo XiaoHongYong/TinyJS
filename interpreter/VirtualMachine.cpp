@@ -768,6 +768,7 @@ void JsVirtualMachine::call(Function *function, VMContext *ctx, VecVMStackScopes
             case OP_RETURN:
             case OP_RETURN_VALUE: {
                 if (code == OP_RETURN_VALUE) {
+                    assert(stack.size() >= 1);
                     retValue = stack.back();
                     stack.pop_back();
                 } else {
@@ -797,6 +798,7 @@ void JsVirtualMachine::call(Function *function, VMContext *ctx, VecVMStackScopes
                 break;
             }
             case OP_THROW: {
+                assert(stack.size() >= 1);
                 ctx->throwException(JE_ERROR, stack.back());
                 stack.pop_back();
                 break;
@@ -807,6 +809,7 @@ void JsVirtualMachine::call(Function *function, VMContext *ctx, VecVMStackScopes
                 break;
             }
             case OP_JUMP_IF_TRUE: {
+                assert(stack.size() >= 1);
                 auto pos = readUInt32(bytecode);
                 auto condition = stack.back();
                 if (runtime->testTrue(condition)) {
@@ -816,6 +819,7 @@ void JsVirtualMachine::call(Function *function, VMContext *ctx, VecVMStackScopes
                 break;
             }
             case OP_JUMP_IF_TRUE_KEEP_VALID: {
+                assert(stack.size() >= 1);
                 auto pos = readUInt32(bytecode);
                 auto condition = stack.back();
                 if (runtime->testTrue(condition)) {
@@ -826,6 +830,7 @@ void JsVirtualMachine::call(Function *function, VMContext *ctx, VecVMStackScopes
                 break;
             }
             case OP_JUMP_IF_FALSE: {
+                assert(stack.size() >= 1);
                 auto pos = readUInt32(bytecode);
                 auto condition = stack.back();
                 if (!runtime->testTrue(condition)) {
@@ -835,6 +840,7 @@ void JsVirtualMachine::call(Function *function, VMContext *ctx, VecVMStackScopes
                 break;
             }
             case OP_JUMP_IF_FALSE_KEEP_COND: {
+                assert(stack.size() >= 1);
                 auto pos = readUInt32(bytecode);
                 auto condition = stack.back();
                 if (runtime->testTrue(condition)) {
@@ -846,6 +852,7 @@ void JsVirtualMachine::call(Function *function, VMContext *ctx, VecVMStackScopes
                 break;
             }
             case OP_JUMP_IF_NULL_UNDEFINED: {
+                assert(stack.size() >= 1);
                 auto pos = readUInt32(bytecode);
                 auto condition = stack.back();
                 if (condition.type <= JDT_NULL) {
@@ -855,6 +862,7 @@ void JsVirtualMachine::call(Function *function, VMContext *ctx, VecVMStackScopes
                 break;
             }
             case OP_JUMP_IF_NOT_NULL_UNDEFINED: {
+                assert(stack.size() >= 1);
                 auto pos = readUInt32(bytecode);
                 auto condition = stack.back();
                 if (condition.type > JDT_NULL) {
@@ -864,6 +872,7 @@ void JsVirtualMachine::call(Function *function, VMContext *ctx, VecVMStackScopes
                 break;
             }
             case OP_JUMP_IF_NOT_NULL_UNDEFINED_KEEP_VALID: {
+                assert(stack.size() >= 1);
                 auto pos = readUInt32(bytecode);
                 auto condition = stack.back();
                 if (condition.type > JDT_NULL) {
@@ -875,6 +884,7 @@ void JsVirtualMachine::call(Function *function, VMContext *ctx, VecVMStackScopes
                 break;
             }
             case OP_SWITCH_CASE_CMP_JUMP: {
+                assert(stack.size() >= 1);
                 auto pos = readUInt32(bytecode);
                 auto caseCond = stack.back(); stack.pop_back();
                 auto switchCond = stack.back();
@@ -886,6 +896,7 @@ void JsVirtualMachine::call(Function *function, VMContext *ctx, VecVMStackScopes
                 break;
             }
             case OP_SWITCH_CASE_FAST_CMP_JUMP: {
+                assert(stack.size() >= 1);
                 auto idx = readUInt16(bytecode);
                 auto switchJump = runtime->getSwitchJumpInResourcePool(idx, resourcePool);
                 auto switchCond = stack.back(); stack.pop_back();
@@ -895,6 +906,7 @@ void JsVirtualMachine::call(Function *function, VMContext *ctx, VecVMStackScopes
                 break;
             }
             case OP_SET_WITH_OBJ: {
+                assert(stack.size() >= 1);
                 auto obj = stack.back(); stack.pop_back();
                 if (obj.type <= JDT_NULL) {
                     ctx->throwException(JE_TYPE_ERROR, "Cannot convert undefined or null to object");
@@ -909,6 +921,7 @@ void JsVirtualMachine::call(Function *function, VMContext *ctx, VecVMStackScopes
             }
             case OP_FUNCTION_CALL: {
                 uint16_t countArgs = readUInt16(bytecode);
+                assert(stack.size() >= 1 + countArgs);
                 size_t posFunc = stack.size() - countArgs - 1;
                 Arguments args(stack.data() + posFunc + 1, countArgs);
                 JsValue func = stack.at(posFunc);
@@ -949,6 +962,7 @@ void JsVirtualMachine::call(Function *function, VMContext *ctx, VecVMStackScopes
             }
             case OP_MEMBER_FUNCTION_CALL: {
                 uint16_t countArgs = readUInt16(bytecode);
+                assert(stack.size() >= 2 + countArgs);
                 size_t posThiz = stack.size() - countArgs - 2;
                 Arguments args(stack.data() + posThiz + 2, countArgs);
                 JsValue thiz = stack.at(posThiz);
@@ -995,6 +1009,7 @@ void JsVirtualMachine::call(Function *function, VMContext *ctx, VecVMStackScopes
                 auto depth = *bytecode++;
                 auto index = readUInt16(bytecode);
                 auto countArgs = readUInt16(bytecode);
+                assert(stack.size() >= countArgs);
                 size_t posArgs = stack.size() - countArgs;
                 Arguments args(stack.data() + posArgs, countArgs);
 
@@ -1040,11 +1055,13 @@ void JsVirtualMachine::call(Function *function, VMContext *ctx, VecVMStackScopes
             //    ERR_LOG1("Unkown opcode: %d", code);
             //    break;
             case OP_POP_STACK_TOP: {
+                assert(stack.size() >= 1);
                 stack.pop_back();
                 break;
             }
             case OP_POP_STACK_TOP_N: {
                 auto count = readUInt16(bytecode);
+                assert(stack.size() >= count);
                 auto start = stack.end() - count;
                 stack.erase(start, stack.end());
                 break;
@@ -1173,6 +1190,7 @@ void JsVirtualMachine::call(Function *function, VMContext *ctx, VecVMStackScopes
                 break;
             }
             case OP_PUSH_MEMBER_INDEX: {
+                assert(stack.size() >= 2);
                 auto index = stack.back(); stack.pop_back();
                 auto obj = stack.back();
                 auto value = getMemberIndex(ctx, obj, index);
@@ -1180,6 +1198,7 @@ void JsVirtualMachine::call(Function *function, VMContext *ctx, VecVMStackScopes
                 break;
             }
             case OP_PUSH_MEMBER_INDEX_INT: {
+                assert(stack.size() >= 1);
                 auto index = JsValue(JDT_INT32, readUInt32(bytecode));
                 auto obj = stack.back();
                 auto value = getMemberIndex(ctx, obj, index);
@@ -1187,6 +1206,7 @@ void JsVirtualMachine::call(Function *function, VMContext *ctx, VecVMStackScopes
                 break;
             }
             case OP_PUSH_MEMBER_DOT: {
+                assert(stack.size() >= 1);
                 auto idx = readUInt32(bytecode);
                 auto obj = stack.back();
                 auto name = runtime->getStringByIdx(idx, resourcePool);
@@ -1195,6 +1215,7 @@ void JsVirtualMachine::call(Function *function, VMContext *ctx, VecVMStackScopes
                 break;
             }
             case OP_PUSH_MEMBER_DOT_OPTIONAL: {
+                assert(stack.size() >= 1);
                 auto idx = readUInt32(bytecode);
                 auto obj = stack.back();
                 if (obj.type <= JDT_NULL) {
@@ -1207,6 +1228,7 @@ void JsVirtualMachine::call(Function *function, VMContext *ctx, VecVMStackScopes
                 break;
             }
             case OP_PUSH_THIS_MEMBER_DOT: {
+                assert(stack.size() >= 1);
                 auto idx = readUInt32(bytecode);
                 auto obj = stack.back();
                 auto name = runtime->getStringByIdx(idx, resourcePool);
@@ -1215,6 +1237,7 @@ void JsVirtualMachine::call(Function *function, VMContext *ctx, VecVMStackScopes
                 break;
             }
             case OP_PUSH_MEMBER_INDEX_NO_POP: {
+                assert(stack.size() >= 2);
                 auto index = stack.back();
                 auto obj = stack[stack.size() - 2];
                 auto value = getMemberIndex(ctx, obj, index);
@@ -1222,6 +1245,7 @@ void JsVirtualMachine::call(Function *function, VMContext *ctx, VecVMStackScopes
                 break;
             }
             case OP_PUSH_THIS_MEMBER_INDEX: {
+                assert(stack.size() >= 2);
                 auto index = stack.back(); stack.pop_back();
                 auto obj = stack.back();
                 auto value = getMemberIndex(ctx, obj, index);
@@ -1229,6 +1253,7 @@ void JsVirtualMachine::call(Function *function, VMContext *ctx, VecVMStackScopes
                 break;
             }
             case OP_PUSH_THIS_MEMBER_INDEX_INT: {
+                assert(stack.size() >= 1);
                 auto index = JsValue(JDT_INT32, readUInt32(bytecode));
                 auto obj = stack.back();
                 auto value = getMemberIndex(ctx, obj, index);
@@ -1236,6 +1261,7 @@ void JsVirtualMachine::call(Function *function, VMContext *ctx, VecVMStackScopes
                 break;
             }
             case OP_PUSH_THIS_MEMBER_DOT_OPTIONAL: {
+                assert(stack.size() >= 1);
                 auto idx = readUInt32(bytecode);
                 auto obj = stack.back();
                 if (obj.type > JDT_NULL) {
@@ -1248,6 +1274,7 @@ void JsVirtualMachine::call(Function *function, VMContext *ctx, VecVMStackScopes
                 break;
             }
             case OP_ASSIGN_IDENTIFIER: {
+                assert(stack.size() >= 1);
                 auto varStorageType = *bytecode++;
                 auto scopeDepth = *bytecode++;
                 auto storageIndex = readUInt16(bytecode);
@@ -1278,12 +1305,14 @@ void JsVirtualMachine::call(Function *function, VMContext *ctx, VecVMStackScopes
                 break;
             }
             case OP_ASSIGN_LOCAL_ARGUMENT: {
+                assert(stack.size() >= 1);
                 auto idx = readUInt16(bytecode);
                 assert(idx < functionScope->args.capacity);
                 functionScope->args[idx] = stack.back();
                 break;
             }
             case OP_ASSIGN_MEMBER_INDEX: {
+                assert(stack.size() >= 3);
                 auto value = stack.back(); stack.pop_back();
                 auto index = stack.back(); stack.pop_back();
                 auto obj = stack.back();
@@ -1294,6 +1323,7 @@ void JsVirtualMachine::call(Function *function, VMContext *ctx, VecVMStackScopes
                 break;
             }
             case OP_ASSIGN_MEMBER_DOT: {
+                assert(stack.size() >= 2);
                 auto idx = readUInt32(bytecode);
                 auto value = stack.back(); stack.pop_back();
                 auto obj = stack.back(); stack.pop_back();
@@ -1304,6 +1334,7 @@ void JsVirtualMachine::call(Function *function, VMContext *ctx, VecVMStackScopes
             }
             case OP_ASSIGN_VALUE_AHEAD_MEMBER_INDEX: {
                 // 和 OP_ASSIGN_MEMBER_INDEX 不同的是，先 push value，再 push member index
+                assert(stack.size() >= 3);
                 auto index = stack.back(); stack.pop_back();
                 auto obj = stack.back(); stack.pop_back();
                 auto value = stack.back();
@@ -1313,6 +1344,7 @@ void JsVirtualMachine::call(Function *function, VMContext *ctx, VecVMStackScopes
             }
             case OP_ASSIGN_VALUE_AHEAD_MEMBER_DOT: {
                 // 和 OP_ASSIGN_MEMBER_DOT 不同的是，先 push value，再 push member dot
+                assert(stack.size() >= 2);
                 auto idx = readUInt32(bytecode);
                 auto obj = stack.back(); stack.pop_back();
                 auto value = stack.back();
@@ -1338,6 +1370,7 @@ void JsVirtualMachine::call(Function *function, VMContext *ctx, VecVMStackScopes
                 break;
             }
             case OP_INCREMENT_MEMBER_DOT_PRE: {
+                assert(stack.size() >= 1);
                 auto idx = readUInt32(bytecode);
                 auto name = runtime->getStringByIdx(idx, resourcePool);
                 JsValue obj = stack.back(); stack.pop_back();
@@ -1346,6 +1379,7 @@ void JsVirtualMachine::call(Function *function, VMContext *ctx, VecVMStackScopes
                 break;
             }
             case OP_INCREMENT_MEMBER_DOT_POST: {
+                assert(stack.size() >= 1);
                 auto idx = readUInt32(bytecode);
                 auto name = runtime->getStringByIdx(idx, resourcePool);
                 JsValue obj = stack.back(); stack.pop_back();
@@ -1354,6 +1388,7 @@ void JsVirtualMachine::call(Function *function, VMContext *ctx, VecVMStackScopes
                 break;
             }
             case OP_DECREMENT_MEMBER_DOT_PRE: {
+                assert(stack.size() >= 1);
                 auto idx = readUInt32(bytecode);
                 auto name = runtime->getStringByIdx(idx, resourcePool);
                 JsValue obj = stack.back(); stack.pop_back();
@@ -1362,6 +1397,7 @@ void JsVirtualMachine::call(Function *function, VMContext *ctx, VecVMStackScopes
                 break;
             }
             case OP_DECREMENT_MEMBER_DOT_POST: {
+                assert(stack.size() >= 1);
                 auto idx = readUInt32(bytecode);
                 auto name = runtime->getStringByIdx(idx, resourcePool);
                 JsValue obj = stack.back(); stack.pop_back();
@@ -1370,6 +1406,7 @@ void JsVirtualMachine::call(Function *function, VMContext *ctx, VecVMStackScopes
                 break;
             }
             case OP_INCREMENT_MEMBER_INDEX_PRE: {
+                assert(stack.size() >= 2);
                 JsValue index = stack.back(); stack.pop_back();
                 JsValue obj = stack.back();
                 auto value = increaseMemberIndex(ctx, obj, index, 1, false);
@@ -1377,6 +1414,7 @@ void JsVirtualMachine::call(Function *function, VMContext *ctx, VecVMStackScopes
                 break;
             }
             case OP_INCREMENT_MEMBER_INDEX_POST: {
+                assert(stack.size() >= 2);
                 JsValue index = stack.back(); stack.pop_back();
                 JsValue obj = stack.back();
                 auto value = increaseMemberIndex(ctx, obj, index, 1, true);
@@ -1384,6 +1422,7 @@ void JsVirtualMachine::call(Function *function, VMContext *ctx, VecVMStackScopes
                 break;
             }
             case OP_DECREMENT_MEMBER_INDEX_PRE: {
+                assert(stack.size() >= 2);
                 JsValue index = stack.back(); stack.pop_back();
                 JsValue obj = stack.back();
                 auto value = increaseMemberIndex(ctx, obj, index, -1, false);
@@ -1391,6 +1430,7 @@ void JsVirtualMachine::call(Function *function, VMContext *ctx, VecVMStackScopes
                 break;
             }
             case OP_DECREMENT_MEMBER_INDEX_POST: {
+                assert(stack.size() >= 2);
                 JsValue index = stack.back(); stack.pop_back();
                 JsValue obj = stack.back();
                 auto value = increaseMemberIndex(ctx, obj, index, -1, true);
@@ -1398,78 +1438,91 @@ void JsVirtualMachine::call(Function *function, VMContext *ctx, VecVMStackScopes
                 break;
             }
             case OP_ADD: {
+                assert(stack.size() >= 2);
                 JsValue right = stack.back(); stack.pop_back();
                 JsValue left = stack.back();
                 stack.back() = plusOperate(ctx, runtime, left, right);
                 break;
             }
             case OP_SUB: {
+                assert(stack.size() >= 2);
                 JsValue right = stack.back(); stack.pop_back();
                 JsValue left = stack.back();
                 stack.back() = arithmeticBinaryOperation(ctx, runtime, left, right, BinaryOpSub());
                 break;
             }
             case OP_MUL: {
+                assert(stack.size() >= 2);
                 JsValue right = stack.back(); stack.pop_back();
                 JsValue left = stack.back();
                 stack.back() = arithmeticBinaryOperation(ctx, runtime, left, right, BinaryOpMul());
                 break;
             }
             case OP_DIV: {
+                assert(stack.size() >= 2);
                 JsValue right = stack.back(); stack.pop_back();
                 JsValue left = stack.back();
                 stack.back() = arithmeticBinaryOperation(ctx, runtime, left, right, BinaryOpDiv());
                 break;
             }
             case OP_MOD: {
+                assert(stack.size() >= 2);
                 JsValue right = stack.back(); stack.pop_back();
                 JsValue left = stack.back();
                 stack.back() = arithmeticBinaryOperation(ctx, runtime, left, right, BinaryOpMod());
                 break;
             }
             case OP_EXP: {
+                assert(stack.size() >= 2);
                 JsValue right = stack.back(); stack.pop_back();
                 JsValue left = stack.back();
                 stack.back() = arithmeticBinaryOperation(ctx, runtime, left, right, BinaryOpExp());
                 break;
             }
             case OP_BIT_OR: {
+                assert(stack.size() >= 2);
                 JsValue right = stack.back(); stack.pop_back();
                 JsValue left = stack.back();
                 stack.back() = arithmeticBinaryOperation(ctx, runtime, left, right, BinaryOpBitOr());
                 break;
             }
             case OP_BIT_XOR: {
+                assert(stack.size() >= 2);
                 JsValue right = stack.back(); stack.pop_back();
                 JsValue left = stack.back();
                 stack.back() = arithmeticBinaryOperation(ctx, runtime, left, right, BinaryOpBitXor());
                 break;
             }
             case OP_BIT_AND: {
+                assert(stack.size() >= 2);
                 JsValue right = stack.back(); stack.pop_back();
                 JsValue left = stack.back();
                 stack.back() = arithmeticBinaryOperation(ctx, runtime, left, right, BinaryOpBitAnd());
                 break;
             }
             case OP_LEFT_SHIFT: {
+                assert(stack.size() >= 2);
                 JsValue right = stack.back(); stack.pop_back();
                 JsValue left = stack.back();
                 stack.back() = arithmeticBinaryOperation(ctx, runtime, left, right, BinaryOpLeftShift());
                 break;
             }
             case OP_RIGHT_SHIFT: {
+                assert(stack.size() >= 2);
                 JsValue right = stack.back(); stack.pop_back();
                 JsValue left = stack.back();
                 stack.back() = arithmeticBinaryOperation(ctx, runtime, left, right, BinaryOpRightShift());
                 break;
             }
             case OP_UNSIGNED_RIGHT_SHIFT: {
+                assert(stack.size() >= 2);
                 JsValue right = stack.back(); stack.pop_back();
                 JsValue left = stack.back();
                 stack.back() = arithmeticBinaryOperation(ctx, runtime, left, right, BinaryOpUnsignedRightShift());
                 break;
             }
             case OP_PREFIX_NEGATE: {
+                assert(stack.size() >= 1);
                 JsValue &v = stack.back();
                 if (v.type == JDT_INT32) {
                     v.value.n32 = -v.value.n32;
@@ -1487,6 +1540,7 @@ void JsVirtualMachine::call(Function *function, VMContext *ctx, VecVMStackScopes
                 break;
             }
             case OP_PREFIX_PLUS: {
+                assert(stack.size() >= 1);
                 JsValue &v = stack.back();
                 if (v.type == JDT_INT32 || v.type == JDT_NUMBER) {
                     // 不做任何修改
@@ -1504,21 +1558,25 @@ void JsVirtualMachine::call(Function *function, VMContext *ctx, VecVMStackScopes
                 break;
             }
             case OP_LOGICAL_NOT: {
+                assert(stack.size() >= 1);
                 JsValue right = stack.back();
                 stack.back() = JsValue(JDT_BOOL, !runtime->testTrue(right));
                 break;
             }
             case OP_BIT_NOT: {
+                assert(stack.size() >= 1);
                 stack.back() = bitNotOperation(ctx, stack.back());
                 break;
             }
             case OP_INEQUAL_STRICT: {
+                assert(stack.size() >= 2);
                 JsValue right = stack.back(); stack.pop_back();
                 JsValue left = stack.back(); stack.pop_back();
                 stack.push_back(JsValue(JDT_BOOL, !relationalStrictEqual(runtime, left, right)));
                 break;
             }
             case OP_INEQUAL: {
+                assert(stack.size() >= 2);
                 JsValue right = stack.back(); stack.pop_back();
                 JsValue left = stack.back();
                 bool ret = relationalEqual(ctx, runtime, left, right);
@@ -1526,12 +1584,14 @@ void JsVirtualMachine::call(Function *function, VMContext *ctx, VecVMStackScopes
                 break;
             }
             case OP_EQUAL_STRICT: {
+                assert(stack.size() >= 2);
                 JsValue right = stack.back(); stack.pop_back();
                 JsValue left = stack.back(); stack.pop_back();
                 stack.push_back(JsValue(JDT_BOOL, relationalStrictEqual(runtime, left, right)));
                 break;
             }
             case OP_EQUAL: {
+                assert(stack.size() >= 2);
                 JsValue right = stack.back(); stack.pop_back();
                 JsValue left = stack.back();
                 bool ret = relationalEqual(ctx, runtime, left, right);
@@ -1539,6 +1599,7 @@ void JsVirtualMachine::call(Function *function, VMContext *ctx, VecVMStackScopes
                 break;
             }
             case OP_LESS_THAN: {
+                assert(stack.size() >= 2);
                 JsValue right = stack.back(); stack.pop_back();
                 JsValue left = stack.back();
                 bool ret = relationalOperate(ctx, runtime, left, right, RelationalOpLessThan());
@@ -1546,6 +1607,7 @@ void JsVirtualMachine::call(Function *function, VMContext *ctx, VecVMStackScopes
                 break;
             }
             case OP_LESS_EQUAL_THAN: {
+                assert(stack.size() >= 2);
                 JsValue right = stack.back(); stack.pop_back();
                 JsValue left = stack.back();
                 bool ret = relationalOperate(ctx, runtime, left, right, RelationalOpLessEqThan());
@@ -1553,6 +1615,7 @@ void JsVirtualMachine::call(Function *function, VMContext *ctx, VecVMStackScopes
                 break;
             }
             case OP_GREATER_THAN: {
+                assert(stack.size() >= 2);
                 JsValue right = stack.back(); stack.pop_back();
                 JsValue left = stack.back();
                 bool ret = relationalOperate(ctx, runtime, left, right, RelationalOpGreaterThan());
@@ -1560,6 +1623,7 @@ void JsVirtualMachine::call(Function *function, VMContext *ctx, VecVMStackScopes
                 break;
             }
             case OP_GREATER_EQUAL_THAN: {
+                assert(stack.size() >= 2);
                 JsValue right = stack.back(); stack.pop_back();
                 JsValue left = stack.back();
                 bool ret = relationalOperate(ctx, runtime, left, right, RelationalOpGreaterEqThan());
@@ -1567,6 +1631,7 @@ void JsVirtualMachine::call(Function *function, VMContext *ctx, VecVMStackScopes
                 break;
             }
             case OP_IN: {
+                assert(stack.size() >= 2);
                 JsValue right = stack.back(); stack.pop_back();
                 JsValue left = stack.back(); stack.pop_back();
                 if (right.type < JDT_OBJECT) {
@@ -1584,12 +1649,14 @@ void JsVirtualMachine::call(Function *function, VMContext *ctx, VecVMStackScopes
                 break;
             }
             case OP_INSTANCE_OF: {
+                assert(stack.size() >= 2);
                 JsValue right = stack.back(); stack.pop_back();
                 JsValue left = stack.back();
                 stack.back() = JsValue(JDT_BOOL, instanceOf(ctx, runtime, left, right));
                 break;
             }
             case OP_DELETE_MEMBER_DOT: {
+                assert(stack.size() >= 1);
                 auto obj = stack.back(); stack.pop_back();
                 auto stringIdx = readUInt32(bytecode);
                 if (obj.type >= JDT_OBJECT) {
@@ -1604,6 +1671,7 @@ void JsVirtualMachine::call(Function *function, VMContext *ctx, VecVMStackScopes
                 break;
             }
             case OP_DELETE_MEMBER_INDEX: {
+                assert(stack.size() >= 2);
                 auto index = stack.back(); stack.pop_back();
                 auto obj = stack.back(); stack.pop_back();
                 if (obj.type >= JDT_OBJECT) {
@@ -1623,10 +1691,12 @@ void JsVirtualMachine::call(Function *function, VMContext *ctx, VecVMStackScopes
                 break;
             }
             case OP_DELETE: {
+                assert(stack.size() >= 1);
                 stack.back() = jsValueTrue;
                 break;
             }
             case OP_TYPEOF: {
+                assert(stack.size() >= 1);
                 auto value = stack.back(); stack.pop_back();
                 switch (value.type) {
                     case JDT_UNDEFINED: stack.push_back(jsStringValueUndefined); break;
@@ -1656,11 +1726,13 @@ void JsVirtualMachine::call(Function *function, VMContext *ctx, VecVMStackScopes
                 break;
             }
             case OP_VOID: {
+                assert(stack.size() >= 1);
                 stack.back() = jsValueUndefined;
                 break;
             }
             case OP_NEW: {
                 uint16_t countArgs = readUInt16(bytecode);
+                assert(stack.size() >= 1 + countArgs);
                 auto posStack = stack.size() - countArgs - 1;
                 JsValue func = stack.at(posStack);
                 Arguments args(stack.data() + stack.size() - countArgs, countArgs);
@@ -1724,6 +1796,7 @@ void JsVirtualMachine::call(Function *function, VMContext *ctx, VecVMStackScopes
                 break;
             }
             case OP_OBJ_SET_PROPERTY: {
+                assert(stack.size() >= 2);
                 auto nameIdx = readUInt32(bytecode);
                 auto value = stack.back(); stack.pop_back();
                 auto obj = stack.back();
@@ -1734,6 +1807,7 @@ void JsVirtualMachine::call(Function *function, VMContext *ctx, VecVMStackScopes
                 break;
             }
             case OP_OBJ_SET_COMPUTED_PROPERTY: {
+                assert(stack.size() >= 3);
                 auto value = stack.back(); stack.pop_back();
                 auto name = stack.back(); stack.pop_back();
                 auto obj = stack.back();
@@ -1743,6 +1817,7 @@ void JsVirtualMachine::call(Function *function, VMContext *ctx, VecVMStackScopes
                 break;
             }
             case OP_OBJ_SPREAD_PROPERTY: {
+                assert(stack.size() >= 2);
                 auto src = stack.back(); stack.pop_back();
                 auto obj = stack.back();
                 assert(obj.type == JDT_OBJECT);
@@ -1750,6 +1825,7 @@ void JsVirtualMachine::call(Function *function, VMContext *ctx, VecVMStackScopes
                 break;
             }
             case OP_OBJ_SET_GETTER: {
+                assert(stack.size() >= 2);
                 auto idx = readUInt32(bytecode);
                 auto value = stack.back(); stack.pop_back();
                 auto obj = stack.back();
@@ -1764,6 +1840,7 @@ void JsVirtualMachine::call(Function *function, VMContext *ctx, VecVMStackScopes
                 break;
             }
             case OP_OBJ_SET_SETTER: {
+                assert(stack.size() >= 2);
                 auto idx = readUInt32(bytecode);
                 auto value = stack.back(); stack.pop_back();
                 auto obj = stack.back();
@@ -1781,12 +1858,14 @@ void JsVirtualMachine::call(Function *function, VMContext *ctx, VecVMStackScopes
                 break;
             }
             case OP_ARRAY_SPREAD_VALUE: {
+                assert(stack.size() >= 2);
                 auto item = stack.back(); stack.pop_back();
                 auto arr = stack.back();
                 runtime->extendObject(ctx, arr, item);
                 break;
             }
             case OP_ARRAY_PUSH_VALUE: {
+                assert(stack.size() >= 2);
                 auto item = stack.back(); stack.pop_back();
                 auto arr = stack.back();
                 assert(arr.type == JDT_ARRAY);
@@ -1795,6 +1874,7 @@ void JsVirtualMachine::call(Function *function, VMContext *ctx, VecVMStackScopes
                 break;
             }
             case OP_ARRAY_PUSH_EMPTY_VALUE: {
+                assert(stack.size() >= 1);
                 auto arr = stack.back();
                 assert(arr.type == JDT_ARRAY);
                 auto a = (JsArray *)runtime->getObject(arr);
@@ -1819,6 +1899,7 @@ void JsVirtualMachine::call(Function *function, VMContext *ctx, VecVMStackScopes
             }
             case OP_ITERATOR_IN_CREATE:
             case OP_ITERATOR_OF_CREATE: {
+                assert(stack.size() >= 1);
                 auto obj = stack.back(); stack.pop_back();
                 IJsIterator *it = nullptr;
                 if (obj.type == JDT_CHAR || obj.type == JDT_STRING) {
@@ -1847,6 +1928,7 @@ void JsVirtualMachine::call(Function *function, VMContext *ctx, VecVMStackScopes
                 break;
             }
             case OP_ITERATOR_NEXT_KEY: {
+                assert(stack.size() >= 1);
                 auto addrEnd = readUInt32(bytecode);
                 auto it = stack.back();
                 auto pit = (IJsIterator *)runtime->getObject(it);
@@ -1864,6 +1946,7 @@ void JsVirtualMachine::call(Function *function, VMContext *ctx, VecVMStackScopes
                 break;
             }
             case OP_ITERATOR_NEXT_VALUE: {
+                assert(stack.size() >= 1);
                 auto addrEnd = readUInt32(bytecode);
                 auto it = stack.back();
                 auto pit = (IJsIterator *)runtime->getObject(it);

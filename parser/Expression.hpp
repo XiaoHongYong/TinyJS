@@ -1042,7 +1042,7 @@ public:
 
     IJsNode *defaultValue() { return defVal; }
 
-protected:
+public:
     IJsNode                         *left, *defVal;
     bool                            isAssignFromStack;
 

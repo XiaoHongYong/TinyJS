@@ -372,6 +372,23 @@ IJsNode *JSParser::_expectForStatment() {
             _leaveScope();
             return init;
         }
+
+        if (init->type == NT_VAR_DECLARTION_LIST) {
+            // 不是 for in 需要将 AssignWithStackTop 转换为普通的 Assign
+            auto &nodeVarDeclList = ((JsNodeVarDeclarationList *)init)->nodes;
+            for (auto it = nodeVarDeclList.begin(); it != nodeVarDeclList.end();) {
+                assert((*it)->type == NT_ASSIGN_WITH_STACK_TOP);
+                auto e = (JsExprAssignWithStackTop *)(*it);
+                if (e->defVal) {
+                    // 转换为赋值
+                    *it = PoolNew(_pool, JsExprAssign)(e->left, e->defVal);
+                    ++it;
+                } else {
+                    // 删除
+                    it = nodeVarDeclList.erase(it);
+                }
+            }
+        }
     }
 
     // for (a;b;c)

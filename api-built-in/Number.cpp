@@ -400,4 +400,5 @@ void registerNumber(VMRuntimeCommon *rt) {
 
     rt->setGlobalValue("isFinite", obj->getByName(nullptr, obj->self, SizedString("isFinite")));
     rt->setGlobalValue("isNaN", obj->getByName(nullptr, obj->self, SizedString("isNaN")));
+    rt->setGlobalValue("parseInt", obj->getByName(nullptr, obj->self, SizedString("parseInt")));
 }
