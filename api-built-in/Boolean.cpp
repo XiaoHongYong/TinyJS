@@ -68,6 +68,5 @@ void registerBoolean(VMRuntimeCommon *rt) {
 
     SET_PROTOTYPE(booleanFunctions, jsValuePrototypeBool);
 
-    rt->setGlobalObject("Boolean",
-        new JsLibObject(rt, booleanFunctions, CountOf(booleanFunctions), booleanConstructor));
+    setGlobalLibObject("Boolean", rt, booleanFunctions, CountOf(booleanFunctions), booleanConstructor, jsValuePrototypeFunction);
 }

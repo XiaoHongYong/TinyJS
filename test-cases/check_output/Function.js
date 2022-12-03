@@ -196,3 +196,32 @@ P:  p1
 42
 */
 
+
+// Index: 9
+function f() {
+    function isNative(Ctor) {
+        console.log(typeof Ctor === 'function');
+        console.log(Ctor.toString());
+        return typeof Ctor === 'function' && /native code/.test(Ctor.toString());
+    }
+
+    console.log(isNative(Symbol));
+    console.log(isNative(Number));
+    console.log(isNative(String));
+    console.log(isNative(Reflect));
+}
+f();
+/* OUTPUT
+true
+function Symbol() { [native code] }
+true
+true
+function Number() { [native code] }
+true
+true
+function String() { [native code] }
+true
+false
+[object Reflect]
+false
+*/

@@ -123,7 +123,9 @@ void functionPrototypeToString(VMContext *ctx, const JsValue &thiz, const Argume
     } else if (thiz.type == JDT_LIB_OBJECT) {
         auto obj = (JsLibObject *)runtime->getObject(thiz);
         if (obj->getFunction()) {
-            ctx->retValue = jsStringValueFunctionNativeCode;
+            auto name = obj->getName();
+            auto str = stringPrintf("function %.*s() { [native code] }", name.len, name.data);
+            ctx->retValue = runtime->pushString(str);
             return;
         }
     }
@@ -147,6 +149,5 @@ void registerObjFunction(VMRuntimeCommon *rt) {
 
     SET_PROTOTYPE(functionFunctions, jsValuePrototypeFunction);
 
-    rt->setGlobalObject("Function",
-        new JsLibObject(rt, functionFunctions, CountOf(functionFunctions), functionConstructor));
+    setGlobalLibObject("Function", rt, functionFunctions, CountOf(functionFunctions), functionConstructor, jsValuePrototypeFunction);
 }

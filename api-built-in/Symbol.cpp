@@ -62,6 +62,5 @@ void registerSymbol(VMRuntimeCommon *rt) {
 
     SET_PROTOTYPE(symbolFunctions, jsValuePrototypeSymbol);
 
-    rt->setGlobalObject("Symbol",
-        new JsLibObject(rt, symbolFunctions, CountOf(symbolFunctions), symbolConstructor));
+    setGlobalLibObject("Symbol", rt, symbolFunctions, CountOf(symbolFunctions), symbolConstructor, jsValuePrototypeFunction);
 }

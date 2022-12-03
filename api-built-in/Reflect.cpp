@@ -107,6 +107,5 @@ static JsLibProperty reflectFunctions[] = {
 };
 
 void registerReflect(VMRuntimeCommon *rt) {
-    rt->setGlobalObject("Reflect",
-        new JsLibObject(rt, reflectFunctions, CountOf(reflectFunctions)));
+    setGlobalLibObject("Reflect", rt, reflectFunctions, CountOf(reflectFunctions));
 }

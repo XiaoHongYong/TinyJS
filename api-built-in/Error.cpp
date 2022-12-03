@@ -187,45 +187,40 @@ void registerErrorAPIs(VMRuntimeCommon *rt) {
     //
     // Error
     //
-    auto prototype = new JsLibObject(rt, errorPrototypeFunctions, CountOf(errorPrototypeFunctions), errorConstructor);
+    auto prototype = new JsLibObject(rt, errorPrototypeFunctions, CountOf(errorPrototypeFunctions), nullptr, nullptr);
     __errorPrototype = rt->pushObjectValue(prototype);
     SET_PROTOTYPE(errorFunctions, __errorPrototype);
-    rt->setGlobalObject("Error",
-        new JsLibObject(rt, errorFunctions, CountOf(errorFunctions), errorConstructor));
+    setGlobalLibObject("Error", rt, errorFunctions, CountOf(errorFunctions), errorConstructor, jsValuePrototypeFunction);
 
     //
     // TypeError
     //
-    prototype = new JsLibObject(rt, typeErrorPrototypeFunctions, CountOf(typeErrorPrototypeFunctions), typeErrorConstructor, __errorPrototype);
+    prototype = new JsLibObject(rt, typeErrorPrototypeFunctions, CountOf(typeErrorPrototypeFunctions), nullptr, nullptr, __errorPrototype);
     __typeErrorPrototype = rt->pushObjectValue(prototype);
     SET_PROTOTYPE(typeErrorFunctions, __typeErrorPrototype);
-    rt->setGlobalObject("TypeError",
-        new JsLibObject(rt, typeErrorFunctions, CountOf(typeErrorFunctions), typeErrorConstructor));
+    setGlobalLibObject("TypeError", rt, typeErrorFunctions, CountOf(typeErrorFunctions), typeErrorConstructor, jsValuePrototypeFunction);
 
     //
     // ReferenceError
     //
-    prototype = new JsLibObject(rt, referenceErrorPrototypeFunctions, CountOf(referenceErrorPrototypeFunctions), referenceErrorConstructor, __errorPrototype);
+    prototype = new JsLibObject(rt, referenceErrorPrototypeFunctions, CountOf(referenceErrorPrototypeFunctions), nullptr, nullptr, __errorPrototype);
     __referenceErrorPrototype = rt->pushObjectValue(prototype);
     SET_PROTOTYPE(referenceErrorFunctions, __referenceErrorPrototype);
-    rt->setGlobalObject("ReferenceError",
-        new JsLibObject(rt, referenceErrorFunctions, CountOf(referenceErrorFunctions), referenceErrorConstructor));
+    setGlobalLibObject("ReferenceError", rt, referenceErrorFunctions, CountOf(referenceErrorFunctions), referenceErrorConstructor, jsValuePrototypeFunction);
 
     //
     // SyntaxError
     //
-    prototype = new JsLibObject(rt, syntaxErrorPrototypeFunctions, CountOf(syntaxErrorPrototypeFunctions), syntaxErrorConstructor, __errorPrototype);
+    prototype = new JsLibObject(rt, syntaxErrorPrototypeFunctions, CountOf(syntaxErrorPrototypeFunctions), nullptr, nullptr, __errorPrototype);
     __syntaxErrorPrototype = rt->pushObjectValue(prototype);
     SET_PROTOTYPE(syntaxErrorFunctions, __syntaxErrorPrototype);
-    rt->setGlobalObject("SyntaxError",
-        new JsLibObject(rt, syntaxErrorFunctions, CountOf(syntaxErrorFunctions), syntaxErrorConstructor));
+    setGlobalLibObject("SyntaxError", rt, syntaxErrorFunctions, CountOf(syntaxErrorFunctions), syntaxErrorConstructor, jsValuePrototypeFunction);
 
     //
     // RangeError
     //
-    prototype = new JsLibObject(rt, rangeErrorPrototypeFunctions, CountOf(rangeErrorPrototypeFunctions), rangeErrorConstructor, __errorPrototype);
+    prototype = new JsLibObject(rt, rangeErrorPrototypeFunctions, CountOf(rangeErrorPrototypeFunctions), nullptr, nullptr, __errorPrototype);
     __rangeErrorPrototype = rt->pushObjectValue(prototype);
     SET_PROTOTYPE(rangeErrorFunctions, __rangeErrorPrototype);
-    rt->setGlobalObject("RangeError",
-        new JsLibObject(rt, rangeErrorFunctions, CountOf(rangeErrorFunctions), rangeErrorConstructor));
+    setGlobalLibObject("RangeError", rt, rangeErrorFunctions, CountOf(rangeErrorFunctions), rangeErrorConstructor, jsValuePrototypeFunction);
 }

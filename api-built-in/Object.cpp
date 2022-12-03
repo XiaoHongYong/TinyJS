@@ -758,6 +758,16 @@ static JsLibProperty objectFunctions[] = {
 };
 
 void objectPrototypeToString(VMContext *ctx, const JsValue &thiz, const Arguments &args) {
+    if (thiz.type == JDT_LIB_OBJECT) {
+        auto obj = (JsLibObject *)ctx->runtime->getObject(thiz);
+        auto name = obj->getName();
+        if (name.len > 0) {
+            auto str = stringPrintf("[object %.*s]", name.len, name.data);
+            ctx->retValue = ctx->runtime->pushString(str);
+            return;
+        }
+    }
+
     auto str = objectPrototypeToSizedString(thiz);
     ctx->retValue = ctx->runtime->pushString(str);
 }
@@ -842,12 +852,11 @@ static JsLibProperty objectPrototypeFunctions[] = {
 
 void registerObject(VMRuntimeCommon *rt) {
     // Object.prototype 是 null
-    auto prototypeObj = new JsLibObject(rt, objectPrototypeFunctions, CountOf(objectPrototypeFunctions), nullptr, jsValueNull);
+    auto prototypeObj = new JsLibObject(rt, objectPrototypeFunctions, CountOf(objectPrototypeFunctions), nullptr, nullptr, jsValueNull);
     rt->objPrototypeObject = prototypeObj;
     rt->setPrototypeObject(jsValuePrototypeObject, prototypeObj);
 
     SET_PROTOTYPE(objectFunctions, jsValuePrototypeObject);
 
-    rt->setGlobalObject("Object",
-        new JsLibObject(rt, objectFunctions, CountOf(objectFunctions), objectConstructor));
+    setGlobalLibObject("Object", rt, objectFunctions, CountOf(objectFunctions), objectConstructor, jsValuePrototypeFunction);
 }

@@ -395,10 +395,10 @@ void registerNumber(VMRuntimeCommon *rt) {
 
     SET_PROTOTYPE(numberFunctions, jsValuePrototypeNumber);
 
-    auto obj = new JsLibObject(rt, numberFunctions, CountOf(numberFunctions), numberConstructor);
-    rt->setGlobalObject("Number", obj);
+    auto obj = setGlobalLibObject("Number", rt, numberFunctions, CountOf(numberFunctions), numberConstructor, jsValuePrototypeFunction);
 
     rt->setGlobalValue("isFinite", obj->getByName(nullptr, obj->self, SizedString("isFinite")));
     rt->setGlobalValue("isNaN", obj->getByName(nullptr, obj->self, SizedString("isNaN")));
     rt->setGlobalValue("parseInt", obj->getByName(nullptr, obj->self, SizedString("parseInt")));
+    rt->setGlobalValue("parseFloat", obj->getByName(nullptr, obj->self, SizedString("parseFloat")));
 }

@@ -611,6 +611,5 @@ void registerDate(VMRuntimeCommon *rt) {
 
     SET_PROTOTYPE(dateFunctions, jsValuePrototypeDate);
 
-    rt->setGlobalObject("Date",
-        new JsLibObject(rt, dateFunctions, CountOf(dateFunctions), dateConstructor));
+    setGlobalLibObject("Date", rt, dateFunctions, CountOf(dateFunctions), dateConstructor, jsValuePrototypeFunction);
 }

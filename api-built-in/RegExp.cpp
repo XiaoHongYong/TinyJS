@@ -169,6 +169,5 @@ void registerRegExp(VMRuntimeCommon *rt) {
 
     SET_PROTOTYPE(regExpFunctions, jsValuePrototypeRegExp);
 
-    rt->setGlobalObject("RegExp",
-        new JsLibObject(rt, regExpFunctions, CountOf(regExpFunctions), regExpConstructor));
+    setGlobalLibObject("RegExp", rt, regExpFunctions, CountOf(regExpFunctions), regExpConstructor, jsValuePrototypeFunction);
 }

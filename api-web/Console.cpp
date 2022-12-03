@@ -157,6 +157,5 @@ static JsLibProperty consoleFunctions[] = {
 };
 
 void registerConsole(VMRuntimeCommon *rt) {
-    rt->setGlobalObject("console",
-        new JsLibObject(rt, consoleFunctions, CountOf(consoleFunctions)));
+    setGlobalLibObject("console", rt, consoleFunctions, CountOf(consoleFunctions));
 }

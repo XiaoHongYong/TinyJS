@@ -1357,6 +1357,5 @@ void registerString(VMRuntimeCommon *rt) {
 
     SET_PROTOTYPE(stringFunctions, jsValuePrototypeString);
 
-    rt->setGlobalObject("String",
-        new JsLibObject(rt, stringFunctions, CountOf(stringFunctions), stringConstructor));
+    setGlobalLibObject("String", rt, stringFunctions, CountOf(stringFunctions), stringConstructor, jsValuePrototypeFunction);
 }

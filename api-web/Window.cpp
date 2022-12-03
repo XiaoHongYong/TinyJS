@@ -187,8 +187,7 @@ void registerWindow(VMRuntimeCommon *rt) {
 
     SET_PROTOTYPE(windowFunctions, jsValuePrototypeWindow);
 
-    rt->setGlobalObject("Window",
-        new JsLibObject(rt, windowFunctions, CountOf(windowFunctions), windowConstructor));
+    setGlobalLibObject("Window", rt, windowFunctions, CountOf(windowFunctions), windowConstructor, jsValuePrototypeFunction);
 
     _windowCtxTaskPtr = make_shared<WindowContextTask>();
     rt->vm->registerTask(_windowCtxTaskPtr);

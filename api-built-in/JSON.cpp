@@ -316,6 +316,5 @@ static JsLibProperty jsonFunctions[] = {
 };
 
 void registerJSON(VMRuntimeCommon *rt) {
-    rt->setGlobalObject("JSON",
-        new JsLibObject(rt, jsonFunctions, CountOf(jsonFunctions)));
+    setGlobalLibObject("JSON", rt, jsonFunctions, CountOf(jsonFunctions));
 }

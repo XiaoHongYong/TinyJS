@@ -24,8 +24,10 @@ public:
 
 };
 
-JsLibObject::JsLibObject(VMRuntimeCommon *rt, JsLibProperty *libProps, int countProps, JsNativeFunction function, const JsValue &proto) : _libProps(libProps), _libPropsEnd(libProps + countProps), _function(function), __proto__(proto, false, false, false, true) {
+JsLibObject::JsLibObject(VMRuntimeCommon *rt, JsLibProperty *libProps, int countProps, cstr_t name, JsNativeFunction constructor, const JsValue &proto) : _libProps(libProps), _libPropsEnd(libProps + countProps), _constructor(constructor), __proto__(proto, false, false, false, true)
+{
     type = JDT_LIB_OBJECT;
+    _name = name ? makeCommonString(name) : sizedStringEmpty;
     _obj = nullptr;
     _modified = false;
     _isOfIterable = false;
@@ -46,7 +48,8 @@ JsLibObject::JsLibObject(JsLibObject *from) {
     type = JDT_LIB_OBJECT;
 
     assert(!from->_modified);
-    _function = from->_function;
+    _name = from->_name;
+    _constructor = from->_constructor;
     _obj = from->_obj;
     _libProps = from->_libProps;
     _libPropsEnd = from->_libPropsEnd;
@@ -385,4 +388,10 @@ JsLibProperty makeJsLibPropertyGetter(const char *name, JsNativeFunction f) {
     prop.name = name;
     prop.function = f;
     return prop;
+}
+
+JsLibObject *setGlobalLibObject(cstr_t name, VMRuntimeCommon *rt, JsLibProperty *libProps, int countProps, JsNativeFunction constructor, const JsValue &proto) {
+    auto obj = new JsLibObject(rt, libProps, countProps, name, constructor, proto);
+    rt->setGlobalObject(name, obj);
+    return obj;
 }

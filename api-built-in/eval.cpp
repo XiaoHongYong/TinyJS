@@ -47,6 +47,5 @@ static JsLibProperty errorFunctions[] = {
 };
 
 void registerEval(VMRuntimeCommon *rt) {
-    rt->setGlobalObject("eval",
-        new JsLibObject(rt, errorFunctions, CountOf(errorFunctions), _eval));
+    setGlobalLibObject("eval", rt, errorFunctions, CountOf(errorFunctions), _eval, jsValuePrototypeFunction);
 }

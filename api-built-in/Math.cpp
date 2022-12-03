@@ -421,6 +421,5 @@ static JsLibProperty mathFunctions[] = {
 };
 
 void registerObjMath(VMRuntimeCommon *rt) {
-    rt->setGlobalObject("Math",
-        new JsLibObject(rt, mathFunctions, CountOf(mathFunctions)));
+    setGlobalLibObject("Math", rt, mathFunctions, CountOf(mathFunctions));
 }

@@ -392,6 +392,5 @@ void registerPromise(VMRuntimeCommon *rt) {
     _promiseCtxTaskPtr = make_shared<PromiseContextTask>();
     rt->vm->registerTask(_promiseCtxTaskPtr);
 
-    rt->setGlobalObject("Promise",
-        new JsLibObject(rt, promiseFunctions, CountOf(promiseFunctions), promiseConstructor));
+    setGlobalLibObject("Promise", rt, promiseFunctions, CountOf(promiseFunctions), promiseConstructor, jsValuePrototypeFunction);
 }

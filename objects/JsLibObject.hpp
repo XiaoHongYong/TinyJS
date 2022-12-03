@@ -34,7 +34,7 @@ private:
     JsLibObject &operator=(const JsLibObject &);
 
 public:
-    JsLibObject(VMRuntimeCommon *rt, JsLibProperty *libProps, int countProps, JsNativeFunction function = nullptr, const JsValue &proto = jsValuePrototypeObject);
+    JsLibObject(VMRuntimeCommon *rt, JsLibProperty *libProps, int countProps, cstr_t name = nullptr, JsNativeFunction function = nullptr, const JsValue &proto = jsValuePrototypeObject);
     JsLibObject(JsLibObject *from);
     ~JsLibObject();
 
@@ -67,7 +67,8 @@ public:
 
     virtual void markReferIdx(VMRuntime *rt) override;
 
-    JsNativeFunction getFunction() const { return _function; }
+    const SizedString &getName() const { return _name; }
+    JsNativeFunction getFunction() const { return _constructor; }
     void setOfIteratorTrue() { _isOfIterable = true; }
 
     bool isModified() const { return _modified || _obj; }
@@ -81,7 +82,8 @@ protected:
 
     JsProperty                  __proto__;
 
-    JsNativeFunction            _function;
+    SizedString                 _name;
+    JsNativeFunction            _constructor;
     bool                        _modified;
     JsLibProperty               *_libProps, *_libPropsEnd;
     JsObject                    *_obj;
@@ -93,5 +95,7 @@ JsLibProperty makeJsLibPropertyGetter(const char *name, JsNativeFunction f);
 void setPrototype(JsLibProperty *prop, JsLibProperty *propEnd, const JsValue &value);
 
 #define SET_PROTOTYPE(props, prototype)     setPrototype(props, props + CountOf(props), prototype)
+
+JsLibObject *setGlobalLibObject(cstr_t name, VMRuntimeCommon *rt, JsLibProperty *libProps, int countProps, JsNativeFunction function = nullptr, const JsValue &proto = jsValuePrototypeObject);
 
 #endif /* JsLibObject_hpp */

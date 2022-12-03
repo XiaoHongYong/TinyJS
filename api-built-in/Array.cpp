@@ -1820,6 +1820,5 @@ void registerArray(VMRuntimeCommon *rt) {
 
     SET_PROTOTYPE(arrayFunctions, jsValuePrototypeArray);
 
-    rt->setGlobalObject("Array",
-        new JsLibObject(rt, arrayFunctions, CountOf(arrayFunctions), arrayConstructor));
+    setGlobalLibObject("Array", rt, arrayFunctions, CountOf(arrayFunctions), arrayConstructor, jsValuePrototypeFunction);
 }
