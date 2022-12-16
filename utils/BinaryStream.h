@@ -329,6 +329,15 @@ public:
         _last += 8;
     }
 
+    void writeDouble(double v) {
+        if (_last + 8 > _end) {
+            newBuffer();
+        }
+
+        *(double *)_last = v;
+        _last += 8;
+    }
+
     void writeUInt16BE(uint16_t n) {
         if (_last + 2 > _end) {
             newBuffer();

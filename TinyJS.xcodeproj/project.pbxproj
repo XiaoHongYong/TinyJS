@@ -441,29 +441,29 @@
 		C08597FE28D0D54C00577A8E /* objects */ = {
 			isa = PBXGroup;
 			children = (
+				C06EE44128F40552000F0E41 /* IJsIterator.cpp */,
+				C06EE44228F40552000F0E41 /* IJsIterator.hpp */,
 				C085980728D0D54C00577A8E /* IJsObject.cpp */,
 				C085980128D0D54C00577A8E /* IJsObject.hpp */,
-				C06EE43E28F40406000F0E41 /* JsObject.cpp */,
-				C06EE43D28F40406000F0E41 /* JsObject.hpp */,
-				C06EE44028F40495000F0E41 /* JsDummyObject.hpp */,
 				C085980228D0D54C00577A8E /* JsArguments.cpp */,
 				C085980928D0D54C00577A8E /* JsArguments.hpp */,
 				C085980828D0D54C00577A8E /* JsArray.cpp */,
 				C085980328D0D54C00577A8E /* JsArray.hpp */,
+				C06EE44028F40495000F0E41 /* JsDummyObject.hpp */,
 				C085985028D9A0A100577A8E /* JsGlobalThis.cpp */,
 				C085984F28D9A08F00577A8E /* JsGlobalThis.hpp */,
 				C085980A28D0D54C00577A8E /* JsLibObject.cpp */,
 				C085980428D0D54C00577A8E /* JsLibObject.hpp */,
+				C06EE43E28F40406000F0E41 /* JsObject.cpp */,
+				C06EE43D28F40406000F0E41 /* JsObject.hpp */,
 				C085980628D0D54C00577A8E /* JsObjectFunction.cpp */,
 				C085980028D0D54C00577A8E /* JsObjectFunction.hpp */,
 				C06EE44529091177000F0E41 /* JsObjectLazy.cpp */,
 				C06EE44429091177000F0E41 /* JsObjectLazy.hpp */,
-				C085980528D0D54C00577A8E /* JsPrimaryObject.hpp */,
 				C0A3AF2D29167B4900BBEE8E /* JsPrimaryObject.cpp */,
+				C085980528D0D54C00577A8E /* JsPrimaryObject.hpp */,
 				C08597FF28D0D54C00577A8E /* JsRegExp.cpp */,
 				C085980C28D0D54C00577A8E /* JsRegExp.hpp */,
-				C06EE44128F40552000F0E41 /* IJsIterator.cpp */,
-				C06EE44228F40552000F0E41 /* IJsIterator.hpp */,
 			);
 			path = objects;
 			sourceTree = "<group>";

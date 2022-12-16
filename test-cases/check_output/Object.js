@@ -734,3 +734,57 @@ x undefined 2
 set y 3
 */
 
+
+// Index: 19
+// 测试 prototype 的修改
+function f() {
+    var a = {};
+    Object.preventExtensions(a);
+    Object.defineProperty(a, 'x', { value: 1});
+}
+f();
+/* OUTPUT
+Uncaught TypeError: Cannot define property x, object is not extensible
+*/
+
+
+// Index: 20
+// 测试 prototype 的修改
+function f() {
+    var a = {};
+    Object.defineProperty(a, 'x', { value: 2});
+    Object.defineProperty(a, 'x', { value: 2});
+    console.log('#1');
+    Object.defineProperty(a, 'x', { value: 1});
+}
+f();
+/* OUTPUT
+#1
+Uncaught TypeError: Cannot redefine property: x
+*/
+
+
+// Index: 21
+// String
+function f() {
+    var a = new String('abc');
+    a.y = 2;
+
+    for (var i in a) {
+        console.log('#1', i, a[i]);
+    }
+
+    for (var i of a) {
+        console.log('#2', i);
+    }
+}
+f();
+/* OUTPUT
+#1 0 a
+#1 1 b
+#1 2 c
+#1 y 2
+#2 a
+#2 b
+#2 c
+*/

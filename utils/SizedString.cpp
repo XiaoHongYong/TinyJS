@@ -23,7 +23,20 @@ bool SizedString::isNumeric() const {
         }
     }
 
-    return data != end;
+    return true;
+}
+
+bool SizedString::isAnsi() const {
+    auto end = data + len;
+    auto p = data;
+
+    for (; p < end; ++p) {
+        if (*p > 127) {
+            return false;
+        }
+    }
+
+    return true;
 }
 
 uint8_t *SizedString::strlchr(uint8_t c) const {

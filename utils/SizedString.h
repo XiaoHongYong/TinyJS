@@ -37,6 +37,7 @@ public:
     inline bool isStable() const { return _isStable; }
 
     bool isNumeric() const;
+    bool isAnsi() const;
 
     uint8_t *strlchr(uint8_t c) const;
     uint8_t *strrchr(uint8_t c) const;
@@ -152,7 +153,7 @@ protected:
 
 };
 
-static_assert(sizeof(SizedString) == 16);
+static_assert(sizeof(SizedString) == 16, "Expected same size.");
 
 /**
  * SizedString 保存的是 utf-8 编码, 而 dataUtf16 和 lenUtf16 保存的是 utf-16 编码
@@ -170,6 +171,16 @@ public:
 
     SizedStringUtf16(const SizedString &s) : _utf8Str(s) {
         onSetUtf8String();
+    }
+
+    SizedStringUtf16(const uint8_t *data, uint32_t len, bool isAnsi) : _utf8Str(data, len) {
+        if (isAnsi) {
+            _dataUtf16 = nullptr;
+            _utf8Str._lenUtf16 = len;
+            _utf8Str._isAnsi = true;
+        } else {
+            onSetUtf8String();
+        }
     }
 
     void set(const SizedString &other) {

@@ -312,6 +312,7 @@ void JSLexer::_readToken() {
 
     if (_bufPos >= _bufEnd) {
         _curToken.type = TK_EOF;
+        _curToken.buf = _bufPos;
         return;
     }
 

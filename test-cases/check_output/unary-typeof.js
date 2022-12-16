@@ -56,3 +56,24 @@ f();
 symbol
 */
 
+
+// Index: 1
+function f() {
+    console.log(typeof gg);
+}
+f();
+/* OUTPUT-DISABLED
+undefined
+*/
+
+
+// Index: 2
+function f() {
+    // console.log(typeof xx);
+    // let xx;
+    // Uncaught ReferenceError: Cannot access 'xx' before initialization
+}
+f();
+/* OUTPUT
+*/
+

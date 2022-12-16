@@ -56,6 +56,8 @@ public:
     virtual bool removeByName(VMContext *ctx, const SizedString &name) override;
     virtual bool removeByIndex(VMContext *ctx, uint32_t index) override;
 
+    virtual IJsIterator *getIteratorObject(VMContext *ctx, bool includeProtoProp = true, bool includeNoneEnumerable = false) override;
+
     virtual void markReferIdx(VMRuntime *rt) override {
         rt->markReferIdx(_value);
 
@@ -70,6 +72,8 @@ public:
 
 protected:
     void _updateLength(VMContext *ctx);
+
+    friend class JsStringIterator;
 
     uint32_t                    _length;
     JsValue                     _value;

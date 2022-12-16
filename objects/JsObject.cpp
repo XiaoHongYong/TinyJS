@@ -111,6 +111,7 @@ void JsObject::definePropertyByName(VMContext *ctx, const SizedString &name, con
     auto it = _props.find(name);
     if (it == _props.end()) {
         if (isPreventedExtensions) {
+            ctx->throwException(JE_TYPE_ERROR, "Cannot define property %.*s, object is not extensible", name.len, name.data);
             return;
         }
 
@@ -141,6 +142,7 @@ void JsObject::definePropertyBySymbol(VMContext *ctx, uint32_t index, const JsPr
     }
 
     if (isPreventedExtensions) {
+        ctx->throwException(JE_TYPE_ERROR, "Cannot define property Symbol(%d), object is not extensible", index);
         return;
     }
 

@@ -1,6 +1,7 @@
 // Index: 0
 var obj1 = { toString() { return '3.0'; }}
 var obj2 = { toString() { return 1; }}
+function g() {}
 function f(r, a, b, noPrint) {
     console.log('round: ', r);
 
@@ -63,6 +64,39 @@ round:  21
 TypeError: Cannot use 'in' operator to search for 'x' in 3
 round:  25
 TypeError: Cannot use 'in' operator to search for 'x' in false
-Uncaught ReferenceError: g is not defined
+round:  26
+false
+round:  27
+false
+round:  29
+false
+round:  26
+false
+round:  27
+false
+round:  29
+false
+round:  26-t
+true
+round:  27-t
+true
+round:  29-t
+true
+round:  26-t
+true
+round:  27-t
+true
+round:  29-t
+true
+*/
+
+
+// Index: 1
+function f() {
+    console.log(aa instanceof gg);
+}
+f();
+/* OUTPUT
+Uncaught ReferenceError: aa is not defined
 */
 

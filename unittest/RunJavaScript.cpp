@@ -136,18 +136,25 @@ bool runJavascript(const string &code, string &output) {
 void splitTestCodeAndOutput(string textOrg, VecStrings &vCodeOut, VecStrings &vOutputOut) {
     SizedString text(textOrg);
     while (true) {
-        SizedString left, right;
-        if (text.split("/* OUTPUT", left, right)) {
-            vCodeOut.push_back(left.toString());
-
-            if (right.startsWith("-FIXED")) {
-                right.shrink(6);
+        SizedString code, remain;
+        if (text.split("/* OUTPUT", code, remain)) {
+            if (remain.startsWith("-FIXED")) {
+                remain.shrink(6);
             }
-            if (!right.split("*/", left, right)) {
+
+            SizedString output;
+            if (!remain.split("*/", output, remain)) {
                 throw "Invalid output format";
             }
-            vOutputOut.push_back(left.toString());
-            text = right;
+
+            if (output.startsWith("-DISABLED")) {
+                code = "";
+                output = "";
+            }
+            vCodeOut.push_back(code.toString());
+            output.trim();
+            vOutputOut.push_back(output.toString());
+            text = remain;
         } else {
             text.trim();
             if (text.len > 0) {

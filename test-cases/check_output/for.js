@@ -407,15 +407,23 @@ function f() {
     var a = 'str';
     String.prototype.y = 'y1';
     for (var i in a) {
-        console.log(i, a[i]);
+        console.log('#1', i, a[i]);
+    }
+
+    for (var i in new String('xyz')) {
+        console.log('#2', i, a[i]);
     }
 }
 f();
 /* OUTPUT
-0 s
-1 t
-2 r
-y y1
+#1 0 s
+#1 1 t
+#1 2 r
+#1 y y1
+#2 0 s
+#2 1 t
+#2 2 r
+#2 y y1
 */
 
 

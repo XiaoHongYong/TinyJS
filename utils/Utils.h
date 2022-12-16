@@ -1,5 +1,5 @@
-#ifndef _HEADER_UTILS_H
-#define _HEADER_UTILS_H
+#ifndef _HEADER_TINYJS_UTILS_H
+#define _HEADER_TINYJS_UTILS_H
 
 #pragma once
 
@@ -14,4 +14,4 @@
 #include "BinaryStream.h"
 #include "DateTime.h"
 
-#endif    // _HEADER_UTILS_H
+#endif    // _HEADER_TINYJS_UTILS_H

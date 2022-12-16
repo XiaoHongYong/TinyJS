@@ -522,7 +522,7 @@ uint32_t utf8ToUtf32(const uint8_t *data, uint32_t len, utf32_t *bufOut, uint32_
     return lenUtf32;
 }
 
-uint32_t utf32CodeToUtf8Length(uint16_t code) {
+uint32_t utf32CodeToUtf8Length(uint32_t code) {
     if (code < 0x80) {
         return 1;
     } else if (code < 0x0800) {
@@ -534,12 +534,12 @@ uint32_t utf32CodeToUtf8Length(uint16_t code) {
     }
 }
 
-uint32_t utf32CodeToUtf16Length(uint16_t code) {
+uint32_t utf32CodeToUtf16Length(uint32_t code) {
     return code <= 0xFFFF ? 1 : 2;
 }
 
 
-uint32_t utf32CodeToUtf8(uint16_t code, uint8_t *bufOut) {
+uint32_t utf32CodeToUtf8(uint32_t code, uint8_t *bufOut) {
     if (code < 0x80) {
         bufOut[0] = (uint8_t)code;
         return 1;
@@ -561,7 +561,7 @@ uint32_t utf32CodeToUtf8(uint16_t code, uint8_t *bufOut) {
     }
 }
 
-void utf32CodeToUtf8(uint16_t code, string &out) {
+void utf32CodeToUtf8(uint32_t code, string &out) {
     if (code < 0x80) {
         out.push_back((uint8_t)code);
     } else if (code < 0x0800) {

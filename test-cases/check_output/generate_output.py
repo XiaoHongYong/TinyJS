@@ -397,7 +397,7 @@ def generate_output_of_file(chrome, fn):
             output, _, content = remains.partition('\n*/')
             content = content.strip()
 
-            if output.startswith('-FIXED'):
+            if output.startswith('-FIXED') or output.startswith('-DISABLED'):
                 # 不运行
                 print(' NO Run code: {} '.format(i).center(70, '='))
                 output = '/* OUTPUT' + output.strip() + '\n*/'

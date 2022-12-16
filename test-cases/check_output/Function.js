@@ -63,15 +63,17 @@ get 1
 // Index: 2
 function f() {
     globalThis.xyz = 'xyz-value';
-    function g() {
-        console.log(this.xyz);
+    console.log(1, xyz);
+    function g() {;
+        console.log(2, this.xyz);
     }
 
     g();
 }
 f();
 /* OUTPUT
-xyz-value
+1 xyz-value
+2 xyz-value
 */
 
 

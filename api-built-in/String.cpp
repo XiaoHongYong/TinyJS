@@ -1326,7 +1326,6 @@ static JsLibProperty stringPrototypeFunctions[] = {
     { "trimEnd", stringPrototypeTrimEnd },
     { "trimStart", stringPrototypeTrimStart },
     { "valueOf", stringPrototypeValueOf },
-    makeJsLibPropertyGetter("length", stringPrototypeLength),
 };
 
 class StringPrototypeObject : public JsLibObject {

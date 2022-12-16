@@ -8,9 +8,104 @@
 #include "JsPrimaryObject.hpp"
 
 
+class JsStringIterator : public IJsIterator {
+public:
+    JsStringIterator(VMContext *ctx, JsStringObject *objStr, const JsValue &str, bool includeProtoProp, bool includeNoneEnumerable) : IJsIterator(includeProtoProp, includeNoneEnumerable), _keyBuf(0)
+    {
+        assert(str.isString());
+        _ctx = ctx;
+        _runtime = ctx->runtime;
+        _str = str;
+        _pos = 0;
+
+        if (objStr && objStr->_obj) {
+            _itObjStr = objStr->_obj->getIteratorObject(_ctx, _includeProtoProp, _includeNoneEnumerable);
+        } else if (_includeProtoProp) {
+            _itObjStr = _ctx->runtime->objPrototypeString->getIteratorObject(_ctx, true, _includeNoneEnumerable);
+        } else {
+            _itObjStr = nullptr;
+        }
+
+        if (str.type == JDT_CHAR) {
+            auto len = utf32CodeToUtf8(str.value.n32, _chars);
+            _strUtf16.set(SizedString(_chars, len));
+            _u16[0] = (utf16_t)str.value.n32;
+            _strUtf16.setUtf16(_u16, 1);
+        } else {
+            _strUtf16 = ctx->runtime->getStringWithRandAccess(_str);
+        }
+        _len = _strUtf16.size();
+        _isOfIterable = true;
+    }
+
+    virtual bool nextOf(JsValue &valueOut) override {
+        if (_pos >= _len) {
+            return false;
+        }
+
+        valueOut = makeJsValueChar(_strUtf16.chartAt(_pos));
+        _pos++;
+
+        return true;
+    }
+
+    virtual bool next(SizedString *strKeyOut = nullptr, JsValue *keyOut = nullptr, JsValue *valueOut = nullptr) override {
+        if (_pos >= _len) {
+            if (_itObjStr) {
+                return _itObjStr->next(strKeyOut, keyOut, valueOut);
+            }
+            return false;
+        }
+
+        _keyBuf.set(_pos);
+        if (strKeyOut) {
+            *strKeyOut = _keyBuf.str();
+        }
+
+        if (keyOut) {
+            *keyOut = _runtime->pushString(_keyBuf.str());
+        }
+
+        if (valueOut) {
+            *valueOut = makeJsValueChar(_strUtf16.chartAt(_pos));
+        }
+
+        _pos++;
+
+        return true;
+    }
+
+    virtual void markReferIdx(VMRuntime *rt) override {
+        rt->markReferIdx(_str);
+
+        if (_itObjStr) {
+            ::markReferIdx(rt, _itObjStr);
+        }
+    }
+
+protected:
+    VMContext                       *_ctx;
+    VMRuntime                       *_runtime;
+    IJsIterator                     *_itObjStr;
+    JsValue                         _str;
+    SizedStringUtf16                _strUtf16;
+    uint32_t                        _len;
+    uint32_t                        _pos;
+    NumberToSizedString             _keyBuf;
+
+    uint8_t                         _chars[4];
+    utf16_t                         _u16[2];
+
+};
+
+IJsIterator *newJsStringIterator(VMContext *ctx, const JsValue &str, bool includeProtoProps, bool includeNoneEnumerable) {
+    return new JsStringIterator(ctx, nullptr, str, includeProtoProps, includeNoneEnumerable);
+}
+
 JsStringObject::JsStringObject(const JsValue &value) : JsObjectLazy(nullptr, 0, jsValuePrototypeString),_value(value) {
     type = JDT_OBJ_STRING;
     _length = -1;
+    _isOfIterable = true;
 }
 
 void JsStringObject::definePropertyByName(VMContext *ctx, const SizedString &name, const JsProperty &descriptor) {
@@ -165,6 +260,10 @@ bool JsStringObject::removeByIndex(VMContext *ctx, uint32_t index) {
     }
 
     return JsObjectLazy::removeByIndex(ctx, index);
+}
+
+IJsIterator *JsStringObject::getIteratorObject(VMContext *ctx, bool includeProtoProp, bool includeNoneEnumerable) {
+    return new JsStringIterator(ctx, this, _value, includeProtoProp, includeNoneEnumerable);
 }
 
 void JsStringObject::_updateLength(VMContext *ctx) {

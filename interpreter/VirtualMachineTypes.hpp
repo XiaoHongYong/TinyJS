@@ -19,6 +19,9 @@ class IJsIterator;
 class VMContext;
 class VMRuntime;
 
+extern SizedString SS_TRUE;
+extern SizedString SS_FALSE;
+
 #define OP_CODE_DEFINES \
     OP_ITEM(OP_INVALID, "not_used"), \
     OP_ITEM(OP_PREPARE_VAR_THIS, ""), \
@@ -370,6 +373,55 @@ static_assert(sizeof(JsString) == 32);
 
 const uint32_t LEN_MAX_STRING = 1024 * 124 * 512;
 const int32_t MAX_INT32 = 0x7FFFFFFF;
+
+inline JsValue makeJsValueEmpty() {
+    // JsValue v;
+    // v.isEmpty = 1;
+    // v.isConfigurable = 1;
+    // v.isWritable = 1;
+    // v.isEnumerable = 1;
+    return JsValue();
+}
+
+inline JsValue makeJsValueBool(bool v) {
+    JsValue r(JDT_BOOL, v);
+    return r;
+}
+
+//inline JsValue makeJsValueDouble(double d) {
+//    JsValue r(JDT_NUMBER);
+//    r.number.data = d;
+//    return r;
+//}
+
+inline JsValue makeJsValueInt32(int32_t n) {
+    JsValue r(JDT_INT32, n);
+    return r;
+}
+
+inline JsValue makeJsValueChar(int code) {
+    return JsValue(JDT_CHAR, code);
+}
+
+//inline double getJsValueDouble(const JsValue &v) {
+//    assert(v.type == JDT_NUMBER);
+//    return v.number.data;
+//}
+
+inline int32_t getJsValueInt32(const JsValue &v) {
+    assert(v.type == JDT_INT32);
+    return int32_t(v.value.n32);
+}
+
+inline bool getJsValueBool(const JsValue &v) {
+    assert(v.type == JDT_BOOL);
+    return int32_t(v.value.n32);
+}
+
+inline const SizedString &getJsValueBoolString(const JsValue &v) {
+    assert(v.type == JDT_BOOL);
+    return v.value.n32 ? SS_TRUE : SS_FALSE;
+}
 
 /**
  * JsProperty 定义了 Object 的基本属性

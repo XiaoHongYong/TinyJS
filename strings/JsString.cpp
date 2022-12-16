@@ -8,146 +8,6 @@
 #include "JsString.hpp"
 
 
-/**
- * 遍历 String
- */
-class JsStringIterator : public IJsIterator {
-public:
-    JsStringIterator(VMContext *ctx, const JsValue &str, bool includeProtoProp, bool includeNoneEnumerable) : IJsIterator(includeProtoProp, includeNoneEnumerable), _keyBuf(0) {
-        assert(str.type == JDT_STRING);
-        _isOfIterable = true;
-        _ctx = ctx;
-        _str = str;
-        _pos = 0;
-        _itObj = nullptr;
-        _len = _ctx->runtime->getStringLength(str);
-    }
-
-    virtual bool nextOf(JsValue &valueOut) override {
-        if (_pos >= _len) {
-            return false;
-        }
-
-        auto &s = _ctx->runtime->getStringWithRandAccess(_str);
-        valueOut = JsValue(JDT_CHAR, s.chartAt(_pos));
-        _pos++;
-
-        return true;
-    }
-
-    virtual bool next(SizedString *strKeyOut = nullptr, JsValue *keyOut = nullptr, JsValue *valueOut = nullptr) override {
-        if (_pos >= _len) {
-            if (_includeProtoProp) {
-                if (_itObj == nullptr) {
-                    _itObj = _ctx->runtime->objPrototypeString->getIteratorObject(_ctx, true, _includeNoneEnumerable);
-                }
-                return _itObj->next(strKeyOut, keyOut, valueOut);
-            }
-            return false;
-        }
-
-        _keyBuf.set(_pos);
-        if (strKeyOut) {
-            *strKeyOut = _keyBuf.str();
-        }
-
-        if (keyOut) {
-            *keyOut = _ctx->runtime->pushString(_keyBuf.str());
-        }
-
-        if (valueOut) {
-            auto &s = _ctx->runtime->getStringWithRandAccess(_str);
-            *valueOut = JsValue(JDT_CHAR, s.chartAt(_pos));
-        }
-
-        _pos++;
-
-        return true;
-    }
-
-protected:
-    VMContext                       *_ctx;
-    JsValue                         _str;
-    uint32_t                        _len;
-    uint32_t                        _pos;
-    NumberToSizedString             _keyBuf;
-
-    IJsIterator                     *_itObj;
-
-};
-
-/**
- * 遍历 Char
- */
-class JsCharIterator : public IJsIterator {
-public:
-    JsCharIterator(VMContext *ctx, const JsValue &str, bool includeProtoProp, bool includeNoneEnumerable) : IJsIterator(includeProtoProp, includeNoneEnumerable), _keyBuf(0) {
-        assert(str.type == JDT_CHAR);
-        _isOfIterable = true;
-        _ctx = ctx;
-        _str = str;
-        _end = false;
-        _itObj = nullptr;
-    }
-
-    virtual bool nextOf(JsValue &valueOut) override {
-        if (_end) {
-            return false;
-        }
-
-        valueOut = _str;
-        _end = true;
-
-        return true;
-    }
-
-    virtual bool next(SizedString *strKeyOut = nullptr, JsValue *keyOut = nullptr, JsValue *valueOut = nullptr) override {
-        if (_end) {
-            if (_includeProtoProp) {
-                if (_itObj == nullptr) {
-                    _itObj = _ctx->runtime->objPrototypeString->getIteratorObject(_ctx, true, _includeNoneEnumerable);
-                }
-                return _itObj->next(strKeyOut, keyOut, valueOut);
-            }
-            return false;
-        }
-
-        if (strKeyOut) {
-            *strKeyOut = _keyBuf.str();
-        }
-
-        if (keyOut) {
-            *keyOut = _ctx->runtime->pushString(_keyBuf.str());
-        }
-
-        if (valueOut) {
-            *valueOut = _str;
-        }
-
-        _end = true;
-        return true;
-    }
-
-protected:
-    VMContext                       *_ctx;
-    JsValue                         _str;
-    bool                            _end;
-    SizedStringWrapper              _keyBuf;
-
-    IJsIterator                     *_itObj;
-
-};
-
-IJsIterator *newJsStringIterator(VMContext *ctx, const JsValue &str, bool includeProtoProps, bool includeNoneEnumerable) {
-    if (str.type == JDT_STRING) {
-        return new JsStringIterator(ctx, str, includeProtoProps, includeNoneEnumerable);
-    } else if (str.type == JDT_CHAR) {
-        return new JsCharIterator(ctx, str, includeProtoProps, includeNoneEnumerable);
-    } else {
-        assert(0);
-    }
-}
-
 JsValue getStringCharAtIndex(VMContext *ctx, const JsValue &thiz, uint32_t index) {
     if (thiz.type == JDT_CHAR) {
         if (index == 0) {
@@ -177,6 +37,14 @@ JsValue getStringMemberIndex(VMContext *ctx, const JsValue &thiz, const JsValue 
     }
 
     auto strName = runtime->toSizedString(ctx, name);
+    if (strName.equal(SS_LENGTH)) {
+        if (thiz.type == JDT_CHAR) {
+            return JsValue(JDT_INT32, 1);
+        } else {
+            return JsValue(JDT_INT32, runtime->getStringLength(thiz));
+        }
+    }
+
 
     bool successful = false;
     auto index = strName.atoi(successful);

@@ -560,7 +560,7 @@ IJsNode *JSParser::_expectVariableDeclaration(TokenType declareType, bool initFr
             if (declareType == TK_VAR) {
                 _curFuncScope->addVarDeclaration(_curToken);
             } else {
-                _curScope->addVarDeclaration(_curToken, declareType == TK_CONST);
+                _curScope->addVarDeclaration(_curToken, declareType == TK_CONST, true);
             }
             left = _newExprIdentifier(_curToken);
             _readToken();
@@ -896,7 +896,7 @@ IJsNode *JSParser::_expectExpression(Precedence pred, bool enableIn) {
             }
 
             if (_curToken.type == TK_ARROW) {
-                auto childFunction = _enterFunction(tokenStart);
+                auto childFunction = _enterFunction(tokenStart, false, true);
                 assert(expr == nullptr || expr->type == NT_PAREN_EXPRESSION);
                 childFunction->params = _convertParenExprsToFormalPrameters((JsParenExpr *)expr);
 
@@ -1763,7 +1763,8 @@ void JSParser::_allocateIdentifierStorage(Scope *scope, int registerIndex) {
             }
         } else {
             // 变量
-            if (true || declare->isReferredByChild || scope->hasEval || scope->hasWith) {
+            // if (true || declare->isReferredByChild || scope->hasEval || scope->hasWith)
+            {
                 // 被子函数引用 或者 有 eval, with，则必须将变量保存到 vars 中
                 if (scope->parent == nullptr) {
                     declare->varStorageType = VST_GLOBAL_VAR;
@@ -1771,10 +1772,10 @@ void JSParser::_allocateIdentifierStorage(Scope *scope, int registerIndex) {
                     declare->varStorageType = VST_SCOPE_VAR;
                     declare->storageIndex = scope->countLocalVars++;
                 }
-            } else {
-                // 可直接存储在寄存器中
-                declare->varStorageType = VST_REGISTER;
-                declare->storageIndex = registerIndex++;
+            // } else {
+            //     // 可直接存储在寄存器中
+            //     declare->varStorageType = VST_REGISTER;
+            //     declare->storageIndex = registerIndex++;
             }
         }
     }

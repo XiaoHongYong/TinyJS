@@ -31,7 +31,7 @@ function f(r, obj, noPrint) {
     try {
         Object.freeze(obj);
         obj.length = 3;
-        console.log(obj, 'length');
+        console.log(obj, obj['length']);
     } catch (e) {
         console.log(e.name + ': ' + e.message);
     }
@@ -53,21 +53,21 @@ TypeError: Cannot set properties of undefined (setting 'length')
 Round:  2 null
 TypeError: Cannot set properties of null (setting 'length')
 Round:  3 1
-1 length
+1 undefined
 Round:  4 false
-false length
+false undefined
 Round:  5 NaN
-NaN length
+NaN undefined
 Round:  6 Symbol()
-Symbol() length
+Symbol() undefined
 Round:  7 x
-x length
+x 1
 Round:  8 Ab
-Ab length
+Ab 2
 Round:  9 function g() { }
-function g() { } length
+function g() { } 0
 Round:  10 
-{tt: x} length
+{tt: x} undefined
 Round:  11 
 TypeError: Cannot freeze
 */
