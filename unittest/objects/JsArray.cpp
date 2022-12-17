@@ -40,7 +40,7 @@ TEST(JsArray, findToModifyBlock) {
 
     // 在第一个 block 内
     for (int i = 10; i < 20; i++) {
-        value = JsValue(JDT_INT32, i);
+        value = makeJsValueInt32(i);
         a.setByIndex(ctx, thiz, i, value);
         ASSERT_EQ(a.countBlocks(), 1);
         ASSERT_EQ(a.length(), i + 1);
@@ -56,7 +56,7 @@ TEST(JsArray, findToModifyBlock) {
         ASSERT_EQ(ret, value);
 
         ret = a.getByName(ctx, thiz, SS_LENGTH);
-        ASSERT_EQ(ret, JsValue(JDT_INT32, i + 1));
+        ASSERT_EQ(ret, makeJsValueInt32(i + 1));
     }
 
     // 测试不存在的值
@@ -66,7 +66,7 @@ TEST(JsArray, findToModifyBlock) {
     // 添加在第 2 block, 按照 ARRAY_BLOCK_SIZE 分段
     int startIndex = ARRAY_BLOCK_SIZE * 3;
     for (int i = startIndex + 10; i < startIndex + 20; i++) {
-        value = JsValue(JDT_INT32, i);
+        value = makeJsValueInt32(i);
         a.setByIndex(ctx, thiz, i, value);
         ASSERT_EQ(a.countBlocks(), 2);
         ASSERT_EQ(a.length(), i + 1);
@@ -82,14 +82,14 @@ TEST(JsArray, findToModifyBlock) {
         ASSERT_EQ(ret, value);
 
         ret = a.getByName(ctx, thiz, SS_LENGTH);
-        ASSERT_EQ(ret, JsValue(JDT_INT32, i + 1));
+        ASSERT_EQ(ret, makeJsValueInt32(i + 1));
     }
     length = a.length();
 
     // 插入在第 2 block, 按照 ARRAY_BLOCK_SIZE 分段
     startIndex = ARRAY_BLOCK_SIZE * 2;
     for (int i = startIndex + ARRAY_BLOCK_SIZE / 2; i < startIndex + ARRAY_BLOCK_SIZE / 2 + 20; i++) {
-        value = JsValue(JDT_INT32, i);
+        value = makeJsValueInt32(i);
         a.setByIndex(ctx, thiz, i, value);
         ASSERT_EQ(a.countBlocks(), 3);
         ASSERT_EQ(a.length(), length);
@@ -105,13 +105,13 @@ TEST(JsArray, findToModifyBlock) {
         ASSERT_EQ(ret, value);
 
         ret = a.getByName(ctx, thiz, SS_LENGTH);
-        ASSERT_EQ(ret, JsValue(JDT_INT32, length));
+        ASSERT_EQ(ret, makeJsValueInt32(length));
     }
 
     // 添加 block，位置超出了 ARRAY_RESERVE_MAX_SIZE，没有按照 ARRAY_BLOCK_SIZE 分段
     startIndex = ARRAY_RESERVE_MAX_SIZE + ARRAY_BLOCK_SIZE * 10 + 10;
     for (int i = startIndex; i < startIndex + 20; i++) {
-        value = JsValue(JDT_INT32, i);
+        value = makeJsValueInt32(i);
         a.setByIndex(ctx, thiz, i, value);
         ASSERT_EQ(a.countBlocks(), 4);
         ASSERT_EQ(a.length(), i + 1);
@@ -127,7 +127,7 @@ TEST(JsArray, findToModifyBlock) {
         ASSERT_EQ(ret, value);
 
         ret = a.getByName(ctx, thiz, SS_LENGTH);
-        ASSERT_EQ(ret, JsValue(JDT_INT32, i + 1));
+        ASSERT_EQ(ret, makeJsValueInt32(i + 1));
     }
 
     length = a.length();
@@ -135,7 +135,7 @@ TEST(JsArray, findToModifyBlock) {
     // 在之间插入新的 block
     startIndex = ARRAY_RESERVE_MAX_SIZE + ARRAY_BLOCK_SIZE * 9 + 10;
     for (int i = startIndex; i < startIndex + 20; i++) {
-        value = JsValue(JDT_INT32, i);
+        value = makeJsValueInt32(i);
         a.setByIndex(ctx, thiz, i, value);
         ASSERT_EQ(a.countBlocks(), 5);
         ASSERT_EQ(a.length(), length);
@@ -154,7 +154,7 @@ TEST(JsArray, findToModifyBlock) {
     // 添加到最后一个大的 block
     startIndex = ARRAY_RESERVE_MAX_SIZE + ARRAY_BLOCK_SIZE * 9 + ARRAY_BLOCK_SIZE / 2 + 30;
     for (int i = startIndex; i < startIndex + 20; i++) {
-        value = JsValue(JDT_INT32, i);
+        value = makeJsValueInt32(i);
         a.setByIndex(ctx, thiz, i, value);
         ASSERT_EQ(a.countBlocks(), 5);
         ASSERT_EQ(a.length(), length);

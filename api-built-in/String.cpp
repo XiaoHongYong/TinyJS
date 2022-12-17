@@ -17,14 +17,14 @@ static void stringConstructor(VMContext *ctx, const JsValue &thiz, const Argumen
 
     JsValue str = args.count > 0 ? runtime->toString(ctx, args[0]) : jsStringValueEmpty;
 
-    if (thiz.type != JDT_NOT_INITIALIZED) {
+    if (thiz.isValid()) {
         ctx->retValue = str;
         return;
     }
 
     // New
     auto obj = new JsStringObject(str);
-    ctx->retValue = runtime->pushObjectValue(obj);
+    ctx->retValue = runtime->pushObject(obj);
 }
 
 void stringFromCharCode(VMContext *ctx, const JsValue &thiz, const Arguments &args) {
@@ -73,8 +73,8 @@ static JsLibProperty stringFunctions[] = {
     { "fromCharCode", stringFromCharCode },
     { "fromCodePoint", stringFromCodePoint },
     { "name", nullptr, "String" },
-    { "length", nullptr, nullptr, JsValue(JDT_INT32, 1) },
-    { "prototype", nullptr, nullptr, JsValue(JDT_INT32, 1) },
+    { "length", nullptr, nullptr, jsValueLength1Property },
+    { "prototype", nullptr, nullptr, jsValuePropertyPrototype },
 };
 
 
@@ -87,7 +87,7 @@ inline JsValue convertStringToJsValue(VMContext *ctx, const JsValue &thiz, const
     }
 
     ctx->throwException(JE_TYPE_ERROR, "String.prototype.%s requires that 'this' be a String", funcName);
-    return jsValueNotInitialized;
+    return jsValueEmpty;
 }
 
 void stringPrototypeAt(VMContext *ctx, const JsValue &thiz, const Arguments &args) {
@@ -119,7 +119,7 @@ void stringPrototypeAt(VMContext *ctx, const JsValue &thiz, const Arguments &arg
     }
 
     if (index < str.size()) {
-        ctx->retValue = JsValue(JDT_CHAR, str.chartAt(index));
+        ctx->retValue = makeJsValueChar(str.chartAt(index));
     } else {
         ctx->retValue = jsValueUndefined;
     }
@@ -155,7 +155,7 @@ void stringPrototypeCharAt(VMContext *ctx, const JsValue &thiz, const Arguments 
         return;
     }
 
-    ctx->retValue = JsValue(JDT_CHAR, code);
+    ctx->retValue = makeJsValueChar(code);
 }
 
 void stringPrototypeCharCodeAt(VMContext *ctx, const JsValue &thiz, const Arguments &args) {
@@ -165,7 +165,7 @@ void stringPrototypeCharCodeAt(VMContext *ctx, const JsValue &thiz, const Argume
         return;
     }
 
-    ctx->retValue = JsValue(JDT_INT32, code);
+    ctx->retValue = makeJsValueInt32(code);
 }
 
 void stringPrototypeCodePointAt(VMContext *ctx, const JsValue &thiz, const Arguments &args) {
@@ -183,13 +183,13 @@ void stringPrototypeCodePointAt(VMContext *ctx, const JsValue &thiz, const Argum
             ctx->retValue = jsValueUndefined;
             return;
         }
-        ctx->retValue = JsValue(JDT_INT32, str.codePointAt(index));
+        ctx->retValue = makeJsValueInt32(str.codePointAt(index));
     } else {
         if (index != 0) {
             ctx->retValue = jsValueUndefined;
             return;
         }
-        ctx->retValue = JsValue(JDT_INT32, strValue.value.n32);
+        ctx->retValue = makeJsValueInt32(strValue.value.n32);
     }
 }
 
@@ -229,7 +229,7 @@ void stringPrototypeEndsWith(VMContext *ctx, const JsValue &thiz, const Argument
         return;
     }
 
-    ctx->retValue = JsValue(JDT_BOOL, s.endsWith(with));
+    ctx->retValue = makeJsValueBool(s.endsWith(with));
 }
 
 /*
@@ -273,7 +273,7 @@ void stringPrototypeIncludes(VMContext *ctx, const JsValue &thiz, const Argument
         return;
     }
 
-    ctx->retValue = JsValue(JDT_BOOL, s.strstr(p) != -1);
+    ctx->retValue = makeJsValueBool(s.strstr(p) != -1);
 }
 
 void stringPrototypeIndexOf(VMContext *ctx, const JsValue &thiz, const Arguments &args) {
@@ -303,7 +303,7 @@ void stringPrototypeIndexOf(VMContext *ctx, const JsValue &thiz, const Arguments
     auto pos = s.indexOf(p, index);
 
     // 返回的位置是 utf-16 的
-    ctx->retValue = JsValue(JDT_INT32, pos);
+    ctx->retValue = makeJsValueInt32(pos);
 }
 
 void stringPrototypeLastIndexOf(VMContext *ctx, const JsValue &thiz, const Arguments &args) {
@@ -329,7 +329,7 @@ void stringPrototypeLastIndexOf(VMContext *ctx, const JsValue &thiz, const Argum
 
     auto pos = s.lastIndexOf(p, index);
 
-    ctx->retValue = JsValue(JDT_INT32, pos);
+    ctx->retValue = makeJsValueInt32(pos);
 }
 
 void stringPrototypeLocaleCompare(VMContext *ctx, const JsValue &thiz, const Arguments &args) {
@@ -354,7 +354,7 @@ inline JsValue regexMatch(VMContext *ctx, VMRuntime *runtime, std::regex &re, ui
         }
 
         auto arr = new JsArray();
-        ret = runtime->pushObjectValue(arr);
+        ret = runtime->pushObject(arr);
 
         for (auto it = begin; it != end; ++it) {
             auto &m = *it;
@@ -364,14 +364,14 @@ inline JsValue regexMatch(VMContext *ctx, VMRuntime *runtime, std::regex &re, ui
         std::cmatch matches;
         if (std::regex_search((cstr_t)str.data, (cstr_t)str.data + str.len, matches, re)) {
             auto arr = new JsArray();
-            ret = runtime->pushObjectValue(arr);
+            ret = runtime->pushObject(arr);
 
             for (auto &m : matches) {
                 arr->push(ctx, runtime->pushString(str.substr(m.first, m.second)));
             }
 
             auto index = utf8ToUtf16Length(str.data, (uint32_t)(matches[0].first - (cstr_t)str.data));
-            arr->setByName(ctx, ret, SS_INDEX, JsValue(JDT_INT32, index));
+            arr->setByName(ctx, ret, SS_INDEX, makeJsValueInt32(index));
             arr->setByName(ctx, ret, SS_GROUPS, jsValueUndefined);
             arr->setByName(ctx, ret, SS_INPUT, strVal);
         }
@@ -422,7 +422,7 @@ public:
 
         if (std::regex_search((cstr_t)_strBegin, (cstr_t)_strEnd, matches, _re)) {
             auto arr = new JsArray();
-            auto ret = runtime->pushObjectValue(arr);
+            auto ret = runtime->pushObject(arr);
             SizedString str(_strBegin, uint32_t(_strEnd - _strBegin));
 
             for (auto &m : matches) {
@@ -431,7 +431,7 @@ public:
 
             auto m0 = matches[0];
             _offset += utf8ToUtf16Length(_strBegin, (uint32_t)(m0.first - (cstr_t)_strBegin));
-            arr->setByName(_ctx, ret, SS_INDEX, JsValue(JDT_INT32, _offset));
+            arr->setByName(_ctx, ret, SS_INDEX, makeJsValueInt32(_offset));
             arr->setByName(_ctx, ret, SS_GROUPS, jsValueUndefined);
             arr->setByName(_ctx, ret, SS_INPUT, _strVal);
 
@@ -485,7 +485,7 @@ void stringPrototypeMatchAll(VMContext *ctx, const JsValue &thiz, const Argument
             return;
         }
 
-        ctx->retValue = runtime->pushObjectValue(new StringMatchAllIterator(ctx, re, flags, str, strVal));
+        ctx->retValue = runtime->pushObject(new StringMatchAllIterator(ctx, re, flags, str, strVal));
     } else {
         if (pattern.type == JDT_UNDEFINED) {
             pattern = jsStringValueEmpty;
@@ -495,7 +495,7 @@ void stringPrototypeMatchAll(VMContext *ctx, const JsValue &thiz, const Argument
         auto flags = std::regex::flag_type::ECMAScript;
         std::regex re((cstr_t)strRe.data, strRe.len, flags);
 
-        ctx->retValue = runtime->pushObjectValue(new StringMatchAllIterator(ctx, re, flags, str, strVal));
+        ctx->retValue = runtime->pushObject(new StringMatchAllIterator(ctx, re, flags, str, strVal));
     }
 }
 
@@ -532,7 +532,7 @@ void stringPrototypePadEnd(VMContext *ctx, const JsValue &thiz, const Arguments 
 
     auto pad = args.getAt(1);
     if (pad.type == JDT_UNDEFINED) {
-        pad = JsValue(JDT_CHAR, ' ');
+        pad = makeJsValueChar(' ');
     }
 
     auto sPad = runtime->toSizedStringStrictly(ctx, pad);
@@ -580,7 +580,7 @@ void stringPrototypePadStart(VMContext *ctx, const JsValue &thiz, const Argument
 
     auto pad = args.getAt(1);
     if (pad.type == JDT_UNDEFINED) {
-        pad = JsValue(JDT_CHAR, ' ');
+        pad = makeJsValueChar(' ');
     }
 
     auto sPad = runtime->toSizedStringStrictly(ctx, pad);
@@ -655,7 +655,7 @@ void doStringReplaceWithFunction(VMContext *ctx, const SizedString &str, const J
     for (auto &m : matches) {
         argvs.push_back(runtime->pushString(str.substr(m.first, m.second)));
     }
-    argvs.push_back(JsValue(JDT_INT32, offset));
+    argvs.push_back(makeJsValueInt32(offset));
     argvs.push_back(strVal);
     argvs.push_back(jsValueUndefined);
 
@@ -864,9 +864,9 @@ void stringPrototypeReplaceAll(VMContext *ctx, const JsValue &thiz, const Argume
 inline void regexSearch(VMContext *ctx, std::regex &re, const SizedString &str) {
     std::cmatch matches;
     if (std::regex_search((cstr_t)str.data, (cstr_t)str.data + str.len, matches, re)) {
-        ctx->retValue = JsValue(JDT_INT32, utf8ToUtf16Length(str.data, (uint32_t)(matches[0].first - (cstr_t)str.data)));
+        ctx->retValue = makeJsValueInt32(utf8ToUtf16Length(str.data, (uint32_t)(matches[0].first - (cstr_t)str.data)));
     } else {
-        ctx->retValue = JsValue(JDT_INT32, -1);
+        ctx->retValue = makeJsValueInt32(-1);
     }
 }
 
@@ -943,7 +943,7 @@ void stringPrototypeSplit(VMContext *ctx, const JsValue &thiz, const Arguments &
     auto sep = args.getAt(0);
     auto limit = args.getIntAt(ctx, 1, MAX_INT32);
     auto arrObj = new JsArray();
-    auto arr = runtime->pushObjectValue(arrObj);
+    auto arr = runtime->pushObject(arrObj);
 
     if (limit < 0) {
         limit = MAX_INT32;
@@ -989,7 +989,7 @@ void stringPrototypeSplit(VMContext *ctx, const JsValue &thiz, const Arguments &
 
             auto p = u16s.data(), end = p + len;
             for (; p < end; p++) {
-                arrObj->push(ctx, JsValue(JDT_CHAR, *p));
+                arrObj->push(ctx, makeJsValueChar(*p));
             }
         } else {
             for (; limit > 0; --limit) {
@@ -1022,7 +1022,7 @@ void stringPrototypeStartsWith(VMContext *ctx, const JsValue &thiz, const Argume
     auto start = args.getIntAt(ctx, 0, 0);
     if (start <= 0) {
         auto str = runtime->toSizedString(ctx, strVal);
-        ctx->retValue = JsValue(JDT_BOOL, str.startsWith(with));
+        ctx->retValue = makeJsValueBool(str.startsWith(with));
         return;
     }
 
@@ -1035,7 +1035,7 @@ void stringPrototypeStartsWith(VMContext *ctx, const JsValue &thiz, const Argume
     auto &su8 = str.utf8Str();
     auto p = utf8ToUtf16Seek(su8.data, su8.len, start);
 
-    ctx->retValue = JsValue(JDT_BOOL, SizedString(p, uint32_t(su8.data + su8.len - p)).startsWith(with));
+    ctx->retValue = makeJsValueBool(SizedString(p, uint32_t(su8.data + su8.len - p)).startsWith(with));
 }
 
 void stringPrototypeSubstr(VMContext *ctx, const JsValue &thiz, const Arguments &args) {
@@ -1109,7 +1109,7 @@ void stringPrototypeToLowerCase(VMContext *ctx, const JsValue &thiz, const Argum
     }
 
     if (strVal.type == JDT_CHAR) {
-        ctx->retValue = JsValue(JDT_CHAR, toLower(strVal.value.n32));
+        ctx->retValue = makeJsValueChar(toLower(strVal.value.n32));
         return;
     }
 
@@ -1153,7 +1153,7 @@ void stringPrototypeToUpperCase(VMContext *ctx, const JsValue &thiz, const Argum
     }
 
     if (strVal.type == JDT_CHAR) {
-        ctx->retValue = JsValue(JDT_CHAR, toUpper(strVal.value.n32));
+        ctx->retValue = makeJsValueChar(toUpper(strVal.value.n32));
         return;
     }
 
@@ -1275,7 +1275,7 @@ void stringPrototypeLength(VMContext *ctx, const JsValue &thiz, const Arguments 
         return;
     }
 
-    ctx->retValue = JsValue(JDT_INT32, runtime->getStringLength(strValue));
+    ctx->retValue = makeJsValueInt32(runtime->getStringLength(strValue));
 }
 
 static JsLibProperty stringPrototypeFunctions[] = {
@@ -1330,7 +1330,7 @@ static JsLibProperty stringPrototypeFunctions[] = {
 
 class StringPrototypeObject : public JsLibObject {
 public:
-    JsProperty *getRawByName(VMContext *ctx, const SizedString &name, JsNativeFunction &funcGetterOut, bool includeProtoProp) {
+    JsValue *getRawByName(VMContext *ctx, const SizedString &name, bool includeProtoProp) {
         if (name.len > 0 && isDigit(name.data[0])) {
             bool successful = false;
             auto n = name.atoi(successful);
@@ -1342,8 +1342,8 @@ public:
         return nullptr;
     }
 
-    JsProperty *getRawByIndex(VMContext *ctx, uint32_t index, bool includeProtoProp) {
-        static JsProperty propIndex;
+    JsValue *getRawByIndex(VMContext *ctx, uint32_t index, bool includeProtoProp) {
+        static JsValue propIndex;
         return &propIndex;
     }
 

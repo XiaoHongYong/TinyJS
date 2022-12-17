@@ -81,15 +81,13 @@ protected:
 
 };
 
-JsArguments::JsArguments(VMScope *scope, Arguments *args) {
-    type = JDT_ARGUMENTS;
-
+JsArguments::JsArguments(VMScope *scope, Arguments *args) : IJsObject(jsValueEmpty, JDT_ARGUMENTS) {
     _isOfIterable = true;
     _scope = scope;
     _args = args;
     _argsDescriptors = nullptr;
     _obj = nullptr;
-    _length = JsValue(JDT_INT32, args->count);
+    _length = makeJsValueInt32(args->count).asProperty(JP_WRITABLE);
 }
 
 JsArguments::~JsArguments() {
@@ -97,18 +95,18 @@ JsArguments::~JsArguments() {
     if (_argsDescriptors) delete _argsDescriptors;
 }
 
-void JsArguments::definePropertyByName(VMContext *ctx, const SizedString &name, const JsProperty &descriptor) {
+void JsArguments::setPropertyByName(VMContext *ctx, const SizedString &name, const JsValue &descriptor) {
     if (name.len > 0 && isDigit(name.data[0])) {
         bool successful = false;
         auto n = name.atoi(successful);
         if (successful && n < _args->count) {
-            return definePropertyByIndex(ctx, (uint32_t)n, descriptor);
+            return setPropertyByIndex(ctx, (uint32_t)n, descriptor);
         }
     }
 
     if (name.equal(SS_LENGTH)) {
         // 设置标志调用 setByIndexCallback
-        defineNameProperty(ctx, &_length, descriptor, name);
+        _length = descriptor;
         return;
     }
 
@@ -116,37 +114,35 @@ void JsArguments::definePropertyByName(VMContext *ctx, const SizedString &name, 
         _newObject(ctx);
     }
 
-    _obj->definePropertyByName(ctx, name, descriptor);
+    _obj->setPropertyByName(ctx, name, descriptor);
 }
 
-void JsArguments::definePropertyByIndex(VMContext *ctx, uint32_t index, const JsProperty &descriptor) {
+void JsArguments::setPropertyByIndex(VMContext *ctx, uint32_t index, const JsValue &descriptor) {
     if (index >= _args->count) {
         NumberToSizedString ss(index);
-        definePropertyByName(ctx, ss, descriptor);
+        setPropertyByName(ctx, ss, descriptor);
         return;
     }
 
     if (!_argsDescriptors) {
         _argsDescriptors = new VecJsProperties();
         for (uint32_t i = 0; i < _args->count; i++)  {
-            _argsDescriptors->push_back(_args->data[i]);
+            _argsDescriptors->push_back(_args->data[i].asProperty());
         }
     }
 
-    auto &prop = _argsDescriptors->at(index);
-    defineIndexProperty(ctx, &prop, descriptor, index);
-
-    if (!prop.isGSetter) {
-        _args->data[index] = prop.value;
+    _argsDescriptors->at(index) = descriptor;
+    if (!descriptor.isGetterSetter()) {
+        _args->data[index] = descriptor;
     }
 }
 
-void JsArguments::definePropertyBySymbol(VMContext *ctx, uint32_t index, const JsProperty &descriptor) {
+void JsArguments::setPropertyBySymbol(VMContext *ctx, uint32_t index, const JsValue &descriptor) {
     if (!_obj) {
         _newObject(ctx);
     }
 
-    _obj->definePropertyBySymbol(ctx, index, descriptor);
+    _obj->setPropertyBySymbol(ctx, index, descriptor);
 }
 
 JsError JsArguments::setByName(VMContext *ctx, const JsValue &thiz, const SizedString &name, const JsValue &value) {
@@ -159,7 +155,7 @@ JsError JsArguments::setByName(VMContext *ctx, const JsValue &thiz, const SizedS
     }
 
     if (name.equal(SS_LENGTH)) {
-        return set(ctx, &_length, thiz, value);
+        return setPropertyValue(ctx, &_length, thiz, value);
     }
 
     if (!_obj) {
@@ -176,7 +172,7 @@ JsError JsArguments::setByIndex(VMContext *ctx, const JsValue &thiz, uint32_t in
 
     if (_argsDescriptors) {
         auto prop = &_argsDescriptors->at(index);
-        auto ret = set(ctx, prop, thiz, value);
+        auto ret = setPropertyValue(ctx, prop, thiz, value);
         if (ret == JE_OK) {
             // 同步修改到 _args 中
             _args->data[index] = value;
@@ -205,7 +201,7 @@ JsValue JsArguments::increaseByName(VMContext *ctx, const JsValue &thiz, const S
     }
 
     if (name.equal(SS_LENGTH)) {
-        return increase(ctx, &_length, thiz, n, isPost);
+        return increasePropertyValue(ctx, &_length, thiz, n, isPost);
     }
 
     if (!_obj) {
@@ -222,10 +218,10 @@ JsValue JsArguments::increaseByIndex(VMContext *ctx, const JsValue &thiz, uint32
 
     if (_argsDescriptors) {
         auto prop = &_argsDescriptors->at(index);
-        auto ret = increase(ctx, prop, thiz, n, isPost);
-        if (!prop->isGSetter && prop->isWritable) {
+        auto ret = increasePropertyValue(ctx, prop, thiz, n, isPost);
+        if (!prop->isGetterSetter() && prop->isWritable()) {
             // 同步修改到 _args 中
-            _args->data[index] = prop->value;
+            _args->data[index] = *prop;
         }
         return ret;
     } else {
@@ -241,9 +237,7 @@ JsValue JsArguments::increaseBySymbol(VMContext *ctx, const JsValue &thiz, uint3
     return _obj->increaseBySymbol(ctx, thiz, index, n, isPost);
 }
 
-JsProperty *JsArguments::getRawByName(VMContext *ctx, const SizedString &name, JsNativeFunction &funcGetterOut, bool includeProtoProp) {
-    funcGetterOut = nullptr;
-
+JsValue *JsArguments::getRawByName(VMContext *ctx, const SizedString &name, bool includeProtoProp) {
     if (name.len > 0 && isDigit(name.data[0])) {
         bool successful = false;
         auto n = name.atoi(successful);
@@ -257,22 +251,21 @@ JsProperty *JsArguments::getRawByName(VMContext *ctx, const SizedString &name, J
     }
 
     if (_obj) {
-        return _obj->getRawByName(ctx, name, funcGetterOut, includeProtoProp);
+        return _obj->getRawByName(ctx, name, includeProtoProp);
     }
 
     if (includeProtoProp) {
         // 缺省的 Object.prototype
-        return ctx->runtime->objPrototypeObject->getRawByName(ctx, name, funcGetterOut, includeProtoProp);
+        return ctx->runtime->objPrototypeObject()->getRawByName(ctx, name, includeProtoProp);
     }
 
     return nullptr;
 }
 
-JsProperty *JsArguments::getRawByIndex(VMContext *ctx, uint32_t index, bool includeProtoProp) {
+JsValue *JsArguments::getRawByIndex(VMContext *ctx, uint32_t index, bool includeProtoProp) {
     if (index >= _args->count) {
         NumberToSizedString name(index);
-        JsNativeFunction funcGetter;
-        return getRawByName(ctx, name, funcGetter, includeProtoProp);
+        return getRawByName(ctx, name, includeProtoProp);
     }
 
     if (_argsDescriptors) {
@@ -280,12 +273,12 @@ JsProperty *JsArguments::getRawByIndex(VMContext *ctx, uint32_t index, bool incl
     }
 
     // 获取值
-    static JsProperty prop;
-    prop.value = _args->data[index];
+    static JsValue prop;
+    prop = _args->data[index].asProperty();
     return &prop;
 }
 
-JsProperty *JsArguments::getRawBySymbol(VMContext *ctx, uint32_t index, bool includeProtoProp) {
+JsValue *JsArguments::getRawBySymbol(VMContext *ctx, uint32_t index, bool includeProtoProp) {
     if (_obj) {
         return _obj->getRawBySymbol(ctx, index, includeProtoProp);
     }
@@ -309,9 +302,8 @@ bool JsArguments::removeByIndex(VMContext *ctx, uint32_t index) {
 
     if (_argsDescriptors) {
         auto prop = &_argsDescriptors->at(index);
-        if (prop->isConfigurable) {
-            prop->value = jsValueUndefined;
-            prop->isGSetter = false;
+        if (prop->isConfigurable()) {
+            *prop = jsValuePropertyDefault;
         }
     } else {
         (*_args)[index] = jsValueUndefined;
@@ -332,29 +324,35 @@ bool JsArguments::removeBySymbol(VMContext *ctx, uint32_t index) {
     return true;
 }
 
-void JsArguments::changeAllProperties(VMContext *ctx, int8_t configurable, int8_t writable) {
+void JsArguments::changeAllProperties(VMContext *ctx, JsPropertyFlags toAdd, JsPropertyFlags toRemove) {
     if (!_argsDescriptors) {
         _argsDescriptors = new VecJsProperties();
         for (uint32_t i = 0; i < _args->count; i++)  {
-            _argsDescriptors->push_back(_args->data[i]);
+            _argsDescriptors->push_back(_args->data[i].asProperty());
         }
     }
 
     for (auto &item : *_argsDescriptors) {
-        item.changeProperty(configurable, writable);
+        item.changeProperty(toAdd, toRemove);
     }
 
     if (_obj) {
-        _obj->changeAllProperties(ctx, configurable, writable);
+        _obj->changeAllProperties(ctx, toAdd, toRemove);
     }
 }
 
-bool JsArguments::hasAnyProperty(VMContext *ctx, bool configurable, bool writable) {
-    if (!_argsDescriptors) {
+bool JsArguments::hasAnyProperty(VMContext *ctx, JsPropertyFlags flags) {
+    if (_argsDescriptors) {
+        for (auto &v : *_argsDescriptors) {
+            if (v.isPropertyAny(flags)) {
+                return true;
+            }
+        }
+    } else if (_args->count > 0) {
         return true;
     }
 
-    return _obj && _obj->hasAnyProperty(ctx, configurable, writable);
+    return _obj && _obj->hasAnyProperty(ctx, flags);
 }
 
 void JsArguments::preventExtensions(VMContext *ctx) {

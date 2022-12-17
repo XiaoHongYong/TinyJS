@@ -100,40 +100,40 @@ public:
 
     bool Null() { onValue(jsValueNull); return true; }
 
-    bool Bool(bool b) { onValue(JsValue(JDT_BOOL, b)); return true; }
-    bool Int(int i) { onValue(JsValue(JDT_INT32, i)); return true; }
+    bool Bool(bool b) { onValue(makeJsValueBool(b)); return true; }
+    bool Int(int i) { onValue(makeJsValueInt32(i)); return true; }
     bool Uint(unsigned u) {
         if (u > 0x7FFFFFFF) {
-            onValue(_rt->pushDoubleValue(u));
+            onValue(_rt->pushDouble(u));
         } else {
-            onValue(JsValue(JDT_INT32, u));
+            onValue(makeJsValueInt32(u));
         }
         return true;
     }
     bool Int64(int64_t i) {
         if (i == (int32_t)i) {
-            onValue(JsValue(JDT_INT32, (int32_t)i));
+            onValue(makeJsValueInt32((int32_t)i));
         } else {
-            onValue(_rt->pushDoubleValue(i));
+            onValue(_rt->pushDouble(i));
         }
         return true;
     }
     bool Uint64(uint64_t u) {
         if (u == (int32_t)u) {
-            onValue(JsValue(JDT_INT32, (int32_t)u));
+            onValue(makeJsValueInt32((int32_t)u));
         } else {
-            onValue(_rt->pushDoubleValue(u));
+            onValue(_rt->pushDouble(u));
         }
         return true;
     }
-    bool Double(double d) { onValue(_rt->pushDoubleValue(d)); return true; }
+    bool Double(double d) { onValue(_rt->pushDouble(d)); return true; }
     bool String(const char* str, SizeType length, bool copy) {
         onValue(_rt->pushString(SizedString(str, length)));
         return true;
     }
     bool StartObject() {
         auto obj = new JsObject();
-        onValue(_rt->pushObjectValue(obj));
+        onValue(_rt->pushObject(obj));
 
         _stack.push_back(StackItem(_status, _obj));
         _obj = obj;
@@ -159,7 +159,7 @@ public:
     }
     bool StartArray() {
         auto obj = new JsArray();
-        onValue(_rt->pushObjectValue(obj));
+        onValue(_rt->pushObject(obj));
 
         _stack.push_back(StackItem(_status, _obj));
         _obj = obj;
@@ -215,7 +215,6 @@ void json_parse(VMContext *ctx, const JsValue &thiz, const Arguments &args) {
 
 void stringify(VMContext *ctx, Writer<StringBuffer> &writer, JsValue value) {
     switch (value.type) {
-        case JDT_NOT_INITIALIZED:
         case JDT_UNDEFINED:
         case JDT_SYMBOL:
             assert(0);
@@ -310,7 +309,7 @@ void json_stringify(VMContext *ctx, const JsValue &thiz, const Arguments &args) 
 
 static JsLibProperty jsonFunctions[] = {
     { "name", nullptr, "JSON" },
-    { "length", nullptr, nullptr, JsValue(JDT_INT32, 1) },
+    { "length", nullptr, nullptr, jsValueLength1Property },
     { "parse", json_parse, },
     { "stringify", json_stringify, },
 };

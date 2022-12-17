@@ -8,8 +8,8 @@
 #include "JsObjectLazy.hpp"
 
 
-JsObjectLazy::JsObjectLazy(JsLazyProperty *props, uint32_t countProps, const JsValue &__proto__) : _props(props), _propsEnd(props + countProps), __proto__(__proto__) {
-
+JsObjectLazy::JsObjectLazy(JsLazyProperty *props, uint32_t countProps, const JsValue &__proto__, JsDataType type) : IJsObject(__proto__, type), _props(props), _propsEnd(props + countProps)
+{
     _obj = nullptr;
 }
 
@@ -19,10 +19,10 @@ JsObjectLazy::~JsObjectLazy() {
     }
 }
 
-void JsObjectLazy::definePropertyByName(VMContext *ctx, const SizedString &name, const JsProperty &descriptor) {
+void JsObjectLazy::setPropertyByName(VMContext *ctx, const SizedString &name, const JsValue &descriptor) {
     for (auto p = _props; p < _propsEnd; p++) {
         if (name.equal(p->name)) {
-            defineNameProperty(ctx, &p->prop, descriptor, name);
+            p->prop = descriptor;
             return;
         }
     }
@@ -30,29 +30,29 @@ void JsObjectLazy::definePropertyByName(VMContext *ctx, const SizedString &name,
     if (!_obj) {
         _newObject(ctx);
     }
-    _obj->definePropertyByName(ctx, name, descriptor);
+    _obj->setPropertyByName(ctx, name, descriptor);
 }
 
-void JsObjectLazy::definePropertyByIndex(VMContext *ctx, uint32_t index, const JsProperty &descriptor) {
+void JsObjectLazy::setPropertyByIndex(VMContext *ctx, uint32_t index, const JsValue &descriptor) {
     if (!_obj) {
         _newObject(ctx);
     }
 
-    _obj->definePropertyByIndex(ctx, index, descriptor);
+    _obj->setPropertyByIndex(ctx, index, descriptor);
 }
 
-void JsObjectLazy::definePropertyBySymbol(VMContext *ctx, uint32_t index, const JsProperty &descriptor) {
+void JsObjectLazy::setPropertyBySymbol(VMContext *ctx, uint32_t index, const JsValue &descriptor) {
     if (!_obj) {
         _newObject(ctx);
     }
 
-    _obj->definePropertyBySymbol(ctx, index, descriptor);
+    _obj->setPropertyBySymbol(ctx, index, descriptor);
 }
 
 JsError JsObjectLazy::setByName(VMContext *ctx, const JsValue &thiz, const SizedString &name, const JsValue &value) {
     for (auto p = _props; p < _propsEnd; p++) {
         if (name.equal(p->name)) {
-            return set(ctx, &p->prop, thiz, value);
+            return setPropertyValue(ctx, &p->prop, thiz, value);
         }
     }
 
@@ -80,7 +80,7 @@ JsError JsObjectLazy::setBySymbol(VMContext *ctx, const JsValue &thiz, uint32_t 
 JsValue JsObjectLazy::increaseByName(VMContext *ctx, const JsValue &thiz, const SizedString &name, int n, bool isPost) {
     for (auto p = _props; p < _propsEnd; p++) {
         if (name.equal(p->name)) {
-            return increase(ctx, &p->prop, thiz, n, isPost);
+            return increasePropertyValue(ctx, &p->prop, thiz, n, isPost);
         }
     }
 
@@ -105,12 +105,10 @@ JsValue JsObjectLazy::increaseBySymbol(VMContext *ctx, const JsValue &thiz, uint
     return _obj->increaseBySymbol(ctx, thiz, index, n, isPost);
 }
 
-JsProperty *JsObjectLazy::getRawByName(VMContext *ctx, const SizedString &name, JsNativeFunction &funcGetterOut, bool includeProtoProp) {
-    funcGetterOut = nullptr;
-
+JsValue *JsObjectLazy::getRawByName(VMContext *ctx, const SizedString &name, bool includeProtoProp) {
     for (auto p = _props; p < _propsEnd; p++) {
         if (name.equal(p->name)) {
-            if (p->isLazyInit && p->prop.value.type == JDT_NOT_INITIALIZED) {
+            if (p->isLazyInit && p->prop.isEmpty()) {
                 onInitLazyProperty(ctx, p);
             }
             return &p->prop;
@@ -118,7 +116,7 @@ JsProperty *JsObjectLazy::getRawByName(VMContext *ctx, const SizedString &name, 
     }
 
     if (_obj) {
-        return _obj->getRawByName(ctx, name, funcGetterOut, includeProtoProp);
+        return _obj->getRawByName(ctx, name, includeProtoProp);
     }
 
     if (name.equal(SS___PROTO__)) {
@@ -127,20 +125,16 @@ JsProperty *JsObjectLazy::getRawByName(VMContext *ctx, const SizedString &name, 
 
     if (includeProtoProp) {
         // 查找 __proto__ 的属性
-        if (__proto__.value.equal(jsValuePrototypeFunction)) {
-            // 缺省的 Function.prototype
-            return ctx->runtime->objPrototypeFunction->getRawByName(ctx, name, funcGetterOut, true);
-        } else if (__proto__.value.type >= JDT_OBJECT) {
-            auto obj = ctx->runtime->getObject(__proto__.value);
-            assert(obj);
-            return obj->getRawByName(ctx, name, funcGetterOut, true);
+        auto obj = getPrototypeObject(ctx);
+        if (obj) {
+            return obj->getRawByName(ctx, name, true);
         }
     }
 
     return nullptr;
 }
 
-JsProperty *JsObjectLazy::getRawByIndex(VMContext *ctx, uint32_t index, bool includeProtoProp) {
+JsValue *JsObjectLazy::getRawByIndex(VMContext *ctx, uint32_t index, bool includeProtoProp) {
     if (_obj) {
         return _obj->getRawByIndex(ctx, index, includeProtoProp);
     }
@@ -148,7 +142,7 @@ JsProperty *JsObjectLazy::getRawByIndex(VMContext *ctx, uint32_t index, bool inc
     return nullptr;
 }
 
-JsProperty *JsObjectLazy::getRawBySymbol(VMContext *ctx, uint32_t index, bool includeProtoProp) {
+JsValue *JsObjectLazy::getRawBySymbol(VMContext *ctx, uint32_t index, bool includeProtoProp) {
     if (_obj) {
         return _obj->getRawBySymbol(ctx, index, includeProtoProp);
     }
@@ -159,7 +153,7 @@ JsProperty *JsObjectLazy::getRawBySymbol(VMContext *ctx, uint32_t index, bool in
 bool JsObjectLazy::removeByName(VMContext *ctx, const SizedString &name) {
     for (auto p = _props; p < _propsEnd; p++) {
         if (name.equal(p->name)) {
-            if (p->prop.isConfigurable) {
+            if (p->prop.isConfigurable()) {
                 memmove(p, p + 1, sizeof(*p) * (_propsEnd - p));
                 _propsEnd--;
                 return true;
@@ -192,24 +186,24 @@ bool JsObjectLazy::removeBySymbol(VMContext *ctx, uint32_t index) {
     return true;
 }
 
-void JsObjectLazy::changeAllProperties(VMContext *ctx, int8_t configurable, int8_t writable) {
+void JsObjectLazy::changeAllProperties(VMContext *ctx, JsPropertyFlags toAdd, JsPropertyFlags toRemove) {
     for (auto p = _props; p < _propsEnd; p++) {
-        p->prop.changeProperty(configurable, writable);
+        p->prop.changeProperty(toAdd, toRemove);
     }
 
     if (_obj) {
-        _obj->changeAllProperties(ctx, configurable, writable);
+        _obj->changeAllProperties(ctx, toAdd, toRemove);
     }
 }
 
-bool JsObjectLazy::hasAnyProperty(VMContext *ctx, bool configurable, bool writable) {
+bool JsObjectLazy::hasAnyProperty(VMContext *ctx, JsPropertyFlags flags) {
     for (auto p = _props; p < _propsEnd; p++) {
-        if (p->prop.isPropertyAny(configurable, writable)) {
+        if (p->prop.isPropertyAny(flags)) {
             return true;
         }
     }
 
-    return _obj && _obj->hasAnyProperty(ctx, configurable, writable);
+    return _obj && _obj->hasAnyProperty(ctx, flags);
 }
 
 void JsObjectLazy::preventExtensions(VMContext *ctx) {
@@ -246,7 +240,7 @@ void JsObjectLazy::markReferIdx(VMRuntime *rt) {
 void JsObjectLazy::_newObject(VMContext *ctx) {
     assert(_obj == nullptr);
 
-    _obj = new JsObject(__proto__.value);
+    _obj = new JsObject(__proto__);
 
     if (isPreventedExtensions) {
         _obj->preventExtensions(ctx);

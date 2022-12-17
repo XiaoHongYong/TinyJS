@@ -20,7 +20,7 @@ static void symbolConstructor(VMContext *ctx, const JsValue &thiz, const Argumen
 
     JsSymbol symbol(name);
 
-    ctx->retValue = runtime->pushSymbolValue(symbol);
+    ctx->retValue = runtime->pushSymbol(symbol);
 }
 
 static void symbolFor(VMContext *ctx, const JsValue &thiz, const Arguments &args) {
@@ -31,8 +31,8 @@ static void symbolFor(VMContext *ctx, const JsValue &thiz, const Arguments &args
 static JsLibProperty symbolFunctions[] = {
     { "for", symbolFor },
     { "name", nullptr, "Symbol" },
-    { "length", nullptr, nullptr, JsValue(JDT_INT32, 1) },
-    { "prototype", nullptr, nullptr, JsValue(JDT_INT32, 1) },
+    { "length", nullptr, nullptr, jsValueLength1Property },
+    { "prototype", nullptr, nullptr, jsValuePropertyPrototype },
 };
 
 inline JsValue convertSymbolToJsValue(VMContext *ctx, const JsValue &thiz, const char *funcName) {
@@ -44,7 +44,7 @@ inline JsValue convertSymbolToJsValue(VMContext *ctx, const JsValue &thiz, const
     }
 
     ctx->throwException(JE_TYPE_ERROR, "Symbol.prototype.%s requires that 'this' be a Symbol", funcName);
-    return jsValueNotInitialized;
+    return jsValueEmpty;
 }
 
 void symbolPrototypeToString(VMContext *ctx, const JsValue &thiz, const Arguments &args) {

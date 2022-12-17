@@ -88,30 +88,30 @@ function f() {
     };
 
     const unboundGetX = module.getX;
-    console.log(unboundGetX()); // The function gets invoked at the global scope
+    console.log(0, unboundGetX()); // The function gets invoked at the global scope
     // expected output: undefined
     
     var boundGetX = unboundGetX.bind(module);
-    console.log(boundGetX.name);
-    console.log(boundGetX());
+    console.log(1, boundGetX.name);
+    console.log(2, boundGetX());
     // expected output: 42
 
     boundGetX = boundGetX.bind();
-    console.log(boundGetX.name);
-    console.log(boundGetX());
+    console.log(3, boundGetX.name);
+    console.log(4, boundGetX());
     // expected output: 42
 
     boundGetX = unboundGetX.bind();
-    console.log(boundGetX());
+    console.log(5, boundGetX());
 }
 f();
 /* OUTPUT
-undefined
-bound getX
-42
-bound bound getX
-42
-undefined
+0 undefined
+1 bound getX
+2 42
+3 bound bound getX
+4 42
+5 undefined
 */
 
 
@@ -227,3 +227,4 @@ false
 [object Reflect]
 false
 */
+

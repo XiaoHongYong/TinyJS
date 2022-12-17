@@ -23,10 +23,10 @@ void math_abs(VMContext *ctx, const JsValue &thiz, const Arguments &args) {
         if (d >= 0) {
             ctx->retValue = value;
         } else if (value.type == JDT_INT32) {
-            ctx->retValue = JsValue(JDT_INT32, -value.value.n32);
+            ctx->retValue = makeJsValueInt32(-value.value.n32);
         } else {
             // double
-            ctx->retValue = runtime->pushDoubleValue(-d);
+            ctx->retValue = runtime->pushDouble(-d);
         }
     } else {
         if (isnan(d)) {
@@ -37,9 +37,9 @@ void math_abs(VMContext *ctx, const JsValue &thiz, const Arguments &args) {
             }
 
             if (d == (int32_t)d) {
-                ctx->retValue = JsValue(JDT_INT32, (int32_t)d);
+                ctx->retValue = makeJsValueInt32((int32_t)d);
             } else {
-                ctx->retValue = runtime->pushDoubleValue(d);
+                ctx->retValue = runtime->pushDouble(d);
             }
         }
     }
@@ -113,10 +113,10 @@ void math_ceil(VMContext *ctx, const JsValue &thiz, const Arguments &args) {
     } else {
         auto n = (int32_t)d;
         if (n == (int64_t)d) {
-            ctx->retValue = JsValue(JDT_INT32, n);
+            ctx->retValue = makeJsValueInt32(n);
         } else {
             auto n = (int64_t)d;
-            ctx->retValue = runtime->pushDoubleValue(n);
+            ctx->retValue = runtime->pushDouble(n);
         }
     }
 }
@@ -171,9 +171,9 @@ void math_floor(VMContext *ctx, const JsValue &thiz, const Arguments &args) {
     } else {
         auto n = (int32_t)d;
         if (n == (int64_t)d) {
-            ctx->retValue = JsValue(JDT_INT32, n);
+            ctx->retValue = makeJsValueInt32(n);
         } else {
-            ctx->retValue = runtime->pushDoubleValue(d);
+            ctx->retValue = runtime->pushDouble(d);
         }
     }
 }
@@ -225,7 +225,7 @@ void math_max(VMContext *ctx, const JsValue &thiz, const Arguments &args) {
     auto v1 = args.getAt(0);
     auto v2 = args.getAt(1);
     if (v1.type == JDT_INT32 && v2.type == JDT_INT32) {
-        ctx->retValue = JsValue(JDT_INT32, max(v1.value.n32, v2.value.n32));
+        ctx->retValue = makeJsValueInt32(max(v1.value.n32, v2.value.n32));
         return;
     }
 
@@ -235,13 +235,13 @@ void math_max(VMContext *ctx, const JsValue &thiz, const Arguments &args) {
         if (v1.isNumber()) {
             ctx->retValue = v1;
         } else {
-            ctx->retValue = runtime->pushDoubleValue(d1);
+            ctx->retValue = runtime->pushDouble(d1);
         }
     } else {
         if (v2.isNumber()) {
             ctx->retValue = v2;
         } else {
-            ctx->retValue = runtime->pushDoubleValue(d2);
+            ctx->retValue = runtime->pushDouble(d2);
         }
     }
 }
@@ -251,7 +251,7 @@ void math_min(VMContext *ctx, const JsValue &thiz, const Arguments &args) {
     auto v1 = args.getAt(0);
     auto v2 = args.getAt(1);
     if (v1.type == JDT_INT32 && v2.type == JDT_INT32) {
-        ctx->retValue = JsValue(JDT_INT32, min(v1.value.n32, v2.value.n32));
+        ctx->retValue = makeJsValueInt32(min(v1.value.n32, v2.value.n32));
         return;
     }
 
@@ -261,13 +261,13 @@ void math_min(VMContext *ctx, const JsValue &thiz, const Arguments &args) {
         if (v1.isNumber()) {
             ctx->retValue = v1;
         } else {
-            ctx->retValue = runtime->pushDoubleValue(d1);
+            ctx->retValue = runtime->pushDouble(d1);
         }
     } else {
         if (v2.isNumber()) {
             ctx->retValue = v2;
         } else {
-            ctx->retValue = runtime->pushDoubleValue(d2);
+            ctx->retValue = runtime->pushDouble(d2);
         }
     }
 }
@@ -281,15 +281,15 @@ void math_pow(VMContext *ctx, const JsValue &thiz, const Arguments &args) {
 
     auto r = pow(d1, d2);
     if (r == (int32_t)r) {
-        ctx->retValue = JsValue(JDT_INT32, r);
+        ctx->retValue = makeJsValueInt32(r);
     } else {
-        ctx->retValue = runtime->pushDoubleValue(r);
+        ctx->retValue = runtime->pushDouble(r);
     }
 }
 
 void math_random(VMContext *ctx, const JsValue &thiz, const Arguments &args) {
     double r = rand() / (double)RAND_MAX;
-    ctx->retValue = ctx->runtime->pushDoubleValue(r);
+    ctx->retValue = ctx->runtime->pushDouble(r);
 }
 
 void math_round(VMContext *ctx, const JsValue &thiz, const Arguments &args) {
@@ -312,9 +312,9 @@ void math_round(VMContext *ctx, const JsValue &thiz, const Arguments &args) {
     } else {
         auto n = (int32_t)d;
         if (n == (int64_t)d) {
-            ctx->retValue = JsValue(JDT_INT32, n);
+            ctx->retValue = makeJsValueInt32(n);
         } else {
-            ctx->retValue = runtime->pushDoubleValue(d);
+            ctx->retValue = runtime->pushDouble(d);
         }
     }
 }
@@ -326,9 +326,9 @@ void math_sign(VMContext *ctx, const JsValue &thiz, const Arguments &args) {
     if (isnan(d)) {
         ctx->retValue = jsValueNaN;
     } else if (d == 0) {
-        ctx->retValue = JsValue(JDT_INT32, 0);
+        ctx->retValue = makeJsValueInt32(0);
     } else {
-        ctx->retValue = JsValue(JDT_INT32, signbit(d) ? -1 : 1);
+        ctx->retValue = makeJsValueInt32(signbit(d) ? -1 : 1);
     }
 }
 
@@ -357,7 +357,7 @@ void math_sqrt(VMContext *ctx, const JsValue &thiz, const Arguments &args) {
             ctx->retValue = jsValueInf;
         }
     } else {
-        ctx->retValue = runtime->pushDoubleValue(d);
+        ctx->retValue = runtime->pushDouble(d);
     }
 }
 
@@ -382,7 +382,7 @@ void math_trunc(VMContext *ctx, const JsValue &thiz, const Arguments &args) {
 
 static JsLibProperty mathFunctions[] = {
     { "name", nullptr, "Math" },
-    { "length", nullptr, nullptr, JsValue(JDT_INT32, 1) },
+    { "length", nullptr, nullptr, jsValueLength1Property },
     { "abs", math_abs, },
     { "acos", math_acos, },
     { "acosh", math_acosh, },

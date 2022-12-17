@@ -26,29 +26,17 @@ public:
             }
 
             auto index = (*_it).second->storageIndex;
-            if (index < _scope->varProperties.size()) {
-                auto prop = &_scope->varProperties[index];
-                if (!prop->isEnumerable && !_includeNoneEnumerable) {
-                    ++_it;
-                    continue;;
-                }
+            auto prop = &_scope->vars[index];
+            if (!prop->isEnumerable() && !_includeNoneEnumerable) {
+                ++_it;
+                continue;;
+            }
 
-                if (valueOut) {
-                    if (prop->isGSetter) {
-                        prop->value = _scope->vars[index];
-                        if (prop->value.type >= JDT_FUNCTION) {
-                            _ctx->vm->callMember(_ctx, jsValueGlobalThis, prop->value, Arguments());
-                            *valueOut = _ctx->retValue;
-                        } else {
-                            *valueOut = jsValueUndefined;
-                        }
-                    } else {
-                        *valueOut = _scope->vars[index];
-                    }
-                }
-            } else {
-                if (valueOut) {
-                    *valueOut = _scope->vars[index];
+            if (valueOut) {
+                if (prop->isGetterSetter()) {
+                    *valueOut = getPropertyValue(_ctx, jsValueGlobalThis, prop);
+                } else {
+                    *valueOut = *prop;
                 }
             }
 
@@ -73,8 +61,8 @@ protected:
 
 };
 
-JsGlobalThis::JsGlobalThis(VMGlobalScope *scope) : _scope(scope) {
-    type = JDT_OBJ_GLOBAL_THIS;
+JsGlobalThis::JsGlobalThis(VMGlobalScope *scope) : IJsObject(jsValuePrototypeWindow, JDT_OBJ_GLOBAL_THIS), _scope(scope)
+{
     _scopeDesc = scope->scopeDsc;
     _obj = nullptr;
 }
@@ -82,7 +70,7 @@ JsGlobalThis::JsGlobalThis(VMGlobalScope *scope) : _scope(scope) {
 JsGlobalThis::~JsGlobalThis() {
 }
 
-void JsGlobalThis::definePropertyByName(VMContext *ctx, const SizedString &name, const JsProperty &descriptor) {
+void JsGlobalThis::setPropertyByName(VMContext *ctx, const SizedString &name, const JsValue &descriptor) {
     auto declare = _scopeDesc->getVarDeclarationByName(name);
     if (!declare) {
         declare = PoolNew(_scopeDesc->function->resourcePool->pool, IdentifierDeclare)(name, _scopeDesc);
@@ -90,40 +78,22 @@ void JsGlobalThis::definePropertyByName(VMContext *ctx, const SizedString &name,
         declare->varStorageType = VST_GLOBAL_VAR;
         declare->isReferredByChild = true;
 
-        _scope->vars.resize(_scopeDesc->countLocalVars, jsValueUndefined);
+        _scope->vars.resize(_scopeDesc->countLocalVars, jsValueUndefined.asProperty());
     }
 
     auto index = declare->storageIndex;
-
-    if (_scopeDesc->countLocalVars > _scope->varProperties.size()) {
-        if (_scope->varProperties.empty()) {
-            _scope->varProperties.resize(ctx->runtime->countImmutableGlobalVars,
-                                         JsProperty(jsValueUndefined, false, true, true, true));
-        }
-
-        bool notDefined = index >= _scope->varProperties.size();
-        _scope->varProperties.resize(_scopeDesc->countLocalVars, JsProperty(jsValueUndefined, false, true, true, true));
-        if (notDefined) {
-            _scope->varProperties[index] = descriptor;
-            _scope->vars[index] = descriptor.value;
-            return;
-        }
-    }
-
-    _scope->varProperties[index].value = _scope->vars[index];
-    defineNameProperty(ctx, &_scope->varProperties[index], descriptor, name);
-    _scope->vars[index] = _scope->varProperties[index].value;
+    _scope->vars[index] = descriptor;
 }
 
-void JsGlobalThis::definePropertyByIndex(VMContext *ctx, uint32_t index, const JsProperty &descriptor) {
+void JsGlobalThis::setPropertyByIndex(VMContext *ctx, uint32_t index, const JsValue &descriptor) {
 }
 
-void JsGlobalThis::definePropertyBySymbol(VMContext *ctx, uint32_t index, const JsProperty &descriptor) {
+void JsGlobalThis::setPropertyBySymbol(VMContext *ctx, uint32_t index, const JsValue &descriptor) {
     if (!_obj) {
         _newObject(ctx);
     }
 
-    _obj->definePropertyBySymbol(ctx, index, descriptor);
+    _obj->setPropertyBySymbol(ctx, index, descriptor);
 }
 
 JsError JsGlobalThis::setByName(VMContext *ctx, const JsValue &thiz, const SizedString &name, const JsValue &value) {
@@ -133,29 +103,23 @@ JsError JsGlobalThis::setByName(VMContext *ctx, const JsValue &thiz, const Sized
     }
 
     // 查找 prototye 的属性
-    JsProperty *prop = nullptr;
-    JsNativeFunction funcGetter = nullptr;
+    JsValue *prop = nullptr;
     auto objProto = getPrototypeObject(ctx);
     if (objProto) {
-        prop = objProto->getRawByName(ctx, name, funcGetter, true);
+        prop = objProto->getRawByName(ctx, name, true);
     }
 
     if (prop) {
-        if (prop->isGSetter) {
-            if (prop->setter.isValid()) {
-                // prototype 带 setter 的可以直接返回用于修改调用
-                return set(ctx, prop, thiz, value);
-            } else {
-                return JE_TYPE_NO_PROP_SETTER;
-            }
-        } else if (!prop->isWritable) {
+        if (prop->isGetterSetter()) {
+            return setPropertyValueBySetter(ctx, prop, thiz, value);
+        } else if (!prop->isWritable()) {
             return JE_TYPE_PROP_READ_ONLY;
         }
     }
 
     auto index = _newIdentifier(name);
 
-    _scope->vars.resize(_scopeDesc->countLocalVars, jsValueUndefined);
+    _scope->vars.resize(_scopeDesc->countLocalVars, jsValueUndefined.asProperty());
     return _scope->set(ctx, index, value);
 }
 
@@ -178,32 +142,31 @@ JsValue JsGlobalThis::increaseByName(VMContext *ctx, const JsValue &thiz, const 
     }
 
     // 查找 prototye 的属性
-    JsProperty *prop = nullptr;
-    JsNativeFunction funcGetter = nullptr;
+    JsValue *prop = nullptr;
     auto objProto = getPrototypeObject(ctx);
     if (objProto) {
-        prop = objProto->getRawByName(ctx, name, funcGetter, true);
+        prop = objProto->getRawByName(ctx, name, true);
     }
 
     if (prop) {
-        if (prop->isGSetter) {
+        if (prop->isGetterSetter()) {
             // prototype 带 getter/setter
-            return increase(ctx, prop, thiz, n, isPost);
+            return increasePropertyValue(ctx, prop, thiz, n, isPost);
         }
 
         // 不能修改到 proto，所以先复制到 temp，再添加
-        JsProperty tmp = *prop;
-        auto ret = increase(ctx, &tmp, thiz, n, isPost);
+        JsValue tmp = *prop;
+        auto ret = increasePropertyValue(ctx, &tmp, thiz, n, isPost);
 
-        if (prop->isWritable) {
+        if (prop->isWritable()) {
             // 添加新属性
-            _scope->set(ctx, _newIdentifier(name), tmp.value);
+            _scope->set(ctx, _newIdentifier(name), tmp);
         }
         return ret;
     }
 
     auto idx = _newIdentifier(name);
-    _scope->vars.resize(_scopeDesc->countLocalVars, jsValueUndefined);
+    _scope->vars.resize(_scopeDesc->countLocalVars, jsValueUndefined.asProperty());
     return _scope->increase(ctx, idx, n, isPost);
 }
 
@@ -232,13 +195,13 @@ JsValue JsGlobalThis::increaseBySymbol(VMContext *ctx, const JsValue &thiz, uint
     return _obj->increaseBySymbol(ctx, thiz, index, n, isPost);
 }
 
-JsProperty *JsGlobalThis::getRawByName(VMContext *ctx, const SizedString &name, JsNativeFunction &funcGetterOut, bool includeProtoProp) {
+JsValue *JsGlobalThis::getRawByName(VMContext *ctx, const SizedString &name, bool includeProtoProp) {
     auto declare = _scopeDesc->getVarDeclarationByName(name);
     if (!declare) {
         if (includeProtoProp) {
             auto objProto = getPrototypeObject(ctx);
             if (objProto) {
-                return objProto->getRawByName(ctx, name, funcGetterOut, includeProtoProp);
+                return objProto->getRawByName(ctx, name, includeProtoProp);
             }
         }
 
@@ -246,26 +209,15 @@ JsProperty *JsGlobalThis::getRawByName(VMContext *ctx, const SizedString &name, 
     }
 
     auto index = declare->storageIndex;
-    if (index >= _scope->varProperties.size()) {
-        static JsProperty prop;
-        // 暂时存在这里
-        prop = JsProperty(_scope->vars[index], false, true, true, true);
-        if (!prop.value.isValid()) {
-            prop.value = jsValueUndefined;
-        }
-        return &prop;
-    }
-
-    _scope->varProperties[index].value = _scope->vars[index];
-    return &_scope->varProperties[index];
+    return &_scope->vars[index];
 }
 
-JsProperty *JsGlobalThis::getRawByIndex(VMContext *ctx, uint32_t index, bool includeProtoProp) {
+JsValue *JsGlobalThis::getRawByIndex(VMContext *ctx, uint32_t index, bool includeProtoProp) {
     // 不支持 index 的访问
     return nullptr;
 }
 
-JsProperty *JsGlobalThis::getRawBySymbol(VMContext *ctx, uint32_t index, bool includeProtoProp) {
+JsValue *JsGlobalThis::getRawBySymbol(VMContext *ctx, uint32_t index, bool includeProtoProp) {
     if (_obj) {
         return _obj->getRawBySymbol(ctx, index, includeProtoProp);
     }
@@ -280,21 +232,13 @@ bool JsGlobalThis::removeByName(VMContext *ctx, const SizedString &name) {
     }
 
     auto index = declare->storageIndex;
-    if (index < ctx->runtime->countImmutableGlobalVars) {
-        return false;
-    } else if (index < _scope->varProperties.size()) {
-        auto &prop = _scope->varProperties[index];
-        if (!prop.isConfigurable) {
-            return false;
-        }
-
-        prop = JsProperty(jsValueUndefined);
-        _scope->vars[index] = jsValueUndefined;
-    } else {
-        _scope->vars[index] = jsValueUndefined;
+    auto &prop = _scope->vars[index];
+    if (prop.isConfigurable()) {
+        prop = jsValueUndefined.asProperty();
+        return true;
     }
 
-    return true;
+    return false;
 }
 
 bool JsGlobalThis::removeByIndex(VMContext *ctx, uint32_t index) {
@@ -310,7 +254,7 @@ bool JsGlobalThis::removeBySymbol(VMContext *ctx, uint32_t index) {
     return true;
 }
 
-void JsGlobalThis::changeAllProperties(VMContext *ctx, int8_t configurable, int8_t writable) {
+void JsGlobalThis::changeAllProperties(VMContext *ctx, JsPropertyFlags toAdd, JsPropertyFlags toRemove) {
     ctx->throwException(JE_TYPE_ERROR, "Cannot freeze");
 }
 

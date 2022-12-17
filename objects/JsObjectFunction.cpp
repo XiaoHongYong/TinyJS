@@ -8,16 +8,15 @@
 #include "JsObjectFunction.hpp"
 
 
-JsObjectFunction::JsObjectFunction(const VecVMStackScopes &stackScopes, Function *function) : JsObjectLazy(_props, CountOf(_props), jsValuePrototypeFunction), stackScopes(stackScopes), function(function) {
-    type = JDT_FUNCTION;
-
+JsObjectFunction::JsObjectFunction(const VecVMStackScopes &stackScopes, Function *function) : JsObjectLazy(_props, CountOf(_props), jsValuePrototypeFunction, JDT_FUNCTION), stackScopes(stackScopes), function(function)
+{
     // isGSetter, isConfigurable, isEnumerable, isWritable
     JsLazyProperty props[] = {
-        { SS_PROTOTYPE, JsProperty(jsValueNotInitialized, false, false, false, true), true },
-        { SS_NAME, JsProperty(jsValueNotInitialized, false, false, false, false), true, },
-        { SS_LENGTH, JsProperty(JsValue(JDT_INT32, 0), false, false, false, false), false, },
-        { SS_CALLER, JsProperty(jsValueNull, false, false, false, false), false, },
-        { SS_ARGUMENTS, JsProperty(jsValueNull, false, false, false, false), false, },
+        { SS_PROTOTYPE, jsValueUndefined.asProperty(JP_WRITABLE | JP_EMPTY), true },
+        { SS_NAME, jsValueEmpty, true, },
+        { SS_LENGTH, jsValueLength0Property, false, },
+        { SS_CALLER, jsValueNull.asProperty(0), false, },
+        { SS_ARGUMENTS, jsValueNull.asProperty(0), false, },
     };
 
     static_assert(sizeof(props) == sizeof(props));
@@ -35,10 +34,10 @@ void JsObjectFunction::onInitLazyProperty(VMContext *ctx, JsLazyProperty *prop) 
     if (name.equal(SS_PROTOTYPE)) {
         // 为了节省内存分配，延迟初始化 _prototype 属性
         auto proto = new JsObject();
-        prop->prop.value = ctx->runtime->pushObjectValue(proto);
-        proto->setByName(ctx, prop->prop.value, SS_CONSTRUCTOR, self);
+        prop->prop.setValue(ctx->runtime->pushObject(proto));
+        proto->setByName(ctx, proto->self, SS_CONSTRUCTOR, self);
     } else if (name.equal(SS_NAME)) {
-        prop->prop.value = ctx->runtime->pushString(function->name);
+        prop->prop.setValue(ctx->runtime->pushString(function->name));
     } else {
         assert(0);
     }
@@ -66,16 +65,14 @@ void JsObjectFunction::markReferIdx(VMRuntime *rt) {
 }
 
 
-JsObjectBoundFunction::JsObjectBoundFunction(const JsValue &func, const JsValue &thiz) : JsObjectLazy(_props, CountOf(_props), jsValuePrototypeFunction), func(func), thiz(thiz)
+JsObjectBoundFunction::JsObjectBoundFunction(const JsValue &func, const JsValue &thiz) : JsObjectLazy(_props, CountOf(_props), jsValuePrototypeFunction, JDT_BOUND_FUNCTION), func(func), thiz(thiz)
 {
     assert(func.type >= JDT_FUNCTION);
 
-    type = JDT_BOUND_FUNCTION;
-
     // isGSetter, isConfigurable, isEnumerable, isWritable
     static JsLazyProperty props[] = {
-        { SS_NAME, JsProperty(jsValueNotInitialized, false, false, false, false), true, },
-        { SS_LENGTH, JsProperty(JsValue(JDT_INT32, 0), false, false, false, false), false, },
+        { SS_NAME, jsValueEmpty.asProperty(JP_EMPTY), true, },
+        { SS_LENGTH, jsValueLength0Property, false, },
     };
 
     static_assert(sizeof(props) == sizeof(props));
@@ -94,7 +91,7 @@ void JsObjectBoundFunction::onInitLazyProperty(VMContext *ctx, JsLazyProperty *p
         static SizedString SS_BOUND_PREFIX("bound ");
 
         auto value = ctx->vm->getMemberDot(ctx, func, SS_NAME);
-        prop->prop.value = ctx->runtime->plusString(SS_BOUND_PREFIX, value);
+        prop->prop.setValue(ctx->runtime->plusString(SS_BOUND_PREFIX, value));
     } else {
         assert(0);
     }

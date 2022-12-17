@@ -54,7 +54,7 @@ public:
             }
 
             auto &prop = (*_it).second;
-            if (prop.isEnumerable || _includeNoneEnumerable) {
+            if (prop.isEnumerable() || _includeNoneEnumerable) {
                 break;
             }
             _it++;
@@ -69,7 +69,7 @@ public:
         }
 
         if (valueOut) {
-            *valueOut = getPropertyValue(_ctx, (*_it).second, _obj->self);
+            *valueOut = getPropertyValue(_ctx, _obj->self, (*_it).second);
         }
 
         _it++;
@@ -86,8 +86,7 @@ protected:
 };
 
 
-JsObject::JsObject(const JsValue &proto) : __proto__(proto, false, false, false, true) {
-    type = JDT_OBJECT;
+JsObject::JsObject(const JsValue &proto) : IJsObject(proto, JDT_OBJECT) {
     _symbolProps = nullptr;
 }
 
@@ -105,9 +104,7 @@ JsObject::~JsObject() {
     }
 }
 
-void JsObject::definePropertyByName(VMContext *ctx, const SizedString &name, const JsProperty &descriptor) {
-    JsProperty *prop;
-
+void JsObject::setPropertyByName(VMContext *ctx, const SizedString &name, const JsValue &descriptor) {
     auto it = _props.find(name);
     if (it == _props.end()) {
         if (isPreventedExtensions) {
@@ -116,28 +113,25 @@ void JsObject::definePropertyByName(VMContext *ctx, const SizedString &name, con
         }
 
         if (name.equal(SS___PROTO__)) {
-            prop = &__proto__;
+            __proto__ = descriptor;
         } else {
             // 定义新的属性
-            _props[copyPropertyIfNeed(name)] = descriptor.defineProperty();
-            return;
+            _props[copyPropertyIfNeed(name)] = descriptor;
         }
     } else {
-        prop = &(*it).second;
+        (*it).second = descriptor;
     }
-
-    defineNameProperty(ctx, prop, descriptor, name);
 }
 
-void JsObject::definePropertyByIndex(VMContext *ctx, uint32_t index, const JsProperty &descriptor) {
+void JsObject::setPropertyByIndex(VMContext *ctx, uint32_t index, const JsValue &descriptor) {
     NumberToSizedString name(index);
-    return definePropertyByName(ctx, name, descriptor);
+    return setPropertyByName(ctx, name, descriptor);
 }
 
-void JsObject::definePropertyBySymbol(VMContext *ctx, uint32_t index, const JsProperty &descriptor) {
+void JsObject::setPropertyBySymbol(VMContext *ctx, uint32_t index, const JsValue &descriptor) {
     auto prop = getRawBySymbol(ctx, index, false);
     if (prop) {
-        defineSymbolProperty(ctx, prop, descriptor, index);
+        *prop = descriptor;
         return;
     }
 
@@ -150,7 +144,7 @@ void JsObject::definePropertyBySymbol(VMContext *ctx, uint32_t index, const JsPr
     if (!_symbolProps) {
         _symbolProps = new MapSymbolToJsProperty;
     }
-    (*_symbolProps)[index] = descriptor.defineProperty();
+    (*_symbolProps)[index] = descriptor;
 }
 
 JsError JsObject::setByName(VMContext *ctx, const JsValue &thiz, const SizedString &name, const JsValue &value) {
@@ -158,39 +152,35 @@ JsError JsObject::setByName(VMContext *ctx, const JsValue &thiz, const SizedStri
     if (it == _props.end()) {
         if (name.equal(SS___PROTO__)) {
             if (!isPreventedExtensions) {
-                return set(ctx, &__proto__, thiz, value);
+                return setPropertyValue(ctx, &__proto__, thiz, value);
             }
             return JE_TYPE_PREVENTED_EXTENSION;
         }
 
         // 查找 prototye 的属性
-        JsProperty *prop = nullptr;
-        JsNativeFunction funcGetter = nullptr;
+        JsValue *prop = nullptr;
         auto objProto = getPrototypeObject(ctx);
         if (objProto) {
-            prop = objProto->getRawByName(ctx, name, funcGetter, true);
+            prop = objProto->getRawByName(ctx, name, true);
         }
 
         if (prop) {
-            if (prop->isGSetter) {
-                if (prop->setter.isValid()) {
-                    // prototype 带 setter 的可以直接返回用于修改调用
-                    return set(ctx, prop, thiz, value);
-                }
-                return JE_TYPE_NO_PROP_SETTER;
-            } else if (!prop->isWritable) {
+            if (prop->isGetterSetter()) {
+                // prototype 带 setter 的可以直接返回用于修改调用
+                return setPropertyValue(ctx, prop, thiz, value);
+            } else if (!prop->isWritable()) {
                 return JE_TYPE_PROP_READ_ONLY;
             }
         }
 
         if (!isPreventedExtensions) {
             // 添加新属性
-            _props[copyPropertyIfNeed(name)] = value;
+            _props[copyPropertyIfNeed(name)] = value.asProperty();
             return JE_OK;
         }
         return JE_TYPE_PREVENTED_EXTENSION;
     } else {
-        return set(ctx, &(*it).second, thiz, value);
+        return setPropertyValue(ctx, &(*it).second, thiz, value);
     }
 }
 
@@ -203,7 +193,7 @@ JsError JsObject::setBySymbol(VMContext *ctx, const JsValue &thiz, uint32_t inde
     auto prop = getRawBySymbol(ctx, index, false);
     if (prop) {
         // 修改已经存在的
-        return set(ctx, prop, thiz, value);
+        return setPropertyValue(ctx, prop, thiz, value);
     } else {
         if (isPreventedExtensions) {
             return JE_TYPE_PREVENTED_EXTENSION;
@@ -226,26 +216,25 @@ JsValue JsObject::increaseByName(VMContext *ctx, const JsValue &thiz, const Size
         }
 
         // 查找 prototye 的属性
-        JsProperty *prop = nullptr;
-        JsNativeFunction funcGetter = nullptr;
+        JsValue *prop = nullptr;
         auto objProto = getPrototypeObject(ctx);
         if (objProto) {
-            prop = objProto->getRawByName(ctx, name, funcGetter, true);
+            prop = objProto->getRawByName(ctx, name, true);
         }
 
         if (prop) {
-            if (prop->isGSetter) {
+            if (prop->isGetterSetter()) {
                 // prototype 带 getter/setter
-                return increase(ctx, prop, thiz, n, isPost);
+                return increasePropertyValue(ctx, prop, thiz, n, isPost);
             }
 
             // 不能修改到 proto，所以先复制到 temp，再添加
-            JsProperty tmp = *prop;
-            auto ret = increase(ctx, &tmp, thiz, n, isPost);
+            JsValue tmp = *prop;
+            auto ret = increasePropertyValue(ctx, &tmp, thiz, n, isPost);
 
-            if (prop->isWritable) {
+            if (prop->isWritable()) {
                 // 添加新属性
-                _props[copyPropertyIfNeed(name)] = tmp.value;
+                _props[copyPropertyIfNeed(name)] = tmp.asProperty();
             }
             return ret;
         } else {
@@ -253,11 +242,11 @@ JsValue JsObject::increaseByName(VMContext *ctx, const JsValue &thiz, const Size
                 return jsValueNaN;
             }
             // 添加新属性
-            _props[copyPropertyIfNeed(name)] = jsValueNaN;
+            _props[copyPropertyIfNeed(name)] = jsValueNaN.asProperty();
             return jsValueNaN;
         }
     } else {
-        return increase(ctx, &(*it).second, thiz, n, isPost);
+        return increasePropertyValue(ctx, &(*it).second, thiz, n, isPost);
     }
 }
 
@@ -270,7 +259,7 @@ JsValue JsObject::increaseBySymbol(VMContext *ctx, const JsValue &thiz, uint32_t
     auto prop = getRawBySymbol(ctx, index, false);
     if (prop) {
         // 修改已经存在的
-        return increase(ctx, prop, thiz, n, isPost);
+        return increasePropertyValue(ctx, prop, thiz, n, isPost);
     } else {
         if (isPreventedExtensions) {
             return jsValueNaN;
@@ -286,7 +275,7 @@ JsValue JsObject::increaseBySymbol(VMContext *ctx, const JsValue &thiz, uint32_t
     }
 }
 
-JsProperty *JsObject::getRawByName(VMContext *ctx, const SizedString &name, JsNativeFunction &funcGetterOut, bool includeProtoProp) {
+JsValue *JsObject::getRawByName(VMContext *ctx, const SizedString &name, bool includeProtoProp) {
     auto it = _props.find(name);
     if (it == _props.end()) {
         if (name.equal(SS___PROTO__)) {
@@ -296,7 +285,7 @@ JsProperty *JsObject::getRawByName(VMContext *ctx, const SizedString &name, JsNa
         if (includeProtoProp) {
             auto objProto = getPrototypeObject(ctx);
             if (objProto) {
-                return objProto->getRawByName(ctx, name, funcGetterOut, includeProtoProp);
+                return objProto->getRawByName(ctx, name, includeProtoProp);
             }
         }
     } else {
@@ -306,13 +295,12 @@ JsProperty *JsObject::getRawByName(VMContext *ctx, const SizedString &name, JsNa
     return nullptr;
 }
 
-JsProperty *JsObject::getRawByIndex(VMContext *ctx, uint32_t index, bool includeProtoProp) {
+JsValue *JsObject::getRawByIndex(VMContext *ctx, uint32_t index, bool includeProtoProp) {
     NumberToSizedString name(index);
-    JsNativeFunction funcGetter;
-    return getRawByName(ctx, name, funcGetter, includeProtoProp);
+    return getRawByName(ctx, name, includeProtoProp);
 }
 
-JsProperty *JsObject::getRawBySymbol(VMContext *ctx, uint32_t index, bool includeProtoProp) {
+JsValue *JsObject::getRawBySymbol(VMContext *ctx, uint32_t index, bool includeProtoProp) {
     if (!_symbolProps) {
         return nullptr;
     }
@@ -336,7 +324,7 @@ bool JsObject::removeByName(VMContext *ctx, const SizedString &name) {
     auto it = _props.find(name);
     if (it != _props.end()) {
         auto &prop = (*it).second;
-        if (prop.isConfigurable) {
+        if (prop.isConfigurable()) {
             // 删除自己的属性
             auto key = (*it).first;
             if (!key.isStable()) {
@@ -365,7 +353,7 @@ bool JsObject::removeBySymbol(VMContext *ctx, uint32_t index) {
         auto it = _symbolProps->find(index);
         if (it != _symbolProps->end()) {
             auto &prop = (*it).second;
-            if (prop.isConfigurable) {
+            if (prop.isConfigurable()) {
                 // 删除自己的属性
                 _symbolProps->erase(it);
                 return true;
@@ -378,28 +366,29 @@ bool JsObject::removeBySymbol(VMContext *ctx, uint32_t index) {
     return true;
 }
 
-void JsObject::changeAllProperties(VMContext *ctx, int8_t configurable, int8_t writable) {
+void JsObject::changeAllProperties(VMContext *ctx, JsPropertyFlags toAdd, JsPropertyFlags toRemove) {
+
     for (auto &item : _props) {
-        item.second.changeProperty(configurable, writable);
+        item.second.changeProperty(toAdd, toRemove);
     }
 
     if (_symbolProps) {
         for (auto &item : *_symbolProps) {
-            item.second.changeProperty(configurable, writable);
+            item.second.changeProperty(toAdd, toRemove);
         }
     }
 }
 
-bool JsObject::hasAnyProperty(VMContext *ctx, bool configurable, bool writable) {
+bool JsObject::hasAnyProperty(VMContext *ctx, JsPropertyFlags flags) {
     for (auto &item : _props) {
-        if (item.second.isPropertyAny(configurable, writable)) {
+        if (item.second.isPropertyAny(flags)) {
             return true;
         }
     }
 
     if (_symbolProps) {
         for (auto &item : *_symbolProps) {
-            if (item.second.isPropertyAny(configurable, writable)) {
+            if (item.second.isPropertyAny(flags)) {
                 return true;
             }
         }
@@ -409,7 +398,7 @@ bool JsObject::hasAnyProperty(VMContext *ctx, bool configurable, bool writable) 
 }
 
 IJsObject *JsObject::clone() {
-    auto obj = new JsObject(__proto__.value);
+    auto obj = new JsObject(__proto__);
 
     for (auto &item : _props) {
         auto &key = item.first;
@@ -436,8 +425,8 @@ void JsObject::markReferIdx(VMRuntime *rt) {
         rt->markReferIdx(item.second);
     }
 
-    if (__proto__.value.type > JDT_NUMBER) {
-        rt->markReferIdx(__proto__.value);
+    if (__proto__.isValid()) {
+        rt->markReferIdx(__proto__);
     }
 
     if (_symbolProps) {

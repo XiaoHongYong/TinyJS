@@ -23,25 +23,25 @@ struct BinaryOpSub {
     JsValue operator()(VMRuntime *rt, int32_t a, int32_t b) const {
         int64_t r = (int64_t)a - (int64_t)b;
         if (r == (int32_t)r) {
-            return JsValue(JDT_INT32, (int32_t)r);
+            return makeJsValueInt32((int32_t)r);
         } else {
-            return rt->pushDoubleValue(r);
+            return rt->pushDouble(r);
         }
     }
 
     JsValue operator()(VMRuntime *rt, double a, int32_t b) const {
         auto r = a - b;
-        return rt->pushDoubleValue(r);
+        return rt->pushDouble(r);
     }
 
     JsValue operator()(VMRuntime *rt, int32_t a, double b) const {
         auto r = a - b;
-        return rt->pushDoubleValue(r);
+        return rt->pushDouble(r);
     }
 
     JsValue operator()(VMRuntime *rt, double a, double b) const {
         auto r = a - b;
-        return rt->pushDoubleValue(r);
+        return rt->pushDouble(r);
     }
 };
 
@@ -53,30 +53,30 @@ struct BinaryOpMul {
             // 特殊处理 -0 的情况
             double r = (double)a * (double)b;
             if (signbit(r)) {
-                return rt->pushDoubleValue(r);
+                return rt->pushDouble(r);
             } else {
-                return JsValue(JDT_INT32, (int32_t)r);
+                return makeJsValueInt32((int32_t)r);
             }
         } else if (r == (int32_t)r) {
-            return JsValue(JDT_INT32, (int32_t)r);
+            return makeJsValueInt32((int32_t)r);
         } else {
-            return rt->pushDoubleValue(r);
+            return rt->pushDouble(r);
         }
     }
 
     JsValue operator()(VMRuntime *rt, double a, int32_t b) const {
         auto r = a * b;
-        return rt->pushDoubleValue(r);
+        return rt->pushDouble(r);
     }
 
     JsValue operator()(VMRuntime *rt, int32_t a, double b) const {
         auto r = a * b;
-        return rt->pushDoubleValue(r);
+        return rt->pushDouble(r);
     }
 
     JsValue operator()(VMRuntime *rt, double a, double b) const {
         auto r = a * b;
-        return rt->pushDoubleValue(r);
+        return rt->pushDouble(r);
     }
 };
 
@@ -84,25 +84,25 @@ struct BinaryOpDiv {
     JsValue operator()(VMRuntime *rt, int32_t a, int32_t b) const {
         double r = (double)a / (double)b;
         if (r == (int32_t)r && !(r == 0 && signbit(r))) {
-            return JsValue(JDT_INT32, (int32_t)r);
+            return makeJsValueInt32((int32_t)r);
         } else {
-            return rt->pushDoubleValue(r);
+            return rt->pushDouble(r);
         }
     }
 
     JsValue operator()(VMRuntime *rt, double a, int32_t b) const {
         auto r = a / b;
-        return rt->pushDoubleValue(r);
+        return rt->pushDouble(r);
     }
 
     JsValue operator()(VMRuntime *rt, int32_t a, double b) const {
         auto r = a / b;
-        return rt->pushDoubleValue(r);
+        return rt->pushDouble(r);
     }
 
     JsValue operator()(VMRuntime *rt, double a, double b) const {
         auto r = a / b;
-        return rt->pushDoubleValue(r);
+        return rt->pushDouble(r);
     }
 };
 
@@ -116,25 +116,25 @@ struct BinaryOpMod {
         if (r == 0) {
             auto r = fmod((double)a, (double)b);
             if (signbit(r)) {
-                return rt->pushDoubleValue(r);
+                return rt->pushDouble(r);
             }
         }
-        return JsValue(JDT_INT32, (int32_t)r);
+        return makeJsValueInt32((int32_t)r);
     }
 
     JsValue operator()(VMRuntime *rt, double a, int32_t b) const {
         auto r = fmod(a, (double)b);
-        return rt->pushDoubleValue(r);
+        return rt->pushDouble(r);
     }
 
     JsValue operator()(VMRuntime *rt, int32_t a, double b) const {
         auto r = fmod((double)a, b);
-        return rt->pushDoubleValue(r);
+        return rt->pushDouble(r);
     }
 
     JsValue operator()(VMRuntime *rt, double a, double b) const {
         auto r = fmod(a, b);
-        return rt->pushDoubleValue(r);
+        return rt->pushDouble(r);
     }
 };
 
@@ -142,14 +142,14 @@ struct BinaryOpExp {
     JsValue operator()(VMRuntime *rt, int32_t a, int32_t b) const {
         double r = pow(a, b);
         if (r == (int32_t)r) {
-            return JsValue(JDT_INT32, (int32_t)r);
+            return makeJsValueInt32((int32_t)r);
         }
-        return rt->pushDoubleValue(r);
+        return rt->pushDouble(r);
     }
 
     JsValue operator()(VMRuntime *rt, double a, int32_t b) const {
         double r = pow(a, (double)b);
-        return rt->pushDoubleValue(r);
+        return rt->pushDouble(r);
     }
 
     JsValue operator()(VMRuntime *rt, int32_t a, double b) const {
@@ -159,7 +159,7 @@ struct BinaryOpExp {
         }
 
         auto r = pow((double)a, b);
-        return rt->pushDoubleValue(r);
+        return rt->pushDouble(r);
     }
 
     JsValue operator()(VMRuntime *rt, double a, double b) const {
@@ -169,7 +169,7 @@ struct BinaryOpExp {
         }
 
         auto r = pow(a, b);
-        return rt->pushDoubleValue(r);
+        return rt->pushDouble(r);
     }
 };
 
@@ -181,26 +181,26 @@ struct BinaryOpBitXor {
 
     JsValue operator()(VMRuntime *rt, int32_t a, int32_t b) const {
         auto r = a ^ b;
-        return JsValue(JDT_INT32, r);
+        return makeJsValueInt32(r);
     }
 
     JsValue operator()(VMRuntime *rt, double da, int32_t b) const {
         auto a = doubleToInt32(da);
         auto r = a ^ b;
-        return JsValue(JDT_INT32, r);
+        return makeJsValueInt32(r);
     }
 
     JsValue operator()(VMRuntime *rt, int32_t a, double db) const {
         auto b = doubleToInt32(db);
         auto r = a ^ b;
-        return JsValue(JDT_INT32, r);
+        return makeJsValueInt32(r);
     }
 
     JsValue operator()(VMRuntime *rt, double da, double db) const {
         auto a = doubleToInt32(da);
         auto b = doubleToInt32(db);
         auto r = a ^ b;
-        return JsValue(JDT_INT32, r);
+        return makeJsValueInt32(r);
     }
 };
 
@@ -208,26 +208,26 @@ struct BinaryOpBitOr {
 
     JsValue operator()(VMRuntime *rt, int32_t a, int32_t b) const {
         auto r = a | b;
-        return JsValue(JDT_INT32, r);
+        return makeJsValueInt32(r);
     }
 
     JsValue operator()(VMRuntime *rt, double da, int32_t b) const {
         auto a = doubleToInt32(da);
         auto r = a | b;
-        return JsValue(JDT_INT32, r);
+        return makeJsValueInt32(r);
     }
 
     JsValue operator()(VMRuntime *rt, int32_t a, double db) const {
         auto b = doubleToInt32(db);
         auto r = a | b;
-        return JsValue(JDT_INT32, r);
+        return makeJsValueInt32(r);
     }
 
     JsValue operator()(VMRuntime *rt, double da, double db) const {
         auto a = doubleToInt32(da);
         auto b = doubleToInt32(db);
         auto r = a | b;
-        return JsValue(JDT_INT32, r);
+        return makeJsValueInt32(r);
     }
 };
 
@@ -235,26 +235,26 @@ struct BinaryOpBitAnd {
 
     JsValue operator()(VMRuntime *rt, int32_t a, int32_t b) const {
         auto r = a & b;
-        return JsValue(JDT_INT32, r);
+        return makeJsValueInt32(r);
     }
 
     JsValue operator()(VMRuntime *rt, double da, int32_t b) const {
         auto a = doubleToInt32(da);
         auto r = a & b;
-        return JsValue(JDT_INT32, r);
+        return makeJsValueInt32(r);
     }
 
     JsValue operator()(VMRuntime *rt, int32_t a, double db) const {
         auto b = doubleToInt32(db);
         auto r = a & b;
-        return JsValue(JDT_INT32, r);
+        return makeJsValueInt32(r);
     }
 
     JsValue operator()(VMRuntime *rt, double da, double db) const {
         auto a = doubleToInt32(da);
         auto b = doubleToInt32(db);
         auto r = a & b;
-        return JsValue(JDT_INT32, r);
+        return makeJsValueInt32(r);
     }
 };
 
@@ -267,26 +267,26 @@ struct BinaryOpLeftShift {
 
     JsValue operator()(VMRuntime *rt, int32_t a, int32_t b) const {
         auto r = a << roundShiftSecondOp(b);
-        return JsValue(JDT_INT32, r);
+        return makeJsValueInt32(r);
     }
 
     JsValue operator()(VMRuntime *rt, double da, int32_t b) const {
         auto a = doubleToInt32(da);
         auto r = a << roundShiftSecondOp(b);
-        return JsValue(JDT_INT32, r);
+        return makeJsValueInt32(r);
     }
 
     JsValue operator()(VMRuntime *rt, int32_t a, double db) const {
         auto b = doubleToInt32(db);
         auto r = a << roundShiftSecondOp(b);
-        return JsValue(JDT_INT32, r);
+        return makeJsValueInt32(r);
     }
 
     JsValue operator()(VMRuntime *rt, double da, double db) const {
         auto a = doubleToInt32(da);
         auto b = doubleToInt32(db);
         auto r = a << roundShiftSecondOp(b);
-        return JsValue(JDT_INT32, r);
+        return makeJsValueInt32(r);
     }
 };
 
@@ -294,26 +294,26 @@ struct BinaryOpRightShift {
 
     JsValue operator()(VMRuntime *rt, int32_t a, int32_t b) const {
         auto r = a >> roundShiftSecondOp(b);
-        return JsValue(JDT_INT32, r);
+        return makeJsValueInt32(r);
     }
 
     JsValue operator()(VMRuntime *rt, double da, int32_t b) const {
         auto a = doubleToInt32(da);
         auto r = a >> roundShiftSecondOp(b);
-        return JsValue(JDT_INT32, r);
+        return makeJsValueInt32(r);
     }
 
     JsValue operator()(VMRuntime *rt, int32_t a, double db) const {
         auto b = doubleToInt32(db);
         auto r = a >> roundShiftSecondOp(b);
-        return JsValue(JDT_INT32, r);
+        return makeJsValueInt32(r);
     }
 
     JsValue operator()(VMRuntime *rt, double da, double db) const {
         auto a = doubleToInt32(da);
         auto b = doubleToInt32(db);
         auto r = a >> roundShiftSecondOp(b);
-        return JsValue(JDT_INT32, r);
+        return makeJsValueInt32(r);
     }
 };
 
@@ -322,9 +322,9 @@ struct BinaryOpUnsignedRightShift {
     inline JsValue rightShift(VMRuntime *rt, uint32_t a, uint32_t b) const {
         int64_t r = a >> roundShiftSecondOp(b);
         if (r == (int32_t)r) {
-            return JsValue(JDT_INT32, (int32_t)r);
+            return makeJsValueInt32((int32_t)r);
         } else {
-            return rt->pushDoubleValue(r);
+            return rt->pushDouble(r);
         }
     }
 
@@ -377,22 +377,21 @@ inline JsValue arithmeticBinaryOperation(VMContext *ctx, VMRuntime *rt, const Js
 
 inline JsValue plusOperate(VMContext *ctx, VMRuntime *rt, int32_t left, const JsValue &leftStr, const JsValue &right) {
     switch (right.type) {
-        case JDT_NOT_INITIALIZED:
         case JDT_UNDEFINED:
             return jsValueNaN;
         case JDT_NULL:
-            return JsValue(JDT_INT32, left);
+            return makeJsValueInt32(left);
         case JDT_BOOL:
         case JDT_INT32: {
             auto r = (int64_t)left + right.value.n32;
             if (r == (int32_t)r) {
-                return JsValue(JDT_INT32, (int32_t)r);
+                return makeJsValueInt32((int32_t)r);
             }
-            return rt->pushDoubleValue(r);
+            return rt->pushDouble(r);
         }
         case JDT_NUMBER: {
             auto r = left + rt->getDouble(right);
-            return rt->pushDoubleValue(r);
+            return rt->pushDouble(r);
         }
         case JDT_SYMBOL:
             throwSymbolConvertException(ctx);
@@ -424,10 +423,8 @@ inline JsValue plusOperate(VMContext *ctx, VMRuntime *rt, int32_t left, const Js
 
 inline JsValue plusOperate(VMContext *ctx, VMRuntime *rt, const JsValue &left, const JsValue &right) {
     switch (left.type) {
-        case JDT_NOT_INITIALIZED:
         case JDT_UNDEFINED:
             switch (right.type) {
-                case JDT_NOT_INITIALIZED:
                 case JDT_UNDEFINED:
                 case JDT_NULL:
                 case JDT_BOOL:
@@ -455,11 +452,10 @@ inline JsValue plusOperate(VMContext *ctx, VMRuntime *rt, const JsValue &left, c
         case JDT_BOOL:
             return plusOperate(ctx, rt, left.value.n32, left.value.n32 ? jsStringValueTrue : jsStringValueFalse, right);
         case JDT_INT32:
-            return plusOperate(ctx, rt, left.value.n32, jsValueNotInitialized, right);
+            return plusOperate(ctx, rt, left.value.n32, jsValueEmpty, right);
         case JDT_NUMBER: {
             auto n = rt->getDouble(left);
             switch (right.type) {
-                case JDT_NOT_INITIALIZED:
                 case JDT_UNDEFINED:
                     return jsValueNaN;
                 case JDT_NULL:
@@ -468,13 +464,13 @@ inline JsValue plusOperate(VMContext *ctx, VMRuntime *rt, const JsValue &left, c
                 case JDT_INT32: {
                     auto r = n + right.value.n32;
                     if (r == (int32_t)r) {
-                        return JsValue(JDT_INT32, (int32_t)r);
+                        return makeJsValueInt32((int32_t)r);
                     }
-                    return rt->pushDoubleValue(r);
+                    return rt->pushDouble(r);
                 }
                 case JDT_NUMBER: {
                     auto r = n + rt->getDouble(right);
-                    return rt->pushDoubleValue(r);
+                    return rt->pushDouble(r);
                 }
                 case JDT_SYMBOL:
                     throwSymbolConvertException(ctx);
@@ -491,7 +487,6 @@ inline JsValue plusOperate(VMContext *ctx, VMRuntime *rt, const JsValue &left, c
         }
         case JDT_CHAR: {
             switch (right.type) {
-                case JDT_NOT_INITIALIZED:
                 case JDT_UNDEFINED:
                 case JDT_NULL:
                 case JDT_BOOL:
@@ -519,7 +514,6 @@ inline JsValue plusOperate(VMContext *ctx, VMRuntime *rt, const JsValue &left, c
         }
         case JDT_STRING: {
             switch (right.type) {
-                case JDT_NOT_INITIALIZED:
                 case JDT_UNDEFINED:
                     return rt->plusString(left, jsStringValueUndefined);
                 case JDT_NULL:
@@ -666,7 +660,6 @@ struct RelationalOpGreaterEqThan {
 template<typename Operator>
 inline bool relationalNumberCmp(VMContext *ctx, VMRuntime *rt, double left, const JsValue &right, const Operator &op) {
     switch (right.type) {
-        case JDT_NOT_INITIALIZED:
         case JDT_UNDEFINED:
             return false;
         case JDT_NULL:
@@ -692,7 +685,6 @@ inline bool relationalNumberCmp(VMContext *ctx, VMRuntime *rt, double left, cons
 template<typename Operator>
 inline bool relationalStringCmp(VMContext *ctx, VMRuntime *rt, const SizedString &left, const JsValue &right, const Operator &op) {
     switch (right.type) {
-        case JDT_NOT_INITIALIZED:
         case JDT_UNDEFINED:
             return false;
         case JDT_NULL: {
@@ -738,14 +730,12 @@ inline bool relationalStringCmp(VMContext *ctx, VMRuntime *rt, const SizedString
 template<typename Operator>
 inline bool relationalOperate(VMContext *ctx, VMRuntime *rt, const JsValue &left, const JsValue &right, const Operator &op) {
     switch (left.type) {
-        case JDT_NOT_INITIALIZED:
         case JDT_UNDEFINED:
             if (right.type <= JDT_NULL) return op.undefinedVsNullUndefined();
             if (right.type == JDT_SYMBOL) return op.nullVsSymbol(ctx);
             return false;
         case JDT_NULL:
             switch (right.type) {
-                case JDT_NOT_INITIALIZED:
                 case JDT_UNDEFINED:
                     return op.nullVsUndefined();
                 case JDT_NULL:
@@ -794,9 +784,9 @@ inline bool relationalOperate(VMContext *ctx, VMRuntime *rt, const JsValue &left
 }
 
 inline bool relationalEqual(VMContext *ctx, VMRuntime *rt, const JsValue &left, const JsValue &right) {
-    if (left.equal(right)) {
-        // TODO: 需要检查 JsValue 在 runtime->doubleValues 的值是否为 NaN
-        return !left.equal(jsValueNaN);
+    if (left.equalValue(right)) {
+        // TODO: 需要检查 JsValue 在 runtime->_doubleValues 的值是否为 NaN
+        return !left.equalValue(jsValueNaN);
     } else {
         // 需要特别判断 Object 的情况
         if (left.type >= JDT_OBJECT && right.type >= JDT_OBJECT) {
@@ -809,7 +799,7 @@ inline bool relationalEqual(VMContext *ctx, VMRuntime *rt, const JsValue &left, 
 }
 
 inline bool relationalStrictEqual(VMRuntime *rt, const JsValue &left, const JsValue &right) {
-    if (left.equal(right) && !left.equal(jsValueNaN)) {
+    if (left.equalValue(right) && !left.equalValue(jsValueNaN)) {
         return true;
     }
 

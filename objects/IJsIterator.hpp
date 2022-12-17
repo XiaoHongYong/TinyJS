@@ -13,13 +13,11 @@
 
 class IJsIterator : public IJsObject {
 public:
-    IJsIterator(bool includeProtoProp, bool includeNoneEnumerable) {
+    IJsIterator(bool includeProtoProp, bool includeNoneEnumerable) : IJsObject(jsValueEmpty, JDT_ITERATOR) {
         _includeProtoProp = includeProtoProp;
         _includeNoneEnumerable = includeNoneEnumerable;
 
-        __proto__ = JsProperty(jsValueNotInitialized, false, false, false, true);
         _obj = nullptr;
-        type = JDT_ITERATOR;
         referIdx = 0;
         nextFreeIdx = 0;
     }
@@ -38,9 +36,9 @@ public:
     //
     // IJsObject 的接口实现
     //
-    virtual void definePropertyByName(VMContext *ctx, const SizedString &name, const JsProperty &descriptor) override;
-    virtual void definePropertyByIndex(VMContext *ctx, uint32_t index, const JsProperty &descriptor) override;
-    virtual void definePropertyBySymbol(VMContext *ctx, uint32_t index, const JsProperty &descriptor) override;
+    virtual void setPropertyByName(VMContext *ctx, const SizedString &name, const JsValue &descriptor) override;
+    virtual void setPropertyByIndex(VMContext *ctx, uint32_t index, const JsValue &descriptor) override;
+    virtual void setPropertyBySymbol(VMContext *ctx, uint32_t index, const JsValue &descriptor) override;
 
     virtual JsError setByName(VMContext *ctx, const JsValue &thiz, const SizedString &name, const JsValue &value) override;
     virtual JsError setByIndex(VMContext *ctx, const JsValue &thiz, uint32_t index, const JsValue &value) override;
@@ -50,16 +48,16 @@ public:
     virtual JsValue increaseByIndex(VMContext *ctx, const JsValue &thiz, uint32_t index, int n, bool isPost) override;
     virtual JsValue increaseBySymbol(VMContext *ctx, const JsValue &thiz, uint32_t index, int n, bool isPost) override;
 
-    virtual JsProperty *getRawByName(VMContext *ctx, const SizedString &name, JsNativeFunction &funcGetterOut, bool includeProtoProp = true) override;
-    virtual JsProperty *getRawByIndex(VMContext *ctx, uint32_t index, bool includeProtoProp = true) override;
-    virtual JsProperty *getRawBySymbol(VMContext *ctx, uint32_t index, bool includeProtoProp = true) override;
+    virtual JsValue *getRawByName(VMContext *ctx, const SizedString &name, bool includeProtoProp = true) override;
+    virtual JsValue *getRawByIndex(VMContext *ctx, uint32_t index, bool includeProtoProp = true) override;
+    virtual JsValue *getRawBySymbol(VMContext *ctx, uint32_t index, bool includeProtoProp = true) override;
 
     virtual bool removeByName(VMContext *ctx, const SizedString &name) override;
     virtual bool removeByIndex(VMContext *ctx, uint32_t index) override;
     virtual bool removeBySymbol(VMContext *ctx, uint32_t index) override;
 
-    virtual void changeAllProperties(VMContext *ctx, int8_t configurable = -1, int8_t writable = -1) override;
-    virtual bool hasAnyProperty(VMContext *ctx, bool configurable, bool writable) override;
+    virtual void changeAllProperties(VMContext *ctx, JsPropertyFlags toAdd, JsPropertyFlags toRemove) override;
+    virtual bool hasAnyProperty(VMContext *ctx, JsPropertyFlags flags) override;
     virtual void preventExtensions(VMContext *ctx) override;
 
     virtual IJsObject *clone() override;
@@ -73,7 +71,6 @@ protected:
 protected:
     friend class JsIteratorOfIterator;
 
-    JsProperty                  __proto__;
     JsObject                    *_obj;
 
     JsValue                     _curValue;

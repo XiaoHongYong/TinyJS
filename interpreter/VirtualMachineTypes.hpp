@@ -18,6 +18,9 @@ class JsObject;
 class IJsIterator;
 class VMContext;
 class VMRuntime;
+class Arguments;
+
+struct JsValue;
 
 extern SizedString SS_TRUE;
 extern SizedString SS_FALSE;
@@ -212,7 +215,6 @@ enum JsError {
 cstr_t parseErrorToString(JsError err);
 
 enum JsDataType : uint8_t {
-    JDT_NOT_INITIALIZED = 0,
     JDT_UNDEFINED,
     JDT_NULL,
     JDT_BOOL,
@@ -222,6 +224,9 @@ enum JsDataType : uint8_t {
     // 下面的类型都要参与到 gc 中
     JDT_NUMBER,
     JDT_SYMBOL,
+
+    JDT_GETTER_SETTER,
+
     JDT_STRING,
 
     // Object 开始
@@ -249,6 +254,8 @@ enum JsDataType : uint8_t {
 
 const char *jsDataTypeToString(JsDataType type);
 
+typedef void (*JsNativeFunction)(VMContext *ctx, const JsValue &thiz, const Arguments &args);
+
 using VMAddress = uint32_t;
 const VMAddress addressInvalid = (VMAddress)-1;
 
@@ -256,8 +263,21 @@ inline uint32_t makeResourceIndex(uint16_t poolIdx, uint16_t resIdx) { return (p
 inline uint16_t getPoolIndexOfResource(uint32_t resIndex) { return resIndex >> 16; }
 inline uint16_t getIndexOfResource(uint32_t resIndex) { return resIndex & 0xFFFF; }
 
+enum JsPropertyFlag {
+    JP_EMPTY                = 1,
+    JP_CONFIGURABLE         = 1 << 1,
+    JP_ENUMERABLE           = 1 << 2,
+    JP_WRITABLE             = 1 << 3,
+
+    JP_DEFAULT              = JP_CONFIGURABLE | JP_ENUMERABLE | JP_WRITABLE,
+};
+
+using JsPropertyFlags = uint8_t;
+
 struct JsValue {
-    uint8_t                     reserved[1];
+    // 在 Object property 中的属性定义，仅仅在 Object 中有效
+    JsPropertyFlags             propFlags;
+
     JsDataType                  type;
     bool                        isInResourcePool;
     union {
@@ -268,11 +288,49 @@ struct JsValue {
     JsValue() { *(uint64_t *)this = 0; }
     JsValue(JsDataType type, uint32_t objIdx) { *(uint64_t *)this = 0; this->type = type; value.index = objIdx; }
 
-    inline bool isValid() const { return type > JDT_NOT_INITIALIZED; }
+    inline bool isEmpty() const { return propFlags & JP_EMPTY; }
+    inline bool isConfigurable() const { return propFlags & JP_CONFIGURABLE; }
+    inline bool isEnumerable() const { return propFlags & JP_ENUMERABLE; }
+    inline bool isWritable() const { return propFlags & JP_WRITABLE; }
+
+    inline bool isValid() const { return (propFlags & JP_EMPTY) == 0; }
     inline bool isString() const { return type == JDT_CHAR || type == JDT_STRING; }
     inline bool isNumber() const { return type == JDT_INT32 || type == JDT_NUMBER; }
+    inline bool isGetterSetter() const { return type == JDT_GETTER_SETTER; }
     inline bool isFunction() const { return type >= JDT_FUNCTION; }
     inline bool equal(const JsValue &other) const { return *(uint64_t *)this == *(uint64_t *)&other; }
+
+    inline bool equalValue(const JsValue &other) const {
+        return type == other.type && value.n32 == other.value.n32 && isInResourcePool == other.isInResourcePool;
+    }
+
+    inline void changeProperty(JsPropertyFlags toAdd, JsPropertyFlags toRemove) {
+        propFlags = (propFlags & ~toRemove) | toAdd;
+    }
+
+    inline bool isPropertyAny(JsPropertyFlags flags) const { return (propFlags & flags) > 0; }
+
+    inline void setProperty(JsPropertyFlags flags) {
+        propFlags = flags;
+    }
+
+    inline void setValue(const JsValue &other) {
+        auto flags = propFlags;
+        *(uint64_t *)this = *(uint64_t *)&other;
+        propFlags = flags & ~JP_EMPTY;
+    }
+
+    inline JsValue asProperty(JsPropertyFlags flags = JP_DEFAULT) const {
+        JsValue other = *this;
+        other.propFlags = flags;
+        return other;
+    }
+
+    inline JsValue asValue(JsPropertyFlags flags = JP_DEFAULT) const {
+        JsValue other = *this;
+        other.propFlags = 0;
+        return other;
+    }
 };
 
 inline bool operator==(const JsValue &a, const JsValue &b) {
@@ -317,6 +375,15 @@ struct JsSymbol {
     string                      name;
 };
 
+struct JsGetterSetter {
+public:
+    int8_t                      referIdx; // 用于资源回收时所用
+    uint32_t                    nextFreeIdx; // 下一个空闲的索引位置
+    JsValue                     getter;
+    JsValue                     setter;
+
+    JsGetterSetter(const JsValue &getter, const JsValue &setter) : getter(getter), setter(setter), referIdx(0), nextFreeIdx(0) { }
+};
 
 /**
  * 存储 joined string 类型的值
@@ -375,38 +442,22 @@ const uint32_t LEN_MAX_STRING = 1024 * 124 * 512;
 const int32_t MAX_INT32 = 0x7FFFFFFF;
 
 inline JsValue makeJsValueEmpty() {
-    // JsValue v;
-    // v.isEmpty = 1;
-    // v.isConfigurable = 1;
-    // v.isWritable = 1;
-    // v.isEnumerable = 1;
-    return JsValue();
+     JsValue v(JDT_UNDEFINED, 0);
+    v.propFlags = JP_EMPTY;
+    return v;
 }
 
 inline JsValue makeJsValueBool(bool v) {
-    JsValue r(JDT_BOOL, v);
-    return r;
+    return JsValue(JDT_BOOL, v);
 }
 
-//inline JsValue makeJsValueDouble(double d) {
-//    JsValue r(JDT_NUMBER);
-//    r.number.data = d;
-//    return r;
-//}
-
 inline JsValue makeJsValueInt32(int32_t n) {
-    JsValue r(JDT_INT32, n);
-    return r;
+    return JsValue(JDT_INT32, n);
 }
 
 inline JsValue makeJsValueChar(int code) {
     return JsValue(JDT_CHAR, code);
 }
-
-//inline double getJsValueDouble(const JsValue &v) {
-//    assert(v.type == JDT_NUMBER);
-//    return v.number.data;
-//}
 
 inline int32_t getJsValueInt32(const JsValue &v) {
     assert(v.type == JDT_INT32);
@@ -422,62 +473,6 @@ inline const SizedString &getJsValueBoolString(const JsValue &v) {
     assert(v.type == JDT_BOOL);
     return v.value.n32 ? SS_TRUE : SS_FALSE;
 }
-
-/**
- * JsProperty 定义了 Object 的基本属性
- */
-struct JsProperty {
-    JsValue                     value; // 属性值，或者 getter
-    JsValue                     setter;
-    int8_t                      isGSetter; // is getter/setter 中的一个有效？
-    int8_t                      isConfigurable;
-    int8_t                      isEnumerable;
-    int8_t                      isWritable;
-
-    JsProperty(const JsValue &value, int8_t isGSetter = false, int8_t isConfigurable = true, int8_t isEnumerable = true, int8_t isWritable = true) : value(value), isGSetter(isGSetter), isConfigurable(isConfigurable), isEnumerable(isEnumerable), isWritable(isWritable) {
-    }
-
-    JsProperty() : JsProperty(JsValue(JDT_UNDEFINED, 0)) { }
-
-    bool merge(const JsProperty &src);
-
-    JsProperty defineProperty() const {
-        JsProperty ret = *this;
-        if (value.type == JDT_NOT_INITIALIZED) ret.value = JsValue(JDT_UNDEFINED, 0);
-        if (isGSetter == -1) ret.isGSetter = false;
-        if (isConfigurable == -1) ret.isConfigurable = false;
-        if (isEnumerable == -1) ret.isEnumerable = false;
-        if (isWritable == -1) ret.isWritable = false;
-        return ret;
-    }
-
-    inline void changeProperty(int8_t configurable = -1, int8_t writable = -1) {
-        if (configurable != -1) {
-            isConfigurable = configurable;
-        }
-        if (writable != -1) {
-            isWritable = writable;
-        }
-    }
-
-    inline bool isPropertyAny(bool configurable, bool writable) {
-        return (configurable && isConfigurable) || (writable && isWritable);
-    }
-};
-
-class VmTask {
-public:
-    /**
-     * 返回 false 表示没有任务需要执行
-     */
-    virtual bool run() = 0;
-
-    virtual void markReferIdx(VMRuntime *rt) = 0;
-
-};
-
-using VmTaskPtr = std::shared_ptr<VmTask>;
-using ListVmTaskPtrs = list<VmTaskPtr>;
 
 enum JsObjectValueIndex {
     JS_OBJ_GLOBAL_THIS_IDX                  = 1,
@@ -515,11 +510,11 @@ const JsValue jsValuePrototypeArray = JsValue(JDT_LIB_OBJECT, JS_OBJ_PROTOTYPE_I
 const JsValue jsValuePrototypeFunction = JsValue(JDT_LIB_OBJECT, JS_OBJ_PROTOTYPE_IDX_FUNCTION);
 const JsValue jsValuePrototypeWindow = JsValue(JDT_LIB_OBJECT, JS_OBJ_PROTOTYPE_IDX_WINDOW);
 
-const JsValue jsValueNotInitialized = JsValue();
+const JsValue jsValueEmpty = makeJsValueEmpty();
 const JsValue jsValueNull = JsValue(JDT_NULL, 0);
 const JsValue jsValueUndefined = JsValue(JDT_UNDEFINED, 0);
-const JsValue jsValueTrue = JsValue(JDT_BOOL, true);
-const JsValue jsValueFalse = JsValue(JDT_BOOL, false);
+const JsValue jsValueTrue = makeJsValueBool(true);
+const JsValue jsValueFalse = makeJsValueBool(false);
 const JsValue jsValueNaN = JsValue(JDT_NUMBER, JS_NUMBER_IDX_NAN);
 const JsValue jsValueInf = JsValue(JDT_NUMBER, JS_NUMBER_IDX_INF);
 const JsValue jsValueEpsilonNumber = JsValue(JDT_NUMBER, JS_NUMBER_IDX_EPSILON);
@@ -529,13 +524,22 @@ const JsValue jsValueMinSafeInt = JsValue(JDT_NUMBER, JS_NUMBER_IDX_MIN_SAFE_INT
 const JsValue jsValueMinNumber = JsValue(JDT_NUMBER, JS_NUMBER_IDX_MIN_VALUE);
 const JsValue jsValueNegInf = JsValue(JDT_NUMBER, JS_NUMBER_IDX_NEGATIVE_INFINITY);
 
+const JsValue jsValueLength0Property = makeJsValueInt32(0).asProperty(JP_CONFIGURABLE);
+const JsValue jsValueLength1Property = makeJsValueInt32(1).asProperty(JP_CONFIGURABLE);
+const JsValue jsValuePropertyDefault = jsValueUndefined.asProperty(JP_DEFAULT);
+const JsValue jsValuePropertyConfigurable = jsValueUndefined.asProperty(JP_CONFIGURABLE);
+const JsValue jsValuePropertyConfWritable = jsValueUndefined.asProperty(JP_CONFIGURABLE | JP_WRITABLE);
+const JsValue jsValuePropertyWritable = jsValueUndefined.asProperty(JP_WRITABLE);
+const JsValue jsValuePropertyPrototype = jsValueUndefined.asProperty(JP_WRITABLE | JP_EMPTY);
+
 using VecJsValues = std::vector<JsValue>;
 using VecJsDoubles = std::vector<JsDouble>;
 using VecJsStrings = std::vector<JsString>;
 using VecJsSymbols = std::vector<JsSymbol>;
+using VecJsGetterSetters = std::vector<JsGetterSetter>;
 using VecJsObjects = std::vector<IJsObject *>;
-using VecJsProperties = std::vector<JsProperty>;
-using DequeJsProperties = std::deque<JsProperty>;
+using VecJsProperties = std::vector<JsValue>;
+using DequeJsProperties = std::deque<JsValue>;
 using DequeJsValue = std::deque<JsValue>;
 
 bool decodeBytecode(uint8_t *bytecode, int lenBytecode, BinaryOutputStream &stream);

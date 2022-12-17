@@ -15,8 +15,8 @@ static JsValue jsValuePrototypeDate;
 
 class JsDate : public JsObjectLazy {
 public:
-    JsDate(int64_t time, bool isValid = true) : JsObjectLazy(nullptr, 0, jsValuePrototypeDate), time(time), isValid(isValid) {
-        type = JDT_DATE;
+    JsDate(int64_t time, bool isValid = true) : JsObjectLazy(nullptr, 0, jsValuePrototypeDate, JDT_DATE), time(time), isValid(isValid)
+    {
     }
 
     virtual IJsObject *clone() override {
@@ -37,7 +37,7 @@ void dateConstructor(VMContext *ctx, const JsValue &thiz, const Arguments &args)
 
     if (args.count == 0) {
         auto obj = new JsDate(getTimeInMillisecond());
-        ctx->retValue = runtime->pushObjectValue(obj);
+        ctx->retValue = runtime->pushObject(obj);
         return;
     } else if (args.count == 1) {
         auto arg0 = args[0];
@@ -50,16 +50,16 @@ void dateConstructor(VMContext *ctx, const JsValue &thiz, const Arguments &args)
             } else {
                 obj = new JsDate(0, false);
             }
-            ctx->retValue = runtime->pushObjectValue(obj);
+            ctx->retValue = runtime->pushObject(obj);
         } else if (arg0.type == JDT_DATE) {
             auto from = (JsDate *)runtime->getObject(arg0);
             auto obj = new JsDate(from->time);
-            ctx->retValue = runtime->pushObjectValue(obj);
+            ctx->retValue = runtime->pushObject(obj);
         } else {
             auto t = args.getInt64At(ctx, 0);
             if (ctx->error == JE_OK) {
                 auto obj = new JsDate(t);
-                ctx->retValue = runtime->pushObjectValue(obj);
+                ctx->retValue = runtime->pushObject(obj);
             }
         }
         return;
@@ -95,12 +95,12 @@ void dateConstructor(VMContext *ctx, const JsValue &thiz, const Arguments &args)
     }
 
     auto obj = new JsDate(time, valid);
-    ctx->retValue = runtime->pushObjectValue(obj);
+    ctx->retValue = runtime->pushObject(obj);
 }
 
 void date_now(VMContext *ctx, const JsValue &thiz, const Arguments &args) {
     auto obj = new JsDate(getTimeInMillisecond());
-    ctx->retValue = ctx->runtime->pushObjectValue(obj);
+    ctx->retValue = ctx->runtime->pushObject(obj);
 }
 
 void date_parse(VMContext *ctx, const JsValue &thiz, const Arguments &args) {
@@ -111,7 +111,7 @@ void date_parse(VMContext *ctx, const JsValue &thiz, const Arguments &args) {
     if (!date.fromString((cstr_t)str.data, str.len)) {
         ctx->retValue = jsValueNaN;
     } else {
-        ctx->retValue = ctx->runtime->pushDoubleValue(date.getTimeInMs());
+        ctx->retValue = ctx->runtime->pushDouble(date.getTimeInMs());
     }
 }
 
@@ -135,14 +135,14 @@ void date_UTC(VMContext *ctx, const JsValue &thiz, const Arguments &args) {
 
     DateTime date(year, monthIndex + 1, day, hour, minute, second, millisecond, -1, false);
 
-    ctx->retValue = ctx->runtime->pushDoubleValue(date.getTimeInMs());
+    ctx->retValue = ctx->runtime->pushDouble(date.getTimeInMs());
 }
 
 
 static JsLibProperty dateFunctions[] = {
     { "name", nullptr, "Date" },
-    { "length", nullptr, nullptr, JsValue(JDT_INT32, 1) },
-    { "prototype", nullptr, nullptr, JsValue(JDT_INT32, 1) },
+    { "length", nullptr, nullptr, jsValueLength1Property },
+    { "prototype", nullptr, nullptr, jsValuePropertyPrototype },
     { "now", date_now },
     { "parse", date_parse },
     { "UTC", date_UTC },
@@ -178,7 +178,7 @@ void datePrototype_getDate(VMContext *ctx, const JsValue &thiz, const Arguments 
         return;
     }
 
-    ctx->retValue = JsValue(JDT_INT32, datetime.day());
+    ctx->retValue = makeJsValueInt32(datetime.day());
 }
 
 void datePrototype_getDay(VMContext *ctx, const JsValue &thiz, const Arguments &args) {
@@ -188,7 +188,7 @@ void datePrototype_getDay(VMContext *ctx, const JsValue &thiz, const Arguments &
         return;
     }
 
-    ctx->retValue = JsValue(JDT_INT32, datetime.dayOfWeek());
+    ctx->retValue = makeJsValueInt32(datetime.dayOfWeek());
 }
 
 void datePrototype_getFullYear(VMContext *ctx, const JsValue &thiz, const Arguments &args) {
@@ -198,7 +198,7 @@ void datePrototype_getFullYear(VMContext *ctx, const JsValue &thiz, const Argume
         return;
     }
 
-    ctx->retValue = JsValue(JDT_INT32, datetime.year());
+    ctx->retValue = makeJsValueInt32(datetime.year());
 }
 
 void datePrototype_getHours(VMContext *ctx, const JsValue &thiz, const Arguments &args) {
@@ -208,7 +208,7 @@ void datePrototype_getHours(VMContext *ctx, const JsValue &thiz, const Arguments
         return;
     }
 
-    ctx->retValue = JsValue(JDT_INT32, datetime.hour());
+    ctx->retValue = makeJsValueInt32(datetime.hour());
 }
 
 void datePrototype_getMilliseconds(VMContext *ctx, const JsValue &thiz, const Arguments &args) {
@@ -218,7 +218,7 @@ void datePrototype_getMilliseconds(VMContext *ctx, const JsValue &thiz, const Ar
         return;
     }
 
-    ctx->retValue = JsValue(JDT_INT32, datetime.ms());
+    ctx->retValue = makeJsValueInt32(datetime.ms());
 }
 
 void datePrototype_getMinutes(VMContext *ctx, const JsValue &thiz, const Arguments &args) {
@@ -228,7 +228,7 @@ void datePrototype_getMinutes(VMContext *ctx, const JsValue &thiz, const Argumen
         return;
     }
 
-    ctx->retValue = JsValue(JDT_INT32, datetime.minute());
+    ctx->retValue = makeJsValueInt32(datetime.minute());
 }
 
 void datePrototype_getMonth(VMContext *ctx, const JsValue &thiz, const Arguments &args) {
@@ -238,7 +238,7 @@ void datePrototype_getMonth(VMContext *ctx, const JsValue &thiz, const Arguments
         return;
     }
 
-    ctx->retValue = JsValue(JDT_INT32, datetime.month() - 1);
+    ctx->retValue = makeJsValueInt32(datetime.month() - 1);
 }
 
 void datePrototype_getSeconds(VMContext *ctx, const JsValue &thiz, const Arguments &args) {
@@ -248,7 +248,7 @@ void datePrototype_getSeconds(VMContext *ctx, const JsValue &thiz, const Argumen
         return;
     }
 
-    ctx->retValue = JsValue(JDT_INT32, datetime.second());
+    ctx->retValue = makeJsValueInt32(datetime.second());
 }
 
 void datePrototype_getTime(VMContext *ctx, const JsValue &thiz, const Arguments &args) {
@@ -257,7 +257,7 @@ void datePrototype_getTime(VMContext *ctx, const JsValue &thiz, const Arguments 
     }
 
     auto obj = (JsDate *)ctx->runtime->getObject(thiz);
-    ctx->retValue = ctx->runtime->pushDoubleValue(obj->time);
+    ctx->retValue = ctx->runtime->pushDouble(obj->time);
 }
 
 void datePrototype_getTimezoneOffset(VMContext *ctx, const JsValue &thiz, const Arguments &args) {
@@ -267,7 +267,7 @@ void datePrototype_getTimezoneOffset(VMContext *ctx, const JsValue &thiz, const 
         return;
     }
 
-    ctx->retValue = JsValue(JDT_INT32, datetime.timeZoneOffset());
+    ctx->retValue = makeJsValueInt32(datetime.timeZoneOffset());
 }
 
 void datePrototype_getUTCDate(VMContext *ctx, const JsValue &thiz, const Arguments &args) {
@@ -277,7 +277,7 @@ void datePrototype_getUTCDate(VMContext *ctx, const JsValue &thiz, const Argumen
         return;
     }
 
-    ctx->retValue = JsValue(JDT_INT32, datetime.day());
+    ctx->retValue = makeJsValueInt32(datetime.day());
 }
 
 void datePrototype_getUTCDay(VMContext *ctx, const JsValue &thiz, const Arguments &args) {
@@ -287,7 +287,7 @@ void datePrototype_getUTCDay(VMContext *ctx, const JsValue &thiz, const Argument
         return;
     }
 
-    ctx->retValue = JsValue(JDT_INT32, datetime.dayOfWeek());
+    ctx->retValue = makeJsValueInt32(datetime.dayOfWeek());
 }
 
 void datePrototype_getUTCFullYear(VMContext *ctx, const JsValue &thiz, const Arguments &args) {
@@ -297,7 +297,7 @@ void datePrototype_getUTCFullYear(VMContext *ctx, const JsValue &thiz, const Arg
         return;
     }
 
-    ctx->retValue = JsValue(JDT_INT32, datetime.year());
+    ctx->retValue = makeJsValueInt32(datetime.year());
 }
 
 void datePrototype_getUTCHours(VMContext *ctx, const JsValue &thiz, const Arguments &args) {
@@ -307,7 +307,7 @@ void datePrototype_getUTCHours(VMContext *ctx, const JsValue &thiz, const Argume
         return;
     }
 
-    ctx->retValue = JsValue(JDT_INT32, datetime.hour());
+    ctx->retValue = makeJsValueInt32(datetime.hour());
 }
 
 void datePrototype_getUTCMilliseconds(VMContext *ctx, const JsValue &thiz, const Arguments &args) {
@@ -317,7 +317,7 @@ void datePrototype_getUTCMilliseconds(VMContext *ctx, const JsValue &thiz, const
         return;
     }
 
-    ctx->retValue = JsValue(JDT_INT32, datetime.ms());
+    ctx->retValue = makeJsValueInt32(datetime.ms());
 }
 
 void datePrototype_getUTCMinutes(VMContext *ctx, const JsValue &thiz, const Arguments &args) {
@@ -327,7 +327,7 @@ void datePrototype_getUTCMinutes(VMContext *ctx, const JsValue &thiz, const Argu
         return;
     }
 
-    ctx->retValue = JsValue(JDT_INT32, datetime.minute());
+    ctx->retValue = makeJsValueInt32(datetime.minute());
 }
 
 void datePrototype_getUTCMonth(VMContext *ctx, const JsValue &thiz, const Arguments &args) {
@@ -337,7 +337,7 @@ void datePrototype_getUTCMonth(VMContext *ctx, const JsValue &thiz, const Argume
         return;
     }
 
-    ctx->retValue = JsValue(JDT_INT32, datetime.month() - 1);
+    ctx->retValue = makeJsValueInt32(datetime.month() - 1);
 }
 
 void datePrototype_getUTCSeconds(VMContext *ctx, const JsValue &thiz, const Arguments &args) {
@@ -347,7 +347,7 @@ void datePrototype_getUTCSeconds(VMContext *ctx, const JsValue &thiz, const Argu
         return;
     }
 
-    ctx->retValue = JsValue(JDT_INT32, datetime.second());
+    ctx->retValue = makeJsValueInt32(datetime.second());
 }
 
 void datePrototype_setXX(VMContext *ctx, const JsValue &thiz, const Arguments &args, std::function<void(DateTime&, int)> callback, bool isLocalTime = true) {
@@ -368,7 +368,7 @@ void datePrototype_setXX(VMContext *ctx, const JsValue &thiz, const Arguments &a
     callback(datetime, (int)value);
     obj->time = datetime.getTimeInMs();
 
-    ctx->retValue = ctx->runtime->pushDoubleValue(obj->time);
+    ctx->retValue = ctx->runtime->pushDouble(obj->time);
 }
 
 void datePrototype_setDate(VMContext *ctx, const JsValue &thiz, const Arguments &args) {
@@ -392,7 +392,7 @@ void datePrototype_setDate(VMContext *ctx, const JsValue &thiz, const Arguments 
 //    datetime.setDay(value);
 //    obj->time = datetime.getTimeInMs();
 //
-//    ctx->retValue = ctx->runtime->pushDoubleValue(obj->time);
+//    ctx->retValue = ctx->runtime->pushDouble(obj->time);
 }
 
 void datePrototype_setFullYear(VMContext *ctx, const JsValue &thiz, const Arguments &args) {
@@ -447,7 +447,7 @@ void datePrototype_setTime(VMContext *ctx, const JsValue &thiz, const Arguments 
 
     obj->time = (int64_t)value;
 
-    ctx->retValue = ctx->runtime->pushDoubleValue(obj->time);
+    ctx->retValue = ctx->runtime->pushDouble(obj->time);
 }
 
 void datePrototype_setUTCDate(VMContext *ctx, const JsValue &thiz, const Arguments &args) {
@@ -607,7 +607,7 @@ static JsLibProperty datePrototypeFunctions[] = {
 
 void registerDate(VMRuntimeCommon *rt) {
     auto prototypeObj = new JsLibObject(rt, datePrototypeFunctions, CountOf(datePrototypeFunctions));
-    jsValuePrototypeDate = rt->pushObjectValue(prototypeObj);
+    jsValuePrototypeDate = rt->pushObject(prototypeObj);
 
     SET_PROTOTYPE(dateFunctions, jsValuePrototypeDate);
 

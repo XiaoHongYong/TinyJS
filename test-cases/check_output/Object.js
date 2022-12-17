@@ -788,3 +788,20 @@ f();
 #2 b
 #2 c
 */
+
+
+// Index: 22
+// String
+function f() {
+    var proto = { 'x': 1 };
+    var o = { __proto__: proto };
+
+    console.log('#1', proto.propertyIsEnumerable('x'));
+    console.log('#2', o.propertyIsEnumerable('x'));
+}
+f();
+/* OUTPUT
+#1 true
+#2 false
+*/
+

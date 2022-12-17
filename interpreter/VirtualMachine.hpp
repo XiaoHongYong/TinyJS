@@ -8,10 +8,11 @@
 #ifndef VirtualMachine_hpp
 #define VirtualMachine_hpp
 
-#include "VMRuntime.hpp"
+#include "VMScope.hpp"
+#include "TimerTasks.hpp"
+#include "PromiseTasks.hpp"
 
 
-class VMScope;
 class VMScopeDescriptor;
 class VMFunctionFrame;
 class VMRuntimeCommon;
@@ -36,113 +37,6 @@ enum VMMiscFlags {
     VAR_IDX_ARGUMENTS           = 1,
 
     POOL_STRING_IDX_INVALID     = 0,
-};
-
-class Arguments {
-public:
-    Arguments() { data = nullptr; count = 0; capacity = 0; needFree = false; }
-    Arguments(const Arguments &other);
-    Arguments(JsValue *args, uint32_t count) : data(args), count(count), capacity(count) { needFree = false; }
-    ~Arguments();
-
-    void free();
-
-    Arguments &operator = (const Arguments &other);
-    JsValue &operator[](uint32_t n) const { assert(n < capacity); return data[n]; }
-    JsValue getAt(uint32_t n, const JsValue &defValue = jsValueUndefined) const { return n < capacity ? data[n] : defValue; }
-    int32_t getIntAt(VMContext *ctx, uint32_t index, int32_t defVal = 0) const;
-    int64_t getInt64At(VMContext *ctx, uint32_t index, int64_t defVal = 0) const;
-    double getDoubleAt(VMContext *ctx, uint32_t index, double defVal = 0) const;
-    LockedSizedStringWrapper getStringAt(VMContext *ctx, uint32_t index, const SizedString &defVal = sizedStringEmpty) const;
-
-    void copy(const Arguments &other, uint32_t minSize = 0);
-
-    JsValue                     *data;
-    uint32_t                    count;
-    uint32_t                    capacity;
-    bool                        needFree;
-};
-
-class ArgumentsX : public Arguments {
-protected:
-    ArgumentsX(uint32_t count) {
-        this->count = count;
-        data = args;
-        needFree = false;
-        capacity = sizeof(args);
-    }
-
-public:
-    ArgumentsX(const JsValue &one) : ArgumentsX(1) {
-        args[0] = one;
-    }
-
-    ArgumentsX(const JsValue &one, const JsValue &two) : ArgumentsX(2) {
-        args[0] = one;
-        args[1] = two;
-    }
-
-    ArgumentsX(const JsValue &one, const JsValue &two, const JsValue &three) : ArgumentsX(3) {
-        args[0] = one;
-        args[1] = two;
-        args[2] = three;
-    }
-
-    ArgumentsX(const JsValue &one, const JsValue &two, const JsValue &three, const JsValue &four) : ArgumentsX(3) {
-        args[0] = one;
-        args[1] = two;
-        args[2] = three;
-        args[3] = four;
-    }
-
-    JsValue                     args[4];
-
-};
-
-/**
- * VMScope 用于存储当前作用域内的标识符信息.
- */
-class VMScope {
-public:
-    VMScope(Scope *scopeDsc) : scopeDsc(scopeDsc) {
-        referIdx = 0;
-        nextFreeIdx = 0;
-
-        vars.resize(scopeDsc->countLocalVars);
-    }
-    virtual ~VMScope() { }
-
-    void dump(BinaryOutputStream &stream);
-
-    void free();
-
-    int8_t                      referIdx;
-    uint32_t                    nextFreeIdx;
-
-    Scope                       *scopeDsc;
-
-    // 作用域内的所有变量
-    VecJsValues                 vars; // 当前作用域下的变量
-
-    Arguments                   args;
-
-    // 当使用 with 语句，在执行时会在 'withValue' 的 member 中查找标识符
-    JsValue                     withValue;
-
-};
-
-class VMGlobalScope : public VMScope {
-public:
-    VMGlobalScope(Scope *scopeDsc) : VMScope(scopeDsc) { }
-
-    // 全局变量对应的属性定义
-    VecJsProperties             varProperties;
-
-    JsValue get(VMContext *ctx, uint32_t index);
-    JsError set(VMContext *ctx, uint32_t index, const JsValue &value);
-    JsValue increase(VMContext *ctx, uint32_t index, int inc, bool isPost);
-    bool remove(VMContext *ctx, uint32_t index);
-
 };
 
 /**
@@ -179,7 +73,7 @@ private:
     VMContext &operator=(const VMContext &);
 
 public:
-    VMContext(VMRuntime *runtime);
+    VMContext(VMRuntime *runtime, JsVirtualMachine *vm);
 
     void throwException(JsError err, cstr_t format, ...);
     void throwException(JsError err, JsValue errorMessage);
@@ -218,9 +112,15 @@ public:
     JsVirtualMachine();
     virtual ~JsVirtualMachine();
 
-    void registerTask(VmTaskPtr task);
-
+    //
+    // 任务相关的函数
+    //
+    inline void registerToRunPromise(JsPromiseObject *promise) { _promiseTasks.registerToRunPromise(promise); }
+    inline int registerTimer(VMContext *ctx, JsValue callback, int32_t duration, bool repeat)
+        { return _timerTasks.registerTimer(ctx, callback, duration, repeat); }
+    inline void unregisterTimer(int timerId) { _timerTasks.unregisterTimer(timerId); }
     bool onRunTasks();
+
     void run(cstr_t code, size_t len, VMRuntime *runtime = nullptr);
 
     void eval(cstr_t code, size_t len, VMContext *ctx, VecVMStackScopes &stackScopes, const Arguments &args);
@@ -242,11 +142,12 @@ protected:
     void call(Function *function, VMContext *ctx, VecVMStackScopes &stackScopes, const JsValue &thiz, const Arguments &args);
 
 protected:
-    ListVmTaskPtrs              _tasks;
-
     VMRuntimeCommon             _runtimeCommon;
 
     VMRuntime                   _runtime;
+
+    PromiseTasks                _promiseTasks;
+    TimerTasks                  _timerTasks;
 
 };
 

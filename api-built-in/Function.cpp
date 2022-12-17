@@ -34,17 +34,17 @@ static void functionConstructor(VMContext *ctx, const JsValue &thiz, const Argum
 
     VecVMStackScopes stackScopes;
 
-    stackScopes.push_back(runtime->globalScope);
-    ctx->curFunctionScope = runtime->globalScope;
+    stackScopes.push_back(runtime->globalScope());
+    ctx->curFunctionScope = runtime->globalScope();
 
     // eval 会将返回值存放于 retValue 中
-    runtime->vm->eval(functionStr.c_str(), functionStr.size(), ctx, stackScopes, Arguments());
+    ctx->vm->eval(functionStr.c_str(), functionStr.size(), ctx, stackScopes, Arguments());
 }
 
 static JsLibProperty functionFunctions[] = {
     { "name", nullptr, "Function" },
-    { "length", nullptr, nullptr, JsValue(JDT_INT32, 1) },
-    { "prototype", nullptr, nullptr, JsValue(JDT_INT32, 1) },
+    { "length", nullptr, nullptr, jsValueLength1Property },
+    { "prototype", nullptr, nullptr, jsValuePropertyPrototype },
 };
 
 void functionPrototypeApply(VMContext *ctx, const JsValue &thiz, const Arguments &args) {
@@ -88,7 +88,7 @@ void functionPrototypeBind(VMContext *ctx, const JsValue &thiz, const Arguments 
     auto that = args.getAt(0);
 
     auto obj = new JsObjectBoundFunction(thiz, that);
-    ctx->retValue = runtime->pushObjectValue(obj);
+    ctx->retValue = runtime->pushObject(obj);
 }
 
 void functionPrototypeCall(VMContext *ctx, const JsValue &thiz, const Arguments &args) {
@@ -135,7 +135,7 @@ void functionPrototypeToString(VMContext *ctx, const JsValue &thiz, const Argume
 
 static JsLibProperty functionPrototypeFunctions[] = {
     { "name", nullptr, "" },
-    { "length", nullptr, nullptr, JsValue(JDT_INT32, 0) },
+    { "length", nullptr, nullptr, jsValueLength0Property },
     { "apply", functionPrototypeApply },
     { "bind", functionPrototypeBind },
     { "call", functionPrototypeCall },

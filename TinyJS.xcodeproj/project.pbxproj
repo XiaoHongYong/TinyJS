@@ -15,6 +15,12 @@
 		C05589AD29291D1500CBDBD7 /* Math.cpp in Sources */ = {isa = PBXBuildFile; fileRef = C05589AC29291D1500CBDBD7 /* Math.cpp */; };
 		C05589AF2929DC0C00CBDBD7 /* JSON.cpp in Sources */ = {isa = PBXBuildFile; fileRef = C05589AE2929DC0C00CBDBD7 /* JSON.cpp */; };
 		C05589B1292B48D900CBDBD7 /* Date.cpp in Sources */ = {isa = PBXBuildFile; fileRef = C05589B0292B48D900CBDBD7 /* Date.cpp */; };
+		C06C15FC294D8D740022ADCA /* VMScope.cpp in Sources */ = {isa = PBXBuildFile; fileRef = C06C15F8294D750D0022ADCA /* VMScope.cpp */; };
+		C06C15FD294D8D740022ADCA /* Arguments.cpp in Sources */ = {isa = PBXBuildFile; fileRef = C06C15FA294D75AD0022ADCA /* Arguments.cpp */; };
+		C06C1600294DD1150022ADCA /* VMRuntimeCommon.cpp in Sources */ = {isa = PBXBuildFile; fileRef = C06C15FE294DBDF10022ADCA /* VMRuntimeCommon.cpp */; };
+		C06C1605294DD6A00022ADCA /* PromiseTasks.cpp in Sources */ = {isa = PBXBuildFile; fileRef = C06C1604294DD6520022ADCA /* PromiseTasks.cpp */; };
+		C06C1606294DD6A00022ADCA /* TimerTasks.cpp in Sources */ = {isa = PBXBuildFile; fileRef = C06C1602294DD6520022ADCA /* TimerTasks.cpp */; };
+		C06C1609294DD6FF0022ADCA /* JsPromiseObject.cpp in Sources */ = {isa = PBXBuildFile; fileRef = C06C1607294DD6FF0022ADCA /* JsPromiseObject.cpp */; };
 		C06DEEA429332F1C0062C606 /* Reflect.cpp in Sources */ = {isa = PBXBuildFile; fileRef = C06DEEA329332F1C0062C606 /* Reflect.cpp */; };
 		C06DEEA629345A9F0062C606 /* Promise.cpp in Sources */ = {isa = PBXBuildFile; fileRef = C06DEEA529345A9F0062C606 /* Promise.cpp */; };
 		C06EE43F28F40406000F0E41 /* JsObject.cpp in Sources */ = {isa = PBXBuildFile; fileRef = C06EE43E28F40406000F0E41 /* JsObject.cpp */; };
@@ -115,6 +121,18 @@
 		C05589AC29291D1500CBDBD7 /* Math.cpp */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.cpp.cpp; path = Math.cpp; sourceTree = "<group>"; };
 		C05589AE2929DC0C00CBDBD7 /* JSON.cpp */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.cpp.cpp; path = JSON.cpp; sourceTree = "<group>"; };
 		C05589B0292B48D900CBDBD7 /* Date.cpp */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.cpp.cpp; path = Date.cpp; sourceTree = "<group>"; };
+		C06C15F8294D750D0022ADCA /* VMScope.cpp */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.cpp.cpp; path = VMScope.cpp; sourceTree = "<group>"; };
+		C06C15F9294D750D0022ADCA /* VMScope.hpp */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.cpp.h; path = VMScope.hpp; sourceTree = "<group>"; };
+		C06C15FA294D75AD0022ADCA /* Arguments.cpp */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.cpp.cpp; path = Arguments.cpp; sourceTree = "<group>"; };
+		C06C15FB294D75AD0022ADCA /* Arguments.hpp */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.cpp.h; path = Arguments.hpp; sourceTree = "<group>"; };
+		C06C15FE294DBDF10022ADCA /* VMRuntimeCommon.cpp */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.cpp.cpp; path = VMRuntimeCommon.cpp; sourceTree = "<group>"; };
+		C06C15FF294DBDF10022ADCA /* VMRuntimeCommon.hpp */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.cpp.h; path = VMRuntimeCommon.hpp; sourceTree = "<group>"; };
+		C06C1601294DD6520022ADCA /* PromiseTasks.hpp */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.cpp.h; path = PromiseTasks.hpp; sourceTree = "<group>"; };
+		C06C1602294DD6520022ADCA /* TimerTasks.cpp */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.cpp.cpp; path = TimerTasks.cpp; sourceTree = "<group>"; };
+		C06C1603294DD6520022ADCA /* TimerTasks.hpp */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.cpp.h; path = TimerTasks.hpp; sourceTree = "<group>"; };
+		C06C1604294DD6520022ADCA /* PromiseTasks.cpp */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.cpp.cpp; path = PromiseTasks.cpp; sourceTree = "<group>"; };
+		C06C1607294DD6FF0022ADCA /* JsPromiseObject.cpp */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.cpp.cpp; path = JsPromiseObject.cpp; sourceTree = "<group>"; };
+		C06C1608294DD6FF0022ADCA /* JsPromiseObject.hpp */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.cpp.h; path = JsPromiseObject.hpp; sourceTree = "<group>"; };
 		C06DEEA329332F1C0062C606 /* Reflect.cpp */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.cpp.cpp; path = Reflect.cpp; sourceTree = "<group>"; };
 		C06DEEA529345A9F0062C606 /* Promise.cpp */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.cpp.cpp; path = Promise.cpp; sourceTree = "<group>"; };
 		C06EE43D28F40406000F0E41 /* JsObject.hpp */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.cpp.h; path = JsObject.hpp; sourceTree = "<group>"; };
@@ -426,6 +444,12 @@
 		C08597F528D0D54C00577A8E /* interpreter */ = {
 			isa = PBXGroup;
 			children = (
+				C06C1604294DD6520022ADCA /* PromiseTasks.cpp */,
+				C06C1601294DD6520022ADCA /* PromiseTasks.hpp */,
+				C06C1602294DD6520022ADCA /* TimerTasks.cpp */,
+				C06C1603294DD6520022ADCA /* TimerTasks.hpp */,
+				C06C15FA294D75AD0022ADCA /* Arguments.cpp */,
+				C06C15FB294D75AD0022ADCA /* Arguments.hpp */,
 				C08597F728D0D54C00577A8E /* BinaryOperation.hpp */,
 				C08597FA28D0D54C00577A8E /* UnaryOperation.hpp */,
 				C08597FC28D0D54C00577A8E /* VirtualMachine.cpp */,
@@ -434,6 +458,10 @@
 				C08597FB28D0D54C00577A8E /* VirtualMachineTypes.hpp */,
 				C08597FD28D0D54C00577A8E /* VMRuntime.cpp */,
 				C08597F928D0D54C00577A8E /* VMRuntime.hpp */,
+				C06C15FE294DBDF10022ADCA /* VMRuntimeCommon.cpp */,
+				C06C15FF294DBDF10022ADCA /* VMRuntimeCommon.hpp */,
+				C06C15F8294D750D0022ADCA /* VMScope.cpp */,
+				C06C15F9294D750D0022ADCA /* VMScope.hpp */,
 			);
 			path = interpreter;
 			sourceTree = "<group>";
@@ -464,6 +492,8 @@
 				C085980528D0D54C00577A8E /* JsPrimaryObject.hpp */,
 				C08597FF28D0D54C00577A8E /* JsRegExp.cpp */,
 				C085980C28D0D54C00577A8E /* JsRegExp.hpp */,
+				C06C1607294DD6FF0022ADCA /* JsPromiseObject.cpp */,
+				C06C1608294DD6FF0022ADCA /* JsPromiseObject.hpp */,
 			);
 			path = objects;
 			sourceTree = "<group>";
@@ -587,6 +617,11 @@
 			isa = PBXSourcesBuildPhase;
 			buildActionMask = 2147483647;
 			files = (
+				C06C1605294DD6A00022ADCA /* PromiseTasks.cpp in Sources */,
+				C06C1606294DD6A00022ADCA /* TimerTasks.cpp in Sources */,
+				C06C1600294DD1150022ADCA /* VMRuntimeCommon.cpp in Sources */,
+				C06C15FC294D8D740022ADCA /* VMScope.cpp in Sources */,
+				C06C15FD294D8D740022ADCA /* Arguments.cpp in Sources */,
 				C06EE44328F40552000F0E41 /* IJsIterator.cpp in Sources */,
 				C06EE44629091177000F0E41 /* JsObjectLazy.cpp in Sources */,
 				C0443AAF28E5229C00CBF6DB /* CharEncoding.cpp in Sources */,
@@ -610,6 +645,7 @@
 				C085981D28D0D54C00577A8E /* Error.cpp in Sources */,
 				C085983228D0D54C00577A8E /* FileApi.cpp in Sources */,
 				C085982728D0D54C00577A8E /* Lexer.cpp in Sources */,
+				C06C1609294DD6FF0022ADCA /* JsPromiseObject.cpp in Sources */,
 				C085983F28D0D54C00577A8E /* VirtualMachineTypes.cpp in Sources */,
 				C085982628D0D54C00577A8E /* JsArray.cpp in Sources */,
 				C085982A28D0D54C00577A8E /* JsString.cpp in Sources */,

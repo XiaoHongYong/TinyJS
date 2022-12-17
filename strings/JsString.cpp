@@ -18,7 +18,7 @@ JsValue getStringCharAtIndex(VMContext *ctx, const JsValue &thiz, uint32_t index
 
     auto &str = ctx->runtime->getStringWithRandAccess(thiz);
     if (index < str.size()) {
-        return JsValue(JDT_CHAR, str.chartAt(index));
+        return makeJsValueChar(str.chartAt(index));
     }
 
     return jsValueUndefined;
@@ -31,7 +31,7 @@ JsValue getStringMemberIndex(VMContext *ctx, const JsValue &thiz, const JsValue 
         return getStringCharAtIndex(ctx, thiz, name.value.n32);
     }
 
-    auto value = runtime->objPrototypeString->get(ctx, thiz, name, jsValueNotInitialized);
+    auto value = runtime->objPrototypeString()->get(ctx, thiz, name, jsValueEmpty);
     if (value.isValid()) {
         return value;
     }
@@ -39,9 +39,9 @@ JsValue getStringMemberIndex(VMContext *ctx, const JsValue &thiz, const JsValue 
     auto strName = runtime->toSizedString(ctx, name);
     if (strName.equal(SS_LENGTH)) {
         if (thiz.type == JDT_CHAR) {
-            return JsValue(JDT_INT32, 1);
+            return makeJsValueInt32(1);
         } else {
-            return JsValue(JDT_INT32, runtime->getStringLength(thiz));
+            return makeJsValueInt32(runtime->getStringLength(thiz));
         }
     }
 

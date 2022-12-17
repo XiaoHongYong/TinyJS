@@ -16,8 +16,8 @@
 template<int protoIndex_, JsDataType type_>
 class JsPrimaryObject_ : public JsObjectLazy {
 public:
-    JsPrimaryObject_(const JsValue &value) : JsObjectLazy(nullptr, 0, JsValue(JDT_LIB_OBJECT, protoIndex_)), _value(value) {
-        type = type_;
+    JsPrimaryObject_(const JsValue &value) : JsObjectLazy(nullptr, 0, JsValue(JDT_LIB_OBJECT, protoIndex_), type_), _value(value)
+    {
     }
 
     virtual void markReferIdx(VMRuntime *rt) override {
@@ -41,8 +41,8 @@ class JsStringObject : public JsObjectLazy {
 public:
     JsStringObject(const JsValue &value);
 
-    virtual void definePropertyByName(VMContext *ctx, const SizedString &name, const JsProperty &descriptor) override;
-    virtual void definePropertyByIndex(VMContext *ctx, uint32_t index, const JsProperty &descriptor) override;
+    virtual void setPropertyByName(VMContext *ctx, const SizedString &name, const JsValue &descriptor) override;
+    virtual void setPropertyByIndex(VMContext *ctx, uint32_t index, const JsValue &descriptor) override;
 
     virtual JsError setByName(VMContext *ctx, const JsValue &thiz, const SizedString &name, const JsValue &value) override;
     virtual JsError setByIndex(VMContext *ctx, const JsValue &thiz, uint32_t index, const JsValue &value) override;
@@ -50,8 +50,8 @@ public:
     virtual JsValue increaseByName(VMContext *ctx, const JsValue &thiz, const SizedString &name, int n, bool isPost) override;
     virtual JsValue increaseByIndex(VMContext *ctx, const JsValue &thiz, uint32_t index, int n, bool isPost) override;
 
-    virtual JsProperty *getRawByName(VMContext *ctx, const SizedString &name, JsNativeFunction &funcGetterOut, bool includeProtoProp = true) override;
-    virtual JsProperty *getRawByIndex(VMContext *ctx, uint32_t index, bool includeProtoProp = true) override;
+    virtual JsValue *getRawByName(VMContext *ctx, const SizedString &name, bool includeProtoProp = true) override;
+    virtual JsValue *getRawByIndex(VMContext *ctx, uint32_t index, bool includeProtoProp = true) override;
 
     virtual bool removeByName(VMContext *ctx, const SizedString &name) override;
     virtual bool removeByIndex(VMContext *ctx, uint32_t index) override;

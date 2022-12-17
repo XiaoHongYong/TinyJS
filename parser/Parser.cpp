@@ -23,8 +23,8 @@ inline bool isTokenNameEqual(const Token &token, SizedString &name) {
 JSParser::JSParser(VMRuntimeCommon *rtc, ResourcePool *resPool, const char *buf, size_t len) : JSLexer(resPool, buf, len) {
     _runtimeCommon = rtc;
     if (rtc) {
-        _nextStringIdx = (uint32_t)rtc->stringValues.size();
-        _nextDoubleIdx = (uint32_t)rtc->doubleValues.size();
+        _nextStringIdx = rtc->countStringValues();
+        _nextDoubleIdx = rtc->countDoubleValues();
     } else {
         _nextStringIdx = 0;
         _nextDoubleIdx = 0;
@@ -1705,11 +1705,6 @@ void JSParser::_relocateIdentifierInParentFunction(Function *codeBlock, Function
             if (id->varStorageType == VST_NOT_SET) {
                 id->varStorageType = storageType;
                 id->storageIndex = functionScope->countLocalVars++;
-            } else if (curId->isFuncName && functionScope->parent == nullptr
-                       && id->storageIndex < _runtimeCommon->countImmutableGlobalVars) {
-                // 不能出现同名的函数
-                _parseError("Identifier '%.*s' has already been declared",
-                            (int)item.first.len, item.first.data);
             }
 
             curId->varStorageType = id->varStorageType;

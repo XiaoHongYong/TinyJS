@@ -64,7 +64,7 @@ void reflect_ownKeys(VMContext *ctx, const JsValue &thiz, const Arguments &args)
     shared_ptr<IJsIterator> it(obj->getIteratorObject(ctx, false, true));
     JsValue key;
     auto arrObj = new JsArray();
-    auto arr = ctx->runtime->pushObjectValue(arrObj);
+    auto arr = ctx->runtime->pushObject(arrObj);
 
     while (it->next(nullptr, &key, nullptr)) {
         arrObj->push(ctx, key);
@@ -90,7 +90,7 @@ void reflect_setPrototypeOf(VMContext *ctx, const JsValue &thiz, const Arguments
 
 static JsLibProperty reflectFunctions[] = {
     { "name", nullptr, "Reflect" },
-    { "length", nullptr, nullptr, JsValue(JDT_INT32, 1) },
+    { "length", nullptr, nullptr, jsValueLength1Property },
     { "apply", reflect_apply },
     { "construct", reflect_construct },
     { "defineProperty", reflect_defineProperty },

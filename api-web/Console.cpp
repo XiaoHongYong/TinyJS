@@ -83,7 +83,7 @@ void consoleLog(VMContext *ctx, const JsValue &thiz, const Arguments &args) {
             continue;
         } else if (v.type >= JDT_OBJECT) {
             Arguments noArgs;
-            runtime->vm->callMember(ctx, v, SS_TOSTRING, noArgs);
+            ctx->vm->callMember(ctx, v, SS_TOSTRING, noArgs);
             if (ctx->error == JE_OK) {
                 v = ctx->retValue;
             } else {
@@ -92,9 +92,6 @@ void consoleLog(VMContext *ctx, const JsValue &thiz, const Arguments &args) {
         }
 
         switch (v.type) {
-            case JDT_NOT_INITIALIZED:
-                ctx->throwException(JE_REFERECNE_ERROR, "Cannot access variable before initialization");
-                break;
             case JDT_UNDEFINED:
                 out.append("undefined");
                 break;
@@ -133,7 +130,7 @@ void consoleLog(VMContext *ctx, const JsValue &thiz, const Arguments &args) {
         }
     }
 
-    runtime->console->log(SizedString(out));
+    runtime->console()->log(SizedString(out));
     ctx->retValue = jsValueUndefined;
 }
 

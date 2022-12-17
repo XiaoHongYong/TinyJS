@@ -9,29 +9,28 @@
 #define UnaryOperation_hpp
 
 
-JsValue increaseJsValue(VMContext *ctx, JsValue &v, int inc, bool isPost) {
+inline JsValue increaseJsValue(VMContext *ctx, JsValue &v, int inc, bool isPost) {
     JsValue org = jsValueNaN;
     auto runtime = ctx->runtime;
 
     switch (v.type) {
-        case JDT_NOT_INITIALIZED:
         case JDT_UNDEFINED: v = jsValueNaN; break;
-        case JDT_NULL: org = JsValue(JDT_INT32, 0); v = JsValue(JDT_INT32, inc); break;
-        case JDT_BOOL: org = JsValue(JDT_INT32, v.value.n32); v = JsValue(JDT_INT32, v.value.n32 + inc); break;
+        case JDT_NULL: org = makeJsValueInt32(0); v = makeJsValueInt32(inc); break;
+        case JDT_BOOL: org = makeJsValueInt32(v.value.n32); v = makeJsValueInt32(v.value.n32 + inc); break;
         case JDT_INT32: {
             org = v;
             int64_t n = v.value.n32;
             n += inc;
             if (n == (int32_t)n) {
-                v = JsValue(JDT_INT32, (int32_t)n);
+                v = makeJsValueInt32((int32_t)n);
             } else {
-                v = runtime->pushDoubleValue(n);
+                v = runtime->pushDouble(n);
             }
             break;
         }
         case JDT_NUMBER: {
             org = v;
-            v = runtime->pushDoubleValue(runtime->getDouble(v) + inc);
+            v = runtime->pushDouble(runtime->getDouble(v) + inc);
             break;
         }
         case JDT_SYMBOL: {
@@ -40,8 +39,8 @@ JsValue increaseJsValue(VMContext *ctx, JsValue &v, int inc, bool isPost) {
         }
         case JDT_CHAR: {
             if (isdigit(v.value.n32)) {
-                org = JsValue(JDT_INT32, v.value.n32 - '0');
-                v = JsValue(JDT_INT32, v.value.n32 - '0' + inc);
+                org = makeJsValueInt32(v.value.n32 - '0');
+                v = makeJsValueInt32(v.value.n32 - '0' + inc);
             } else {
                 v = jsValueNaN;
             }
@@ -52,11 +51,11 @@ JsValue increaseJsValue(VMContext *ctx, JsValue &v, int inc, bool isPost) {
             if (runtime->toNumber(ctx, v, n)) {
                 n += inc;
                 if (n == (int32_t)n) {
-                    org = JsValue(JDT_INT32, (int32_t)n - inc);
-                    v = JsValue(JDT_INT32, (int32_t)n);
+                    org = makeJsValueInt32((int32_t)n - inc);
+                    v = makeJsValueInt32((int32_t)n);
                 } else {
-                    org = runtime->pushDoubleValue(n - inc);
-                    v = runtime->pushDoubleValue(n);
+                    org = runtime->pushDouble(n - inc);
+                    v = runtime->pushDouble(n);
                 }
             } else {
                 v = jsValueNaN;
@@ -72,7 +71,6 @@ inline JsValue increaseMemberDot(VMContext *ctx, const JsValue &obj, SizedString
     auto runtime = ctx->runtime;
 
     switch (obj.type) {
-        case JDT_NOT_INITIALIZED:
         case JDT_UNDEFINED:
             ctx->throwException(JE_TYPE_ERROR, "Cannot read properties of undefined (reading '%.*s')", (int)name.len, name.data);
             return jsValueNaN;
@@ -86,7 +84,7 @@ inline JsValue increaseMemberDot(VMContext *ctx, const JsValue &obj, SizedString
             return jsValueNaN;
         case JDT_CHAR:
         case JDT_STRING:
-            return runtime->objPrototypeString->increaseByName(ctx, obj, name, inc, isPost);
+            return runtime->objPrototypeString()->increaseByName(ctx, obj, name, inc, isPost);
         default: {
             auto pobj = runtime->getObject(obj);
             assert(pobj);
@@ -101,7 +99,6 @@ inline JsValue increaseMemberIndex(VMContext *ctx, const JsValue &obj, JsValue &
     auto runtime = ctx->runtime;
 
     switch (obj.type) {
-        case JDT_NOT_INITIALIZED:
         case JDT_UNDEFINED:
             ctx->throwExceptionFormatJsValue(JE_TYPE_ERROR, "Cannot read properties of undefined (reading '%.*s')", index);
             return jsValueNaN;
@@ -128,16 +125,15 @@ inline JsValue increaseMemberIndex(VMContext *ctx, const JsValue &obj, JsValue &
     return jsValueUndefined;
 }
 
-JsValue bitNotOperation(VMContext *ctx, JsValue &v) {
+inline JsValue bitNotOperation(VMContext *ctx, JsValue &v) {
     if (v.type == JDT_INT32) {
-        return JsValue(JDT_INT32, ~v.value.n32);
+        return makeJsValueInt32(~v.value.n32);
     }
 
     auto runtime = ctx->runtime;
     int32_t n = 0;
 
     switch (v.type) {
-        case JDT_NOT_INITIALIZED:
         case JDT_UNDEFINED:
         case JDT_NULL:
             break;
@@ -158,7 +154,7 @@ JsValue bitNotOperation(VMContext *ctx, JsValue &v) {
         }
     }
 
-    return JsValue(JDT_INT32, ~n);
+    return makeJsValueInt32(~n);
 }
 
 

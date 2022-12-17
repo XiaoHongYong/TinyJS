@@ -16,7 +16,7 @@ static void objectConstructor(VMContext *ctx, const JsValue &thiz, const Argumen
     auto runtime = ctx->runtime;
 
     if (args.count == 0) {
-        ctx->retValue = runtime->pushObjectValue(new JsObject());
+        ctx->retValue = runtime->pushObject(new JsObject());
     } else {
         ctx->retValue = args[0];
     }
@@ -80,6 +80,16 @@ LockedSizedStringWrapper definePropertyXetterToString(VMContext *ctx, const JsVa
     }
 }
 
+void changeFlag(VMRuntime *runtime, const JsValue &field, JsPropertyFlag flag, JsPropertyFlags &flags) {
+    if (field.isValid()) {
+        if (runtime->testTrue(field)) {
+            flags |= flag;
+        } else {
+            flags &= ~flag;
+        }
+    }
+}
+
 // https://developer.mozilla.org/zh-CN/docs/Web/JavaScript/Reference/Global_Objects/Object/defineProperty
 void objectDefineProperty(VMContext *ctx, const JsValue &thiz, const Arguments &args) {
     auto runtime = ctx->runtime;
@@ -90,7 +100,7 @@ void objectDefineProperty(VMContext *ctx, const JsValue &thiz, const Arguments &
     }
 
     auto obj = args[0];
-    auto prop = args[1];
+    auto name = args[1];
     auto descriptor = args[2];
 
     if (obj.type < JDT_OBJECT) {
@@ -100,12 +110,12 @@ void objectDefineProperty(VMContext *ctx, const JsValue &thiz, const Arguments &
 
     auto descriptorObj = runtime->getObject(descriptor);
 
-    auto configurable = descriptorObj->getByName(ctx, descriptor, SS_CONFIGURABLE, jsValueNotInitialized);
-    auto enumerable = descriptorObj->getByName(ctx, descriptor, SS_ENUMERABLE, jsValueNotInitialized);
-    auto writable = descriptorObj->getByName(ctx, descriptor, SS_WRITABLE, jsValueNotInitialized);
-    auto value = descriptorObj->getByName(ctx, descriptor, SS_VALUE, jsValueNotInitialized);
-    auto get = descriptorObj->getByName(ctx, descriptor, SS_GET, jsValueNotInitialized);
-    auto set = descriptorObj->getByName(ctx, descriptor, SS_SET, jsValueNotInitialized);
+    auto configurable = descriptorObj->getByName(ctx, descriptor, SS_CONFIGURABLE, jsValueEmpty);
+    auto enumerable = descriptorObj->getByName(ctx, descriptor, SS_ENUMERABLE, jsValueEmpty);
+    auto writable = descriptorObj->getByName(ctx, descriptor, SS_WRITABLE, jsValueEmpty);
+    auto value = descriptorObj->getByName(ctx, descriptor, SS_VALUE, jsValueEmpty);
+    auto get = descriptorObj->getByName(ctx, descriptor, SS_GET, jsValueEmpty);
+    auto set = descriptorObj->getByName(ctx, descriptor, SS_SET, jsValueEmpty);
 
     if (get.type < JDT_FUNCTION && get.type > JDT_UNDEFINED) {
         auto str = definePropertyXetterToString(ctx, get);
@@ -123,24 +133,67 @@ void objectDefineProperty(VMContext *ctx, const JsValue &thiz, const Arguments &
         ctx->throwException(JE_TYPE_ERROR, "Invalid property descriptor. Cannot both specify accessors and a value or writable attribute, #<Object>");
     }
 
-    JsProperty propDescriptor(jsValueNotInitialized, -1, -1, -1, -1);
-    propDescriptor.setter = jsValueNotInitialized;
-
-    if (configurable.isValid()) propDescriptor.isConfigurable = runtime->testTrue(configurable);
-    if (enumerable.isValid()) propDescriptor.isEnumerable = runtime->testTrue(enumerable);
-    if (writable.isValid()) propDescriptor.isWritable = runtime->testTrue(writable);
-
-    if (get.isValid() || set.isValid()) {
-        propDescriptor.isGSetter = true;
-        if (get.isValid()) propDescriptor.value = get;
-        if (set.isValid()) propDescriptor.setter = set;
-    } else {
-        propDescriptor.isGSetter = false;
-        propDescriptor.value = value;
-    }
-
     auto pObj = runtime->getObject(obj);
-    pObj->defineProperty(ctx, prop, propDescriptor);
+    auto prop = pObj->getRaw(ctx, name, false);
+    if (prop == nullptr || prop->isEmpty()) {
+        if (pObj->isPreventedExtensions) {
+            ctx->throwExceptionFormatJsValue(JE_TYPE_ERROR, "Cannot define property %.*s, object is not extensible", name);
+            return;
+        }
+
+        // 定义新的 property
+        JsValue propDescriptor;
+        if (value.isValid()) {
+            propDescriptor = value.asProperty(0);
+        } else if (get.isValid() || set.isValid()) {
+            propDescriptor = runtime->pushGetterSetter(get, set);
+        }
+
+        JsPropertyFlags flags = 0;
+        if (configurable.isValid() && runtime->testTrue(configurable)) flags |= JP_CONFIGURABLE;
+        if (enumerable.isValid() && runtime->testTrue(enumerable)) flags |= JP_ENUMERABLE;
+        if (writable.isValid() && runtime->testTrue(writable)) flags |= JP_WRITABLE;
+
+        propDescriptor.propFlags = flags;
+
+        pObj->setProperty(ctx, name, propDescriptor);
+    } else {
+        // 修改现有的.
+        JsValue newProp = *prop;
+
+        if (get.isValid() || set.isValid()) {
+            if (!prop->isConfigurable()) {
+                ctx->throwExceptionFormatJsValue(JE_TYPE_ERROR, "Cannot redefine property: %.*s", name);
+                return;
+            }
+
+            if (newProp.type != JDT_GETTER_SETTER) {
+                if (!prop->isConfigurable()) {
+                    ctx->throwExceptionFormatJsValue(JE_TYPE_ERROR, "Cannot redefine property: %.*s", name);
+                    return;
+                }
+                newProp = runtime->pushGetterSetter(get, set);
+            } else {
+                auto &gs = runtime->getGetterSetter(newProp);
+                if (get.isFunction()) gs.getter = get;
+                if (set.isFunction()) gs.setter = set;
+            }
+        } else {
+            if (value.isValid()) {
+                newProp.setValue(value);
+            }
+        }
+
+        changeFlag(runtime, configurable, JP_CONFIGURABLE, newProp.propFlags);
+        changeFlag(runtime, enumerable, JP_ENUMERABLE, newProp.propFlags);
+        changeFlag(runtime, writable, JP_WRITABLE, newProp.propFlags);
+
+        if (prop->isConfigurable()) {
+            pObj->setProperty(ctx, name, newProp);
+        } else if (!prop->equal(newProp)) {
+            ctx->throwExceptionFormatJsValue(JE_TYPE_ERROR, "Cannot redefine property: %.*s", name);
+        }
+    }
 
     ctx->retValue = thiz;
 }
@@ -190,7 +243,7 @@ void objectCreate(VMContext *ctx, const JsValue &thiz, const Arguments &args) {
     }
 
     auto obj = new JsObject(proto);
-    ctx->retValue = runtime->pushObjectValue(obj);
+    ctx->retValue = runtime->pushObject(obj);
 
     if (args.count >= 2 && args[1].type > JDT_UNDEFINED) {
         objectDefineProperties(ctx, thiz, ArgumentsX(ctx->retValue, args[1]));
@@ -206,12 +259,12 @@ void objectAssign(VMContext *ctx, const JsValue &thiz, const Arguments &args) {
     auto runtime = ctx->runtime;
     auto targ = args[0];
     switch (targ.type) {
-        case JDT_BOOL: targ = runtime->pushObjectValue(new JsBooleanObject(targ)); break;
-        case JDT_INT32: targ = runtime->pushObjectValue(new JsNumberObject(targ)); break;
-        case JDT_NUMBER: targ = runtime->pushObjectValue(new JsNumberObject(targ)); break;
+        case JDT_BOOL: targ = runtime->pushObject(new JsBooleanObject(targ)); break;
+        case JDT_INT32: targ = runtime->pushObject(new JsNumberObject(targ)); break;
+        case JDT_NUMBER: targ = runtime->pushObject(new JsNumberObject(targ)); break;
         case JDT_SYMBOL: ctx->throwException(JE_TYPE_ERROR, "Not supported Object.assign for symbol"); return;
-        case JDT_CHAR: targ = runtime->pushObjectValue(new JsStringObject(targ)); break;
-        case JDT_STRING: targ = runtime->pushObjectValue(new JsStringObject(targ)); break;
+        case JDT_CHAR: targ = runtime->pushObject(new JsStringObject(targ)); break;
+        case JDT_STRING: targ = runtime->pushObject(new JsStringObject(targ)); break;
         default: break;
     }
 
@@ -232,7 +285,7 @@ void objectEntries(VMContext *ctx, const JsValue &thiz, const Arguments &args) {
     auto obj = args[0];
 
     auto arr = new JsArray();
-    auto ret = runtime->pushObjectValue(arr);
+    auto ret = runtime->pushObject(arr);
 
     auto it = getJsIteratorPtr(ctx, obj);
     if (it) {
@@ -242,7 +295,7 @@ void objectEntries(VMContext *ctx, const JsValue &thiz, const Arguments &args) {
             item->push(ctx, key);
             item->push(ctx, value);
 
-            arr->push(ctx, runtime->pushObjectValue(item));
+            arr->push(ctx, runtime->pushObject(item));
         }
     }
 
@@ -251,7 +304,7 @@ void objectEntries(VMContext *ctx, const JsValue &thiz, const Arguments &args) {
 
 void stringPrototypeCharAt(VMContext *ctx, const JsValue &thiz, const Arguments &args);
 
-bool getStringOwnPropertyDescriptor(VMContext *ctx, const JsValue &thiz, JsValue name, JsProperty &descriptorOut) {
+bool getStringOwnPropertyDescriptor(VMContext *ctx, const JsValue &thiz, JsValue name, JsValue &descriptorOut) {
     assert(thiz.type == JDT_CHAR || thiz.type == JDT_STRING);
 
     auto runtime = ctx->runtime;
@@ -271,13 +324,9 @@ bool getStringOwnPropertyDescriptor(VMContext *ctx, const JsValue &thiz, JsValue
         }
 
         if (index >= 0 && index < len) {
-            ArgumentsX args(JsValue(JDT_INT32, index));
+            ArgumentsX args(makeJsValueInt32(index));
             stringPrototypeCharAt(ctx, thiz, args);
-            descriptorOut.value = ctx->retValue;
-            descriptorOut.isConfigurable = false;
-            descriptorOut.isEnumerable = true;
-            descriptorOut.isWritable = false;
-            descriptorOut.isGSetter = false;
+            descriptorOut = ctx->retValue.asProperty(JP_ENUMERABLE);
             return true;
         }
         return false;
@@ -288,17 +337,13 @@ bool getStringOwnPropertyDescriptor(VMContext *ctx, const JsValue &thiz, JsValue
 
         auto str = runtime->toSizedString(ctx, name);
         if (str.equal(SS_LENGTH)) {
-            descriptorOut.value = JsValue(JDT_INT32, len);
-            descriptorOut.isConfigurable = false;
-            descriptorOut.isEnumerable = true;
-            descriptorOut.isWritable = false;
-            descriptorOut.isGSetter = false;
+            descriptorOut = makeJsValueInt32(len).asProperty(JP_ENUMERABLE);
             ret = true;
         } else {
             bool successful;
             auto n = str.atoi(successful);
             if (successful) {
-                name = JsValue(JDT_INT32, (uint32_t)n);
+                name = makeJsValueInt32((uint32_t)n);
                 ret = true;
             }
         }
@@ -322,10 +367,9 @@ void objectGetOwnPropertyDescriptor(VMContext *ctx, const JsValue &thiz, const A
     auto &obj = args[0];
     auto &name = args[1];
 
-    JsProperty descriptor;
+    JsValue descriptor;
 
     switch (obj.type) {
-        case JDT_NOT_INITIALIZED:
         case JDT_UNDEFINED:
         case JDT_NULL:
             assert(0);
@@ -352,17 +396,18 @@ void objectGetOwnPropertyDescriptor(VMContext *ctx, const JsValue &thiz, const A
 
     // 将 descriptor 转换为 object
     auto desc = new JsObject();
-    auto descValue = runtime->pushObjectValue(desc);
+    auto descValue = runtime->pushObject(desc);
 
-    desc->setByName(ctx, descValue, SS_CONFIGURABLE, JsValue(JDT_BOOL, descriptor.isConfigurable));
-    desc->setByName(ctx, descValue, SS_ENUMERABLE, JsValue(JDT_BOOL, descriptor.isEnumerable));
+    desc->setByName(ctx, descValue, SS_CONFIGURABLE, makeJsValueBool(descriptor.isConfigurable()));
+    desc->setByName(ctx, descValue, SS_ENUMERABLE, makeJsValueBool(descriptor.isEnumerable()));
 
-    if (descriptor.isGSetter) {
-        desc->setByName(ctx, descValue, SS_GET, descriptor.value);
-        desc->setByName(ctx, descValue, SS_SET, descriptor.setter);
+    if (descriptor.isGetterSetter()) {
+        auto &gs = runtime->getGetterSetter(descriptor);
+        desc->setByName(ctx, descValue, SS_GET, gs.getter);
+        desc->setByName(ctx, descValue, SS_SET, gs.setter);
     } else {
-        desc->setByName(ctx, descValue, SS_WRITABLE, JsValue(JDT_BOOL, descriptor.isWritable));
-        desc->setByName(ctx, descValue, SS_VALUE, descriptor.value.isValid() ? descriptor.value : jsValueUndefined);
+        desc->setByName(ctx, descValue, SS_WRITABLE, makeJsValueBool(descriptor.isWritable()));
+        desc->setByName(ctx, descValue, SS_VALUE, descriptor.isValid() ? descriptor : jsValueUndefined);
     }
 
     ctx->retValue = descValue;
@@ -381,7 +426,7 @@ void objectFreeze(VMContext *ctx, const JsValue &thiz, const Arguments &args) {
     }
 
     auto pobj = ctx->runtime->getObject(obj);
-    pobj->changeAllProperties(ctx, false, false);
+    pobj->changeAllProperties(ctx, 0, JP_CONFIGURABLE | JP_WRITABLE);
     pobj->preventExtensions(ctx);
 }
 
@@ -415,7 +460,7 @@ void objectFromEntries(VMContext *ctx, const JsValue &thiz, const Arguments &arg
     }
 
     auto pobj = new JsObject();
-    auto obj = runtime->pushObjectValue(pobj);
+    auto obj = runtime->pushObject(pobj);
 
     JsValue item;
     while (it->nextOf(item)) {
@@ -439,7 +484,7 @@ void objectGetOwnPropertyDescriptors(VMContext *ctx, const JsValue &thiz, const 
 
     auto obj = args[0];
     auto descsObj = new JsObject();
-    auto descs = ctx->runtime->pushObjectValue(descsObj);
+    auto descs = ctx->runtime->pushObject(descsObj);
 
     auto it = getJsIteratorPtr(ctx, obj, true);
     if (it) {
@@ -461,7 +506,7 @@ void objectGetOwnPropertyNames(VMContext *ctx, const JsValue &thiz, const Argume
 
     auto obj = args[0];
     auto namesObj = new JsArray();
-    auto names = ctx->runtime->pushObjectValue(namesObj);
+    auto names = ctx->runtime->pushObject(namesObj);
 
     auto it = getJsIteratorPtr(ctx, obj, true);
     if (it) {
@@ -477,7 +522,6 @@ void objectGetOwnPropertyNames(VMContext *ctx, const JsValue &thiz, const Argume
 JsValue get__proto__(VMContext *ctx, const JsValue &value) {
     auto runtime = ctx->runtime;
     switch (value.type) {
-        case JDT_NOT_INITIALIZED:
         case JDT_UNDEFINED:
             ctx->throwException(JE_TYPE_ERROR, "Cannot read properties of undefined (reading '__proto__')");
             break;
@@ -541,7 +585,7 @@ void hasOwnProperty(VMContext *ctx, const JsValue &obj, const JsValue &name) {
         }
     } else {
         auto pobj = runtime->getObject(obj);
-        JsProperty descriptor;
+        JsValue descriptor;
 
         if (pobj->getOwnPropertyDescriptor(ctx, name, descriptor)) {
             ret = jsValueTrue;
@@ -576,11 +620,11 @@ void objectIs(VMContext *ctx, const JsValue &thiz, const Arguments &args) {
             if (isnan(a) && isnan(b)) {
                 ctx->retValue = jsValueTrue;
             } else {
-                ctx->retValue = JsValue(JDT_BOOL, a == b);
+                ctx->retValue = makeJsValueBool(a == b);
             }
         }
     } else {
-        ctx->retValue = JsValue(JDT_BOOL, relationalStrictEqual(ctx->runtime, left, right));
+        ctx->retValue = makeJsValueBool(relationalStrictEqual(ctx->runtime, left, right));
     }
 }
 
@@ -594,7 +638,7 @@ void objectIsExtensible(VMContext *ctx, const JsValue &thiz, const Arguments &ar
         extensible = pobj->isExtensible();
     }
 
-    ctx->retValue = JsValue(JDT_BOOL, extensible);
+    ctx->retValue = makeJsValueBool(extensible);
 }
 
 void objectIsFrozen(VMContext *ctx, const JsValue &thiz, const Arguments &args) {
@@ -611,9 +655,9 @@ void objectIsFrozen(VMContext *ctx, const JsValue &thiz, const Arguments &args) 
         return;
     }
 
-    bool isFrozen = !pobj->hasAnyProperty(ctx, true, true);
+    bool isFrozen = !pobj->hasAnyProperty(ctx, JP_CONFIGURABLE | JP_WRITABLE);
 
-    ctx->retValue = JsValue(JDT_BOOL, isFrozen);
+    ctx->retValue = makeJsValueBool(isFrozen);
 }
 
 void objectIsSealed(VMContext *ctx, const JsValue &thiz, const Arguments &args) {
@@ -630,9 +674,9 @@ void objectIsSealed(VMContext *ctx, const JsValue &thiz, const Arguments &args) 
         return;
     }
 
-    bool isSealed = !pobj->hasAnyProperty(ctx, true, false);
+    bool isSealed = !pobj->hasAnyProperty(ctx, JP_CONFIGURABLE);
 
-    ctx->retValue = JsValue(JDT_BOOL, isSealed);
+    ctx->retValue = makeJsValueBool(isSealed);
 }
 
 void objectKeys(VMContext *ctx, const JsValue &thiz, const Arguments &args) {
@@ -643,7 +687,7 @@ void objectKeys(VMContext *ctx, const JsValue &thiz, const Arguments &args) {
     }
 
     auto arr = new JsArray();
-    auto ret = ctx->runtime->pushObjectValue(arr);
+    auto ret = ctx->runtime->pushObject(arr);
 
     auto it = getJsIteratorPtr(ctx, obj);
     if (it) {
@@ -681,7 +725,7 @@ void objectSeal(VMContext *ctx, const JsValue &thiz, const Arguments &args) {
 
     auto pobj = ctx->runtime->getObject(obj);
     pobj->preventExtensions(ctx);
-    pobj->changeAllProperties(ctx, true);
+    pobj->changeAllProperties(ctx, 0, JP_CONFIGURABLE);
 }
 
 void objectSetPrototypeOf(VMContext *ctx, const JsValue &thiz, const Arguments &args) {
@@ -717,7 +761,7 @@ void objectValues(VMContext *ctx, const JsValue &thiz, const Arguments &args) {
     }
 
     auto arr = new JsArray();
-    auto ret = runtime->pushObjectValue(arr);
+    auto ret = runtime->pushObject(arr);
 
     auto it = getJsIteratorPtr(ctx, obj);
     if (it) {
@@ -732,7 +776,7 @@ void objectValues(VMContext *ctx, const JsValue &thiz, const Arguments &args) {
 
 static JsLibProperty objectFunctions[] = {
     { "name", nullptr, "Object" },
-    { "length", nullptr, nullptr, JsValue(JDT_INT32, 1) },
+    { "length", nullptr, nullptr, jsValueLength0Property },
     { "assign", objectAssign },
     { "create", objectCreate },
     { "defineProperties", objectDefineProperties },
@@ -754,7 +798,7 @@ static JsLibProperty objectFunctions[] = {
     { "seal", objectSeal },
     { "setPrototypeOf", objectSetPrototypeOf },
     { "values", objectValues },
-    { "prototype", nullptr, nullptr, JsValue(JDT_INT32, 1) },
+    { "prototype", nullptr, nullptr, jsValuePropertyPrototype },
 };
 
 void objectPrototypeToString(VMContext *ctx, const JsValue &thiz, const Arguments &args) {
@@ -797,7 +841,7 @@ void objectPrototypeIsPrototypeOf(VMContext *ctx, const JsValue &thiz, const Arg
         }
     }
 
-    ctx->retValue = JsValue(JDT_BOOL, ret);
+    ctx->retValue = makeJsValueBool(ret);
 }
 
 void objectPrototypeValueOf(VMContext *ctx, const JsValue &thiz, const Arguments &args) {
@@ -831,14 +875,13 @@ void objectPrototypePropertyIsEnumerable(VMContext *ctx, const JsValue &thiz, co
         }
     } else {
         auto pobj = runtime->getObject(thiz);
-        JsNativeFunction funcGetter = nullptr;
-        auto prop = pobj->getRaw(ctx, name, funcGetter);
-        if (prop && prop->isEnumerable) {
+        auto prop = pobj->getRaw(ctx, name, false);
+        if (prop && prop->isEnumerable()) {
             ret = true;
         }
     }
 
-    ctx->retValue = JsValue(JDT_BOOL, ret);
+    ctx->retValue = makeJsValueBool(ret);
 }
 
 static JsLibProperty objectPrototypeFunctions[] = {

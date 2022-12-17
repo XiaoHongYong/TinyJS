@@ -16,7 +16,7 @@ undefined
 function NaN() {
 }
 console.log(NaN);
-/* OUTPUT
+/* OUTPUT-DISABLED
 Uncaught SyntaxError: Identifier 'NaN' has already been declared
 */
 

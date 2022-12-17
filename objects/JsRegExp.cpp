@@ -37,22 +37,21 @@ bool parseRegexpFlags(const SizedString &flags, uint32_t &flagsOut) {
     return true;
 }
 
-JsRegExp::JsRegExp(const SizedString &str, const std::regex &re, uint32_t flags) : JsObjectLazy(_props, CountOf(_props), jsValuePrototypeRegExp),  _strRe((cstr_t)str.data, str.len), _flags(flags), _re(re) {
-    type = JDT_REGEX;
-
+JsRegExp::JsRegExp(const SizedString &str, const std::regex &re, uint32_t flags) : JsObjectLazy(_props, CountOf(_props), jsValuePrototypeRegExp, JDT_REGEX),  _strRe((cstr_t)str.data, str.len), _flags(flags), _re(re)
+{
     // isGSetter, isConfigurable, isEnumerable, isWritable
     JsLazyProperty props[] = {
         // 添加缺省的 lastIndex 属性.
-        { SS_LASTINDEX, JsProperty(JsValue(JDT_INT32, 0), false, false, false, true), false, },
-        { SS_DOTALL, JsProperty(JsValue(JDT_BOOL, flags &RF_DOT_ALL), false, false, false, false), false, },
-        { SS_FLAGS, JsProperty(JsValue(JDT_BOOL, false), flags, false, false, false), false, },
-        { SS_GLOBAL, JsProperty(JsValue(JDT_BOOL, flags &RF_GLOBAL_SEARCH), false, false, false, false), false, },
-        { SS_HASINDICES, JsProperty(JsValue(JDT_BOOL, flags &RF_INDEX), false, false, false, false), false, },
-        { SS_IGNORECASE, JsProperty(JsValue(JDT_BOOL, flags &RF_CASE_INSENSITIVE), false, false, false, false), false, },
-        { SS_MULTILINE, JsProperty(JsValue(JDT_BOOL, flags &RF_MULTILINE), false, false, false, false), false, },
-        { SS_SOURCE, JsProperty(JsValue(JDT_BOOL, false), false, false, false, false), false, },
-        { SS_STICKY, JsProperty(JsValue(JDT_BOOL, flags &RF_STICKY), false, false, false, false), false, },
-        { SS_UNICODE, JsProperty(JsValue(JDT_BOOL, flags &RF_UNICODE), false, false, false, false), false, },
+        { SS_LASTINDEX, makeJsValueInt32(0).asProperty(JP_WRITABLE), false, },
+        { SS_DOTALL, makeJsValueBool(flags &RF_DOT_ALL).asProperty(0), false, },
+        { SS_FLAGS, makeJsValueBool(false).asProperty(0), false, },
+        { SS_GLOBAL, makeJsValueBool(flags & RF_GLOBAL_SEARCH).asProperty(0), false, },
+        { SS_HASINDICES, makeJsValueBool(flags & RF_INDEX).asProperty(0), false, },
+        { SS_IGNORECASE, makeJsValueBool(flags & RF_CASE_INSENSITIVE).asProperty(0), false, },
+        { SS_MULTILINE, makeJsValueBool(flags & RF_MULTILINE).asProperty(0), false, },
+        { SS_SOURCE, makeJsValueBool(false).asProperty(0), false, },
+        { SS_STICKY, makeJsValueBool(flags & RF_STICKY).asProperty(0), false, },
+        { SS_UNICODE, makeJsValueBool(flags & RF_UNICODE).asProperty(0), false, },
     };
 
     static_assert(sizeof(props) == sizeof(props));
@@ -64,7 +63,7 @@ JsRegExp::~JsRegExp() {
 
 void JsRegExp::setLastIndex(int index) {
     assert(_props[0].name.equal(SS_LASTINDEX));
-    _props[0].prop.value.value.n32 = index;
+    _props[0].prop.setValue(makeJsValueInt32(index));
 }
 
 IJsObject *JsRegExp::clone() {

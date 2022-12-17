@@ -10,6 +10,14 @@
 #include <algorithm>
 
 
+IJsObject::IJsObject(JsValue proto, JsDataType type) : __proto__(proto), type(type) {
+    __proto__.setProperty(JP_WRITABLE);
+    isPreventedExtensions = false;
+    _isOfIterable = false;
+    referIdx = 0;
+    nextFreeIdx = 0;
+}
+
 bool IJsObject::getBool(VMContext *ctx, const JsValue &thiz, const SizedString &name) {
     auto value = getByName(ctx, thiz, name);
     return ctx->runtime->testTrue(value);
@@ -20,55 +28,49 @@ bool IJsObject::getBool(VMContext *ctx, const JsValue &thiz, const JsValue &name
     return ctx->runtime->testTrue(value);
 }
 
-void IJsObject::defineProperty(VMContext *ctx, const JsValue &nameOrg, const JsProperty &descriptor) {
+void IJsObject::setProperty(VMContext *ctx, const JsValue &nameOrg, const JsValue &descriptor) {
     JsValue name = nameOrg;
     if (name.type >= JDT_OBJECT) {
         name = ctx->runtime->toString(ctx, nameOrg);
     }
 
     switch (name.type) {
-        case JDT_NOT_INITIALIZED:
-            ctx->throwException(JE_TYPE_ERROR, "Cannot access '?' before initialization");
-            break;
-        case JDT_UNDEFINED: definePropertyByName(ctx, SS_UNDEFINED, descriptor); break;
-        case JDT_NULL: definePropertyByName(ctx, SS_NULL, descriptor); break;
-        case JDT_BOOL: definePropertyByName(ctx, name.value.n32 ? SS_TRUE : SS_FALSE, descriptor); break;
-        case JDT_INT32: definePropertyByIndex(ctx, name.value.n32, descriptor); break;
+        case JDT_UNDEFINED: setPropertyByName(ctx, SS_UNDEFINED, descriptor); break;
+        case JDT_NULL: setPropertyByName(ctx, SS_NULL, descriptor); break;
+        case JDT_BOOL: setPropertyByName(ctx, name.value.n32 ? SS_TRUE : SS_FALSE, descriptor); break;
+        case JDT_INT32: setPropertyByIndex(ctx, name.value.n32, descriptor); break;
         case JDT_NUMBER: {
             char buf[64];
             auto len = floatToString(ctx->runtime->getDouble(name), buf);
-            definePropertyByName(ctx, SizedString(buf, len), descriptor);
+            setPropertyByName(ctx, SizedString(buf, len), descriptor);
             break;
         }
         case JDT_CHAR: {
             SizedStringWrapper str(name);
-            definePropertyByName(ctx, str, descriptor);
+            setPropertyByName(ctx, str, descriptor);
             break;
         }
         case JDT_STRING: {
             auto &strName = ctx->runtime->getUtf8String(name);
-            definePropertyByName(ctx, strName, descriptor);
+            setPropertyByName(ctx, strName, descriptor);
             break;
         }
-        case JDT_SYMBOL: definePropertyBySymbol(ctx, name.value.index, descriptor); break;
+        case JDT_SYMBOL: setPropertyBySymbol(ctx, name.value.index, descriptor); break;
         default: {
             ctx->throwException(JE_TYPE_ERROR, "Cannot convert object to primitive value");
         }
     }
 }
 
-bool IJsObject::getOwnPropertyDescriptor(VMContext *ctx, const JsValue &nameOrg, JsProperty &descriptorOut) {
+bool IJsObject::getOwnPropertyDescriptor(VMContext *ctx, const JsValue &nameOrg, JsValue &descriptorOut) {
     JsValue name = nameOrg;
     if (name.type >= JDT_OBJECT) {
         name = ctx->runtime->toString(ctx, nameOrg);
     }
 
-    descriptorOut = JsProperty(jsValueUndefined);
+    descriptorOut = jsValueEmpty;
 
     switch (name.type) {
-        case JDT_NOT_INITIALIZED:
-            ctx->throwException(JE_TYPE_ERROR, "Cannot access '?' before initialization");
-            break;
         case JDT_UNDEFINED: return getOwnPropertyDescriptorByName(ctx, SS_UNDEFINED, descriptorOut);
         case JDT_NULL: return getOwnPropertyDescriptorByName(ctx, SS_NULL, descriptorOut);
         case JDT_BOOL: return getOwnPropertyDescriptorByName(ctx, name.value.n32 ? SS_TRUE : SS_FALSE, descriptorOut);
@@ -96,14 +98,11 @@ bool IJsObject::getOwnPropertyDescriptor(VMContext *ctx, const JsValue &nameOrg,
     return false;
 }
 
-JsProperty *IJsObject::getRaw(VMContext *ctx, const JsValue &name, JsNativeFunction &funcGetterOut, bool includeProtoProp) {
+JsValue *IJsObject::getRaw(VMContext *ctx, const JsValue &name, bool includeProtoProp) {
     switch (name.type) {
-        case JDT_NOT_INITIALIZED:
-            ctx->throwException(JE_TYPE_ERROR, "Cannot access '?' before initialization");
-            return nullptr;
-        case JDT_UNDEFINED: return getRawByName(ctx, SS_UNDEFINED, funcGetterOut, includeProtoProp); break;
-        case JDT_NULL: return getRawByName(ctx, SS_NULL, funcGetterOut, includeProtoProp); break;
-        case JDT_BOOL: return getRawByName(ctx, name.value.n32 ? SS_TRUE : SS_FALSE, funcGetterOut, includeProtoProp); break;
+        case JDT_UNDEFINED: return getRawByName(ctx, SS_UNDEFINED, includeProtoProp); break;
+        case JDT_NULL: return getRawByName(ctx, SS_NULL, includeProtoProp); break;
+        case JDT_BOOL: return getRawByName(ctx, name.value.n32 ? SS_TRUE : SS_FALSE, includeProtoProp); break;
         case JDT_INT32: return getRawByIndex(ctx, name.value.n32, includeProtoProp); break;
         case JDT_NUMBER: {
             auto d = ctx->runtime->getDouble(name);
@@ -112,17 +111,17 @@ JsProperty *IJsObject::getRaw(VMContext *ctx, const JsValue &name, JsNativeFunct
             } else {
                 char buf[64];
                 auto len = floatToString(d, buf);
-                return getRawByName(ctx, SizedString(buf, len), funcGetterOut, includeProtoProp);
+                return getRawByName(ctx, SizedString(buf, len), includeProtoProp);
             }
             break;
         }
         case JDT_CHAR: {
             SizedStringWrapper str(name);
-            return getRawByName(ctx, str.str(), funcGetterOut, includeProtoProp);
+            return getRawByName(ctx, str.str(), includeProtoProp);
         }
         case JDT_STRING: {
             auto &str = ctx->runtime->getUtf8String(name);
-            return getRawByName(ctx, str, funcGetterOut, includeProtoProp);
+            return getRawByName(ctx, str, includeProtoProp);
         }
         case JDT_SYMBOL: {
             return getRawBySymbol(ctx, name.value.index, includeProtoProp);
@@ -133,29 +132,15 @@ JsProperty *IJsObject::getRaw(VMContext *ctx, const JsValue &name, JsNativeFunct
             if (ctx->error != JE_OK) {
                 return nullptr;
             }
-            return getRaw(ctx, nameNew, funcGetterOut, includeProtoProp);
+            return getRaw(ctx, nameNew, includeProtoProp);
         }
     }
 }
 
 JsValue IJsObject::get(VMContext *ctx, const JsValue &thiz, const JsValue &nameOrg, const JsValue &defVal) {
-    JsNativeFunction funcGetter = nullptr;
-    JsProperty *prop = getRaw(ctx, nameOrg, funcGetter, true);
+    auto *prop = getRaw(ctx, nameOrg, true);
     if (prop) {
-        if (prop->isGSetter) {
-            if (funcGetter) {
-                funcGetter(ctx, thiz, Arguments());
-            } else if (prop->value.type >= JDT_FUNCTION) {
-                ctx->vm->callMember(ctx, thiz, prop->value, Arguments());
-            } else {
-                // getter 未设置，返回 undefined.
-                return jsValueUndefined;
-            }
-            return ctx->retValue;
-        } else if (prop->value.type == JDT_NOT_INITIALIZED) {
-            return defVal;
-        }
-        return prop->value;
+        return getPropertyValue(ctx, thiz, prop, defVal);
     }
     return defVal;
 }
@@ -165,24 +150,8 @@ void IJsObject::set(VMContext *ctx, const JsValue &thiz, const JsValue &nameOrg,
     if (name.type >= JDT_OBJECT) {
         name = ctx->runtime->toString(ctx, nameOrg);
     }
-//
-//    if (thiz.type < JDT_OBJECT) {
-//        // Primitive types 不能被修改，但是其 setter 函数会被调用
-//        auto strName = ctx->runtime->toSizedString(ctx, name);
-//        JsNativeFunction funcGetter = nullptr;
-//        auto prop = getRawByName(ctx, strName, funcGetter, true);
-//        if (prop && prop->setter.type >= JDT_FUNCTION) {
-//            // 调用 setter 函数
-//            ArgumentsX args(value);
-//            ctx->vm->callMember(ctx, thiz, prop->setter, args);
-//        }
-//        return;
-//    }
 
     switch (name.type) {
-        case JDT_NOT_INITIALIZED:
-            ctx->throwException(JE_TYPE_ERROR, "Cannot access '?' before initialization");
-            return;
         case JDT_UNDEFINED: setByName(ctx, thiz, SS_UNDEFINED, value); break;
         case JDT_NULL: setByName(ctx, thiz, SS_NULL, value); break;
         case JDT_BOOL: setByName(ctx, thiz, name.value.n32 ? SS_TRUE : SS_FALSE, value); break;
@@ -225,9 +194,6 @@ JsValue IJsObject::increase(VMContext *ctx, const JsValue &thiz, const JsValue &
     }
 
     switch (name.type) {
-        case JDT_NOT_INITIALIZED:
-            ctx->throwException(JE_TYPE_ERROR, "Cannot access '?' before initialization");
-            return jsValueNaN;
         case JDT_UNDEFINED: return increaseByName(ctx, thiz, SS_UNDEFINED, n, isPost);
         case JDT_NULL: return increaseByName(ctx, thiz, SS_NULL, n, isPost);
         case JDT_BOOL: return increaseByName(ctx, thiz, name.value.n32 ? SS_TRUE : SS_FALSE, n, isPost);
@@ -267,9 +233,6 @@ bool IJsObject::remove(VMContext *ctx, const JsValue &propOrg) {
     }
 
     switch (prop.type) {
-        case JDT_NOT_INITIALIZED:
-            ctx->throwException(JE_TYPE_ERROR, "Cannot access '?' before initialization");
-            break;
         case JDT_UNDEFINED: return removeByName(ctx, SS_UNDEFINED);
         case JDT_NULL: return removeByName(ctx, SS_NULL);
         case JDT_BOOL: return removeByName(ctx, prop.value.n32 ? SS_TRUE : SS_FALSE);
@@ -311,6 +274,21 @@ bool IJsObject::getLength(VMContext *ctx, int32_t &lengthOut) {
 }
 
 /**
+ * 通过 { get x() {}, set x() {} } 时调用.
+ */
+void IJsObject::addGetterSetterByName(VMContext *ctx, const SizedString &name, const JsValue &getter, const JsValue &setter) {
+    auto prop = getRawByName(ctx, name);
+    if (prop == nullptr) {
+        auto gs = ctx->runtime->pushGetterSetter(getter, setter);
+        setPropertyByName(ctx, name, gs.asProperty(JP_DEFAULT));
+    } else {
+        auto &gs = ctx->runtime->getGetterSetter(*prop);
+        if (getter.isFunction()) gs.getter = getter;
+        if (setter.isFunction()) gs.setter = setter;
+    }
+}
+
+/**
  * 为了遍历 Object 的所有属性
  */
 class JsObjectIterator : public IJsIterator {
@@ -346,7 +324,7 @@ public:
             }
 
             auto &prop = (*_it).second;
-            if (prop.isEnumerable || _includeNoneEnumerable) {
+            if (prop.isEnumerable() || _includeNoneEnumerable) {
                 break;
             }
             _it++;
@@ -361,7 +339,7 @@ public:
         }
 
         if (valueOut) {
-            *valueOut = getPropertyValue(_ctx, (*_it).second, _obj->self);
+            *valueOut = getPropertyValue(_ctx, _obj->self, (*_it).second);
         }
 
         _it++;

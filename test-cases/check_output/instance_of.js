@@ -230,40 +230,40 @@ function f() {
     const o = new C();
 
     // true, because: Object.getPrototypeOf(o) === C.prototype
-    console.log(o instanceof C);
+    console.log(1, o instanceof C);
 
     // false, because D.prototype is nowhere in o's prototype chain
-    console.log(o instanceof D);
+    console.log(2, o instanceof D);
 
-    console.log(o instanceof Object); // true, because:
-    console.log(C.prototype instanceof Object); // true
+    console.log(3, o instanceof Object); // true, because:
+    console.log(4, C.prototype instanceof Object); // true
 
     // Re-assign `constructor.prototype`: you should
     // rarely do this in practice.
     C.prototype = {};
     const o2 = new C();
 
-    console.log(o2 instanceof C); // true
+    console.log(5, o2 instanceof C); // true
 
     // false, because C.prototype is nowhere in
     // o's prototype chain anymore
-    console.log(o instanceof C);
+    console.log(6, o instanceof C);
 
     D.prototype = new C(); // add C to [[Prototype]] linkage of D
     const o3 = new D();
-    console.log(o3 instanceof D); // true
-    console.log(o3 instanceof C); // true since C.prototype is now in o3's prototype chain
+    console.log(7, o3 instanceof D); // true
+    console.log(8, o3 instanceof C); // true since C.prototype is now in o3's prototype chain
 }
 f();
 /* OUTPUT
-true
-false
-true
-true
-true
-false
-true
-true
+1 true
+2 false
+3 true
+4 true
+5 true
+6 false
+7 true
+8 true
 */
 
 

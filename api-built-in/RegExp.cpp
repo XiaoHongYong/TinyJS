@@ -44,13 +44,13 @@ void regExpConstructor(VMContext *ctx, const JsValue &thiz, const Arguments &arg
     std::regex re((cstr_t)strRe.data, strRe.len, (std::regex::flag_type)flags);
     auto reObj = new JsRegExp(SizedString(all), re, flags);
 
-    ctx->retValue = runtime->pushObjectValue(reObj);
+    ctx->retValue = runtime->pushObject(reObj);
 }
 
 static JsLibProperty regExpFunctions[] = {
     { "name", nullptr, "RegExp" },
-    { "length", nullptr, nullptr, JsValue(JDT_INT32, 1) },
-    { "prototype", nullptr, nullptr, JsValue(JDT_INT32, 1) },
+    { "length", nullptr, nullptr, jsValueLength1Property },
+    { "prototype", nullptr, nullptr, jsValuePropertyPrototype },
 };
 
 
@@ -83,7 +83,7 @@ void regexp_exec(VMContext *ctx, const JsValue &thiz, const Arguments &args) {
     std::cmatch matches;
     if (std::regex_search((cstr_t)str.data, (cstr_t)str.data + str.len, matches, re)) {
         auto arr = new JsArray();
-        auto ret = runtime->pushObjectValue(arr);
+        auto ret = runtime->pushObject(arr);
 
         for (auto &m : matches) {
             arr->push(ctx, runtime->pushString(str.substr(m.first, m.second)));
@@ -91,7 +91,7 @@ void regexp_exec(VMContext *ctx, const JsValue &thiz, const Arguments &args) {
 
         auto index = utf8ToUtf16Length(str.data, (uint32_t)(matches[0].first - (cstr_t)str.data));
         lastIndex += index;
-        arr->setByName(ctx, ret, SS_INDEX, JsValue(JDT_INT32, lastIndex));
+        arr->setByName(ctx, ret, SS_INDEX, makeJsValueInt32(lastIndex));
         arr->setByName(ctx, ret, SS_GROUPS, jsValueUndefined);
         arr->setByName(ctx, ret, SS_INPUT, strVal);
         regexp->setLastIndex(lastIndex + utf8ToUtf16Length((uint8_t *)matches[0].first,

@@ -29,7 +29,7 @@ static void _eval(VMContext *ctx, const JsValue &thiz, const Arguments &args) {
         auto code = runtime->getString(v);
         auto stackScopes = ctx->stackScopesForNativeFunctionCall;
         if (stackScopes == nullptr) {
-            stackScopesGlobal.push_back(runtime->globalScope);
+            stackScopesGlobal.push_back(runtime->globalScope());
             stackScopes = &stackScopesGlobal;
         }
 
@@ -43,7 +43,7 @@ static void _eval(VMContext *ctx, const JsValue &thiz, const Arguments &args) {
 
 static JsLibProperty errorFunctions[] = {
     { "name", nullptr, "eval" },
-    { "length", nullptr, nullptr, JsValue(JDT_INT32, 1) },
+    { "length", nullptr, nullptr, jsValueLength1Property },
 };
 
 void registerEval(VMRuntimeCommon *rt) {

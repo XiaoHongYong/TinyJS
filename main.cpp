@@ -62,7 +62,7 @@ int main(int argc, const char * argv[]) {
     BinaryOutputStream stream;
 
     auto runtime = vm.defaultRuntime();
-    auto ctx = runtime->mainVmCtx;
+    auto ctx = runtime->mainCtx();
 
     vm.run(code, strlen(code), runtime);
     if (ctx->error) {
@@ -79,8 +79,8 @@ int main(int argc, const char * argv[]) {
     }
 
 //    code = "g('y');";
-//    vm.eval(code, strlen(code), runtime->mainVmCtx, stackScopes, args);
-//    if (runtime->mainVmCtx->error) {
+//    vm.eval(code, strlen(code), runtime->mainCtx(), stackScopes, args);
+//    if (runtime->mainCtx()->error) {
 //        auto err = runtime->toSizedString(ctx, ctx->errorMessage);
 //        printf("Got exception: %.*s\n", int(err.len), err.data);
 //    }

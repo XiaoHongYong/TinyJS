@@ -57,7 +57,7 @@ void throwModifyPropertyException(VMContext *ctx, JsError err, JsValue thiz, int
 }
 
 void setPropByIndexEx(VMContext *ctx, JsValue thiz, IJsObject *obj, JsValue value, int32_t index) {
-    if (value.type == JDT_NOT_INITIALIZED) {
+    if (value.isEmpty()) {
         if (!obj->removeByIndex(ctx, index)) {
             auto s = objectPrototypeToSizedString(thiz);
             ctx->throwException(JE_TYPE_ERROR, "Cannot delete property '%d' of %.*s", index, s.len, s.data);
@@ -83,7 +83,7 @@ void arrayLikeAction(VMContext *ctx, JsValue thiz, T action) {
             auto &str = runtime->getStringWithRandAccess(thiz);
             auto length = str.size();
             for (uint32_t i = 0; i < length && ctx->error == JE_OK; i++) {
-                action(i, JsValue(JDT_CHAR, str.chartAt(i)));
+                action(i, makeJsValueChar(str.chartAt(i)));
             }
         }
         return;
@@ -96,8 +96,8 @@ void arrayLikeAction(VMContext *ctx, JsValue thiz, T action) {
     }
 
     for (int i = 0; i < length && ctx->error == JE_OK; i++) {
-        auto value = obj->getByIndex(ctx, thiz, i, jsValueNotInitialized);
-        if (value.type > JDT_NOT_INITIALIZED) {
+        auto value = obj->getByIndex(ctx, thiz, i, jsValueEmpty);
+        if (value.isValid()) {
             action(i, value);
         }
     }
@@ -120,7 +120,7 @@ void arrayLikeActionEx(VMContext *ctx, JsValue thiz, T action, int start = 0) {
             normalizeStart(start, length);
 
             for (uint32_t i = start; i < length; i++) {
-                if (action(i, JsValue(JDT_CHAR, str.chartAt(i)))) {
+                if (action(i, makeJsValueChar(str.chartAt(i)))) {
                     break;
                 }
             }
@@ -138,8 +138,8 @@ void arrayLikeActionEx(VMContext *ctx, JsValue thiz, T action, int start = 0) {
 
     if (ignoreEmptySlot) {
         for (int i = start; i < length; i++) {
-            auto value = obj->getByIndex(ctx, thiz, i, jsValueNotInitialized);
-            if (value.type > JDT_NOT_INITIALIZED) {
+            auto value = obj->getByIndex(ctx, thiz, i, jsValueEmpty);
+            if (value.isValid()) {
                 if (action(i, value)) {
                     break;
                 }
@@ -177,7 +177,7 @@ void arrayLikeActionExReverse(VMContext *ctx, JsValue thiz, T action, int fromIn
             }
 
             for (int i = fromIndex; i >= 0; i--) {
-                if (action(i, JsValue(JDT_CHAR, str.chartAt(i)))) {
+                if (action(i, makeJsValueChar(str.chartAt(i)))) {
                     break;
                 }
             }
@@ -202,8 +202,8 @@ void arrayLikeActionExReverse(VMContext *ctx, JsValue thiz, T action, int fromIn
 
     if (ignoreEmptySlot) {
         for (int i = fromIndex; i >= 0; i--) {
-            auto value = obj->getByIndex(ctx, thiz, i, jsValueNotInitialized);
-            if (value.type > JDT_NOT_INITIALIZED) {
+            auto value = obj->getByIndex(ctx, thiz, i, jsValueEmpty);
+            if (value.isValid()) {
                 if (action(i, value)) {
                     break;
                 }
@@ -223,7 +223,7 @@ static void arrayConstructor(VMContext *ctx, const JsValue &thiz, const Argument
     auto runtime = ctx->runtime;
 
     if (args.count == 0) {
-        ctx->retValue = runtime->pushObjectValue(new JsArray());
+        ctx->retValue = runtime->pushObject(new JsArray());
         return;
     } else if (args.count == 1 && (args[0].type == JDT_INT32 || args[0].type == JDT_NUMBER)) {
         auto len = args[0];
@@ -239,13 +239,13 @@ static void arrayConstructor(VMContext *ctx, const JsValue &thiz, const Argument
         }
 
         auto arr = new JsArray(n);
-        ctx->retValue = runtime->pushObjectValue(arr);
+        ctx->retValue = runtime->pushObject(arr);
         return;
     }
 
     auto arr = new JsArray();
     arr->push(ctx, args.data, args.count);
-    ctx->retValue = runtime->pushObjectValue(arr);
+    ctx->retValue = runtime->pushObject(arr);
 }
 
 void arrayIsArray(VMContext *ctx, const JsValue &thiz, const Arguments &args) {
@@ -254,7 +254,7 @@ void arrayIsArray(VMContext *ctx, const JsValue &thiz, const Arguments &args) {
     if (arr == jsValuePrototypeArray) {
         ctx->retValue = jsValueTrue;
     } else {
-        ctx->retValue = JsValue(JDT_BOOL, arr.type == JDT_ARRAY);
+        ctx->retValue = makeJsValueBool(arr.type == JDT_ARRAY);
     }
 }
 
@@ -265,7 +265,7 @@ void arrayFrom(VMContext *ctx, const JsValue &thiz, const Arguments &args) {
 
     if (callback.type <= JDT_UNDEFINED) {
         auto arrObj = new JsArray();
-        auto arr = ctx->runtime->pushObjectValue(arrObj);
+        auto arr = ctx->runtime->pushObject(arrObj);
 
         auto vm = ctx->vm;
         arrayLikeAction(ctx, src, [ctx, vm, arrObj](int index, JsValue item) {
@@ -278,11 +278,11 @@ void arrayFrom(VMContext *ctx, const JsValue &thiz, const Arguments &args) {
         return;
     } else {
         auto arrObj = new JsArray();
-        auto arr = ctx->runtime->pushObjectValue(arrObj);
+        auto arr = ctx->runtime->pushObject(arrObj);
 
         auto vm = ctx->vm;
         arrayLikeActionEx<false>(ctx, src, [ctx, vm, arrObj, callback, thisArg](int index, JsValue item) {
-            ArgumentsX args(item, JsValue(JDT_INT32, index));
+            ArgumentsX args(item, makeJsValueInt32(index));
             vm->callMember(ctx, thisArg, callback, args);
             arrObj->push(ctx, ctx->retValue);
             return false;
@@ -294,7 +294,7 @@ void arrayFrom(VMContext *ctx, const JsValue &thiz, const Arguments &args) {
 
 void arrayOf(VMContext *ctx, const JsValue &thiz, const Arguments &args) {
     auto arrObj = new JsArray();
-    auto arr = ctx->runtime->pushObjectValue(arrObj);
+    auto arr = ctx->runtime->pushObject(arrObj);
 
     arrObj->push(ctx, args.data, args.count);
 
@@ -303,11 +303,11 @@ void arrayOf(VMContext *ctx, const JsValue &thiz, const Arguments &args) {
 
 static JsLibProperty arrayFunctions[] = {
     { "name", nullptr, "Array" },
-    { "length", nullptr, nullptr, JsValue(JDT_INT32, 1) },
+    { "length", nullptr, nullptr, jsValueLength1Property },
     { "isArray", arrayIsArray },
     { "from", arrayFrom },
     { "of", arrayOf },
-    { "prototype", nullptr, nullptr, JsValue(JDT_INT32, 1) },
+    { "prototype", nullptr, nullptr, jsValuePropertyWritable },
 };
 
 void objectPrototypeToString(VMContext *ctx, const JsValue &thiz, const Arguments &args);
@@ -339,7 +339,7 @@ void arrayPrototypeAt(VMContext *ctx, const JsValue &thiz, const Arguments &args
             }
 
             if (index >= 0 && index < str.size()) {
-                ctx->retValue = JsValue(JDT_CHAR, str.chartAt(index));
+                ctx->retValue = makeJsValueChar(str.chartAt(index));
             }
             return;
         }
@@ -393,7 +393,7 @@ JsValue newPrimaryObject(VMRuntime *runtime, const JsValue &thiz) {
             break;
     }
 
-    return runtime->pushObjectValue(obj);
+    return runtime->pushObject(obj);
 }
 
 void arrayPrototypeConcat(VMContext *ctx, const JsValue &thiz, const Arguments &args) {
@@ -415,7 +415,7 @@ void arrayPrototypeConcat(VMContext *ctx, const JsValue &thiz, const Arguments &
         arrObj->push(ctx, a1);
     }
 
-    arr = runtime->pushObjectValue(arrObj);
+    arr = runtime->pushObject(arrObj);
 
     for (int i = 0; i < args.count; i++) {
         if (args[i].type == JDT_ARRAY) {
@@ -473,7 +473,7 @@ void arrayPrototypeCopyWithin(VMContext *ctx, const JsValue &thiz, const Argumen
     if (target < start) {
         // 往左复制
         for (int i = start; i < end && ctx->error == JE_OK; i++) {
-            auto value = obj->getByIndex(ctx, thiz, i, jsValueNotInitialized);
+            auto value = obj->getByIndex(ctx, thiz, i, jsValueEmpty);
             setPropByIndexEx(ctx, thiz, obj, value, target++);
         }
     } else {
@@ -484,7 +484,7 @@ void arrayPrototypeCopyWithin(VMContext *ctx, const JsValue &thiz, const Argumen
             target = length - 1;
         }
         for (int i = end - 1; i >= start && ctx->error == JE_OK; i--) {
-            auto value = obj->getByIndex(ctx, thiz, i, jsValueNotInitialized);
+            auto value = obj->getByIndex(ctx, thiz, i, jsValueEmpty);
             setPropByIndexEx(ctx, thiz, obj, value, target--);
         }
     }
@@ -510,9 +510,9 @@ public:
         }
 
         auto arrObj = new JsArray();
-        auto arr = _ctx->runtime->pushObjectValue(arrObj);
+        auto arr = _ctx->runtime->pushObject(arrObj);
 
-        arrObj->push(_ctx, JsValue(JDT_INT32, _index));
+        arrObj->push(_ctx, makeJsValueInt32(_index));
         arrObj->push(_ctx, _obj->getByIndex(_ctx, _obj->self, _index));
 
         valueOut = _curValue = arr;
@@ -554,9 +554,9 @@ public:
         }
 
         auto arrObj = new JsArray();
-        auto arr = _ctx->runtime->pushObjectValue(arrObj);
+        auto arr = _ctx->runtime->pushObject(arrObj);
 
-        arrObj->push(_ctx, JsValue(JDT_INT32, _index));
+        arrObj->push(_ctx, makeJsValueInt32(_index));
         arrObj->push(_ctx, valueOut);
 
         valueOut = _curValue = arr;
@@ -608,7 +608,7 @@ void arrayPrototypeEntries(VMContext *ctx, const JsValue &thiz, const Arguments 
                     auto length = (int32_t)n;
                     if (length > 0) {
                         it = new EntriesArrayLikeObjIterator(ctx, obj, (uint32_t)length);
-                        ctx->retValue = runtime->pushObjectValue(it);
+                        ctx->retValue = runtime->pushObject(it);
                         return;
                     }
                 }
@@ -623,7 +623,7 @@ void arrayPrototypeEntries(VMContext *ctx, const JsValue &thiz, const Arguments 
         it = new EntriesIterator(ctx, it);
     }
 
-    ctx->retValue = runtime->pushObjectValue(it);
+    ctx->retValue = runtime->pushObject(it);
 }
 
 void arrayPrototypeEvery(VMContext *ctx, const JsValue &thiz, const Arguments &args) {
@@ -633,7 +633,7 @@ void arrayPrototypeEvery(VMContext *ctx, const JsValue &thiz, const Arguments &a
 
     auto vm = ctx->vm;
     arrayLikeActionEx(ctx, thiz, [ctx, vm, &result, callback, thisArg, thiz](int index, JsValue item) {
-        ArgumentsX args(item, JsValue(JDT_INT32, index), thiz);
+        ArgumentsX args(item, makeJsValueInt32(index), thiz);
         vm->callMember(ctx, thisArg, callback, args);
         if (ctx->error == JE_OK && ctx->runtime->testTrue(ctx->retValue)) {
             return false;
@@ -643,7 +643,7 @@ void arrayPrototypeEvery(VMContext *ctx, const JsValue &thiz, const Arguments &a
         return true;
     });
 
-    ctx->retValue = JsValue(JDT_BOOL, result);
+    ctx->retValue = makeJsValueBool(result);
 }
 
 void arrayPrototypeFill(VMContext *ctx, const JsValue &thiz, const Arguments &args) {
@@ -695,10 +695,10 @@ void arrayPrototypeFilter(VMContext *ctx, const JsValue &thiz, const Arguments &
     auto thisArg = args.getAt(1, jsValueGlobalThis);
     auto vm = ctx->vm;
     auto arrObj = new JsArray();
-    auto arr = runtime->pushObjectValue(arrObj);
+    auto arr = runtime->pushObject(arrObj);
 
     arrayLikeAction(ctx, thiz, [ctx, vm, callback, thisArg, thiz, arrObj](int index, JsValue item) {
-        ArgumentsX args(item, JsValue(JDT_INT32, index), thiz);
+        ArgumentsX args(item, makeJsValueInt32(index), thiz);
         vm->callMember(ctx, thisArg, callback, args);
         if (ctx->error == JE_OK && ctx->runtime->testTrue(ctx->retValue)) {
             arrObj->push(ctx, item);
@@ -715,7 +715,7 @@ void arrayPrototypeFind(VMContext *ctx, const JsValue &thiz, const Arguments &ar
 
     auto vm = ctx->vm;
     arrayLikeActionEx<false>(ctx, thiz, [ctx, vm, &result, callback, thisArg, thiz](int index, JsValue item) {
-        ArgumentsX args(item, JsValue(JDT_INT32, index), thiz);
+        ArgumentsX args(item, makeJsValueInt32(index), thiz);
         vm->callMember(ctx, thisArg, callback, args);
         if (ctx->error == JE_OK && ctx->runtime->testTrue(ctx->retValue)) {
             result = item;
@@ -734,7 +734,7 @@ void arrayPrototypeFindIndex(VMContext *ctx, const JsValue &thiz, const Argument
 
     auto vm = ctx->vm;
     arrayLikeActionEx<false>(ctx, thiz, [ctx, vm, &result, callback, thisArg, thiz](int index, JsValue item) {
-        ArgumentsX args(item, JsValue(JDT_INT32, index), thiz);
+        ArgumentsX args(item, makeJsValueInt32(index), thiz);
         vm->callMember(ctx, thisArg, callback, args);
         if (ctx->error == JE_OK && ctx->runtime->testTrue(ctx->retValue)) {
             result = index;
@@ -743,7 +743,7 @@ void arrayPrototypeFindIndex(VMContext *ctx, const JsValue &thiz, const Argument
         return false;
     });
 
-    ctx->retValue = JsValue(JDT_INT32, result);
+    ctx->retValue = makeJsValueInt32(result);
 }
 
 void arrayPrototypeFindLast(VMContext *ctx, const JsValue &thiz, const Arguments &args) {
@@ -753,7 +753,7 @@ void arrayPrototypeFindLast(VMContext *ctx, const JsValue &thiz, const Arguments
 
     auto vm = ctx->vm;
     arrayLikeActionExReverse<false>(ctx, thiz, [ctx, vm, &result, callback, thisArg, thiz](int index, JsValue item) {
-        ArgumentsX args(item, JsValue(JDT_INT32, index), thiz);
+        ArgumentsX args(item, makeJsValueInt32(index), thiz);
         vm->callMember(ctx, thisArg, callback, args);
         if (ctx->error == JE_OK && ctx->runtime->testTrue(ctx->retValue)) {
             result = item;
@@ -772,7 +772,7 @@ void arrayPrototypeFindLastIndex(VMContext *ctx, const JsValue &thiz, const Argu
 
     auto vm = ctx->vm;
     arrayLikeActionExReverse<false>(ctx, thiz, [ctx, vm, &result, callback, thisArg, thiz](int index, JsValue item) {
-        ArgumentsX args(item, JsValue(JDT_INT32, index), thiz);
+        ArgumentsX args(item, makeJsValueInt32(index), thiz);
         vm->callMember(ctx, thisArg, callback, args);
         if (ctx->error == JE_OK && ctx->runtime->testTrue(ctx->retValue)) {
             result = index;
@@ -781,7 +781,7 @@ void arrayPrototypeFindLastIndex(VMContext *ctx, const JsValue &thiz, const Argu
         return false;
     });
 
-    ctx->retValue = JsValue(JDT_INT32, result);
+    ctx->retValue = makeJsValueInt32(result);
 }
 
 void arrayPrototypeFlat(VMContext *ctx, const JsValue &thiz, const Arguments &args) {
@@ -791,7 +791,7 @@ void arrayPrototypeFlat(VMContext *ctx, const JsValue &thiz, const Arguments &ar
     }
 
     auto arrObj = new JsArray();
-    auto arr = ctx->runtime->pushObjectValue(arrObj);
+    auto arr = ctx->runtime->pushObject(arrObj);
 
     auto vm = ctx->vm;
     arrayLikeAction(ctx, thiz, [ctx, vm, arrObj, thiz, depth](int index, JsValue item) {
@@ -814,11 +814,11 @@ void arrayPrototypeFlatMap(VMContext *ctx, const JsValue &thiz, const Arguments 
 
     auto thisArg = args.getAt(1, jsValueGlobalThis);
     auto arrObj = new JsArray();
-    auto arr = ctx->runtime->pushObjectValue(arrObj);
+    auto arr = ctx->runtime->pushObject(arrObj);
 
     auto vm = ctx->vm;
     arrayLikeAction(ctx, thiz, [ctx, vm, arrObj, thiz, callback, thisArg](int index, JsValue item) {
-        ArgumentsX args(item, JsValue(JDT_INT32, index), thiz);
+        ArgumentsX args(item, makeJsValueInt32(index), thiz);
         vm->callMember(ctx, thisArg, callback, args);
         if (ctx->retValue.type == JDT_ARRAY) {
             arrObj->extend(ctx, ctx->retValue, 0);
@@ -836,7 +836,7 @@ void arrayPrototypeForEach(VMContext *ctx, const JsValue &thiz, const Arguments 
 
     auto vm = ctx->vm;
     arrayLikeAction(ctx, thiz, [ctx, vm, thiz, callback, thisArg](int index, JsValue item) {
-        ArgumentsX args(item, JsValue(JDT_INT32, index), thiz);
+        ArgumentsX args(item, makeJsValueInt32(index), thiz);
         vm->callMember(ctx, thisArg, callback, args);
     });
 
@@ -873,7 +873,7 @@ void arrayPrototypeIncludes(VMContext *ctx, const JsValue &thiz, const Arguments
         return false;
     }, fromIndex);
 
-    ctx->retValue = JsValue(JDT_BOOL, result);
+    ctx->retValue = makeJsValueBool(result);
 }
 
 void arrayPrototypeIndexOf(VMContext *ctx, const JsValue &thiz, const Arguments &args) {
@@ -890,7 +890,7 @@ void arrayPrototypeIndexOf(VMContext *ctx, const JsValue &thiz, const Arguments 
         return false;
     }, fromIndex);
 
-    ctx->retValue = JsValue(JDT_INT32, result);
+    ctx->retValue = makeJsValueInt32(result);
 }
 
 void arrayPrototypeJoin(VMContext *ctx, const JsValue &thiz, const Arguments &args) {
@@ -930,7 +930,7 @@ public:
     }
 
     virtual bool nextOf(JsValue &valueOut) override {
-        valueOut = JsValue(JDT_INT32, _index);
+        valueOut = makeJsValueInt32(_index);
         _index++;
         return _index <= _length;
     }
@@ -963,7 +963,7 @@ void arrayPrototypeKeys(VMContext *ctx, const JsValue &thiz, const Arguments &ar
     }
 
     auto it = new IndexIterator(length);
-    ctx->retValue = runtime->pushObjectValue(it);
+    ctx->retValue = runtime->pushObject(it);
 }
 
 void arrayPrototypeLastIndexOf(VMContext *ctx, const JsValue &thiz, const Arguments &args) {
@@ -980,19 +980,19 @@ void arrayPrototypeLastIndexOf(VMContext *ctx, const JsValue &thiz, const Argume
         return false;
     }, fromIndex);
 
-    ctx->retValue = JsValue(JDT_INT32, result);
+    ctx->retValue = makeJsValueInt32(result);
 }
 
 void arrayPrototypeMap(VMContext *ctx, const JsValue &thiz, const Arguments &args) {
     auto callback = args.getAt(0);
     auto thisArg = args.getAt(1, jsValueGlobalThis);
     auto arrObj = new JsArray();
-    auto arr = ctx->runtime->pushObjectValue(arrObj);
+    auto arr = ctx->runtime->pushObject(arrObj);
     auto vm = ctx->vm;
     auto runtime = ctx->runtime;
 
     auto action = [ctx, vm, arrObj, thiz, callback, thisArg](int index, JsValue item) {
-        ArgumentsX args(item, JsValue(JDT_INT32, index), thiz);
+        ArgumentsX args(item, makeJsValueInt32(index), thiz);
         vm->callMember(ctx, thisArg, callback, args);
         arrObj->push(ctx, ctx->retValue);
     };
@@ -1006,7 +1006,7 @@ void arrayPrototypeMap(VMContext *ctx, const JsValue &thiz, const Arguments &arg
             auto &str = runtime->getStringWithRandAccess(thiz);
             auto length = str.size();
             for (uint32_t i = 0; i < length && ctx->error == JE_OK; i++) {
-                action(i, JsValue(JDT_CHAR, str.chartAt(i)));
+                action(i, makeJsValueChar(str.chartAt(i)));
             }
         }
     } else {
@@ -1014,8 +1014,8 @@ void arrayPrototypeMap(VMContext *ctx, const JsValue &thiz, const Arguments &arg
         int32_t length = 0;
         if (obj->getLength(ctx, length)) {
             for (int i = 0; i < length && ctx->error == JE_OK; i++) {
-                auto value = obj->getByIndex(ctx, thiz, i, jsValueNotInitialized);
-                if (value.type == JDT_NOT_INITIALIZED) {
+                auto value = obj->getByIndex(ctx, thiz, i, jsValueEmpty);
+                if (value.isEmpty()) {
                     arrObj->push(ctx, jsValueUndefined);
                 } else {
                     action(i, value);
@@ -1055,7 +1055,7 @@ void arrayPrototypePop(VMContext *ctx, const JsValue &thiz, const Arguments &arg
     }
 
     if (length <= 0) {
-        obj->setByName(ctx, thiz, SS_LENGTH, JsValue(JDT_INT32, 0));
+        obj->setByName(ctx, thiz, SS_LENGTH, makeJsValueInt32(0));
         ctx->retValue = jsValueUndefined;
     } else {
         auto index = length - 1;
@@ -1065,7 +1065,7 @@ void arrayPrototypePop(VMContext *ctx, const JsValue &thiz, const Arguments &arg
             ctx->throwException(JE_TYPE_ERROR, "Cannot delete property '%d' of %.*s", index, s.len, s.data);
         } else {
             ctx->retValue = v;
-            obj->setByName(ctx, thiz, SS_LENGTH, JsValue(JDT_INT32, index));
+            obj->setByName(ctx, thiz, SS_LENGTH, makeJsValueInt32(index));
         }
     }
 }
@@ -1079,7 +1079,7 @@ void arrayPrototypePush(VMContext *ctx, const JsValue &thiz, const Arguments &ar
         } else if (thiz.type == JDT_CHAR || thiz.type == JDT_STRING) {
             ctx->throwException(JE_TYPE_ERROR, "Cannot assign to read only property 'length' of object '[object String]'");
         } else {
-            ctx->retValue = JsValue(JDT_INT32, 1);
+            ctx->retValue = makeJsValueInt32(1);
         }
         return;
     }
@@ -1105,14 +1105,14 @@ void arrayPrototypePush(VMContext *ctx, const JsValue &thiz, const Arguments &ar
         }
 
         if (ctx->error == JE_OK) {
-            auto err = obj->setByName(ctx, thiz, SS_LENGTH, JsValue(JDT_INT32, length));
+            auto err = obj->setByName(ctx, thiz, SS_LENGTH, makeJsValueInt32(length));
             if (err != JE_OK) {
                 throwModifyPropertyException(ctx, err, thiz, length - 1);
             }
         }
     }
 
-    ctx->retValue = JsValue(JDT_INT32, length);
+    ctx->retValue = makeJsValueInt32(length);
 }
 
 void arrayPrototypeReduce(VMContext *ctx, const JsValue &thiz, const Arguments &args) {
@@ -1124,7 +1124,7 @@ void arrayPrototypeReduce(VMContext *ctx, const JsValue &thiz, const Arguments &
         return;
     }
 
-    auto accumulator = args.getAt(1, jsValueNotInitialized);
+    auto accumulator = args.getAt(1, jsValueEmpty);
 
     if (thiz.type < JDT_OBJECT) {
         if (thiz.type <= JDT_NULL) {
@@ -1133,7 +1133,7 @@ void arrayPrototypeReduce(VMContext *ctx, const JsValue &thiz, const Arguments &
             if (args.count == 1) {
                 ctx->retValue = thiz;
             } else {
-                ArgumentsX args(accumulator, thiz, JsValue(JDT_INT32, 0), thiz);
+                ArgumentsX args(accumulator, thiz, makeJsValueInt32(0), thiz);
                 vm->callMember(ctx, jsValueGlobalThis, callback, args);
             }
         } else if (thiz.type == JDT_STRING) {
@@ -1147,12 +1147,12 @@ void arrayPrototypeReduce(VMContext *ctx, const JsValue &thiz, const Arguments &
                     return;
                 }
 
-                accumulator = JsValue(JDT_CHAR, str.chartAt(0));
+                accumulator = makeJsValueChar(str.chartAt(0));
                 i = 1;
             }
 
             for (; i < length && ctx->error == JE_OK; i++) {
-                ArgumentsX args(accumulator, JsValue(JDT_CHAR, str.chartAt(i)), JsValue(JDT_INT32, i), thiz);
+                ArgumentsX args(accumulator, makeJsValueChar(str.chartAt(i)), makeJsValueInt32(i), thiz);
                 vm->callMember(ctx, jsValueGlobalThis, callback, args);
                 accumulator = ctx->retValue;
             }
@@ -1168,21 +1168,21 @@ void arrayPrototypeReduce(VMContext *ctx, const JsValue &thiz, const Arguments &
 
     uint32_t i = 0;
     if (args.count == 1) {
-        while (i < length && accumulator.type == JDT_NOT_INITIALIZED) {
-            accumulator = obj->getByIndex(ctx, thiz, i, jsValueNotInitialized);
+        while (i < length && accumulator.isEmpty()) {
+            accumulator = obj->getByIndex(ctx, thiz, i, jsValueEmpty);
             i++;
         }
     }
 
-    if (accumulator.type == JDT_NOT_INITIALIZED) {
+    if (accumulator.isEmpty()) {
         ctx->throwException(JE_TYPE_ERROR, "Reduce of empty array with no initial value");
         return;
     }
 
     for (; i < length && ctx->error == JE_OK; i++) {
-        auto value = obj->getByIndex(ctx, thiz, i, jsValueNotInitialized);
-        if (value.type > JDT_NOT_INITIALIZED) {
-            ArgumentsX args(accumulator, value, JsValue(JDT_INT32, i), thiz);
+        auto value = obj->getByIndex(ctx, thiz, i, jsValueEmpty);
+        if (value.isValid()) {
+            ArgumentsX args(accumulator, value, makeJsValueInt32(i), thiz);
             vm->callMember(ctx, jsValueGlobalThis, callback, args);
             accumulator = ctx->retValue;
         }
@@ -1200,7 +1200,7 @@ void arrayPrototypeReduceRight(VMContext *ctx, const JsValue &thiz, const Argume
         return;
     }
 
-    auto accumulator = args.getAt(1, jsValueNotInitialized);
+    auto accumulator = args.getAt(1, jsValueEmpty);
 
     if (thiz.type < JDT_OBJECT) {
         if (thiz.type <= JDT_NULL) {
@@ -1209,7 +1209,7 @@ void arrayPrototypeReduceRight(VMContext *ctx, const JsValue &thiz, const Argume
             if (args.count == 1) {
                 ctx->retValue = thiz;
             } else {
-                ArgumentsX args(accumulator, thiz, JsValue(JDT_INT32, 0), thiz);
+                ArgumentsX args(accumulator, thiz, makeJsValueInt32(0), thiz);
                 vm->callMember(ctx, jsValueGlobalThis, callback, args);
             }
         } else if (thiz.type == JDT_STRING) {
@@ -1223,11 +1223,11 @@ void arrayPrototypeReduceRight(VMContext *ctx, const JsValue &thiz, const Argume
                     return;
                 }
 
-                accumulator = JsValue(JDT_CHAR, str.chartAt(i--));
+                accumulator = makeJsValueChar(str.chartAt(i--));
             }
 
             for (; i >= 0 && ctx->error == JE_OK; i--) {
-                ArgumentsX args(accumulator, JsValue(JDT_CHAR, str.chartAt(i)), JsValue(JDT_INT32, i), thiz);
+                ArgumentsX args(accumulator, makeJsValueChar(str.chartAt(i)), makeJsValueInt32(i), thiz);
                 vm->callMember(ctx, jsValueGlobalThis, callback, args);
                 accumulator = ctx->retValue;
             }
@@ -1243,21 +1243,21 @@ void arrayPrototypeReduceRight(VMContext *ctx, const JsValue &thiz, const Argume
 
     int32_t i = length - 1;
     if (args.count == 1) {
-        while (i >= 0 && accumulator.type == JDT_NOT_INITIALIZED) {
-            accumulator = obj->getByIndex(ctx, thiz, i, jsValueNotInitialized);
+        while (i >= 0 && accumulator.isEmpty()) {
+            accumulator = obj->getByIndex(ctx, thiz, i, jsValueEmpty);
             i--;
         }
     }
 
-    if (accumulator.type == JDT_NOT_INITIALIZED) {
+    if (accumulator.isEmpty()) {
         ctx->throwException(JE_TYPE_ERROR, "Reduce of empty array with no initial value");
         return;
     }
 
     for (; i >= 0 && ctx->error == JE_OK; i--) {
-        auto value = obj->getByIndex(ctx, thiz, i, jsValueNotInitialized);
-        if (value.type > JDT_NOT_INITIALIZED) {
-            ArgumentsX args(accumulator, value, JsValue(JDT_INT32, i), thiz);
+        auto value = obj->getByIndex(ctx, thiz, i, jsValueEmpty);
+        if (value.isValid()) {
+            ArgumentsX args(accumulator, value, makeJsValueInt32(i), thiz);
             vm->callMember(ctx, jsValueGlobalThis, callback, args);
             accumulator = ctx->retValue;
         }
@@ -1302,8 +1302,8 @@ void arrayPrototypeReverse(VMContext *ctx, const JsValue &thiz, const Arguments 
 
     length--;
     for (uint32_t i = 0; i < length && ctx->error == JE_OK; i++, length--) {
-        auto left = obj->getByIndex(ctx, thiz, i, jsValueNotInitialized);
-        auto right = obj->getByIndex(ctx, thiz, length, jsValueNotInitialized);
+        auto left = obj->getByIndex(ctx, thiz, i, jsValueEmpty);
+        auto right = obj->getByIndex(ctx, thiz, length, jsValueEmpty);
         setPropByIndexEx(ctx, thiz, obj, right, i);
         setPropByIndexEx(ctx, thiz, obj, left, length);
     }
@@ -1345,23 +1345,23 @@ void arrayPrototypeShift(VMContext *ctx, const JsValue &thiz, const Arguments &a
 
     int32_t length = 0;
     if (!obj->getLength(ctx, length)) {
-        obj->setByName(ctx, thiz, SS_LENGTH, JsValue(JDT_INT32, 0));
+        obj->setByName(ctx, thiz, SS_LENGTH, makeJsValueInt32(0));
         ctx->retValue = jsValueUndefined;
         return;
     }
 
     if (length <= 0) {
-        obj->setByName(ctx, thiz, SS_LENGTH, JsValue(JDT_INT32, 0));
+        obj->setByName(ctx, thiz, SS_LENGTH, makeJsValueInt32(0));
         ctx->retValue = jsValueUndefined;
     } else {
         auto ret = obj->getByIndex(ctx, thiz, 0);
         for (int32_t i = 1; i < length && ctx->error == JE_OK; i++) {
-            auto v = obj->getByIndex(ctx, thiz, i, jsValueNotInitialized);
+            auto v = obj->getByIndex(ctx, thiz, i, jsValueEmpty);
             setPropByIndexEx(ctx, thiz, obj, v, i - 1);
         }
         if (ctx->error == JE_OK) {
             if (obj->removeByIndex(ctx, length - 1)) {
-                obj->setByName(ctx, thiz, SS_LENGTH, JsValue(JDT_INT32, length - 1));
+                obj->setByName(ctx, thiz, SS_LENGTH, makeJsValueInt32(length - 1));
             } else {
                 throwModifyPropertyException(ctx, JE_TYPE_PROP_NO_DELETABLE, thiz, length - 1);
             }
@@ -1383,7 +1383,7 @@ void arrayPrototypeSlice(VMContext *ctx, const JsValue &thiz, const Arguments &a
         }
 
         auto *arrObj = new JsArray();
-        auto arr = runtime->pushObjectValue(arrObj);
+        auto arr = runtime->pushObject(arrObj);
 
         if (thiz.type == JDT_CHAR) {
             if (start <= 0 && end >= 1) {
@@ -1395,7 +1395,7 @@ void arrayPrototypeSlice(VMContext *ctx, const JsValue &thiz, const Arguments &a
             normalizeEnd(end, str.size());
 
             for (auto i = start; i < end; i++) {
-                arrObj->push(ctx, JsValue(JDT_CHAR, str.chartAt(i)));
+                arrObj->push(ctx, makeJsValueChar(str.chartAt(i)));
             }
         }
 
@@ -1418,10 +1418,10 @@ void arrayPrototypeSlice(VMContext *ctx, const JsValue &thiz, const Arguments &a
 //    }
 
     auto *arrObj = new JsArray();
-    auto arr = runtime->pushObjectValue(arrObj);
+    auto arr = runtime->pushObject(arrObj);
 
     for (int32_t i = start; i < end && ctx->error == JE_OK; i++) {
-        auto v = obj->getByIndex(ctx, thiz, i, jsValueNotInitialized);
+        auto v = obj->getByIndex(ctx, thiz, i, jsValueEmpty);
         arrObj->push(ctx, v);
     }
 
@@ -1435,7 +1435,7 @@ void arrayPrototypeSome(VMContext *ctx, const JsValue &thiz, const Arguments &ar
 
     auto vm = ctx->vm;
     arrayLikeActionEx(ctx, thiz, [ctx, vm, &result, callback, thisArg, thiz](int index, JsValue item) {
-        ArgumentsX args(item, JsValue(JDT_INT32, index), thiz);
+        ArgumentsX args(item, makeJsValueInt32(index), thiz);
         vm->callMember(ctx, thisArg, callback, args);
         if (ctx->error == JE_OK && ctx->runtime->testTrue(ctx->retValue)) {
             result = true;
@@ -1444,7 +1444,7 @@ void arrayPrototypeSome(VMContext *ctx, const JsValue &thiz, const Arguments &ar
         return false;
     });
 
-    ctx->retValue = JsValue(JDT_BOOL, result);
+    ctx->retValue = makeJsValueBool(result);
 }
 
 void arrayPrototypeSort(VMContext *ctx, const JsValue &thiz, const Arguments &args) {
@@ -1484,11 +1484,11 @@ void arrayPrototypeSort(VMContext *ctx, const JsValue &thiz, const Arguments &ar
     }
 
     VecJsValues values;
-    int countNotInit = 0, countUndefined = 0;
+    int countEmpty = 0, countUndefined = 0;
     for (uint32_t i = 0; i < length && ctx->error == JE_OK; i++) {
-        auto v = obj->getByIndex(ctx, thiz, i, jsValueNotInitialized);
-        if (v.type == JDT_NOT_INITIALIZED) {
-            countNotInit++;
+        auto v = obj->getByIndex(ctx, thiz, i, jsValueEmpty);
+        if (v.isEmpty()) {
+            countEmpty++;
         } else if (v.type == JDT_UNDEFINED) {
             countUndefined++;
         } else {
@@ -1523,8 +1523,8 @@ void arrayPrototypeSort(VMContext *ctx, const JsValue &thiz, const Arguments &ar
     }
 
     // empty
-    countNotInit += i;
-    for (; i < countNotInit && ctx->error == JE_OK; i++) {
+    countEmpty += i;
+    for (; i < countEmpty && ctx->error == JE_OK; i++) {
         if (!obj->removeByIndex(ctx, i)) {
             throwModifyPropertyException(ctx, JE_TYPE_PROP_NO_DELETABLE, thiz, i);
             break;
@@ -1566,7 +1566,7 @@ void arrayPrototypeSplice(VMContext *ctx, const JsValue &thiz, const Arguments &
 
         if (ctx->error == JE_OK) {
             auto *arrObj = new JsArray();
-            auto arr = runtime->pushObjectValue(arrObj);
+            auto arr = runtime->pushObject(arrObj);
             ctx->retValue = arr;
         }
         return;
@@ -1589,7 +1589,7 @@ void arrayPrototypeSplice(VMContext *ctx, const JsValue &thiz, const Arguments &
 //    }
 
     auto *arrObj = new JsArray();
-    auto arr = runtime->pushObjectValue(arrObj);
+    auto arr = runtime->pushObject(arrObj);
 
     // 将要删除的元素保存下来
     for (int i = 0; i < deleteCount && ctx->error == JE_OK; i++) {
@@ -1604,7 +1604,7 @@ void arrayPrototypeSplice(VMContext *ctx, const JsValue &thiz, const Arguments &
         int src = length - 1, dst = length - 1 + insertCount - deleteCount;
         int srcBegin = start + deleteCount;
         for (; src >= srcBegin && ctx->error == JE_OK; src--, dst--) {
-            auto v = obj->getByIndex(ctx, thiz, src, jsValueNotInitialized);
+            auto v = obj->getByIndex(ctx, thiz, src, jsValueEmpty);
             setPropByIndexEx(ctx, thiz, obj, v, dst);
         }
     } else if (insertCount == deleteCount) {
@@ -1614,7 +1614,7 @@ void arrayPrototypeSplice(VMContext *ctx, const JsValue &thiz, const Arguments &
         int src = start + deleteCount;
         int dst = start + insertCount;
         for (; src < length && ctx->error == JE_OK; src++, dst++) {
-            auto v = obj->getByIndex(ctx, thiz, src, jsValueNotInitialized);
+            auto v = obj->getByIndex(ctx, thiz, src, jsValueEmpty);
             setPropByIndexEx(ctx, thiz, obj, v, dst);
         }
 
@@ -1636,7 +1636,7 @@ void arrayPrototypeSplice(VMContext *ctx, const JsValue &thiz, const Arguments &
 
     if (ctx->error == JE_OK) {
         length += insertCount - deleteCount;
-        auto err = obj->setByName(ctx, thiz, SS_LENGTH, JsValue(JDT_INT32, length));
+        auto err = obj->setByName(ctx, thiz, SS_LENGTH, makeJsValueInt32(length));
         if (err != JE_OK) {
             ctx->throwException(JE_TYPE_ERROR, "Cannot assign to read only property 'length' of object");
         }
@@ -1677,7 +1677,7 @@ void arrayPrototypeUnshift(VMContext *ctx, const JsValue &thiz, const Arguments 
             }
         }
 
-        ctx->retValue = JsValue(JDT_INT32, 1);
+        ctx->retValue = makeJsValueInt32(1);
         return;
     }
 
@@ -1690,7 +1690,7 @@ void arrayPrototypeUnshift(VMContext *ctx, const JsValue &thiz, const Arguments 
         // 往右移动
         int src = length - 1, dst = length - 1 + args.count;
         for (; src >= 0 && ctx->error == JE_OK; src--, dst--) {
-            auto v = obj->getByIndex(ctx, thiz, src, jsValueNotInitialized);
+            auto v = obj->getByIndex(ctx, thiz, src, jsValueEmpty);
             setPropByIndexEx(ctx, thiz, obj, v, dst);
         }
 
@@ -1701,9 +1701,9 @@ void arrayPrototypeUnshift(VMContext *ctx, const JsValue &thiz, const Arguments 
     }
 
     length += args.count;
-    obj->setByName(ctx, thiz, SS_LENGTH, JsValue(JDT_INT32, length));
+    obj->setByName(ctx, thiz, SS_LENGTH, makeJsValueInt32(length));
 
-    ctx->retValue = JsValue(JDT_INT32, length);
+    ctx->retValue = makeJsValueInt32(length);
 }
 
 class ValuesArrayLikeObjIterator : public IJsIterator {
@@ -1769,7 +1769,7 @@ void arrayPrototypeValues(VMContext *ctx, const JsValue &thiz, const Arguments &
     }
 
     assert(it != nullptr);
-    ctx->retValue = runtime->pushObjectValue(it);
+    ctx->retValue = runtime->pushObject(it);
 }
 
 static JsLibProperty arrayPrototypeFunctions[] = {

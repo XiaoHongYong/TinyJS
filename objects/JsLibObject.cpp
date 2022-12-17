@@ -24,9 +24,8 @@ public:
 
 };
 
-JsLibObject::JsLibObject(VMRuntimeCommon *rt, JsLibProperty *libProps, int countProps, cstr_t name, JsNativeFunction constructor, const JsValue &proto) : _libProps(libProps), _libPropsEnd(libProps + countProps), _constructor(constructor), __proto__(proto, false, false, false, true)
+JsLibObject::JsLibObject(VMRuntimeCommon *rt, JsLibProperty *libProps, int countProps, cstr_t name, JsNativeFunction constructor, const JsValue &proto) : IJsObject(proto, JDT_LIB_OBJECT), _libProps(libProps), _libPropsEnd(libProps + countProps), _constructor(constructor)
 {
-    type = JDT_LIB_OBJECT;
     _name = name ? makeCommonString(name) : sizedStringEmpty;
     _obj = nullptr;
     _modified = false;
@@ -35,18 +34,16 @@ JsLibObject::JsLibObject(VMRuntimeCommon *rt, JsLibProperty *libProps, int count
     for (auto p = _libProps; p != _libPropsEnd; p++) {
         p->name.setStable();
         if (p->function) {
-            p->prop.value = rt->pushNativeFunction(p->function, p->name);
+            p->prop = rt->pushNativeFunction(p->function, p->name).asProperty(JP_WRITABLE | JP_CONFIGURABLE);
         } else if (p->strValue) {
-            p->prop.value = rt->pushStringValue(makeStableStr(p->strValue));
+            p->prop = rt->pushStringValue(makeStableStr(p->strValue)).asProperty(JP_CONFIGURABLE);
         }
     }
 
     std::sort(_libProps, _libPropsEnd, JsLibFunctionLessCmp());
 }
 
-JsLibObject::JsLibObject(JsLibObject *from) {
-    type = JDT_LIB_OBJECT;
-
+JsLibObject::JsLibObject(JsLibObject *from) : IJsObject(from->__proto__, from->type) {
     assert(!from->_modified);
     _name = from->_name;
     _constructor = from->_constructor;
@@ -68,14 +65,14 @@ JsLibObject::~JsLibObject() {
     }
 }
 
-void JsLibObject::definePropertyByName(VMContext *ctx, const SizedString &name, const JsProperty &descriptor) {
+void JsLibObject::setPropertyByName(VMContext *ctx, const SizedString &name, const JsValue &descriptor) {
     auto first = std::lower_bound(_libProps, _libPropsEnd, name, JsLibFunctionLessCmp());
     if (first != _libPropsEnd && first->name.equal(name)) {
         // 修改现有的属性
         first = _copyForModify(first);
 
         first->function = nullptr;
-        defineNameProperty(ctx, &first->prop, descriptor, name);
+        first->prop = descriptor;
         return;
     }
 
@@ -83,32 +80,30 @@ void JsLibObject::definePropertyByName(VMContext *ctx, const SizedString &name, 
         _newObject(ctx);
     }
 
-    _obj->definePropertyByName(ctx, name, descriptor);
+    _obj->setPropertyByName(ctx, name, descriptor);
 }
 
-void JsLibObject::definePropertyByIndex(VMContext *ctx, uint32_t index, const JsProperty &descriptor) {
+void JsLibObject::setPropertyByIndex(VMContext *ctx, uint32_t index, const JsValue &descriptor) {
     NumberToSizedString name(index);
-    definePropertyByName(ctx, name, descriptor);
+    setPropertyByName(ctx, name, descriptor);
 }
 
-void JsLibObject::definePropertyBySymbol(VMContext *ctx, uint32_t index, const JsProperty &descriptor) {
+void JsLibObject::setPropertyBySymbol(VMContext *ctx, uint32_t index, const JsValue &descriptor) {
     if (!_obj) {
         _newObject(ctx);
     }
 
-    _obj->definePropertyBySymbol(ctx, index, descriptor);
+    _obj->setPropertyBySymbol(ctx, index, descriptor);
 }
 
 JsError JsLibObject::setByName(VMContext *ctx, const JsValue &thiz, const SizedString &name, const JsValue &value) {
     if (thiz.type < JDT_OBJECT) {
         // Primitive types 不能被修改，但是其 setter 函数会被调用
         if (_obj) {
-            JsNativeFunction funcGetter = nullptr;
-            auto prop = _obj->getRawByName(ctx, name, funcGetter, true);
-            if (prop && prop->setter.type >= JDT_FUNCTION) {
+            auto prop = _obj->getRawByName(ctx, name, true);
+            if (prop && prop->isGetterSetter()) {
                 // 调用 setter 函数
-                ArgumentsX args(value);
-                ctx->vm->callMember(ctx, thiz, prop->setter, args);
+                setPropertyValue(ctx, prop, thiz, value);
             }
         }
         return JE_OK;
@@ -119,11 +114,7 @@ JsError JsLibObject::setByName(VMContext *ctx, const JsValue &thiz, const SizedS
         first = _copyForModify(first);
 
         // 修改现有的属性
-        if (first->functionSet) {
-            first->functionSet(ctx, thiz, ArgumentsX(value));
-        } else {
-            return set(ctx, &first->prop, thiz, value);
-        }
+        return setPropertyValue(ctx, &first->prop, thiz, value);
     } else {
         if (!_obj) {
             _newObject(ctx);
@@ -150,12 +141,11 @@ JsValue JsLibObject::increaseByName(VMContext *ctx, const JsValue &thiz, const S
     if (thiz.type < JDT_OBJECT) {
         // Primitive types 不能被修改，但是其 setter 函数会被调用
         if (_obj) {
-            JsNativeFunction funcGetter = nullptr;
-            auto prop = _obj->getRawByName(ctx, name, funcGetter, true);
+            auto prop = _obj->getRawByName(ctx, name, true);
 
             // 保存到临时对象中调用
-            JsProperty tmp = *prop;
-            return increase(ctx, &tmp, thiz, n, isPost);
+            JsValue tmp = *prop;
+            return increasePropertyValue(ctx, &tmp, thiz, n, isPost);
         }
         return jsValueNaN;
     }
@@ -165,14 +155,7 @@ JsValue JsLibObject::increaseByName(VMContext *ctx, const JsValue &thiz, const S
         first = _copyForModify(first);
 
         // 修改现有的属性
-        if (first->functionSet) {
-            // TODO: ...
-            assert(0);
-            // first->functionSet(ctx, thiz, ArgumentsX(value));
-            return jsValueNaN;
-        } else {
-            return increase(ctx, &first->prop, thiz, n, isPost);
-        }
+        return increasePropertyValue(ctx, &first->prop, thiz, n, isPost);
     } else {
         if (!_obj) {
             _newObject(ctx);
@@ -194,20 +177,15 @@ JsValue JsLibObject::increaseBySymbol(VMContext *ctx, const JsValue &thiz, uint3
     return _obj->increaseBySymbol(ctx, thiz, index, n, isPost);
 }
 
-JsProperty *JsLibObject::getRawByName(VMContext *ctx, const SizedString &name, JsNativeFunction &funcGetterOut, bool includeProtoProp) {
-    funcGetterOut = nullptr;
-
+JsValue *JsLibObject::getRawByName(VMContext *ctx, const SizedString &name, bool includeProtoProp) {
     // 使用二分查找
     auto first = std::lower_bound(_libProps, _libPropsEnd, name, JsLibFunctionLessCmp());
     if (first != _libPropsEnd && first->name.equal(name)) {
-        if (first->prop.isGSetter) {
-            funcGetterOut = first->function;
-        }
         return &first->prop;
     }
 
     if (_obj) {
-        return _obj->getRawByName(ctx, name, funcGetterOut, includeProtoProp);
+        return _obj->getRawByName(ctx, name, includeProtoProp);
     }
 
     if (name.equal(SS___PROTO__)) {
@@ -216,22 +194,16 @@ JsProperty *JsLibObject::getRawByName(VMContext *ctx, const SizedString &name, J
 
     if (includeProtoProp) {
         // 查找 prototye 的属性
-        auto &proto = __proto__.value;
-        JsNativeFunction funcGetter = nullptr;
-        if (proto.type == JDT_NOT_INITIALIZED) {
-            // 缺省的 Object.prototype
-            return ctx->runtime->objPrototypeObject->getRawByName(ctx, name, funcGetter, true);
-        } else if (proto.type >= JDT_OBJECT) {
-            auto obj = ctx->runtime->getObject(proto);
-            assert(obj);
-            return obj->getRawByName(ctx, name, funcGetter, true);
+        auto obj = getPrototypeObject(ctx);
+        if (obj) {
+            return obj->getRawByName(ctx, name, true);
         }
     }
 
     return nullptr;
 }
 
-JsProperty *JsLibObject::getRawByIndex(VMContext *ctx, uint32_t index, bool includeProtoProp) {
+JsValue *JsLibObject::getRawByIndex(VMContext *ctx, uint32_t index, bool includeProtoProp) {
     if (_obj) {
         return _obj->getRawByIndex(ctx, index, includeProtoProp);
     }
@@ -239,7 +211,7 @@ JsProperty *JsLibObject::getRawByIndex(VMContext *ctx, uint32_t index, bool incl
     return nullptr;
 }
 
-JsProperty *JsLibObject::getRawBySymbol(VMContext *ctx, uint32_t index, bool includeProtoProp) {
+JsValue *JsLibObject::getRawBySymbol(VMContext *ctx, uint32_t index, bool includeProtoProp) {
     if (_obj) {
         return _obj->getRawBySymbol(ctx, index, includeProtoProp);
     }
@@ -250,7 +222,7 @@ JsProperty *JsLibObject::getRawBySymbol(VMContext *ctx, uint32_t index, bool inc
 bool JsLibObject::removeByName(VMContext *ctx, const SizedString &name) {
     auto first = std::lower_bound(_libProps, _libPropsEnd, name, JsLibFunctionLessCmp());
     if (first != _libPropsEnd && first->name.equal(name)) {
-        if (!first->prop.isConfigurable) {
+        if (!first->prop.isConfigurable()) {
             return false;
         }
 
@@ -281,26 +253,26 @@ bool JsLibObject::removeBySymbol(VMContext *ctx, uint32_t index) {
     return true;
 }
 
-void JsLibObject::changeAllProperties(VMContext *ctx, int8_t configurable, int8_t writable) {
+void JsLibObject::changeAllProperties(VMContext *ctx, JsPropertyFlags toAdd, JsPropertyFlags toRemove) {
     _copyForModify(_libProps);
 
     for (auto p = _libProps; p != _libPropsEnd; p++) {
-        p->prop.changeProperty(configurable, writable);
+        p->prop.changeProperty(toAdd, toRemove);
     }
 
     if (_obj) {
-        _obj->changeAllProperties(ctx, configurable, writable);
+        _obj->changeAllProperties(ctx, toAdd, toRemove);
     }
 }
 
-bool JsLibObject::hasAnyProperty(VMContext *ctx, bool configurable, bool writable) {
+bool JsLibObject::hasAnyProperty(VMContext *ctx, JsPropertyFlags flags) {
     for (auto p = _libProps; p != _libPropsEnd; p++) {
-        if (p->prop.isPropertyAny(configurable, writable)) {
+        if (p->prop.isPropertyAny(flags)) {
             return true;
         }
     }
 
-    return _obj && _obj->hasAnyProperty(ctx, configurable, writable);
+    return _obj && _obj->hasAnyProperty(ctx, flags);
 }
 
 void JsLibObject::preventExtensions(VMContext *ctx) {
@@ -348,7 +320,7 @@ void setPrototype(JsLibProperty *prop, JsLibProperty *propEnd, const JsValue &va
     // 逆序查找，prototye 放在后面.
     for (auto p = propEnd - 1; p >= prop; p--) {
         if (p->name.equal("prototype")) {
-            p->prop = JsProperty(value, false, false, false, false);
+            p->prop = value.asProperty(JP_WRITABLE);
             return;
         }
     }
@@ -358,7 +330,7 @@ void setPrototype(JsLibProperty *prop, JsLibProperty *propEnd, const JsValue &va
 void JsLibObject::_newObject(VMContext *ctx) {
     assert(_obj == nullptr);
 
-    _obj = new JsObject(__proto__.value);
+    _obj = new JsObject(__proto__);
 
     if (isPreventedExtensions) {
         _obj->preventExtensions(ctx);

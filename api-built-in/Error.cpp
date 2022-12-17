@@ -55,9 +55,9 @@ JsValue newJsError(VMContext *ctx, JsError errType, const JsValue &message) {
     }
 
     auto errObj = new JsObject(proto);
-    auto err = runtime->pushObjectValue(errObj);
+    auto err = runtime->pushObject(errObj);
 
-    errObj->setByName(ctx, err, SS_MESSAGE, message.type != JDT_STRING ? runtime->toString(ctx, message) : message);
+    errObj->setByName(ctx, err, SS_MESSAGE, message.isString() ? message : runtime->toString(ctx, message));
     errObj->setByName(ctx, err, SS_STACK, runtime->pushString(SizedString(getStack(ctx))));
 
     return err;
@@ -80,8 +80,8 @@ static void errorConstructor(VMContext *ctx, const JsValue &thiz, const Argument
 
 static JsLibProperty errorFunctions[] = {
     { "name", nullptr, "Error" },
-    { "length", nullptr, nullptr, JsValue(JDT_INT32, 1) },
-    { "prototype", nullptr, nullptr, JsValue(JDT_INT32, 1) },
+    { "length", nullptr, nullptr, jsValueLength1Property },
+    { "prototype", nullptr, nullptr, jsValuePropertyPrototype },
 };
 
 static void errorToString(VMContext *ctx, const JsValue &thiz, const Arguments &args) {
@@ -107,7 +107,7 @@ static void errorToString(VMContext *ctx, const JsValue &thiz, const Arguments &
 
 static JsLibProperty errorPrototypeFunctions[] = {
     { "name", nullptr, "Error" },
-    { "message", nullptr, "" },
+    { "message", nullptr, nullptr, jsStringValueEmpty.asProperty(JP_WRITABLE | JP_CONFIGURABLE) },
     { "toString", errorToString },
 };
 
@@ -119,13 +119,13 @@ static void syntaxErrorConstructor(VMContext *ctx, const JsValue &thiz, const Ar
 
 static JsLibProperty syntaxErrorFunctions[] = {
     { "name", nullptr, "SyntaxError" },
-    { "length", nullptr, nullptr, JsValue(JDT_INT32, 1) },
-    { "prototype", nullptr, nullptr, JsValue(JDT_INT32, 1) },
+    { "length", nullptr, nullptr, jsValueLength1Property },
+    { "prototype", nullptr, nullptr, jsValuePropertyPrototype },
 };
 
 static JsLibProperty syntaxErrorPrototypeFunctions[] = {
     { "name", nullptr, "SyntaxError" },
-    { "message", nullptr, "" },
+    { "message", nullptr, nullptr, jsStringValueEmpty.asProperty(JP_WRITABLE | JP_CONFIGURABLE) },
     { "toString", errorToString },
 };
 
@@ -137,13 +137,13 @@ static void typeErrorConstructor(VMContext *ctx, const JsValue &thiz, const Argu
 
 static JsLibProperty typeErrorFunctions[] = {
     { "name", nullptr, "TypeError" },
-    { "length", nullptr, nullptr, JsValue(JDT_INT32, 1) },
-    { "prototype", nullptr, nullptr, JsValue(JDT_INT32, 1) },
+    { "length", nullptr, nullptr, jsValueLength1Property },
+    { "prototype", nullptr, nullptr, jsValuePropertyPrototype },
 };
 
 static JsLibProperty typeErrorPrototypeFunctions[] = {
     { "name", nullptr, "TypeError" },
-    { "message", nullptr, "" },
+    { "message", nullptr, nullptr, jsStringValueEmpty.asProperty(JP_WRITABLE | JP_CONFIGURABLE) },
     { "toString", errorToString },
 };
 
@@ -155,13 +155,13 @@ static void referenceErrorConstructor(VMContext *ctx, const JsValue &thiz, const
 
 static JsLibProperty referenceErrorFunctions[] = {
     { "name", nullptr, "ReferenceError" },
-    { "length", nullptr, nullptr, JsValue(JDT_INT32, 1) },
-    { "prototype", nullptr, nullptr, JsValue(JDT_INT32, 1) },
+    { "length", nullptr, nullptr, jsValueLength1Property },
+    { "prototype", nullptr, nullptr, jsValuePropertyPrototype },
 };
 
 static JsLibProperty referenceErrorPrototypeFunctions[] = {
-    { "name", nullptr, "ReferenceError" },
-    { "message", nullptr, "" },
+    { "name", nullptr, "ReferenceError", },
+    { "message", nullptr, nullptr, jsStringValueEmpty.asProperty(JP_WRITABLE | JP_CONFIGURABLE) },
     { "toString", errorToString },
 };
 
@@ -173,13 +173,13 @@ static void rangeErrorConstructor(VMContext *ctx, const JsValue &thiz, const Arg
 
 static JsLibProperty rangeErrorFunctions[] = {
     { "name", nullptr, "RangeError" },
-    { "length", nullptr, nullptr, JsValue(JDT_INT32, 1) },
-    { "prototype", nullptr, nullptr, JsValue(JDT_INT32, 1) },
+    { "length", nullptr, nullptr, jsValueLength1Property },
+    { "prototype", nullptr, nullptr, jsValuePropertyPrototype },
 };
 
 static JsLibProperty rangeErrorPrototypeFunctions[] = {
     { "name", nullptr, "RangeError" },
-    { "message", nullptr, "" },
+    { "message", nullptr, nullptr, jsStringValueEmpty.asProperty(JP_WRITABLE | JP_CONFIGURABLE) },
     { "toString", errorToString },
 };
 
@@ -188,7 +188,7 @@ void registerErrorAPIs(VMRuntimeCommon *rt) {
     // Error
     //
     auto prototype = new JsLibObject(rt, errorPrototypeFunctions, CountOf(errorPrototypeFunctions), nullptr, nullptr);
-    __errorPrototype = rt->pushObjectValue(prototype);
+    __errorPrototype = rt->pushObject(prototype);
     SET_PROTOTYPE(errorFunctions, __errorPrototype);
     setGlobalLibObject("Error", rt, errorFunctions, CountOf(errorFunctions), errorConstructor, jsValuePrototypeFunction);
 
@@ -196,7 +196,7 @@ void registerErrorAPIs(VMRuntimeCommon *rt) {
     // TypeError
     //
     prototype = new JsLibObject(rt, typeErrorPrototypeFunctions, CountOf(typeErrorPrototypeFunctions), nullptr, nullptr, __errorPrototype);
-    __typeErrorPrototype = rt->pushObjectValue(prototype);
+    __typeErrorPrototype = rt->pushObject(prototype);
     SET_PROTOTYPE(typeErrorFunctions, __typeErrorPrototype);
     setGlobalLibObject("TypeError", rt, typeErrorFunctions, CountOf(typeErrorFunctions), typeErrorConstructor, jsValuePrototypeFunction);
 
@@ -204,7 +204,7 @@ void registerErrorAPIs(VMRuntimeCommon *rt) {
     // ReferenceError
     //
     prototype = new JsLibObject(rt, referenceErrorPrototypeFunctions, CountOf(referenceErrorPrototypeFunctions), nullptr, nullptr, __errorPrototype);
-    __referenceErrorPrototype = rt->pushObjectValue(prototype);
+    __referenceErrorPrototype = rt->pushObject(prototype);
     SET_PROTOTYPE(referenceErrorFunctions, __referenceErrorPrototype);
     setGlobalLibObject("ReferenceError", rt, referenceErrorFunctions, CountOf(referenceErrorFunctions), referenceErrorConstructor, jsValuePrototypeFunction);
 
@@ -212,7 +212,7 @@ void registerErrorAPIs(VMRuntimeCommon *rt) {
     // SyntaxError
     //
     prototype = new JsLibObject(rt, syntaxErrorPrototypeFunctions, CountOf(syntaxErrorPrototypeFunctions), nullptr, nullptr, __errorPrototype);
-    __syntaxErrorPrototype = rt->pushObjectValue(prototype);
+    __syntaxErrorPrototype = rt->pushObject(prototype);
     SET_PROTOTYPE(syntaxErrorFunctions, __syntaxErrorPrototype);
     setGlobalLibObject("SyntaxError", rt, syntaxErrorFunctions, CountOf(syntaxErrorFunctions), syntaxErrorConstructor, jsValuePrototypeFunction);
 
@@ -220,7 +220,7 @@ void registerErrorAPIs(VMRuntimeCommon *rt) {
     // RangeError
     //
     prototype = new JsLibObject(rt, rangeErrorPrototypeFunctions, CountOf(rangeErrorPrototypeFunctions), nullptr, nullptr, __errorPrototype);
-    __rangeErrorPrototype = rt->pushObjectValue(prototype);
+    __rangeErrorPrototype = rt->pushObject(prototype);
     SET_PROTOTYPE(rangeErrorFunctions, __rangeErrorPrototype);
     setGlobalLibObject("RangeError", rt, rangeErrorFunctions, CountOf(rangeErrorFunctions), rangeErrorConstructor, jsValuePrototypeFunction);
 }

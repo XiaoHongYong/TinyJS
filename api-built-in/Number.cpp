@@ -12,24 +12,24 @@
 void numberConstructor(VMContext *ctx, const JsValue &thiz, const Arguments &args) {
     JsValue value;
     if (args.count == 0) {
-        value = JsValue(JDT_INT32, 0);
+        value = makeJsValueInt32(0);
     } else {
         value = args[0];
         if (value.type != JDT_NUMBER && value.type == JDT_INT32) {
             auto runtime = ctx->runtime;
             auto n = runtime->toNumber(ctx, value);
             if (n == (int32_t)n) {
-                value = JsValue(JDT_INT32, n);
+                value = makeJsValueInt32(n);
             } else {
-                value = runtime->pushDoubleValue(n);
+                value = runtime->pushDouble(n);
             }
         }
     }
 
-    if (thiz.type == JDT_NOT_INITIALIZED) {
+    if (thiz.isEmpty()) {
         // New
         auto obj = new JsNumberObject(value);
-        ctx->retValue = ctx->runtime->pushObjectValue(obj);
+        ctx->retValue = ctx->runtime->pushObject(obj);
     } else {
         ctx->retValue = value;
     }
@@ -40,7 +40,7 @@ void numberIsFinite(VMContext *ctx, const JsValue &thiz, const Arguments &args) 
     auto v = args.getAt(0);
     if (v.type == JDT_NUMBER) {
         auto d = ctx->runtime->getDouble(v);
-        ctx->retValue = JsValue(JDT_BOOL, !isnan(d) && !isinf(d));
+        ctx->retValue = makeJsValueBool(!isnan(d) && !isinf(d));
     } else if (v.type == JDT_INT32) {
         ctx->retValue = jsValueTrue;
     } else {
@@ -52,7 +52,7 @@ void numberIsInteger(VMContext *ctx, const JsValue &thiz, const Arguments &args)
     auto v = args.getAt(0);
     if (v.type == JDT_NUMBER) {
         auto d = ctx->runtime->getDouble(v);
-        ctx->retValue = JsValue(JDT_BOOL, !isinf(d) && (d == (int64_t)d || abs(d) >= 9007199254740992L)); // 2 ** 53
+        ctx->retValue = makeJsValueBool(!isinf(d) && (d == (int64_t)d || abs(d) >= 9007199254740992L)); // 2 ** 53
     } else if (v.type == JDT_INT32) {
         ctx->retValue = jsValueTrue;
     } else {
@@ -64,7 +64,7 @@ void numberIsSafeInteger(VMContext *ctx, const JsValue &thiz, const Arguments &a
     auto v = args.getAt(0);
     if (v.type == JDT_NUMBER) {
         auto d = ctx->runtime->getDouble(v);
-        ctx->retValue = JsValue(JDT_BOOL, d == (int64_t)d && d < 9007199254740992L); // 2 ** 53
+        ctx->retValue = makeJsValueBool(d == (int64_t)d && d < 9007199254740992L); // 2 ** 53
     } else if (v.type == JDT_INT32) {
         ctx->retValue = jsValueTrue;
     } else {
@@ -77,7 +77,7 @@ void numberParseFloat(VMContext *ctx, const JsValue &thiz, const Arguments &args
     while (true) {
         if (v.type == JDT_CHAR) {
             if (isDigit(v.value.n32)) {
-                ctx->retValue = JsValue(JDT_INT32, v.value.n32 - '0');
+                ctx->retValue = makeJsValueInt32(v.value.n32 - '0');
             } else {
                 ctx->retValue = jsValueNaN;
             }
@@ -122,11 +122,11 @@ void numberParseFloat(VMContext *ctx, const JsValue &thiz, const Arguments &args
 
             int32_t n = (int32_t)d;
             if (n == d) {
-                ctx->retValue = JsValue(JDT_INT32, n);
+                ctx->retValue = makeJsValueInt32(n);
             } else if (isnan(d)) {
                 ctx->retValue = jsValueNaN;
             } else {
-                ctx->retValue = ctx->runtime->pushDoubleValue(d);
+                ctx->retValue = ctx->runtime->pushDouble(d);
             }
         } else if (v.isNumber()) {
             ctx->retValue = v;
@@ -216,11 +216,11 @@ void numberParseInt(VMContext *ctx, const JsValue &thiz, const Arguments &args) 
     auto d = parseInt(str.data, str.data + str.len, base);
     int32_t n = (int32_t)d;
     if (n == d) {
-        ctx->retValue = JsValue(JDT_INT32, n);
+        ctx->retValue = makeJsValueInt32(n);
     } else if (isnan(d)) {
         ctx->retValue = jsValueNaN;
     } else {
-        ctx->retValue = ctx->runtime->pushDoubleValue(d);
+        ctx->retValue = ctx->runtime->pushDouble(d);
     }
 }
 
@@ -228,7 +228,7 @@ void numberIsNaN(VMContext *ctx, const JsValue &thiz, const Arguments &args) {
     auto v = args.getAt(0);
     if (v.type == JDT_NUMBER) {
         auto d = ctx->runtime->getDouble(v);
-        ctx->retValue = JsValue(JDT_BOOL, isnan(d));
+        ctx->retValue = makeJsValueBool(isnan(d));
     } else {
         ctx->retValue = jsValueFalse;
     }
@@ -251,8 +251,8 @@ static JsLibProperty numberFunctions[] = {
     { "parseFloat", numberParseFloat, },
     { "parseInt", numberParseInt, },
     { "name", nullptr, "Number" },
-    { "length", nullptr, nullptr, JsValue(JDT_INT32, 1) },
-    { "prototype", nullptr, nullptr, JsValue(JDT_INT32, 1) },
+    { "length", nullptr, nullptr, jsValueLength1Property },
+    { "prototype", nullptr, nullptr, jsValuePropertyPrototype },
 };
 
 
@@ -265,7 +265,7 @@ inline JsValue convertNumberToJsValue(VMContext *ctx, const JsValue &thiz, const
     }
 
     ctx->throwException(JE_TYPE_ERROR, "Number.prototype.%s requires that 'this' be a Number", funcName);
-    return jsValueNotInitialized;
+    return jsValueEmpty;
 }
 
 void numberPrototypeToExponential(VMContext *ctx, const JsValue &thiz, const Arguments &args) {

@@ -51,25 +51,25 @@ protected:
 };
 
 
-void IJsIterator::definePropertyByName(VMContext *ctx, const SizedString &name, const JsProperty &descriptor) {
+void IJsIterator::setPropertyByName(VMContext *ctx, const SizedString &name, const JsValue &descriptor) {
     if (!_obj) {
         _newObject(ctx);
     }
 
-    _obj->definePropertyByName(ctx, name, descriptor);
+    _obj->setPropertyByName(ctx, name, descriptor);
 }
 
-void IJsIterator::definePropertyByIndex(VMContext *ctx, uint32_t index, const JsProperty &descriptor) {
+void IJsIterator::setPropertyByIndex(VMContext *ctx, uint32_t index, const JsValue &descriptor) {
     NumberToSizedString name(index);
-    definePropertyByName(ctx, name, descriptor);
+    setPropertyByName(ctx, name, descriptor);
 }
 
-void IJsIterator::definePropertyBySymbol(VMContext *ctx, uint32_t index, const JsProperty &descriptor) {
+void IJsIterator::setPropertyBySymbol(VMContext *ctx, uint32_t index, const JsValue &descriptor) {
     if (!_obj) {
         _newObject(ctx);
     }
 
-    _obj->definePropertyBySymbol(ctx, index, descriptor);
+    _obj->setPropertyBySymbol(ctx, index, descriptor);
 }
 
 JsError IJsIterator::setByName(VMContext *ctx, const JsValue &thiz, const SizedString &name, const JsValue &value) {
@@ -112,9 +112,9 @@ JsValue IJsIterator::increaseBySymbol(VMContext *ctx, const JsValue &thiz, uint3
     return _obj->increaseBySymbol(ctx, thiz, index, n, isPost);
 }
 
-JsProperty *IJsIterator::getRawByName(VMContext *ctx, const SizedString &name, JsNativeFunction &funcGetterOut, bool includeProtoProp) {
+JsValue *IJsIterator::getRawByName(VMContext *ctx, const SizedString &name, bool includeProtoProp) {
     if (_obj) {
-        return _obj->getRawByName(ctx, name, funcGetterOut, includeProtoProp);
+        return _obj->getRawByName(ctx, name, includeProtoProp);
     }
 
     if (name.equal(SS___PROTO__)) {
@@ -123,22 +123,16 @@ JsProperty *IJsIterator::getRawByName(VMContext *ctx, const SizedString &name, J
 
     if (includeProtoProp) {
         // 查找 prototye 的属性
-        auto &proto = __proto__.value;
-        JsNativeFunction funcGetter = nullptr;
-        if (proto.type == JDT_NOT_INITIALIZED) {
-            // 缺省的 Object.prototype
-            return ctx->runtime->objPrototypeObject->getRawByName(ctx, name, funcGetter, true);
-        } else if (proto.type >= JDT_OBJECT) {
-            auto obj = ctx->runtime->getObject(proto);
-            assert(obj);
-            return obj->getRawByName(ctx, name, funcGetter, true);
+        auto obj = getPrototypeObject(ctx);
+        if (obj) {
+            return obj->getRawByName(ctx, name, true);
         }
     }
 
     return nullptr;
 }
 
-JsProperty *IJsIterator::getRawByIndex(VMContext *ctx, uint32_t index, bool includeProtoProp) {
+JsValue *IJsIterator::getRawByIndex(VMContext *ctx, uint32_t index, bool includeProtoProp) {
     if (_obj) {
         return _obj->getRawByIndex(ctx, index, includeProtoProp);
     }
@@ -146,7 +140,7 @@ JsProperty *IJsIterator::getRawByIndex(VMContext *ctx, uint32_t index, bool incl
     return nullptr;
 }
 
-JsProperty *IJsIterator::getRawBySymbol(VMContext *ctx, uint32_t index, bool includeProtoProp) {
+JsValue *IJsIterator::getRawBySymbol(VMContext *ctx, uint32_t index, bool includeProtoProp) {
     if (_obj) {
         return _obj->getRawBySymbol(ctx, index, includeProtoProp);
     }
@@ -175,14 +169,14 @@ bool IJsIterator::removeBySymbol(VMContext *ctx, uint32_t index) {
     return true;
 }
 
-void IJsIterator::changeAllProperties(VMContext *ctx, int8_t configurable, int8_t writable) {
+void IJsIterator::changeAllProperties(VMContext *ctx, JsPropertyFlags toAdd, JsPropertyFlags toRemove) {
     if (_obj) {
-        _obj->changeAllProperties(ctx, configurable, writable);
+        _obj->changeAllProperties(ctx, toAdd, toRemove);
     }
 }
 
-bool IJsIterator::hasAnyProperty(VMContext *ctx, bool configurable, bool writable) {
-    return _obj && _obj->hasAnyProperty(ctx, configurable, writable);
+bool IJsIterator::hasAnyProperty(VMContext *ctx, JsPropertyFlags flags) {
+    return _obj && _obj->hasAnyProperty(ctx, flags);
 }
 
 void IJsIterator::preventExtensions(VMContext *ctx) {
@@ -219,7 +213,7 @@ void IJsIterator::markReferIdx(VMRuntime *rt) {
 void IJsIterator::_newObject(VMContext *ctx) {
     assert(_obj == nullptr);
 
-    _obj = new JsObject(__proto__.value);
+    _obj = new JsObject(__proto__);
 
     if (isPreventedExtensions) {
         _obj->preventExtensions(ctx);

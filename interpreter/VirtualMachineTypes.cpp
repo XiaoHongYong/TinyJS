@@ -33,7 +33,6 @@ const char *opCodeToString(OpCode code) {
 
 const char *jsDataTypeToString(JsDataType type) {
     const char *NAMES[] = {
-        "JDT_NOT_INITIALIZED",
         "JDT_UNDEFINED",
         "JDT_NULL",
         "JDT_BOOL",
@@ -42,6 +41,7 @@ const char *jsDataTypeToString(JsDataType type) {
 
         "JDT_NUMBER",
         "JDT_SYMBOL",
+        "JDT_GETTER_SETTER",
         "JDT_STRING",
 
         "JDT_ITERATOR",
@@ -142,36 +142,4 @@ static inline void copyProperty(int8_t &dst, int8_t src) {
 
 string JsSymbol::toString() const {
     return "Symbol(" + name + ")";
-}
-
-bool JsProperty::merge(const JsProperty &src) {
-    if (!isWritable && !isGSetter && !setter.isValid()) {
-        if (src.value.type != JDT_NOT_INITIALIZED && !src.value.equal(value)) return false;
-    }
-
-    if (!isConfigurable) {
-        if (isModified(isConfigurable, src.isConfigurable)) return false;
-        if (isModified(isEnumerable, src.isEnumerable)) return false;
-        if (isModified(isWritable, src.isWritable)) return false;
-        if (isModified(isGSetter, src.isGSetter)) return false;
-        if (src.setter.type != JDT_NOT_INITIALIZED && !src.setter.equal(setter)) return false;
-
-        return true;
-    }
-
-    copyProperty(isGSetter, src.isGSetter);
-    copyProperty(isConfigurable, src.isConfigurable);
-    copyProperty(isEnumerable, src.isEnumerable);
-    copyProperty(isWritable, src.isWritable);
-
-    if (src.setter.type >= JDT_FUNCTION) {
-        setter = src.setter;
-        isWritable = false;
-    }
-
-    if (src.value.type >= JDT_UNDEFINED) {
-        value = src.value;
-    }
-
-    return true;
 }

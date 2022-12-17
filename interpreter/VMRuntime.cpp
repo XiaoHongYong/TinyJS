@@ -9,10 +9,9 @@
 
 #include "VMRuntime.hpp"
 #include "VirtualMachine.hpp"
-#include "api-web/WebAPI.hpp"
-#include "api-built-in/BuiltIn.hpp"
 #include "objects/JsGlobalThis.hpp"
 #include "objects/JsDummyObject.hpp"
+#include "objects/JsLibObject.hpp"
 
 
 #define MAX_STACK_SIZE          (1024 * 1024 / 8)
@@ -48,218 +47,33 @@ public:
 
 };
 
-VMRuntimeCommon::VMRuntimeCommon(JsVirtualMachine *vm) : vm(vm) {
-    objPrototypeString = nullptr;
-    objPrototypeNumber = nullptr;
-    objPrototypeBoolean = nullptr;
-    objPrototypeSymbol = nullptr;
-    objPrototypeRegex = nullptr;
-    objPrototypeObject = nullptr;
-    objPrototypeArray = nullptr;
-    objPrototypeFunction = nullptr;
-    objPrototypeWindow = nullptr;
-
-    // 把 0 占用了，0 为非法的位置
-    doubleValues.push_back(0);
-    stringValues.push_back(JsString());
-    objValues.push_back(new JsObject());
-    nativeFunctions.push_back(JsNativeFunctionInfo(nullptr, SS_EMPTY));
-
-    countImmutableGlobalVars = 0;
-
-    addConstStrings(this);
-
-    auto idx = pushDoubleValue(NAN);
-    assert(idx.value.index == jsValueNaN.value.index);
-
-    idx = pushDoubleValue(INFINITY);
-    assert(idx.value.index == jsValueInf.value.index);
-
-    idx = pushDoubleValue(2.220446049250313e-16);
-    assert(idx.value.index == jsValueEpsilonNumber.value.index);
-
-    idx = pushDoubleValue(9007199254740991);
-    assert(idx.value.index == jsValueMaxSafeInt.value.index);
-
-    idx = pushDoubleValue(1.7976931348623157e+308);
-    assert(idx.value.index == jsValueMaxNumber.value.index);
-
-    idx = pushDoubleValue(-9007199254740991);
-    assert(idx.value.index == jsValueMinSafeInt.value.index);
-
-    idx = pushDoubleValue(5e-324);
-    assert(idx.value.index == jsValueMinNumber.value.index);
-
-    idx = pushDoubleValue(-INFINITY);
-    assert(idx.value.index == jsValueNegInf.value.index);
-
-    Function *rootFunc = PoolNew(_resourcePool.pool, Function)(&_resourcePool, nullptr, 0);
-    globalScope = new VMGlobalScope(rootFunc->scope);
-
-    // 添加不能被修改的全局变量
-    setGlobalValue("undefined", jsValueUndefined);
-    countImmutableGlobalVars++; assert(countImmutableGlobalVars == globalScope->vars.size());
-
-    setGlobalValue("NaN", jsValueNaN);
-    countImmutableGlobalVars++; assert(countImmutableGlobalVars == globalScope->vars.size());
-
-    setGlobalValue("Infinity", jsValueInf);
-    countImmutableGlobalVars++; assert(countImmutableGlobalVars == globalScope->vars.size());
-
-    setGlobalValue("globalThis", jsValueGlobalThis);
-    countImmutableGlobalVars++; assert(countImmutableGlobalVars == globalScope->vars.size());
-
-    setGlobalValue("window", jsValueGlobalThis);
-    countImmutableGlobalVars++; assert(countImmutableGlobalVars == globalScope->vars.size());
-
-    setGlobalValue("__proto__", jsValuePrototypeWindow);
-    countImmutableGlobalVars++; assert(countImmutableGlobalVars == globalScope->vars.size());
-
-    for (int i = 1; i < JS_OBJ_IDX_RESERVED_MAX; i++) {
-        objValues.push_back(nullptr);
-    }
-
-    // globalThis 的占位
-    objValues[JS_OBJ_GLOBAL_THIS_IDX] = new JsObject();
-
-    registerBuiltIns(this);
-    registerWebAPIs(this);
-}
-
-VMRuntimeCommon::~VMRuntimeCommon() {
-    for (auto obj : objValues) {
-        delete obj;
-    }
-
-    delete globalScope;
-}
-
-void VMRuntimeCommon::dump(BinaryOutputStream &stream) {
-    stream.writeFormat("Count nativeFunctions: %d\n", (int)nativeFunctions.size());
-
-    stream.write("Strings: [\n");
-    for (uint32_t i = 0; i < stringValues.size(); i++) {
-        auto &item = stringValues[i];
-        assert(!item.isJoinedString);
-        auto &s = item.value.str.utf8Str();
-        stream.writeFormat("  %d: %.*s,\n", i, (int)s.len, s.data);
-    }
-    stream.write("]\n");
-
-    stream.write("Doubles: [\n");
-    for (uint32_t i = 0; i < doubleValues.size(); i++) {
-        auto d = doubleValues[i].value;
-        stream.writeFormat("  %d: %llf,\n", i, d);
-    }
-    stream.write("]\n");
-
-    stream.write("Objects: [\n");
-    for (uint32_t i = 0; i < objValues.size(); i++) {
-        auto obj = objValues[i];
-        stream.writeFormat("  %d: %llf, Type: %s\n", i, obj, jsDataTypeToString(obj->type));
-    }
-    stream.write("]\n");
-}
-
-void VMRuntimeCommon::setGlobalValue(const char *strName, const JsValue &value) {
-    auto name = makeStableStr(strName);
-    auto scopeDsc = globalScope->scopeDsc;
-
-    auto id = PoolNew(scopeDsc->function->resourcePool->pool, IdentifierDeclare)(name, scopeDsc);
-    id->storageIndex = scopeDsc->countLocalVars++;
-    id->varStorageType = VST_GLOBAL_VAR;
-    id->isReferredByChild = true;
-
-    assert(scopeDsc->varDeclares.find(name) == scopeDsc->varDeclares.end());
-    scopeDsc->varDeclares[name] = id;
-
-    assert(id->storageIndex == globalScope->vars.size());
-    globalScope->vars.push_back(value);
-}
-
-void VMRuntimeCommon::setGlobalObject(const char *strName, IJsObject *obj) {
-    setGlobalValue(strName, pushObjectValue(obj));
-}
-
-JsValue VMRuntimeCommon::pushObjectValue(IJsObject *value) {
-    auto jsv = JsValue(value->type, (uint32_t)objValues.size());
-    value->self = jsv;
-    objValues.push_back(value);
-    return jsv;
-}
-
-JsValue VMRuntimeCommon::pushDoubleValue(double value) {
-    auto it = mapDoubles.find(value);
-    if (it == mapDoubles.end()) {
-        uint32_t index = (uint32_t)doubleValues.size();
-        mapDoubles[value] = index;
-        doubleValues.push_back(JsDouble(value));
-        return JsValue(JDT_NUMBER, index);
-    } else {
-        return JsValue(JDT_NUMBER, (*it).second);
-    }
-}
-
-JsValue VMRuntimeCommon::pushStringValue(const SizedString &value) {
-    assert(value.isStable());
-
-    auto it = mapStrings.find(value);
-    if (it == mapStrings.end()) {
-        uint32_t index = (uint32_t)stringValues.size();
-        mapStrings[value] = index;
-        JsString s;
-        s.value.str = value;
-        stringValues.push_back(s);
-        return JsValue(JDT_STRING, index);
-    } else {
-        return JsValue(JDT_STRING, (*it).second);
-    }
-}
-
-uint32_t VMRuntimeCommon::findDoubleValue(double value) {
-    auto it = mapDoubles.find(value);
-    if (it == mapDoubles.end()) {
-        return -1;
-    } else {
-        return (*it).second;
-    }
-}
-
-uint32_t VMRuntimeCommon::findStringValue(const SizedString &value) {
-    auto it = mapStrings.find(value);
-    if (it == mapStrings.end()) {
-        return -1;
-    } else {
-        return (*it).second;
-    }
-}
-
 VMRuntime::VMRuntime() {
-    vm = nullptr;
+    _vm = nullptr;
     rtCommon = nullptr;
-    console = nullptr;
-    globalScope = nullptr;
+    _console = nullptr;
+    _globalScope = nullptr;
 
-    objPrototypeString = nullptr;
-    objPrototypeNumber = nullptr;
-    objPrototypeBoolean = nullptr;
-    objPrototypeRegex = nullptr;
-    objPrototypeSymbol = nullptr;
-    objPrototypeObject = nullptr;
-    objPrototypeArray = nullptr;
-    objPrototypeFunction = nullptr;
-    objPrototypeWindow = nullptr;
+    _objPrototypeString = nullptr;
+    _objPrototypeNumber = nullptr;
+    _objPrototypeBoolean = nullptr;
+    _objPrototypeRegex = nullptr;
+    _objPrototypeSymbol = nullptr;
+    _objPrototypeObject = nullptr;
+    _objPrototypeArray = nullptr;
+    _objPrototypeFunction = nullptr;
+    _objPrototypeWindow = nullptr;
 
-    countCommonDobules = 0;
-    countCommonStrings = 0;
-    countCommonObjs = 0;
+    _countCommonDobules = 0;
+    _countCommonStrings = 0;
+    _countCommonObjs = 0;
 
-    firstFreeDoubleIdx = 0;
-    firstFreeSymbolIdx = 0;
-    firstFreeStringIdx = 0;
-    firstFreeObjIdx = 0;
-    firstFreeVMScopeIdx = 0;
-    firstFreeResourcePoolIdx = 0;
+    _firstFreeDoubleIdx = 0;
+    _firstFreeSymbolIdx = 0;
+    _firstFreeGetterSetterIdx = 0;
+    _firstFreeStringIdx = 0;
+    _firstFreeObjIdx = 0;
+    _firstFreeVMScopeIdx = 0;
+    _firstFreeResourcePoolIdx = 0;
 
     _nextRefIdx = 1;
     _newAllocatedCount = 0;
@@ -267,72 +81,67 @@ VMRuntime::VMRuntime() {
 }
 
 VMRuntime::~VMRuntime() {
-    for (auto item : objValues) {
+    for (auto item : _objValues) {
         delete item;
     }
 
-    for (auto item : vmScopes) {
+    for (auto item : _vmScopes) {
         delete item;
     }
 
-    for (auto item : resourcePools) {
+    for (auto item : _resourcePools) {
         delete item;
     }
 
-    if (console) {
-        delete console;
+    if (_console) {
+        delete _console;
     }
 
-    if (mainVmCtx) {
-        delete mainVmCtx;
+    if (_mainCtx) {
+        delete _mainCtx;
     }
 }
 
 void VMRuntime::init(JsVirtualMachine *vm, VMRuntimeCommon *rtCommon) {
-    this->vm = vm;
+    this->_vm = vm;
     this->rtCommon = rtCommon;
-    console = new StdIOConsole();
+    _console = new StdIOConsole();
 
-    countCommonDobules = (int)rtCommon->doubleValues.size();
-    countCommonStrings = (int)rtCommon->stringValues.size();
-    countCommonObjs = (int)rtCommon->objValues.size();
+    _countCommonDobules = (int)rtCommon->_doubleValues.size();
+    _countCommonStrings = (int)rtCommon->_stringValues.size();
+    _countCommonObjs = (int)rtCommon->_objValues.size();
 
     // 把 0 占用了，0 为非法的位置
-    symbolValues.push_back(JsSymbol());
+    _symbolValues.push_back(JsSymbol());
 
-    doubleValues = rtCommon->doubleValues;
-    stringValues = rtCommon->stringValues;
-    nativeFunctions = rtCommon->nativeFunctions;
+    _doubleValues = rtCommon->_doubleValues;
+    _stringValues = rtCommon->_stringValues;
+    _nativeFunctions = rtCommon->_nativeFunctions;
 
-    globalScope = rtCommon->globalScope;
-    countImmutableGlobalVars = rtCommon->countImmutableGlobalVars;
+    _globalScope = rtCommon->_globalScope;
 
     // 需要将 rtCommon 中的对象都复制一份.
-    for (auto item : rtCommon->objValues) {
-        objValues.push_back(item->clone());
+    for (auto item : rtCommon->_objValues) {
+        _objValues.push_back(item->clone());
     }
-    delete objValues[JS_OBJ_GLOBAL_THIS_IDX];
-    objValues[JS_OBJ_GLOBAL_THIS_IDX] = new JsGlobalThis(globalScope);
+    delete _objValues[JS_OBJ_GLOBAL_THIS_IDX];
+    _objValues[JS_OBJ_GLOBAL_THIS_IDX] = new JsGlobalThis(_globalScope);
 
-    firstFreeDoubleIdx = 0;
-    firstFreeObjIdx = 0;
+    _firstFreeDoubleIdx = 0;
+    _firstFreeObjIdx = 0;
 
-    mainVmCtx = new VMContext(this);
-    mainVmCtx->stack.reserve(MAX_STACK_SIZE);
+    _mainCtx = new VMContext(this, vm);
+    _mainCtx->stack.reserve(MAX_STACK_SIZE);
 
-    objPrototypeString = objValues[JS_OBJ_PROTOTYPE_IDX_STRING];
-    objPrototypeNumber = objValues[JS_OBJ_PROTOTYPE_IDX_NUMBER];
-    objPrototypeBoolean = objValues[JS_OBJ_PROTOTYPE_IDX_BOOL];
-    objPrototypeSymbol = objValues[JS_OBJ_PROTOTYPE_IDX_SYMBOL];
-    objPrototypeRegex = objValues[JS_OBJ_PROTOTYPE_IDX_REGEXP];
-    objPrototypeObject = objValues[JS_OBJ_PROTOTYPE_IDX_OBJECT];
-    objPrototypeArray = objValues[JS_OBJ_PROTOTYPE_IDX_ARRAY];
-    objPrototypeFunction = objValues[JS_OBJ_PROTOTYPE_IDX_FUNCTION];
-    objPrototypeWindow = objValues[JS_OBJ_PROTOTYPE_IDX_WINDOW];
-
-    auto valueOf = objPrototypeObject->getByName(nullptr, objPrototypeObject->self, SS_VALUEOF);
-    assert(valueOf.type == JDT_NATIVE_FUNCTION);
-    funcObjectPrototypeValueOf = getNativeFunction(valueOf.value.index);
+    _objPrototypeString = _objValues[JS_OBJ_PROTOTYPE_IDX_STRING];
+    _objPrototypeNumber = _objValues[JS_OBJ_PROTOTYPE_IDX_NUMBER];
+    _objPrototypeBoolean = _objValues[JS_OBJ_PROTOTYPE_IDX_BOOL];
+    _objPrototypeSymbol = _objValues[JS_OBJ_PROTOTYPE_IDX_SYMBOL];
+    _objPrototypeRegex = _objValues[JS_OBJ_PROTOTYPE_IDX_REGEXP];
+    _objPrototypeObject = _objValues[JS_OBJ_PROTOTYPE_IDX_OBJECT];
+    _objPrototypeArray = _objValues[JS_OBJ_PROTOTYPE_IDX_ARRAY];
+    _objPrototypeFunction = _objValues[JS_OBJ_PROTOTYPE_IDX_FUNCTION];
+    _objPrototypeWindow = _objValues[JS_OBJ_PROTOTYPE_IDX_WINDOW];
 }
 
 void VMRuntime::dump(BinaryOutputStream &stream) {
@@ -342,13 +151,13 @@ void VMRuntime::dump(BinaryOutputStream &stream) {
     rtCommon->dump(os);
     writeIndent(stream, os.sizedStringStartNew(), SizedString("  "));
 
-    for (auto rp : resourcePools) {
+    for (auto rp : _resourcePools) {
         rp->dump(stream);
     }
 
     int index = 0;
     stream.write("String Values: [\n");
-    for (auto &item : stringValues) {
+    for (auto &item : _stringValues) {
         if (item.nextFreeIdx != 0) {
             continue;
         }
@@ -378,7 +187,7 @@ void VMRuntime::dump(BinaryOutputStream &stream) {
     stream.write("  ]\n");
 
     stream.write("Double Values: [\n");
-    for (auto &item : doubleValues) {
+    for (auto &item : _doubleValues) {
         if (item.nextFreeIdx != 0) {
             continue;
         }
@@ -388,7 +197,7 @@ void VMRuntime::dump(BinaryOutputStream &stream) {
     stream.write("]\n");
 
     stream.write("Object Values: [\n  ");
-    for (auto &item : objValues) {
+    for (auto &item : _objValues) {
         if (item->nextFreeIdx != 0) {
             continue;
         }
@@ -397,7 +206,7 @@ void VMRuntime::dump(BinaryOutputStream &stream) {
     }
     stream.write("]\n");
 
-    globalScope->scopeDsc->function->dump(stream);
+    _globalScope->scopeDsc->function->dump(stream);
 }
 
 /**
@@ -430,7 +239,7 @@ void VMRuntime::joinString(JsString &js) {
                 memcpy(p, ss.data, ss.len);
                 p += ss.len;
             } else {
-                auto &head = stringValues[joinedStr->stringIdx];
+                auto &head = _stringValues[joinedStr->stringIdx];
                 if (head.isJoinedString) {
                     // 先复制尾部
                     auto tailP = p + head.value.joinedString.len;
@@ -439,7 +248,7 @@ void VMRuntime::joinString(JsString &js) {
                         auto &ss = getStringInResourcePool(joinedStr->nextStringIdx).utf8Str();
                         memcpy(tailP, ss.data, ss.len);
                     } else {
-                        auto &tail = stringValues[joinedStr->nextStringIdx];
+                        auto &tail = _stringValues[joinedStr->nextStringIdx];
                         if (tail.isJoinedString) {
                             // 添加到 tasks 中
                             tasks.push({tailP, &tail.value.joinedString});
@@ -466,7 +275,7 @@ void VMRuntime::joinString(JsString &js) {
                 auto &ss = getStringInResourcePool(joinedStr->nextStringIdx).utf8Str();
                 memcpy(p, ss.data, ss.len);
             } else {
-                auto &tail = stringValues[joinedStr->nextStringIdx];
+                auto &tail = _stringValues[joinedStr->nextStringIdx];
                 if (tail.isJoinedString) {
                     // 继续循环
                     joinedStr = &tail.value.joinedString;
@@ -555,7 +364,7 @@ JsValue VMRuntime::plusString(const JsValue &s1, const JsValue &s2) {
             ss1 = getStringInResourcePool(s1.value.index);
             lenUtf16 += ss1.size();
         } else {
-            auto &js1 = stringValues[s1.value.index];
+            auto &js1 = _stringValues[s1.value.index];
             lenUtf16 += js1.lenUtf16();
             if (js1.isJoinedString) {
                 isJoinedString = true;
@@ -573,7 +382,7 @@ JsValue VMRuntime::plusString(const JsValue &s1, const JsValue &s2) {
             ss2 = getStringInResourcePool(s2.value.index);
             lenUtf16 += ss2.size();
         } else {
-            auto &js2 = stringValues[s2.value.index];
+            auto &js2 = _stringValues[s2.value.index];
             lenUtf16 += js2.lenUtf16();
             if (js2.isJoinedString) {
                 isJoinedString = true;
@@ -599,18 +408,18 @@ JsValue VMRuntime::plusString(const JsValue &s1, const JsValue &s2) {
     }
 }
 
-JsValue VMRuntime::pushObjectValue(IJsObject *value) {
+JsValue VMRuntime::pushObject(IJsObject *value) {
     _newAllocatedCount++;
 
     uint32_t n;
-    if (firstFreeObjIdx) {
-        n = firstFreeObjIdx;
-        firstFreeObjIdx = objValues[firstFreeObjIdx]->nextFreeIdx;
-        delete objValues[firstFreeObjIdx];
-        objValues[firstFreeObjIdx] = value;
+    if (_firstFreeObjIdx) {
+        n = _firstFreeObjIdx;
+        _firstFreeObjIdx = _objValues[_firstFreeObjIdx]->nextFreeIdx;
+        delete _objValues[_firstFreeObjIdx];
+        _objValues[_firstFreeObjIdx] = value;
     } else {
-        n = (uint32_t)objValues.size();
-        objValues.push_back(value);
+        n = (uint32_t)_objValues.size();
+        _objValues.push_back(value);
     }
 
     assert(value->type >= JDT_OBJECT);
@@ -619,49 +428,65 @@ JsValue VMRuntime::pushObjectValue(IJsObject *value) {
     return jsv;
 }
 
-JsValue VMRuntime::pushDoubleValue(double value) {
+JsValue VMRuntime::pushDouble(double value) {
     _newAllocatedCount++;
     uint32_t n;
 
-    if (firstFreeDoubleIdx) {
-        n = firstFreeDoubleIdx;
-        firstFreeDoubleIdx = doubleValues[firstFreeDoubleIdx].nextFreeIdx;
-        doubleValues[firstFreeDoubleIdx] = JsDouble(value);
+    if (_firstFreeDoubleIdx) {
+        n = _firstFreeDoubleIdx;
+        _firstFreeDoubleIdx = _doubleValues[_firstFreeDoubleIdx].nextFreeIdx;
+        _doubleValues[_firstFreeDoubleIdx] = JsDouble(value);
     } else {
-        n = (uint32_t)doubleValues.size();
-        doubleValues.push_back(JsDouble(value));
+        n = (uint32_t)_doubleValues.size();
+        _doubleValues.push_back(JsDouble(value));
     }
 
     return JsValue(JDT_NUMBER, n);
 }
 
-JsValue VMRuntime::pushSymbolValue(JsSymbol &value) {
+JsValue VMRuntime::pushSymbol(const JsSymbol &value) {
     _newAllocatedCount++;
     uint32_t n;
 
-    if (firstFreeSymbolIdx) {
-        n = firstFreeSymbolIdx;
-        firstFreeSymbolIdx = symbolValues[firstFreeSymbolIdx].nextFreeIdx;
-        symbolValues[firstFreeSymbolIdx] = value;
+    if (_firstFreeSymbolIdx) {
+        n = _firstFreeSymbolIdx;
+        _firstFreeSymbolIdx = _symbolValues[_firstFreeSymbolIdx].nextFreeIdx;
+        _symbolValues[_firstFreeSymbolIdx] = value;
     } else {
-        n = (uint32_t)symbolValues.size();
-        symbolValues.push_back(value);
+        n = (uint32_t)_symbolValues.size();
+        _symbolValues.push_back(value);
     }
 
     return JsValue(JDT_SYMBOL, n);
+}
+
+JsValue VMRuntime::pushGetterSetter(const JsGetterSetter &value) {
+    _newAllocatedCount++;
+    uint32_t n;
+
+    if (_firstFreeGetterSetterIdx) {
+        n = _firstFreeGetterSetterIdx;
+        _firstFreeGetterSetterIdx = _getterSetters[_firstFreeGetterSetterIdx].nextFreeIdx;
+        _getterSetters[_firstFreeGetterSetterIdx] = value;
+    } else {
+        n = (uint32_t)_getterSetters.size();
+        _getterSetters.push_back(value);
+    }
+
+    return JsValue(JDT_GETTER_SETTER, n);
 }
 
 JsValue VMRuntime::pushString(const JsString &str) {
     _newAllocatedCount++;
     uint32_t n;
 
-    if (firstFreeStringIdx) {
-        n = firstFreeStringIdx;
-        firstFreeStringIdx = stringValues[firstFreeStringIdx].nextFreeIdx;
-        stringValues[firstFreeStringIdx] = str;
+    if (_firstFreeStringIdx) {
+        n = _firstFreeStringIdx;
+        _firstFreeStringIdx = _stringValues[_firstFreeStringIdx].nextFreeIdx;
+        _stringValues[_firstFreeStringIdx] = str;
     } else {
-        n = (uint32_t)stringValues.size();
-        stringValues.push_back(str);
+        n = (uint32_t)_stringValues.size();
+        _stringValues.push_back(str);
     }
 
     return JsValue(JDT_STRING, n);
@@ -672,7 +497,7 @@ JsValue VMRuntime::pushString(const SizedString &str) {
         if (str.len == 0) {
             return jsStringValueEmpty;
         } else {
-            return JsValue(JDT_CHAR, str.data[0]);
+            return makeJsValueChar(str.data[0]);
         }
     }
 
@@ -695,7 +520,7 @@ JsValue VMRuntime::pushString(const LinkedString *str) {
         if (str->len == 0) {
             return jsStringValueEmpty;
         } else {
-            return JsValue(JDT_CHAR, str->data[0]);
+            return makeJsValueChar(str->data[0]);
         }
     }
 
@@ -712,15 +537,15 @@ JsValue VMRuntime::pushString(const LinkedString *str) {
 VMScope *VMRuntime::newScope(Scope *scope) {
     _newAllocatedCount++;
 
-    if (firstFreeVMScopeIdx) {
-        auto vs = vmScopes[firstFreeVMScopeIdx];
+    if (_firstFreeVMScopeIdx) {
+        auto vs = _vmScopes[_firstFreeVMScopeIdx];
         vs->scopeDsc = scope;
-        firstFreeVMScopeIdx = vs->nextFreeIdx;
+        _firstFreeVMScopeIdx = vs->nextFreeIdx;
         vs->nextFreeIdx = 0;
         return vs;
     } else {
         auto vs = new VMScope(scope);
-        vmScopes.push_back(vs);
+        _vmScopes.push_back(vs);
         return vs;
     }
 }
@@ -728,14 +553,14 @@ VMScope *VMRuntime::newScope(Scope *scope) {
 ResourcePool *VMRuntime::newResourcePool() {
     _newAllocatedCount++;
 
-    if (firstFreeResourcePoolIdx) {
-        auto rp = resourcePools[firstFreeResourcePoolIdx];
-        firstFreeResourcePoolIdx = rp->nextFreeIdx;
+    if (_firstFreeResourcePoolIdx) {
+        auto rp = _resourcePools[_firstFreeResourcePoolIdx];
+        _firstFreeResourcePoolIdx = rp->nextFreeIdx;
         rp->nextFreeIdx = 0;
         return rp;
     } else {
-        auto rp = new ResourcePool((uint32_t)resourcePools.size());
-        resourcePools.push_back(rp);
+        auto rp = new ResourcePool((uint32_t)_resourcePools.size());
+        _resourcePools.push_back(rp);
         return rp;
     }
 }
@@ -750,7 +575,7 @@ bool VMRuntime::toNumber(VMContext *ctx, const JsValue &item, double &out) {
     auto v = item;
     if (item.type >= JDT_OBJECT) {
         Arguments noArgs;
-        vm->callMember(ctx, v, SS_TOSTRING, noArgs);
+        ctx->vm->callMember(ctx, v, SS_TOSTRING, noArgs);
         if (ctx->retValue.type >= JDT_OBJECT) {
             ctx->throwException(JE_TYPE_ERROR, " Cannot convert object to primitive value");
             return false;
@@ -759,10 +584,6 @@ bool VMRuntime::toNumber(VMContext *ctx, const JsValue &item, double &out) {
     }
 
     switch (v.type) {
-        case JDT_NOT_INITIALIZED:
-            ctx->throwException(JE_REFERECNE_ERROR, "Cannot access variable before initialization");
-            out = NAN;
-            return false;
         case JDT_UNDEFINED:
             out = NAN;
             return false;
@@ -807,7 +628,7 @@ JsValue VMRuntime::tryCallJsObjectValueOf(VMContext *ctx, const JsValue &obj) {
 
 JsValue VMRuntime::jsObjectToString(VMContext *ctx, const JsValue &v) {
     assert(v.type >= JDT_OBJECT);
-    vm->callMember(ctx, v, SS_TOSTRING, Arguments());
+    ctx->vm->callMember(ctx, v, SS_TOSTRING, Arguments());
     if (ctx->retValue.type >= JDT_OBJECT) {
         ctx->throwException(JE_TYPE_ERROR, " Cannot convert object to primitive value");
         return jsStringValueEmpty;
@@ -822,9 +643,6 @@ JsValue VMRuntime::toString(VMContext *ctx, const JsValue &v) {
     }
 
     switch (val.type) {
-        case JDT_NOT_INITIALIZED:
-            ctx->throwException(JE_TYPE_ERROR, "Cannot access '?' before initialization");
-            break;
         case JDT_UNDEFINED: return jsStringValueUndefined;
         case JDT_NULL: return jsStringValueNull;
         case JDT_BOOL: return val.value.n32 ? jsStringValueTrue : jsStringValueFalse;
@@ -846,8 +664,8 @@ JsValue VMRuntime::toString(VMContext *ctx, const JsValue &v) {
         }
         case JDT_SYMBOL: {
             auto index = val.value.n32;
-            assert(index < symbolValues.size());
-            return pushString(SizedString(symbolValues[index].toString()));
+            assert(index < _symbolValues.size());
+            return pushString(SizedString(_symbolValues[index].toString()));
         }
         default: {
             ctx->throwException(JE_TYPE_ERROR, "Cannot convert object to primitive value");
@@ -860,7 +678,7 @@ JsValue VMRuntime::toString(VMContext *ctx, const JsValue &v) {
 LockedSizedStringWrapper VMRuntime::toSizedString(VMContext *ctx, const JsValue &v, bool isStrict) {
     JsValue val = v;
     if (val.type >= JDT_OBJECT) {
-        vm->callMember(ctx, v, SS_TOSTRING, Arguments());
+        ctx->vm->callMember(ctx, v, SS_TOSTRING, Arguments());
         if (ctx->retValue.type >= JDT_OBJECT) {
             ctx->throwException(JE_TYPE_ERROR, " Cannot convert object to primitive value");
             return SizedString();
@@ -869,7 +687,6 @@ LockedSizedStringWrapper VMRuntime::toSizedString(VMContext *ctx, const JsValue 
     }
 
     switch (val.type) {
-        case JDT_NOT_INITIALIZED:
         case JDT_UNDEFINED: return SS_UNDEFINED;
         case JDT_NULL: return SS_NULL;
         case JDT_BOOL: return LockedSizedStringWrapper(val.value.n32 ? SS_TRUE : SS_FALSE);
@@ -883,8 +700,8 @@ LockedSizedStringWrapper VMRuntime::toSizedString(VMContext *ctx, const JsValue 
                 return LockedSizedStringWrapper();
             }
             auto index = val.value.n32;
-            assert(index < symbolValues.size());
-            return LockedSizedStringWrapper(symbolValues[index].toString());
+            assert(index < _symbolValues.size());
+            return LockedSizedStringWrapper(_symbolValues[index].toString());
         }
         default: {
             ctx->throwException(JE_TYPE_ERROR, "Cannot convert object to primitive value");
@@ -927,7 +744,7 @@ bool VMRuntime::isEmptyString(const JsValue &v) {
         return true;
     }
 
-    auto &js = stringValues[v.value.index];
+    auto &js = _stringValues[v.value.index];
     if (js.isJoinedString) {
         return js.value.joinedString.len == 0;
     } else {
@@ -945,7 +762,7 @@ uint32_t VMRuntime::getStringLength(const JsValue &value) {
         if (value.isInResourcePool) {
             len = getStringInResourcePool(value.value.index).size();
         } else {
-            auto &js = stringValues[value.value.index];
+            auto &js = _stringValues[value.value.index];
             if (js.isJoinedString) {
                 len = js.value.joinedString.lenUtf16;
             } else {
@@ -963,7 +780,6 @@ bool VMRuntime::isNan(const JsValue &v) {
 
 bool VMRuntime::testTrue(const JsValue &value) {
     switch (value.type) {
-        case JDT_NOT_INITIALIZED:
         case JDT_UNDEFINED:
         case JDT_NULL:
             return false;
@@ -992,7 +808,7 @@ void VMRuntime::extendObject(VMContext *ctx, const JsValue &dst, const JsValue &
         auto &s = getStringWithRandAccess(src);
         auto size = s.size();
         for (uint32_t i = 0; i < size; i++) {
-            objDst->setByIndex(ctx, dst, i, JsValue(JDT_CHAR, s.chartAt(i)));
+            objDst->setByIndex(ctx, dst, i, makeJsValueChar(s.chartAt(i)));
         }
     } else if (src.type == JDT_CHAR) {
         objDst->setByIndex(ctx, dst, 0, src);
@@ -1009,30 +825,30 @@ void VMRuntime::extendObject(VMContext *ctx, const JsValue &dst, const JsValue &
 }
 
 template<typename ARRAY>
-uint32_t freeValues(ARRAY &arr, uint32_t startIdx, uint32_t firstFreeIdx, uint8_t nextRefIdx, uint32_t &countFreedOut) {
+uint32_t freeValues(ARRAY &arr, uint32_t startIdx, uint32_t _firstFreeIdx, uint8_t nextRefIdx, uint32_t &countFreedOut) {
 
     // 将未标记的对象释放了
     uint32_t size = (uint32_t)arr.size();
     for (uint32_t i = startIdx; i < size; i++) {
         auto &item = arr[i];
         if (item.referIdx != nextRefIdx) {
-            item.nextFreeIdx = firstFreeIdx;
-            firstFreeIdx = i;
+            item.nextFreeIdx = _firstFreeIdx;
+            _firstFreeIdx = i;
             countFreedOut++;
         }
     }
 
-    return firstFreeIdx;
+    return _firstFreeIdx;
 }
 
 /**
  * 统计分配的各类存储对象的数量
  */
 uint32_t VMRuntime::countAllocated() const {
-    return uint32_t(doubleValues.size() - countCommonDobules
-        + symbolValues.size() + stringValues.size() - countCommonStrings
-        + objValues.size() - countCommonObjs
-        + vmScopes.size() + resourcePools.size());
+    return uint32_t(_doubleValues.size() - _countCommonDobules
+        + _symbolValues.size() + _stringValues.size() - _countCommonStrings
+        + _objValues.size() - _countCommonObjs
+        + _vmScopes.size() + _resourcePools.size());
 }
 
 /**
@@ -1040,8 +856,8 @@ uint32_t VMRuntime::countAllocated() const {
  */
 uint32_t VMRuntime::garbageCollect() {
     // 先标记所有的对象
-    for (uint32_t i = 1; i < countCommonObjs; i++) {
-        auto item = objValues[i];
+    for (uint32_t i = 1; i < _countCommonObjs; i++) {
+        auto item = _objValues[i];
         item->referIdx = _nextRefIdx;
         item->markReferIdx(this);
     }
@@ -1051,15 +867,16 @@ uint32_t VMRuntime::garbageCollect() {
     //
     uint32_t countFreed = 0;
 
-    firstFreeDoubleIdx = freeValues(doubleValues, countCommonDobules, firstFreeDoubleIdx, _nextRefIdx, countFreed);
-    firstFreeSymbolIdx = freeValues(symbolValues, 0, firstFreeSymbolIdx, _nextRefIdx, countFreed);
+    _firstFreeDoubleIdx = freeValues(_doubleValues, _countCommonDobules, _firstFreeDoubleIdx, _nextRefIdx, countFreed);
+    _firstFreeSymbolIdx = freeValues(_symbolValues, 0, _firstFreeSymbolIdx, _nextRefIdx, countFreed);
+    _firstFreeGetterSetterIdx = freeValues(_getterSetters, 0, _firstFreeGetterSetterIdx, _nextRefIdx, countFreed);
 
-    auto size = (uint32_t)stringValues.size();
-    for (uint32_t i = countCommonStrings; i < size; i++) {
-        auto &item = stringValues[i];
+    auto size = (uint32_t)_stringValues.size();
+    for (uint32_t i = _countCommonStrings; i < size; i++) {
+        auto &item = _stringValues[i];
         if (item.referIdx != _nextRefIdx) {
-            item.nextFreeIdx = firstFreeStringIdx;
-            firstFreeStringIdx = i;
+            item.nextFreeIdx = _firstFreeStringIdx;
+            _firstFreeStringIdx = i;
             if (!item.value.str.utf8Str().isStable()) {
                 freeString(item.value.str.utf8Str());
             }
@@ -1070,36 +887,36 @@ uint32_t VMRuntime::garbageCollect() {
         }
     }
 
-    size = (uint32_t)objValues.size();
-    for (uint32_t i = countCommonObjs; i < size; i++) {
-        auto item = objValues[i];
+    size = (uint32_t)_objValues.size();
+    for (uint32_t i = _countCommonObjs; i < size; i++) {
+        auto item = _objValues[i];
         if (item->referIdx != _nextRefIdx) {
             delete item;
-            objValues[i] = item = new JsDummyObject();
-            item->nextFreeIdx = firstFreeObjIdx;
-            firstFreeObjIdx = i;
+            _objValues[i] = item = new JsDummyObject();
+            item->nextFreeIdx = _firstFreeObjIdx;
+            _firstFreeObjIdx = i;
             countFreed++;
         }
     }
 
-    size = (uint32_t)vmScopes.size();
+    size = (uint32_t)_vmScopes.size();
     for (uint32_t i = 0; i < size; i++) {
-        auto item = vmScopes[i];
+        auto item = _vmScopes[i];
         if (item->referIdx != _nextRefIdx) {
             item->free();
-            item->nextFreeIdx = firstFreeVMScopeIdx;
-            firstFreeVMScopeIdx = i;
+            item->nextFreeIdx = _firstFreeVMScopeIdx;
+            _firstFreeVMScopeIdx = i;
             countFreed++;
         }
     }
 
-    size = (uint32_t)resourcePools.size();
+    size = (uint32_t)_resourcePools.size();
     for (uint32_t i = 0; i < size; i++) {
-        auto item = resourcePools[i];
+        auto item = _resourcePools[i];
         if (item->referIdx != _nextRefIdx) {
             item->free();
-            item->nextFreeIdx = firstFreeResourcePoolIdx;
-            firstFreeResourcePoolIdx = i;
+            item->nextFreeIdx = _firstFreeResourcePoolIdx;
+            _firstFreeResourcePoolIdx = i;
             countFreed++;
         }
     }
@@ -1118,29 +935,34 @@ void VMRuntime::markReferIdx(const JsValue &val) {
 
     switch (val.type) {
         case JDT_NUMBER: {
-            if (val.value.index < countCommonDobules) {
+            if (val.value.index < _countCommonDobules) {
                 if (val.isInResourcePool) {
                     markResourcePoolReferIdx(val.value.index);
                 } else {
-                    doubleValues[val.value.index].referIdx = _nextRefIdx;
+                    _doubleValues[val.value.index].referIdx = _nextRefIdx;
                 }
             }
             break;
         }
         case JDT_SYMBOL: {
-            assert(val.value.index < symbolValues.size());
-            symbolValues[val.value.index].referIdx = _nextRefIdx;
+            assert(val.value.index < _symbolValues.size());
+            _symbolValues[val.value.index].referIdx = _nextRefIdx;
+            break;
+        }
+        case JDT_GETTER_SETTER: {
+            assert(val.value.index < _getterSetters.size());
+            _getterSetters[val.value.index].referIdx = _nextRefIdx;
             break;
         }
         case JDT_STRING: {
-            if (val.value.index < countCommonStrings) {
+            if (val.value.index < _countCommonStrings) {
                 break;
             }
 
             if (val.isInResourcePool) {
                 markResourcePoolReferIdx(val.value.index);
             } else {
-                auto &item = stringValues[val.value.index];
+                auto &item = _stringValues[val.value.index];
                 if (item.referIdx != _nextRefIdx) {
                     item.referIdx = _nextRefIdx;
                     if (item.isJoinedString) {
@@ -1151,7 +973,7 @@ void VMRuntime::markReferIdx(const JsValue &val) {
             break;
         }
         default: {
-            if (val.value.index < countCommonObjs) {
+            if (val.value.index < _countCommonObjs) {
                 auto obj = getObject(val);
                 if (obj->referIdx != _nextRefIdx) {
                     obj->referIdx = _nextRefIdx;
@@ -1192,7 +1014,7 @@ void VMRuntime::markJoinedStringReferIdx(const JsJoinedString &joinedString) {
         int idx = stackStrings.back();
         stackStrings.pop_back();
 
-        auto &js = stringValues[idx];
+        auto &js = _stringValues[idx];
         if (js.referIdx != _nextRefIdx) {
             js.referIdx = _nextRefIdx;
             if (js.isJoinedString) {

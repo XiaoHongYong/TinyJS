@@ -13,7 +13,7 @@ const uint32_t ARRAY_BLOCK_SIZE = 1024 * 32; // 32768
 const uint32_t ARRAY_RESERVE_MAX_SIZE = ARRAY_BLOCK_SIZE * 10; // 327680 个
 const uint32_t ARRAY_MAX_INDEX = 4294967294; // 2 ** 32 - 2
 
-const JsProperty jsPropertyNotInitialized(jsValueNotInitialized, 0, -1, -1, -1);
+const JsValue jsPropertyNotInitialized = jsValueEmpty.asProperty(JP_CONFIGURABLE | JP_WRITABLE | JP_EMPTY);
 
 class BlockLessCompare {
 public:
@@ -69,7 +69,7 @@ public:
     }
 
     virtual bool next(SizedString *strKeyOut = nullptr, JsValue *keyOut = nullptr, JsValue *valueOut = nullptr) override {
-        JsProperty *prop = nullptr;
+        JsValue *prop = nullptr;
         while (true) {
             if (_pos >= _len()) {
                 if (_pos == _len() && _includeNoneEnumerable) {
@@ -77,7 +77,7 @@ public:
                     _pos++;
                     if (strKeyOut) { *strKeyOut = SS_LENGTH; }
                     if (keyOut) { *keyOut = jsStringValueLength; }
-                    if (valueOut) { *valueOut = JsValue(JDT_INT32, _len()); }
+                    if (valueOut) { *valueOut = makeJsValueInt32(_len()); }
                     return true;
                 }
 
@@ -88,7 +88,7 @@ public:
                         if (_includeProtoProp) {
                             // _arr 的 __proto__ 一定没有修改，使用系统的. 如果修改了 __proto__ 就会创建 _obj.
                             // 使用 proto 的 iterator.
-                            _itObj = _ctx->runtime->objPrototypeArray->getIteratorObject(_ctx, _includeProtoProp, _includeNoneEnumerable);
+                            _itObj = _ctx->runtime->objPrototypeArray()->getIteratorObject(_ctx, _includeProtoProp, _includeNoneEnumerable);
                         } else {
                             return false;
                         }
@@ -100,7 +100,7 @@ public:
             prop = _arr->getRawByIndex(_ctx, _pos, false);
             if (prop == nullptr) {
                 break;
-            } else if (prop->isEnumerable == 1 || _includeNoneEnumerable) {
+            } else if (prop->isEnumerable() || _includeNoneEnumerable) {
                 break;
             }
 
@@ -119,7 +119,7 @@ public:
         }
 
         if (valueOut) {
-            *valueOut = prop ? getPropertyValue(_ctx, prop, _arr->self) : jsValueUndefined;
+            *valueOut = prop ? getPropertyValue(_ctx, _arr->self, prop) : jsValueUndefined;
         }
 
         _pos++;
@@ -138,8 +138,7 @@ protected:
 };
 
 
-JsArray::JsArray(uint32_t length) {
-    type = JDT_ARRAY;
+JsArray::JsArray(uint32_t length) : IJsObject(jsValuePrototypeArray, JDT_ARRAY) {
     _isOfIterable = true;
 
     if (length > 0) {
@@ -166,12 +165,12 @@ JsArray::~JsArray() {
     }
 }
 
-void JsArray::definePropertyByName(VMContext *ctx, const SizedString &name, const JsProperty &descriptor) {
+void JsArray::setPropertyByName(VMContext *ctx, const SizedString &name, const JsValue &descriptor) {
     if (name.len > 0 && isDigit(name.data[0])) {
         bool successful = false;
         auto n = name.atoi(successful);
         if (successful && n <= ARRAY_MAX_INDEX) {
-            return definePropertyByIndex(ctx, (uint32_t)n, descriptor);
+            return setPropertyByIndex(ctx, (uint32_t)n, descriptor);
         }
     }
 
@@ -184,10 +183,10 @@ void JsArray::definePropertyByName(VMContext *ctx, const SizedString &name, cons
         _newObject(ctx);
     }
 
-    _obj->definePropertyByName(ctx, name, descriptor);
+    _obj->setPropertyByName(ctx, name, descriptor);
 }
 
-void JsArray::definePropertyByIndex(VMContext *ctx, uint32_t index, const JsProperty &descriptor) {
+void JsArray::setPropertyByIndex(VMContext *ctx, uint32_t index, const JsValue &descriptor) {
     if (isPreventedExtensions && index >= _length) {
         return;
     }
@@ -196,20 +195,15 @@ void JsArray::definePropertyByIndex(VMContext *ctx, uint32_t index, const JsProp
     index -= block->index;
     assert(index < block->items.size());
     block->hasPropDescriptor = true;
-    auto &prop = (block->items[index]);
-    if (prop.isConfigurable == -1) {
-        prop = descriptor.defineProperty();
-    } else {
-        defineIndexProperty(ctx, &prop, descriptor, index);
-    }
+    block->items[index] = descriptor;
 }
 
-void JsArray::definePropertyBySymbol(VMContext *ctx, uint32_t index, const JsProperty &descriptor) {
+void JsArray::setPropertyBySymbol(VMContext *ctx, uint32_t index, const JsValue &descriptor) {
     if (!_obj) {
         _newObject(ctx);
     }
 
-    _obj->definePropertyBySymbol(ctx, index, descriptor);
+    _obj->setPropertyBySymbol(ctx, index, descriptor);
 }
 
 JsError JsArray::setByName(VMContext *ctx, const JsValue &thiz, const SizedString &name, const JsValue &value) {
@@ -259,7 +253,7 @@ JsError JsArray::setByIndex(VMContext *ctx, const JsValue &thiz, uint32_t index,
             }
 
             // 没有 setter 等属性限制，直接修改
-            _firstBlockItems->at(index) = value;
+            _firstBlockItems->at(index) = value.asProperty();
             return JE_OK;
         }
     } else {
@@ -268,7 +262,7 @@ JsError JsArray::setByIndex(VMContext *ctx, const JsValue &thiz, uint32_t index,
     }
 
     auto prop = &block->items[index];
-    return set(ctx, prop, thiz, value);
+    return setPropertyValue(ctx, prop, thiz, value);
 }
 
 JsError JsArray::setBySymbol(VMContext *ctx, const JsValue &thiz, uint32_t index, const JsValue &value) {
@@ -289,7 +283,7 @@ JsValue JsArray::increaseByName(VMContext *ctx, const JsValue &thiz, const Sized
 
     if (name.equal(SS_LENGTH)) {
         setLength(_length + n);
-        return JsValue(JDT_INT32, isPost ? _length - n : _length);
+        return makeJsValueInt32(isPost ? _length - n : _length);
     }
 
     if (!_obj) {
@@ -318,7 +312,7 @@ JsValue JsArray::increaseByIndex(VMContext *ctx, const JsValue &thiz, uint32_t i
             }
 
             // 没有 setter 等属性限制，直接修改
-            _firstBlockItems->at(index) = jsValueNaN;
+            _firstBlockItems->at(index) = jsValueNaN.asProperty();
             return jsValueNaN;
         }
     } else {
@@ -327,7 +321,7 @@ JsValue JsArray::increaseByIndex(VMContext *ctx, const JsValue &thiz, uint32_t i
     }
 
     auto prop = &block->items[index];
-    return increase(ctx, prop, thiz, n, isPost);
+    return increasePropertyValue(ctx, prop, thiz, n, isPost);
 }
 
 JsValue JsArray::increaseBySymbol(VMContext *ctx, const JsValue &thiz, uint32_t index, int n, bool isPost) {
@@ -337,8 +331,7 @@ JsValue JsArray::increaseBySymbol(VMContext *ctx, const JsValue &thiz, uint32_t 
     return _obj->increaseBySymbol(ctx, thiz, index, n, isPost);
 }
 
-JsProperty *JsArray::getRawByName(VMContext *ctx, const SizedString &name, JsNativeFunction &funcGetterOut, bool includeProtoProp) {
-    funcGetterOut = nullptr;
+JsValue *JsArray::getRawByName(VMContext *ctx, const SizedString &name, bool includeProtoProp) {
     if (name.len > 0 && isDigit(name.data[0])) {
         bool successful = false;
         auto n = name.atoi(successful);
@@ -348,28 +341,26 @@ JsProperty *JsArray::getRawByName(VMContext *ctx, const SizedString &name, JsNat
     }
 
     if (name.equal(SS_LENGTH)) {
-        static JsProperty prop;
-        prop = JsProperty(JsValue(JDT_INT32, _length), false, false, false);
+        static JsValue prop;
+        prop = makeJsValueInt32(_length).asProperty(JP_WRITABLE);
         return &prop;
     }
 
     if (_obj) {
-        return _obj->getRawByName(ctx, name, funcGetterOut, includeProtoProp);
+        return _obj->getRawByName(ctx, name, includeProtoProp);
     }
 
     if (name.equal(SS___PROTO__)) {
-        static JsProperty prop;
-        prop = JsProperty(jsValuePrototypeArray, false, false, false, true);
-        return &prop;
+        return &__proto__;
     }
 
     if (includeProtoProp) {
-        return ctx->runtime->objPrototypeArray->getRawByName(ctx, name, funcGetterOut, true);
+        return ctx->runtime->objPrototypeArray()->getRawByName(ctx, name, true);
     }
     return nullptr;
 }
 
-JsProperty *JsArray::getRawByIndex(VMContext *ctx, uint32_t index, bool includeProtoProp) {
+JsValue *JsArray::getRawByIndex(VMContext *ctx, uint32_t index, bool includeProtoProp) {
     Block *block;
     if (index < ARRAY_BLOCK_SIZE) {
         // 大多数情况都是在第一块内
@@ -391,7 +382,7 @@ JsProperty *JsArray::getRawByIndex(VMContext *ctx, uint32_t index, bool includeP
     return &block->items[index];
 }
 
-JsProperty *JsArray::getRawBySymbol(VMContext *ctx, uint32_t index, bool includeProtoProp) {
+JsValue *JsArray::getRawBySymbol(VMContext *ctx, uint32_t index, bool includeProtoProp) {
     if (_obj) {
         return _obj->getRawBySymbol(ctx, index, includeProtoProp);
     }
@@ -421,7 +412,7 @@ bool JsArray::removeByIndex(VMContext *ctx, uint32_t index) {
     assert(index < block->items.size());
     auto &prop = block->items[index];
 
-    if (prop.isConfigurable) {
+    if (prop.isConfigurable()) {
         prop = jsPropertyNotInitialized;
         return true;
     } else {
@@ -437,28 +428,28 @@ bool JsArray::removeBySymbol(VMContext *ctx, uint32_t index) {
     return true;
 }
 
-void JsArray::changeAllProperties(VMContext *ctx, int8_t configurable, int8_t writable) {
+void JsArray::changeAllProperties(VMContext *ctx, JsPropertyFlags toAdd, JsPropertyFlags toRemove) {
     for (auto block : _blocks) {
         for (auto &item : block->items) {
-            item.changeProperty(configurable, writable);
+            item.changeProperty(toAdd, toRemove);
         }
     }
 
     if (_obj) {
-        _obj->changeAllProperties(ctx, configurable, writable);
+        _obj->changeAllProperties(ctx, toAdd, toRemove);
     }
 }
 
-bool JsArray::hasAnyProperty(VMContext *ctx, bool configurable, bool writable) {
+bool JsArray::hasAnyProperty(VMContext *ctx, JsPropertyFlags flags) {
     for (auto block : _blocks) {
         for (auto &item : block->items) {
-            if (item.isPropertyAny(configurable, writable)) {
+            if (item.isPropertyAny(flags)) {
                 return true;
             }
         }
     }
 
-    return _obj && _obj->hasAnyProperty(ctx, configurable, writable);
+    return _obj && _obj->hasAnyProperty(ctx, flags);
 }
 
 void JsArray::preventExtensions(VMContext *ctx) {
@@ -514,28 +505,17 @@ std::pair<JsError, int> JsArray::popFront(VMContext *ctx, Block *b) {
         auto &prop = items[i];
         err = JE_OK;
 
-        JsValue v;
-        if (prop.isGSetter) {
-            if (prop.value.type >= JDT_FUNCTION) {
-                ctx->vm->callMember(ctx, self, prop.value, Arguments());
-                v = ctx->retValue;
-            } else {
-                v = jsValueUndefined;
-            }
-        } else {
-            v = prop.value;
-        }
-
-        if (v.type == JDT_NOT_INITIALIZED) {
+        JsValue v = getPropertyValue(ctx, self, prop, jsValueEmpty);
+        if (v.isEmpty()) {
             // 删除前一个
             auto &prop = items[i - 1];
-            if (prop.isConfigurable) {
-                prop = JsProperty(jsValueNotInitialized);
+            if (prop.isConfigurable()) {
+                prop = jsPropertyNotInitialized;
             } else {
                 err = JE_TYPE_PROP_NO_DELETABLE;
             }
         } else {
-            err = set(ctx, &items[i - 1], self, v);
+            err = setPropertyValue(ctx, &items[i - 1], self, v);
         }
     }
 
@@ -544,22 +524,13 @@ std::pair<JsError, int> JsArray::popFront(VMContext *ctx, Block *b) {
 }
 
 JsValue JsArray::front(VMContext *ctx, Block *b) {
-    JsValue ret = jsValueUndefined;
     auto &items = b->items;
-
     if (!items.empty()) {
         auto &prop = items[0];
-        if (prop.isGSetter) {
-            if (prop.value.type >= JDT_FUNCTION) {
-                ctx->vm->callMember(ctx, self, prop.value, Arguments());
-                ret = ctx->retValue;
-            }
-        } else {
-            ret = prop.value;
-        }
+        return getPropertyValue(ctx, self, prop);
     }
 
-    return ret;
+    return jsValueUndefined;
 }
 
 std::tuple<JsValue, JsError, int> JsArray::popFront(VMContext *ctx) {
@@ -568,7 +539,7 @@ std::tuple<JsValue, JsError, int> JsArray::popFront(VMContext *ctx) {
     }
 
     auto retValue = front(ctx, _firstBlock);
-    if (retValue.type == JDT_NOT_INITIALIZED) {
+    if (retValue.isEmpty()) {
         retValue = jsValueUndefined;
     }
 
@@ -600,18 +571,13 @@ std::tuple<JsValue, JsError, int> JsArray::popFront(VMContext *ctx) {
 
 void JsArray::sort(VMContext *ctx, const JsValue &callback) {
     VecJsValues values;
-    int countNotInit = 0, countUndefined = 0;
+    int countEmpty = 0, countUndefined = 0;
 
     for (auto b : _blocks) {
         for (auto &item : b->items) {
-            auto v = item.value;
-            if (item.isGSetter && item.value.isFunction()) {
-                ctx->vm->callMember(ctx, self, item.value, Arguments());
-                v = ctx->retValue;
-            }
-
-            if (v.type == JDT_NOT_INITIALIZED) {
-                countNotInit++;
+            auto v = getPropertyValue(ctx, self, item, jsValueEmpty);
+            if (v.isEmpty()) {
+                countEmpty++;
             } else if (v.type == JDT_UNDEFINED) {
                 countUndefined++;
             } else {
@@ -654,18 +620,11 @@ void JsArray::sort(VMContext *ctx, const JsValue &callback) {
         for (; i < end; i++, index++) {
             auto &prop = items[index];
             auto value = values[i];
-            if (prop.isGSetter) {
-                if (prop.setter.type > JDT_OBJECT) {
-                    // 调用 setter 函数
-                    ArgumentsX args(value);
-                    ctx->vm->callMember(ctx, self, prop.setter, args);
-                } else {
-                    ctx->throwException(JE_TYPE_ERROR,
-                        "Cannot set property %d of [object Array] which has only a getter", index);
-                }
-            } else if (prop.isWritable) {
-                prop.value = value;
-            } else {
+            auto err = setPropertyValue(ctx, &prop, self, value);
+            if (err == JE_TYPE_NO_PROP_SETTER) {
+                ctx->throwException(JE_TYPE_ERROR,
+                    "Cannot set property %d of [object Array] which has only a getter", index);
+            } else if (err == JE_TYPE_PROP_READ_ONLY) {
                 ctx->throwException(JE_TYPE_ERROR,
                         "Cannot assign to read only property '%d' of object '[object Array]'", index);
             }
@@ -690,18 +649,11 @@ void JsArray::sort(VMContext *ctx, const JsValue &callback) {
 
         for (; i < end; i++, index++) {
             auto &prop = items[index];
-            if (prop.isGSetter) {
-                if (prop.setter.type > JDT_OBJECT) {
-                    // 调用 setter 函数
-                    ArgumentsX args(jsValueUndefined);
-                    ctx->vm->callMember(ctx, self, prop.setter, args);
-                } else {
-                    ctx->throwException(JE_TYPE_ERROR,
-                        "Cannot set property %d of [object Array] which has only a getter", index);
-                }
-            } else if (prop.isWritable) {
-                prop.value = jsValueUndefined;
-            } else {
+            auto err = setPropertyValue(ctx, &prop, self, jsValueUndefined);
+            if (err == JE_TYPE_NO_PROP_SETTER) {
+                ctx->throwException(JE_TYPE_ERROR,
+                    "Cannot set property %d of [object Array] which has only a getter", index);
+            } else if (err == JE_TYPE_PROP_READ_ONLY) {
                 ctx->throwException(JE_TYPE_ERROR,
                         "Cannot assign to read only property '%d' of object '[object Array]'", index);
             }
@@ -709,8 +661,8 @@ void JsArray::sort(VMContext *ctx, const JsValue &callback) {
     }
 
     // empty
-    countNotInit += i;
-    while (i < countNotInit && ctx->error == JE_OK) {
+    countEmpty += i;
+    while (i < countEmpty && ctx->error == JE_OK) {
         auto b = findBlock(i);
         auto &items = b->items;
         int end = b->index + (int)items.size();
@@ -718,8 +670,8 @@ void JsArray::sort(VMContext *ctx, const JsValue &callback) {
         int start = index;
         for (; i < end; i++, index++) {
             auto &prop = items[index];
-            if (prop.isConfigurable) {
-                prop = JsProperty(jsValueNotInitialized);
+            if (prop.isConfigurable()) {
+                prop = jsPropertyNotInitialized;
             } else {
                 ctx->throwException(JE_TYPE_ERROR, "Cannot delete property '%d' of [object Array]", i);
                 break;
@@ -727,7 +679,7 @@ void JsArray::sort(VMContext *ctx, const JsValue &callback) {
         }
 
         if (ctx->error == JE_OK) {
-            // 从 index 之后的元素都是 jsValueNotInitialized，可以直接删除
+            // 从 index 之后的元素都是 jsValueEmpty，可以直接删除
             items.resize(start, jsPropertyNotInitialized);
         }
     }
@@ -753,9 +705,9 @@ JsError JsArray::push(VMContext *ctx, const JsValue *first, uint32_t count) {
         uint32_t n = _length + count;
         n = n < bound ? count : bound - b->index;
 
-        _firstBlock->items[_length - 1 - b->index] = first[0]; // 第一个元素直接修改
+        _firstBlock->items[_length - 1 - b->index] = first[0].asProperty(); // 第一个元素直接修改
         for (int i = 1; i < n; i++) {
-            _firstBlock->items.push_back(first[i]);
+            _firstBlock->items.push_back(first[i].asProperty());
         }
 
         first += n;
@@ -776,12 +728,7 @@ JsError JsArray::extend(VMContext *ctx, const JsArray *other) {
         values.reserve(b->items.size());
 
         for (auto &prop : b->items) {
-            if (prop.isGSetter && prop.value.type >= JDT_FUNCTION) {
-                ctx->vm->callMember(ctx, self, prop.value, Arguments());
-                values.push_back(ctx->retValue);
-            } else {
-                values.push_back(prop.value);
-            }
+            values.push_back(getPropertyValue(ctx, self, prop, jsValueEmpty));
         }
 
         push(ctx, values.data(), (uint32_t)values.size());
@@ -821,13 +768,7 @@ JsError JsArray::extend(VMContext *ctx, const JsValue &other, uint32_t depth) {
                 auto &prop = *itItems;
                 itItems++;
 
-                JsValue value;
-                if (prop.isGSetter && prop.value.type >= JDT_FUNCTION) {
-                    ctx->vm->callMember(ctx, self, prop.value, Arguments());
-                    value = ctx->retValue;
-                } else {
-                    value = prop.value;
-                }
+                JsValue value = getPropertyValue(ctx, self, prop, jsValueUndefined);
 
                 if (depth > 0 && value.type == JDT_ARRAY) {
                     depth--;
@@ -884,27 +825,11 @@ void JsArray::reverse(VMContext *ctx) {
         for (int low = 0; low < high; low++, high--) {
             auto &left = items[low];
             auto &right = items[high];
-            JsValue vl, vr;
-            if (left.isGSetter) {
-                if (left.value.type >= JDT_FUNCTION) {
-                    ctx->vm->callMember(ctx, self, left.value, Arguments());
-                    vl = ctx->retValue;
-                }
-            } else {
-                vl = left.value;
-            }
+            JsValue vl = getPropertyValue(ctx, self, left, jsValueEmpty);
+            JsValue vr = getPropertyValue(ctx, self, right, jsValueEmpty);
 
-            if (right.isGSetter) {
-                if (right.value.type >= JDT_FUNCTION) {
-                    ctx->vm->callMember(ctx, self, right.value, Arguments());
-                    vr = ctx->retValue;
-                }
-            } else {
-                vr = right.value;
-            }
-
-            set(ctx, &left, self, vr);
-            set(ctx, &right, self, vl);
+            setPropertyValue(ctx, &left, self, vr);
+            setPropertyValue(ctx, &right, self, vl);
         }
     } else {
         uint32_t high = _length;
@@ -914,10 +839,10 @@ void JsArray::reverse(VMContext *ctx) {
         high--;
 
         for (int low = 0; low < high; low++, high--) {
-            auto vl = getByIndex(ctx, self, low, jsValueNotInitialized);
-            auto vr = getByIndex(ctx, self, high, jsValueNotInitialized);
+            auto vl = getByIndex(ctx, self, low, jsValueEmpty);
+            auto vr = getByIndex(ctx, self, high, jsValueEmpty);
 
-            if (vl.type == JDT_NOT_INITIALIZED && vr.type == JDT_NOT_INITIALIZED) {
+            if (vl.isEmpty() && vr.isEmpty()) {
                 continue;
             }
 
@@ -949,11 +874,7 @@ void JsArray::toString(VMContext *ctx, const JsValue &thiz, BinaryOutputStream &
         }
 
         for (auto &item : b->items) {
-            auto v = item.value;
-            if (item.isGSetter && item.value.type >= JDT_FUNCTION) {
-                ctx->vm->callMember(ctx, thiz, item.value, Arguments());
-                v = ctx->retValue;
-            }
+            auto v = getPropertyValue(ctx, thiz, item, jsValueEmpty);
 
             LockedSizedStringWrapper s;
             if (v.type == JDT_ARRAY) {
@@ -1028,12 +949,7 @@ void JsArray::dump(VMContext *ctx, const JsValue &thiz, VecJsValues &values) {
 
         int i = b->index;
         for (auto &prop : b->items) {
-            if (prop.isGSetter && prop.value.type >= JDT_FUNCTION) {
-                ctx->vm->callMember(ctx, thiz, prop.value, Arguments());
-                values[i] = ctx->retValue;
-            } else {
-                values[i] = prop.value;
-            }
+            values[i] = getPropertyValue(ctx, thiz, prop, jsValueEmpty);
             i++;
         }
     }
@@ -1142,7 +1058,7 @@ JsArray::Block *JsArray::findToModifyBlock(uint32_t index) {
             && block->index - index < ARRAY_BLOCK_SIZE / 2) {
         // 距离后一个近，而且后一个还没满，且添加的距离不小于 ARRAY_BLOCK_SIZE / 2
         auto insertCount = block->index - index;
-        block->items.insert(block->items.begin(), insertCount, JsProperty(jsValueNotInitialized));
+        block->items.insert(block->items.begin(), insertCount, jsPropertyNotInitialized);
         block->index = index;
         return block;
     } else {
@@ -1150,7 +1066,7 @@ JsArray::Block *JsArray::findToModifyBlock(uint32_t index) {
         block = new Block;
         _blocks.insert(it, block);
         block->index = index;
-        block->items.push_back(JsProperty(jsValueNotInitialized));
+        block->items.push_back(jsPropertyNotInitialized);
         return block;
     }
 }
