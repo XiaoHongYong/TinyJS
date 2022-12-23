@@ -32,7 +32,7 @@ void window_setInterval(VMContext *ctx, const JsValue &thiz, const Arguments &ar
     auto callback = args.getAt(0);
     auto duration = args.getIntAt(ctx, 1, 0);
 
-    auto id = ctx->vm->registerTimer(ctx, callback, duration, true);
+    auto id = ctx->runtime->registerTimer(ctx, callback, duration, true);
     ctx->retValue = makeJsValueInt32(id);
 }
 
@@ -45,7 +45,7 @@ void window_setTimeout(VMContext *ctx, const JsValue &thiz, const Arguments &arg
     auto callback = args.getAt(0);
     auto duration = args.getIntAt(ctx, 1, 0);
 
-    auto id = ctx->vm->registerTimer(ctx, callback, duration, false);
+    auto id = ctx->runtime->registerTimer(ctx, callback, duration, false);
     ctx->retValue = makeJsValueInt32(id);
 }
 
@@ -55,7 +55,7 @@ void window_clearTimer(VMContext *ctx, const JsValue &thiz, const Arguments &arg
     }
 
     auto id = args.getIntAt(ctx, 0, 0);
-    ctx->vm->unregisterTimer(id);
+    ctx->runtime->unregisterTimer(id);
     ctx->retValue = jsValueUndefined;
 }
 

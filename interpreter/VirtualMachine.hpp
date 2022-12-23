@@ -9,8 +9,6 @@
 #define VirtualMachine_hpp
 
 #include "VMScope.hpp"
-#include "TimerTasks.hpp"
-#include "PromiseTasks.hpp"
 
 
 class VMScopeDescriptor;
@@ -74,6 +72,7 @@ private:
 
 public:
     VMContext(VMRuntime *runtime, JsVirtualMachine *vm);
+    virtual ~VMContext();
 
     void throwException(JsError err, cstr_t format, ...);
     void throwException(JsError err, JsValue errorMessage);
@@ -82,6 +81,8 @@ public:
     JsVirtualMachine            *vm;
     VMScope                     *curFunctionScope;
     VMRuntime                   *runtime;
+
+    void                        *extraData;
 
     // 调用 native function 时需要传递的参数
     VecVMStackScopes            *stackScopesForNativeFunctionCall;
@@ -112,15 +113,6 @@ public:
     JsVirtualMachine();
     virtual ~JsVirtualMachine();
 
-    //
-    // 任务相关的函数
-    //
-    inline void registerToRunPromise(JsPromiseObject *promise) { _promiseTasks.registerToRunPromise(promise); }
-    inline int registerTimer(VMContext *ctx, JsValue callback, int32_t duration, bool repeat)
-        { return _timerTasks.registerTimer(ctx, callback, duration, repeat); }
-    inline void unregisterTimer(int timerId) { _timerTasks.unregisterTimer(timerId); }
-    bool onRunTasks();
-
     void run(cstr_t code, size_t len, VMRuntime *runtime = nullptr);
 
     void eval(cstr_t code, size_t len, VMContext *ctx, VecVMStackScopes &stackScopes, const Arguments &args);
@@ -142,12 +134,7 @@ protected:
     void call(Function *function, VMContext *ctx, VecVMStackScopes &stackScopes, const JsValue &thiz, const Arguments &args);
 
 protected:
-    VMRuntimeCommon             _runtimeCommon;
-
     VMRuntime                   _runtime;
-
-    PromiseTasks                _promiseTasks;
-    TimerTasks                  _timerTasks;
 
 };
 

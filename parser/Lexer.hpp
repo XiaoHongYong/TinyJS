@@ -9,7 +9,7 @@
 #define Lexer_hpp
 
 #include "utils/Utils.h"
-#include "VirtualMachineTypes.hpp"
+#include "interpreter/VirtualMachineTypes.hpp"
 
 
 class ResourcePool;

@@ -1,26 +1,22 @@
 //
-//  JsObjectLazy.hpp
+//  JsObjectX.hpp
 //  TinyJS
 //
-//  Created by henry_xiao on 2022/8/11.
+//  Created by henry_xiao on 2022/12/22.
 //
 
-#ifndef JsObjectLazy_hpp
-#define JsObjectLazy_hpp
+#ifndef JsObjectX_hpp
+#define JsObjectX_hpp
 
 #include "JsObject.hpp"
 
 
-struct JsLazyProperty {
-    SizedString             name;
-    JsValue                 prop;
-    bool                    isLazyInit;
-};
-
-class JsObjectLazy : public IJsObject {
+class JsObjectX : public IJsObject {
 public:
-    JsObjectLazy(JsLazyProperty *props, uint32_t countProps, const JsValue &__proto__, JsDataType type);
-    ~JsObjectLazy();
+    JsObjectX(uint32_t extraType, const JsValue &__proto__ = jsValuePrototypeObject);
+    ~JsObjectX();
+
+    uint32_t extraType() const { return _extraType; }
 
     virtual void setPropertyByName(VMContext *ctx, const SizedString &name, const JsValue &descriptor) override;
     virtual void setPropertyByIndex(VMContext *ctx, uint32_t index, const JsValue &descriptor) override;
@@ -50,21 +46,19 @@ public:
 
     virtual void markReferIdx(VMRuntime *rt) override;
 
+    virtual IJsObject *clone() override { assert(0); return nullptr; }
+
 protected:
     void _newObject(VMContext *ctx);
 
-    void setProperties(JsLazyProperty *props, uint32_t countProps) {
-        _props = props;
-        _propsEnd = props + countProps;
-    }
+    virtual bool onSetValue(VMContext *ctx, const SizedString &name, const JsValue &value) = 0;
+    virtual JsValue onGetValue(VMContext *ctx, const SizedString &name) = 0;
+    virtual void onEnumAllProperties(VMContext *ctx, VecSizedStrings &names, VecJsValues &values) = 0;
 
-    virtual void onInitLazyProperty(VMContext *ctx, JsLazyProperty *prop) { assert(0); }
-
-    JsLazyProperty              *_props, *_propsEnd;
-    uint32_t                    _countProps;
-
+    uint32_t                    _extraType;
     JsObject                    *_obj;
+    JsValue                     _tmpRawHolder;
 
 };
 
-#endif /* JsObjectLazy_hpp */
+#endif /* JsObjectX_hpp */

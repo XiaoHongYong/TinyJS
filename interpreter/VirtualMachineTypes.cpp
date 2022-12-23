@@ -52,6 +52,7 @@ const char *jsDataTypeToString(JsDataType type) {
         "JDT_DATE",
         "JDT_PROMISE",
         "JDT_ARGUMENTS",
+        "JDT_OBJ_X",
 
         "JDT_OBJ_BOOL",
         "JDT_OBJ_NUMBER",

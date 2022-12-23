@@ -19,6 +19,7 @@ bool isDirExist(const char *filename);
 bool readFileByBom(const char *fn, std::string &str);
 bool readFile(const char *fn, std::string &str);
 bool writeFile(cstr_t fn, const SizedString &data);
+inline bool writeFile(cstr_t fn, const void *data, size_t len) { return writeFile(fn, SizedString(data, len)); }
 
 bool filetruncate(FILE *fp, int nLen);
 
@@ -29,7 +30,9 @@ bool getFileLength(const char *fileName, uint64_t &length);
 int64_t getFileLength(cstr_t szFileName);
 
 bool createDirectory(cstr_t lpPathName);
-uint32_t isDirWritable(cstr_t szDir);
+bool createDirectoryAll(cstr_t szDir);
+
+bool isDirWritable(cstr_t szDir);
 
 bool enumFilesInDir(cstr_t szBaseDir, cstr_t extFilter, vector<string> &vFiles, bool bEnumFullPath);
 

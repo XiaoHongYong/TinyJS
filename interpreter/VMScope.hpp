@@ -42,6 +42,7 @@ public:
 class VMGlobalScope : public VMScope {
 public:
     VMGlobalScope();
+    VMGlobalScope(VMGlobalScope *other);
 
     JsValue get(VMContext *ctx, uint32_t index) const;
     JsError set(VMContext *ctx, uint32_t index, const JsValue &value);
@@ -52,12 +53,7 @@ public:
 
     uint32_t countVars() const { return (uint32_t)vars.size(); }
 
-    inline void checkSpace() {
-        if (countVars() < scopeDsc->varDeclares.size()) {
-            vars.resize(scopeDsc->varDeclares.size(), jsValueEmpty);
-        }
-    }
-    
+    void checkSpace();
 
 protected:
     ResourcePool                _resourcePool;

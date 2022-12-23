@@ -11,7 +11,7 @@
 #include "api-built-in/BuiltIn.hpp"
 
 
-VMRuntimeCommon::VMRuntimeCommon(JsVirtualMachine *vm) : vm(vm) {
+VMRuntimeCommon::VMRuntimeCommon() {
     objPrototypeString = nullptr;
     objPrototypeNumber = nullptr;
     objPrototypeBoolean = nullptr;
@@ -81,6 +81,16 @@ VMRuntimeCommon::~VMRuntimeCommon() {
     }
 
     delete _globalScope;
+}
+
+static VMRuntimeCommon *_instance = nullptr;
+
+VMRuntimeCommon *VMRuntimeCommon::getInstance() {
+    // static VMRuntimeCommon *_instance = new VMRuntimeCommon();
+    if (_instance == nullptr) {
+        _instance = new VMRuntimeCommon();
+    }
+    return _instance;
 }
 
 void VMRuntimeCommon::dump(BinaryOutputStream &stream) {

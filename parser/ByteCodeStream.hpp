@@ -9,7 +9,7 @@
 #define ByteCodeStream_hpp
 
 #include "utils/BinaryStream.h"
-#include "VirtualMachineTypes.hpp"
+#include "interpreter/VirtualMachineTypes.hpp"
 
 
 class ByteCodeStream : public BinaryOutputStream {

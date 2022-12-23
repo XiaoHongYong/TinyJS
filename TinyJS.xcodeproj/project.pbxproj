@@ -15,12 +15,83 @@
 		C05589AD29291D1500CBDBD7 /* Math.cpp in Sources */ = {isa = PBXBuildFile; fileRef = C05589AC29291D1500CBDBD7 /* Math.cpp */; };
 		C05589AF2929DC0C00CBDBD7 /* JSON.cpp in Sources */ = {isa = PBXBuildFile; fileRef = C05589AE2929DC0C00CBDBD7 /* JSON.cpp */; };
 		C05589B1292B48D900CBDBD7 /* Date.cpp in Sources */ = {isa = PBXBuildFile; fileRef = C05589B0292B48D900CBDBD7 /* Date.cpp */; };
+		C05D73FE2954319C00294F50 /* JsObjectX.cpp in Sources */ = {isa = PBXBuildFile; fileRef = C05D73FA2953FC3300294F50 /* JsObjectX.cpp */; };
 		C06C15FC294D8D740022ADCA /* VMScope.cpp in Sources */ = {isa = PBXBuildFile; fileRef = C06C15F8294D750D0022ADCA /* VMScope.cpp */; };
 		C06C15FD294D8D740022ADCA /* Arguments.cpp in Sources */ = {isa = PBXBuildFile; fileRef = C06C15FA294D75AD0022ADCA /* Arguments.cpp */; };
 		C06C1600294DD1150022ADCA /* VMRuntimeCommon.cpp in Sources */ = {isa = PBXBuildFile; fileRef = C06C15FE294DBDF10022ADCA /* VMRuntimeCommon.cpp */; };
 		C06C1605294DD6A00022ADCA /* PromiseTasks.cpp in Sources */ = {isa = PBXBuildFile; fileRef = C06C1604294DD6520022ADCA /* PromiseTasks.cpp */; };
 		C06C1606294DD6A00022ADCA /* TimerTasks.cpp in Sources */ = {isa = PBXBuildFile; fileRef = C06C1602294DD6520022ADCA /* TimerTasks.cpp */; };
 		C06C1609294DD6FF0022ADCA /* JsPromiseObject.cpp in Sources */ = {isa = PBXBuildFile; fileRef = C06C1607294DD6FF0022ADCA /* JsPromiseObject.cpp */; };
+		C06C161E294EB0360022ADCA /* Array.cpp in Sources */ = {isa = PBXBuildFile; fileRef = C08597B928D0D54C00577A8E /* Array.cpp */; };
+		C06C161F294EB0360022ADCA /* Boolean.cpp in Sources */ = {isa = PBXBuildFile; fileRef = C08597BC28D0D54C00577A8E /* Boolean.cpp */; };
+		C06C1620294EB0360022ADCA /* BuiltIn.cpp in Sources */ = {isa = PBXBuildFile; fileRef = C08597BB28D0D54C00577A8E /* BuiltIn.cpp */; };
+		C06C1621294EB0360022ADCA /* Error.cpp in Sources */ = {isa = PBXBuildFile; fileRef = C08597B528D0D54C00577A8E /* Error.cpp */; };
+		C06C1622294EB0360022ADCA /* Date.cpp in Sources */ = {isa = PBXBuildFile; fileRef = C05589B0292B48D900CBDBD7 /* Date.cpp */; };
+		C06C1623294EB0360022ADCA /* eval.cpp in Sources */ = {isa = PBXBuildFile; fileRef = C08597BD28D0D54C00577A8E /* eval.cpp */; };
+		C06C1624294EB0360022ADCA /* Function.cpp in Sources */ = {isa = PBXBuildFile; fileRef = C08597B828D0D54C00577A8E /* Function.cpp */; };
+		C06C1625294EB0360022ADCA /* JSON.cpp in Sources */ = {isa = PBXBuildFile; fileRef = C05589AE2929DC0C00CBDBD7 /* JSON.cpp */; };
+		C06C1626294EB0360022ADCA /* Math.cpp in Sources */ = {isa = PBXBuildFile; fileRef = C05589AC29291D1500CBDBD7 /* Math.cpp */; };
+		C06C1627294EB0360022ADCA /* Number.cpp in Sources */ = {isa = PBXBuildFile; fileRef = C08597BE28D0D54C00577A8E /* Number.cpp */; };
+		C06C1628294EB0360022ADCA /* Object.cpp in Sources */ = {isa = PBXBuildFile; fileRef = C08597B628D0D54C00577A8E /* Object.cpp */; };
+		C06C1629294EB0360022ADCA /* Promise.cpp in Sources */ = {isa = PBXBuildFile; fileRef = C06DEEA529345A9F0062C606 /* Promise.cpp */; };
+		C06C162A294EB0360022ADCA /* RegExp.cpp in Sources */ = {isa = PBXBuildFile; fileRef = C08597B428D0D54C00577A8E /* RegExp.cpp */; };
+		C06C162B294EB0360022ADCA /* Reflect.cpp in Sources */ = {isa = PBXBuildFile; fileRef = C06DEEA329332F1C0062C606 /* Reflect.cpp */; };
+		C06C162C294EB0360022ADCA /* String.cpp in Sources */ = {isa = PBXBuildFile; fileRef = C08597B728D0D54C00577A8E /* String.cpp */; };
+		C06C162D294EB0360022ADCA /* Symbol.cpp in Sources */ = {isa = PBXBuildFile; fileRef = C08597B328D0D54C00577A8E /* Symbol.cpp */; };
+		C06C162E294EB0360022ADCA /* Console.cpp in Sources */ = {isa = PBXBuildFile; fileRef = C08597CE28D0D54C00577A8E /* Console.cpp */; };
+		C06C162F294EB0360022ADCA /* Window.cpp in Sources */ = {isa = PBXBuildFile; fileRef = C0443AAB28DE07D900CBF6DB /* Window.cpp */; };
+		C06C1630294EB0360022ADCA /* WebAPI.cpp in Sources */ = {isa = PBXBuildFile; fileRef = C08597CF28D0D54C00577A8E /* WebAPI.cpp */; };
+		C06C1631294EB0360022ADCA /* ConstStrings.cpp in Sources */ = {isa = PBXBuildFile; fileRef = C08597F328D0D54C00577A8E /* ConstStrings.cpp */; };
+		C06C1632294EB0360022ADCA /* PromiseTasks.cpp in Sources */ = {isa = PBXBuildFile; fileRef = C06C1604294DD6520022ADCA /* PromiseTasks.cpp */; };
+		C06C1633294EB0360022ADCA /* TimerTasks.cpp in Sources */ = {isa = PBXBuildFile; fileRef = C06C1602294DD6520022ADCA /* TimerTasks.cpp */; };
+		C06C1634294EB0360022ADCA /* Arguments.cpp in Sources */ = {isa = PBXBuildFile; fileRef = C06C15FA294D75AD0022ADCA /* Arguments.cpp */; };
+		C06C1635294EB0360022ADCA /* VirtualMachine.cpp in Sources */ = {isa = PBXBuildFile; fileRef = C08597FC28D0D54C00577A8E /* VirtualMachine.cpp */; };
+		C06C1636294EB0360022ADCA /* VirtualMachineTypes.cpp in Sources */ = {isa = PBXBuildFile; fileRef = C08597F628D0D54C00577A8E /* VirtualMachineTypes.cpp */; };
+		C06C1637294EB0360022ADCA /* VMRuntime.cpp in Sources */ = {isa = PBXBuildFile; fileRef = C08597FD28D0D54C00577A8E /* VMRuntime.cpp */; };
+		C06C1638294EB0360022ADCA /* VMRuntimeCommon.cpp in Sources */ = {isa = PBXBuildFile; fileRef = C06C15FE294DBDF10022ADCA /* VMRuntimeCommon.cpp */; };
+		C06C1639294EB0360022ADCA /* VMScope.cpp in Sources */ = {isa = PBXBuildFile; fileRef = C06C15F8294D750D0022ADCA /* VMScope.cpp */; };
+		C06C163A294EB0360022ADCA /* IJsIterator.cpp in Sources */ = {isa = PBXBuildFile; fileRef = C06EE44128F40552000F0E41 /* IJsIterator.cpp */; };
+		C06C163B294EB0360022ADCA /* IJsObject.cpp in Sources */ = {isa = PBXBuildFile; fileRef = C085980728D0D54C00577A8E /* IJsObject.cpp */; };
+		C06C163C294EB0360022ADCA /* JsArguments.cpp in Sources */ = {isa = PBXBuildFile; fileRef = C085980228D0D54C00577A8E /* JsArguments.cpp */; };
+		C06C163D294EB0360022ADCA /* JsArray.cpp in Sources */ = {isa = PBXBuildFile; fileRef = C085980828D0D54C00577A8E /* JsArray.cpp */; };
+		C06C163E294EB0360022ADCA /* JsGlobalThis.cpp in Sources */ = {isa = PBXBuildFile; fileRef = C085985028D9A0A100577A8E /* JsGlobalThis.cpp */; };
+		C06C163F294EB0360022ADCA /* JsLibObject.cpp in Sources */ = {isa = PBXBuildFile; fileRef = C085980A28D0D54C00577A8E /* JsLibObject.cpp */; };
+		C06C1640294EB0360022ADCA /* JsObject.cpp in Sources */ = {isa = PBXBuildFile; fileRef = C06EE43E28F40406000F0E41 /* JsObject.cpp */; };
+		C06C1641294EB0360022ADCA /* JsObjectFunction.cpp in Sources */ = {isa = PBXBuildFile; fileRef = C085980628D0D54C00577A8E /* JsObjectFunction.cpp */; };
+		C06C1642294EB0360022ADCA /* JsObjectLazy.cpp in Sources */ = {isa = PBXBuildFile; fileRef = C06EE44529091177000F0E41 /* JsObjectLazy.cpp */; };
+		C06C1643294EB0360022ADCA /* JsPrimaryObject.cpp in Sources */ = {isa = PBXBuildFile; fileRef = C0A3AF2D29167B4900BBEE8E /* JsPrimaryObject.cpp */; };
+		C06C1644294EB0360022ADCA /* JsRegExp.cpp in Sources */ = {isa = PBXBuildFile; fileRef = C08597FF28D0D54C00577A8E /* JsRegExp.cpp */; };
+		C06C1645294EB0360022ADCA /* JsPromiseObject.cpp in Sources */ = {isa = PBXBuildFile; fileRef = C06C1607294DD6FF0022ADCA /* JsPromiseObject.cpp */; };
+		C06C1646294EB0360022ADCA /* ByteCodeStream.cpp in Sources */ = {isa = PBXBuildFile; fileRef = C085981328D0D54C00577A8E /* ByteCodeStream.cpp */; };
+		C06C1647294EB0360022ADCA /* Expression.cpp in Sources */ = {isa = PBXBuildFile; fileRef = C085981828D0D54C00577A8E /* Expression.cpp */; };
+		C06C1648294EB0360022ADCA /* Lexer.cpp in Sources */ = {isa = PBXBuildFile; fileRef = C085981128D0D54C00577A8E /* Lexer.cpp */; };
+		C06C1649294EB0360022ADCA /* Parser.cpp in Sources */ = {isa = PBXBuildFile; fileRef = C085981928D0D54C00577A8E /* Parser.cpp */; };
+		C06C164A294EB0360022ADCA /* ParserTypes.cpp in Sources */ = {isa = PBXBuildFile; fileRef = C085981728D0D54C00577A8E /* ParserTypes.cpp */; };
+		C06C164B294EB0360022ADCA /* Statement.cpp in Sources */ = {isa = PBXBuildFile; fileRef = C085981028D0D54C00577A8E /* Statement.cpp */; };
+		C06C164C294EB0360022ADCA /* CommonString.cpp in Sources */ = {isa = PBXBuildFile; fileRef = C08597C828D0D54C00577A8E /* CommonString.cpp */; };
+		C06C164D294EB0360022ADCA /* JsString.cpp in Sources */ = {isa = PBXBuildFile; fileRef = C08597C728D0D54C00577A8E /* JsString.cpp */; };
+		C06C164F294EB0360022ADCA /* SizedString.cpp in Sources */ = {isa = PBXBuildFile; fileRef = C0443AB028E7254000CBF6DB /* SizedString.cpp */; };
+		C06C1650294EB0360022ADCA /* DateTime.cpp in Sources */ = {isa = PBXBuildFile; fileRef = C044A2842931B89E00178864 /* DateTime.cpp */; };
+		C06C1651294EB0360022ADCA /* CharEncoding.cpp in Sources */ = {isa = PBXBuildFile; fileRef = C0443AAE28E51F9800CBF6DB /* CharEncoding.cpp */; };
+		C06C1652294EB0360022ADCA /* JsArray.cpp in Sources */ = {isa = PBXBuildFile; fileRef = C08597C128D0D54C00577A8E /* JsArray.cpp */; };
+		C06C1653294EB0360022ADCA /* Lexer.cpp in Sources */ = {isa = PBXBuildFile; fileRef = C08597C328D0D54C00577A8E /* Lexer.cpp */; };
+		C06C1654294EB0360022ADCA /* Parser.cpp in Sources */ = {isa = PBXBuildFile; fileRef = C08597C428D0D54C00577A8E /* Parser.cpp */; };
+		C06C1655294EB0360022ADCA /* RunJavaScript.cpp in Sources */ = {isa = PBXBuildFile; fileRef = C08597C528D0D54C00577A8E /* RunJavaScript.cpp */; };
+		C06C1656294EB0360022ADCA /* AllocatorPool.cpp in Sources */ = {isa = PBXBuildFile; fileRef = C08597E928D0D54C00577A8E /* AllocatorPool.cpp */; };
+		C06C1657294EB0360022ADCA /* Base64.cpp in Sources */ = {isa = PBXBuildFile; fileRef = C08597DB28D0D54C00577A8E /* Base64.cpp */; };
+		C06C1658294EB0360022ADCA /* BinaryStream.cpp in Sources */ = {isa = PBXBuildFile; fileRef = C08597F128D0D54C00577A8E /* BinaryStream.cpp */; };
+		C06C1659294EB0360022ADCA /* CharEncoding.cpp in Sources */ = {isa = PBXBuildFile; fileRef = C08597D528D0D54C00577A8E /* CharEncoding.cpp */; };
+		C06C165A294EB0360022ADCA /* DateTime.cpp in Sources */ = {isa = PBXBuildFile; fileRef = C08597EC28D0D54C00577A8E /* DateTime.cpp */; };
+		C06C165B294EB0360022ADCA /* FileApi.cpp in Sources */ = {isa = PBXBuildFile; fileRef = C08597DA28D0D54C00577A8E /* FileApi.cpp */; };
+		C06C165C294EB0360022ADCA /* Hash.cpp in Sources */ = {isa = PBXBuildFile; fileRef = C08597EB28D0D54C00577A8E /* Hash.cpp */; };
+		C06C165D294EB0360022ADCA /* LinkedString.cpp in Sources */ = {isa = PBXBuildFile; fileRef = C08597D428D0D54C00577A8E /* LinkedString.cpp */; };
+		C06C165E294EB0360022ADCA /* os.cpp in Sources */ = {isa = PBXBuildFile; fileRef = C08597D728D0D54C00577A8E /* os.cpp */; };
+		C06C165F294EB0360022ADCA /* SizedString.cpp in Sources */ = {isa = PBXBuildFile; fileRef = C08597E328D0D54C00577A8E /* SizedString.cpp */; };
+		C06C1660294EB0360022ADCA /* StringEx.cpp in Sources */ = {isa = PBXBuildFile; fileRef = C08597E028D0D54C00577A8E /* StringEx.cpp */; };
+		C06C1661294EB0360022ADCA /* unittest.cpp in Sources */ = {isa = PBXBuildFile; fileRef = C08597F028D0D54C00577A8E /* unittest.cpp */; };
+		C06C1662294EB0360022ADCA /* XCharSeparatedValues.cpp in Sources */ = {isa = PBXBuildFile; fileRef = C08597DD28D0D54C00577A8E /* XCharSeparatedValues.cpp */; };
+		C06C1667294EB1210022ADCA /* libThirdPartiesSDK.a in Frameworks */ = {isa = PBXBuildFile; fileRef = C08597AA28D0D4C200577A8E /* libThirdPartiesSDK.a */; };
+		C06C1668294EB1580022ADCA /* CharEncodingMac.mm in Sources */ = {isa = PBXBuildFile; fileRef = C08597E628D0D54C00577A8E /* CharEncodingMac.mm */; };
 		C06DEEA429332F1C0062C606 /* Reflect.cpp in Sources */ = {isa = PBXBuildFile; fileRef = C06DEEA329332F1C0062C606 /* Reflect.cpp */; };
 		C06DEEA629345A9F0062C606 /* Promise.cpp in Sources */ = {isa = PBXBuildFile; fileRef = C06DEEA529345A9F0062C606 /* Promise.cpp */; };
 		C06EE43F28F40406000F0E41 /* JsObject.cpp in Sources */ = {isa = PBXBuildFile; fileRef = C06EE43E28F40406000F0E41 /* JsObject.cpp */; };
@@ -45,7 +116,6 @@
 		C085982928D0D54C00577A8E /* RunJavaScript.cpp in Sources */ = {isa = PBXBuildFile; fileRef = C08597C528D0D54C00577A8E /* RunJavaScript.cpp */; };
 		C085982A28D0D54C00577A8E /* JsString.cpp in Sources */ = {isa = PBXBuildFile; fileRef = C08597C728D0D54C00577A8E /* JsString.cpp */; };
 		C085982B28D0D54C00577A8E /* CommonString.cpp in Sources */ = {isa = PBXBuildFile; fileRef = C08597C828D0D54C00577A8E /* CommonString.cpp */; };
-		C085982C28D0D54C00577A8E /* StringPool.cpp in Sources */ = {isa = PBXBuildFile; fileRef = C08597C928D0D54C00577A8E /* StringPool.cpp */; };
 		C085982D28D0D54C00577A8E /* Console.cpp in Sources */ = {isa = PBXBuildFile; fileRef = C08597CE28D0D54C00577A8E /* Console.cpp */; };
 		C085982E28D0D54C00577A8E /* WebAPI.cpp in Sources */ = {isa = PBXBuildFile; fileRef = C08597CF28D0D54C00577A8E /* WebAPI.cpp */; };
 		C085982F28D0D54C00577A8E /* LinkedString.cpp in Sources */ = {isa = PBXBuildFile; fileRef = C08597D428D0D54C00577A8E /* LinkedString.cpp */; };
@@ -121,6 +191,8 @@
 		C05589AC29291D1500CBDBD7 /* Math.cpp */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.cpp.cpp; path = Math.cpp; sourceTree = "<group>"; };
 		C05589AE2929DC0C00CBDBD7 /* JSON.cpp */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.cpp.cpp; path = JSON.cpp; sourceTree = "<group>"; };
 		C05589B0292B48D900CBDBD7 /* Date.cpp */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.cpp.cpp; path = Date.cpp; sourceTree = "<group>"; };
+		C05D73FA2953FC3300294F50 /* JsObjectX.cpp */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.cpp.cpp; path = JsObjectX.cpp; sourceTree = "<group>"; };
+		C05D73FB2953FC3300294F50 /* JsObjectX.hpp */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.cpp.h; path = JsObjectX.hpp; sourceTree = "<group>"; };
 		C06C15F8294D750D0022ADCA /* VMScope.cpp */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.cpp.cpp; path = VMScope.cpp; sourceTree = "<group>"; };
 		C06C15F9294D750D0022ADCA /* VMScope.hpp */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.cpp.h; path = VMScope.hpp; sourceTree = "<group>"; };
 		C06C15FA294D75AD0022ADCA /* Arguments.cpp */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.cpp.cpp; path = Arguments.cpp; sourceTree = "<group>"; };
@@ -133,6 +205,7 @@
 		C06C1604294DD6520022ADCA /* PromiseTasks.cpp */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.cpp.cpp; path = PromiseTasks.cpp; sourceTree = "<group>"; };
 		C06C1607294DD6FF0022ADCA /* JsPromiseObject.cpp */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.cpp.cpp; path = JsPromiseObject.cpp; sourceTree = "<group>"; };
 		C06C1608294DD6FF0022ADCA /* JsPromiseObject.hpp */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.cpp.h; path = JsPromiseObject.hpp; sourceTree = "<group>"; };
+		C06C1615294EAFF70022ADCA /* libTinyJsLib.dylib */ = {isa = PBXFileReference; explicitFileType = "compiled.mach-o.dylib"; includeInIndex = 0; path = libTinyJsLib.dylib; sourceTree = BUILT_PRODUCTS_DIR; };
 		C06DEEA329332F1C0062C606 /* Reflect.cpp */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.cpp.cpp; path = Reflect.cpp; sourceTree = "<group>"; };
 		C06DEEA529345A9F0062C606 /* Promise.cpp */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.cpp.cpp; path = Promise.cpp; sourceTree = "<group>"; };
 		C06EE43D28F40406000F0E41 /* JsObject.hpp */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.cpp.h; path = JsObject.hpp; sourceTree = "<group>"; };
@@ -162,10 +235,8 @@
 		C08597C528D0D54C00577A8E /* RunJavaScript.cpp */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = sourcecode.cpp.cpp; path = RunJavaScript.cpp; sourceTree = "<group>"; };
 		C08597C728D0D54C00577A8E /* JsString.cpp */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = sourcecode.cpp.cpp; path = JsString.cpp; sourceTree = "<group>"; };
 		C08597C828D0D54C00577A8E /* CommonString.cpp */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = sourcecode.cpp.cpp; path = CommonString.cpp; sourceTree = "<group>"; };
-		C08597C928D0D54C00577A8E /* StringPool.cpp */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = sourcecode.cpp.cpp; path = StringPool.cpp; sourceTree = "<group>"; };
 		C08597CA28D0D54C00577A8E /* CommonString.hpp */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = sourcecode.cpp.h; path = CommonString.hpp; sourceTree = "<group>"; };
 		C08597CB28D0D54C00577A8E /* JsString.hpp */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = sourcecode.cpp.h; path = JsString.hpp; sourceTree = "<group>"; };
-		C08597CC28D0D54C00577A8E /* StringPool.hpp */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = sourcecode.cpp.h; path = StringPool.hpp; sourceTree = "<group>"; };
 		C08597CE28D0D54C00577A8E /* Console.cpp */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = sourcecode.cpp.cpp; path = Console.cpp; sourceTree = "<group>"; };
 		C08597CF28D0D54C00577A8E /* WebAPI.cpp */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = sourcecode.cpp.cpp; path = WebAPI.cpp; sourceTree = "<group>"; };
 		C08597D028D0D54C00577A8E /* WebAPI.hpp */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = sourcecode.cpp.h; path = WebAPI.hpp; sourceTree = "<group>"; };
@@ -248,6 +319,14 @@
 			);
 			runOnlyForDeploymentPostprocessing = 0;
 		};
+		C06C1613294EAFF70022ADCA /* Frameworks */ = {
+			isa = PBXFrameworksBuildPhase;
+			buildActionMask = 2147483647;
+			files = (
+				C06C1667294EB1210022ADCA /* libThirdPartiesSDK.a in Frameworks */,
+			);
+			runOnlyForDeploymentPostprocessing = 0;
+		};
 /* End PBXFrameworksBuildPhase section */
 
 /* Begin PBXGroup section */
@@ -265,6 +344,7 @@
 			isa = PBXGroup;
 			children = (
 				C03E44422839CECC00864631 /* TinyJS */,
+				C06C1615294EAFF70022ADCA /* libTinyJsLib.dylib */,
 			);
 			name = Products;
 			sourceTree = "<group>";
@@ -371,8 +451,6 @@
 				C08597CA28D0D54C00577A8E /* CommonString.hpp */,
 				C08597C728D0D54C00577A8E /* JsString.cpp */,
 				C08597CB28D0D54C00577A8E /* JsString.hpp */,
-				C08597C928D0D54C00577A8E /* StringPool.cpp */,
-				C08597CC28D0D54C00577A8E /* StringPool.hpp */,
 			);
 			path = strings;
 			sourceTree = "<group>";
@@ -494,6 +572,8 @@
 				C085980C28D0D54C00577A8E /* JsRegExp.hpp */,
 				C06C1607294DD6FF0022ADCA /* JsPromiseObject.cpp */,
 				C06C1608294DD6FF0022ADCA /* JsPromiseObject.hpp */,
+				C05D73FA2953FC3300294F50 /* JsObjectX.cpp */,
+				C05D73FB2953FC3300294F50 /* JsObjectX.hpp */,
 			);
 			path = objects;
 			sourceTree = "<group>";
@@ -519,6 +599,16 @@
 		};
 /* End PBXGroup section */
 
+/* Begin PBXHeadersBuildPhase section */
+		C06C1611294EAFF70022ADCA /* Headers */ = {
+			isa = PBXHeadersBuildPhase;
+			buildActionMask = 2147483647;
+			files = (
+			);
+			runOnlyForDeploymentPostprocessing = 0;
+		};
+/* End PBXHeadersBuildPhase section */
+
 /* Begin PBXNativeTarget section */
 		C03E44412839CECC00864631 /* TinyJS */ = {
 			isa = PBXNativeTarget;
@@ -539,6 +629,23 @@
 			productReference = C03E44422839CECC00864631 /* TinyJS */;
 			productType = "com.apple.product-type.tool";
 		};
+		C06C1614294EAFF70022ADCA /* TinyJsLib */ = {
+			isa = PBXNativeTarget;
+			buildConfigurationList = C06C161D294EAFF70022ADCA /* Build configuration list for PBXNativeTarget "TinyJsLib" */;
+			buildPhases = (
+				C06C1611294EAFF70022ADCA /* Headers */,
+				C06C1612294EAFF70022ADCA /* Sources */,
+				C06C1613294EAFF70022ADCA /* Frameworks */,
+			);
+			buildRules = (
+			);
+			dependencies = (
+			);
+			name = TinyJsLib;
+			productName = TinyJsLib;
+			productReference = C06C1615294EAFF70022ADCA /* libTinyJsLib.dylib */;
+			productType = "com.apple.product-type.library.dynamic";
+		};
 /* End PBXNativeTarget section */
 
 /* Begin PBXProject section */
@@ -549,6 +656,9 @@
 				LastUpgradeCheck = 1320;
 				TargetAttributes = {
 					C03E44412839CECC00864631 = {
+						CreatedOnToolsVersion = 13.2.1;
+					};
+					C06C1614294EAFF70022ADCA = {
 						CreatedOnToolsVersion = 13.2.1;
 					};
 				};
@@ -573,6 +683,7 @@
 			projectRoot = "";
 			targets = (
 				C03E44412839CECC00864631 /* TinyJS */,
+				C06C1614294EAFF70022ADCA /* TinyJsLib */,
 			);
 		};
 /* End PBXProject section */
@@ -680,7 +791,6 @@
 				C085983428D0D54C00577A8E /* XCharSeparatedValues.cpp in Sources */,
 				C085983028D0D54C00577A8E /* CharEncoding.cpp in Sources */,
 				C06DEEA629345A9F0062C606 /* Promise.cpp in Sources */,
-				C085982C28D0D54C00577A8E /* StringPool.cpp in Sources */,
 				C085981B28D0D54C00577A8E /* Symbol.cpp in Sources */,
 				C085983628D0D54C00577A8E /* SizedString.cpp in Sources */,
 				C085983928D0D54C00577A8E /* Hash.cpp in Sources */,
@@ -688,6 +798,83 @@
 				C085984728D0D54C00577A8E /* JsLibObject.cpp in Sources */,
 				C085983328D0D54C00577A8E /* Base64.cpp in Sources */,
 				C085982B28D0D54C00577A8E /* CommonString.cpp in Sources */,
+			);
+			runOnlyForDeploymentPostprocessing = 0;
+		};
+		C06C1612294EAFF70022ADCA /* Sources */ = {
+			isa = PBXSourcesBuildPhase;
+			buildActionMask = 2147483647;
+			files = (
+				C05D73FE2954319C00294F50 /* JsObjectX.cpp in Sources */,
+				C06C1668294EB1580022ADCA /* CharEncodingMac.mm in Sources */,
+				C06C161E294EB0360022ADCA /* Array.cpp in Sources */,
+				C06C161F294EB0360022ADCA /* Boolean.cpp in Sources */,
+				C06C1620294EB0360022ADCA /* BuiltIn.cpp in Sources */,
+				C06C1621294EB0360022ADCA /* Error.cpp in Sources */,
+				C06C1622294EB0360022ADCA /* Date.cpp in Sources */,
+				C06C1623294EB0360022ADCA /* eval.cpp in Sources */,
+				C06C1624294EB0360022ADCA /* Function.cpp in Sources */,
+				C06C1625294EB0360022ADCA /* JSON.cpp in Sources */,
+				C06C1626294EB0360022ADCA /* Math.cpp in Sources */,
+				C06C1627294EB0360022ADCA /* Number.cpp in Sources */,
+				C06C1628294EB0360022ADCA /* Object.cpp in Sources */,
+				C06C1629294EB0360022ADCA /* Promise.cpp in Sources */,
+				C06C162A294EB0360022ADCA /* RegExp.cpp in Sources */,
+				C06C162B294EB0360022ADCA /* Reflect.cpp in Sources */,
+				C06C162C294EB0360022ADCA /* String.cpp in Sources */,
+				C06C162D294EB0360022ADCA /* Symbol.cpp in Sources */,
+				C06C162E294EB0360022ADCA /* Console.cpp in Sources */,
+				C06C162F294EB0360022ADCA /* Window.cpp in Sources */,
+				C06C1630294EB0360022ADCA /* WebAPI.cpp in Sources */,
+				C06C1631294EB0360022ADCA /* ConstStrings.cpp in Sources */,
+				C06C1632294EB0360022ADCA /* PromiseTasks.cpp in Sources */,
+				C06C1633294EB0360022ADCA /* TimerTasks.cpp in Sources */,
+				C06C1634294EB0360022ADCA /* Arguments.cpp in Sources */,
+				C06C1635294EB0360022ADCA /* VirtualMachine.cpp in Sources */,
+				C06C1636294EB0360022ADCA /* VirtualMachineTypes.cpp in Sources */,
+				C06C1637294EB0360022ADCA /* VMRuntime.cpp in Sources */,
+				C06C1638294EB0360022ADCA /* VMRuntimeCommon.cpp in Sources */,
+				C06C1639294EB0360022ADCA /* VMScope.cpp in Sources */,
+				C06C163A294EB0360022ADCA /* IJsIterator.cpp in Sources */,
+				C06C163B294EB0360022ADCA /* IJsObject.cpp in Sources */,
+				C06C163C294EB0360022ADCA /* JsArguments.cpp in Sources */,
+				C06C163D294EB0360022ADCA /* JsArray.cpp in Sources */,
+				C06C163E294EB0360022ADCA /* JsGlobalThis.cpp in Sources */,
+				C06C163F294EB0360022ADCA /* JsLibObject.cpp in Sources */,
+				C06C1640294EB0360022ADCA /* JsObject.cpp in Sources */,
+				C06C1641294EB0360022ADCA /* JsObjectFunction.cpp in Sources */,
+				C06C1642294EB0360022ADCA /* JsObjectLazy.cpp in Sources */,
+				C06C1643294EB0360022ADCA /* JsPrimaryObject.cpp in Sources */,
+				C06C1644294EB0360022ADCA /* JsRegExp.cpp in Sources */,
+				C06C1645294EB0360022ADCA /* JsPromiseObject.cpp in Sources */,
+				C06C1646294EB0360022ADCA /* ByteCodeStream.cpp in Sources */,
+				C06C1647294EB0360022ADCA /* Expression.cpp in Sources */,
+				C06C1648294EB0360022ADCA /* Lexer.cpp in Sources */,
+				C06C1649294EB0360022ADCA /* Parser.cpp in Sources */,
+				C06C164A294EB0360022ADCA /* ParserTypes.cpp in Sources */,
+				C06C164B294EB0360022ADCA /* Statement.cpp in Sources */,
+				C06C164C294EB0360022ADCA /* CommonString.cpp in Sources */,
+				C06C164D294EB0360022ADCA /* JsString.cpp in Sources */,
+				C06C164F294EB0360022ADCA /* SizedString.cpp in Sources */,
+				C06C1650294EB0360022ADCA /* DateTime.cpp in Sources */,
+				C06C1651294EB0360022ADCA /* CharEncoding.cpp in Sources */,
+				C06C1652294EB0360022ADCA /* JsArray.cpp in Sources */,
+				C06C1653294EB0360022ADCA /* Lexer.cpp in Sources */,
+				C06C1654294EB0360022ADCA /* Parser.cpp in Sources */,
+				C06C1655294EB0360022ADCA /* RunJavaScript.cpp in Sources */,
+				C06C1656294EB0360022ADCA /* AllocatorPool.cpp in Sources */,
+				C06C1657294EB0360022ADCA /* Base64.cpp in Sources */,
+				C06C1658294EB0360022ADCA /* BinaryStream.cpp in Sources */,
+				C06C1659294EB0360022ADCA /* CharEncoding.cpp in Sources */,
+				C06C165A294EB0360022ADCA /* DateTime.cpp in Sources */,
+				C06C165B294EB0360022ADCA /* FileApi.cpp in Sources */,
+				C06C165C294EB0360022ADCA /* Hash.cpp in Sources */,
+				C06C165D294EB0360022ADCA /* LinkedString.cpp in Sources */,
+				C06C165E294EB0360022ADCA /* os.cpp in Sources */,
+				C06C165F294EB0360022ADCA /* SizedString.cpp in Sources */,
+				C06C1660294EB0360022ADCA /* StringEx.cpp in Sources */,
+				C06C1661294EB0360022ADCA /* unittest.cpp in Sources */,
+				C06C1662294EB0360022ADCA /* XCharSeparatedValues.cpp in Sources */,
 			);
 			runOnlyForDeploymentPostprocessing = 0;
 		};
@@ -851,6 +1038,44 @@
 			};
 			name = Release;
 		};
+		C06C161B294EAFF70022ADCA /* Debug */ = {
+			isa = XCBuildConfiguration;
+			buildSettings = {
+				CODE_SIGN_STYLE = Automatic;
+				DYLIB_COMPATIBILITY_VERSION = 1;
+				DYLIB_CURRENT_VERSION = 1;
+				EXECUTABLE_PREFIX = lib;
+				GCC_PREPROCESSOR_DEFINITIONS = (
+					"DEBUG=1",
+					"$(inherited)",
+				);
+				HEADER_SEARCH_PATHS = (
+					"${SRCROOT}/../third-parties/googletest/include",
+					"${SRCROOT}",
+					"${SRCROOT}/../third-parties/rapidjson",
+				);
+				PRODUCT_NAME = "$(TARGET_NAME)";
+				SKIP_INSTALL = YES;
+			};
+			name = Debug;
+		};
+		C06C161C294EAFF70022ADCA /* Release */ = {
+			isa = XCBuildConfiguration;
+			buildSettings = {
+				CODE_SIGN_STYLE = Automatic;
+				DYLIB_COMPATIBILITY_VERSION = 1;
+				DYLIB_CURRENT_VERSION = 1;
+				EXECUTABLE_PREFIX = lib;
+				HEADER_SEARCH_PATHS = (
+					"${SRCROOT}/../third-parties/googletest/include",
+					"${SRCROOT}",
+					"${SRCROOT}/../third-parties/rapidjson",
+				);
+				PRODUCT_NAME = "$(TARGET_NAME)";
+				SKIP_INSTALL = YES;
+			};
+			name = Release;
+		};
 /* End XCBuildConfiguration section */
 
 /* Begin XCConfigurationList section */
@@ -868,6 +1093,15 @@
 			buildConfigurations = (
 				C03E444A2839CECC00864631 /* Debug */,
 				C03E444B2839CECC00864631 /* Release */,
+			);
+			defaultConfigurationIsVisible = 0;
+			defaultConfigurationName = Release;
+		};
+		C06C161D294EAFF70022ADCA /* Build configuration list for PBXNativeTarget "TinyJsLib" */ = {
+			isa = XCConfigurationList;
+			buildConfigurations = (
+				C06C161B294EAFF70022ADCA /* Debug */,
+				C06C161C294EAFF70022ADCA /* Release */,
 			);
 			defaultConfigurationIsVisible = 0;
 			defaultConfigurationName = Release;

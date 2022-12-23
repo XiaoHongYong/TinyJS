@@ -87,6 +87,11 @@ VMContext::VMContext(VMRuntime *runtime, JsVirtualMachine *vm) : runtime(runtime
 
     errorInTry = JE_OK;
     error = JE_OK;
+
+    extraData = nullptr;
+}
+
+VMContext::~VMContext() {
 }
 
 void VMContext::throwException(JsError err, cstr_t format, ...) {
@@ -126,21 +131,11 @@ void VMContext::throwExceptionFormatJsValue(JsError err, cstr_t format, const Js
     throwException(err, format, s.len, s.data);
 }
 
-JsVirtualMachine::JsVirtualMachine() : _runtimeCommon(this) {
-    _runtime.init(this, &_runtimeCommon);
+JsVirtualMachine::JsVirtualMachine() {
+    _runtime.init(this);
 }
 
 JsVirtualMachine::~JsVirtualMachine() {
-}
-
-bool JsVirtualMachine::onRunTasks() {
-    bool hasTasks = _promiseTasks.run();
-
-    if (_timerTasks.run()) {
-        hasTasks = true;
-    }
-
-    return hasTasks;
 }
 
 void JsVirtualMachine::run(cstr_t code, size_t len, VMRuntime *runtime) {
@@ -162,9 +157,6 @@ void JsVirtualMachine::run(cstr_t code, size_t len, VMRuntime *runtime) {
     }
 
     if (runtime->shouldGarbageCollect()) {
-        _timerTasks.markReferIdx(runtime);
-        _promiseTasks.markReferIdx(runtime);
-
 #if DEBUG
         auto countAllocated = runtime->countAllocated();
         auto countFreed = runtime->garbageCollect();
@@ -187,7 +179,7 @@ void JsVirtualMachine::eval(cstr_t code, size_t len, VMContext *vmctx, VecVMStac
     memset(p + len, 0, 4);
     code = p;
 
-    JSParser parser(&_runtimeCommon, resPool, code, len);
+    JSParser parser(VMRuntimeCommon::getInstance(), resPool, code, len);
 
     Function *func = nullptr;
     try {
@@ -197,7 +189,7 @@ void JsVirtualMachine::eval(cstr_t code, size_t len, VMContext *vmctx, VecVMStac
         return;
     }
 
-    {
+    if (0) {
         BinaryOutputStream stream;
         func->dump(stream);
         auto s = stream.sizedStringStartNew();
@@ -216,7 +208,7 @@ void JsVirtualMachine::dump(cstr_t code, size_t len, BinaryOutputStream &stream)
     ResourcePool resPool;
     resPool.index = 0;
 
-    JSParser paser(&_runtimeCommon, &resPool, code, strlen(code));
+    JSParser paser(VMRuntimeCommon::getInstance(), &resPool, code, strlen(code));
 
     Function *rootFunc = PoolNew(resPool.pool, Function)(&resPool, nullptr, 0);
     auto func = paser.parse(rootFunc->scope, false);

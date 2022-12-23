@@ -36,6 +36,19 @@ VMGlobalScope::VMGlobalScope() : VMScope(nullptr) {
     scopeDsc = _rootFunc->scope;
 }
 
+VMGlobalScope::VMGlobalScope(VMGlobalScope *other) : VMScope(nullptr) {
+    _rootFunc = PoolNew(_resourcePool.pool, Function)(&_resourcePool, nullptr, 0);
+    scopeDsc = _rootFunc->scope;
+
+    // 将全局变量都复制过来.
+    for (auto &item : other->scopeDsc->varDeclares) {
+        set(item.first, other->vars[item.second->storageIndex]);
+    }
+
+    assert(other->scopeDsc->varDeclares.size() == scopeDsc->varDeclares.size());
+    assert(other->vars.size() == vars.size());
+}
+
 JsValue VMGlobalScope::get(VMContext *ctx, uint32_t index) const {
     assert(index < vars.size());
 
@@ -74,4 +87,18 @@ void VMGlobalScope::set(const SizedString &name, const JsValue &value) {
 
     assert(id->storageIndex == vars.size());
     vars.push_back(value);
+}
+
+void VMGlobalScope::checkSpace() {
+    if (countVars() < scopeDsc->varDeclares.size()) {
+        uint32_t orgSize = countVars();
+        vars.resize(scopeDsc->varDeclares.size(), jsValueUndefined.asProperty());
+
+        for (auto &item : scopeDsc->varDeclares) {
+            auto index = item.second->storageIndex;
+            if (index >= orgSize && item.second->isImplicitDeclaration) {
+                vars[index] = jsValueEmpty.asProperty();
+            }
+        }
+    }
 }

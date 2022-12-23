@@ -53,6 +53,7 @@ SizedString objectPrototypeToSizedString(const JsValue &thiz) {
         case JDT_DATE: return MAKE_STABLE_STR("[object Date]");
         case JDT_PROMISE: return MAKE_STABLE_STR("[object Promise]");
         case JDT_ARGUMENTS: return MAKE_STABLE_STR("[object Arguments]");
+        case JDT_OBJ_X: return MAKE_STABLE_STR("[object Object]");
         case JDT_OBJ_BOOL: return MAKE_STABLE_STR("[object Boolean]");
         case JDT_OBJ_NUMBER: return MAKE_STABLE_STR("[object Number]");
         case JDT_OBJ_STRING: return MAKE_STABLE_STR("[object String]");

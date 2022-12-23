@@ -71,7 +71,7 @@ int main(int argc, const char * argv[]) {
     }
 
     for (int i = 0; i < 3; i++) {
-        if (vm.onRunTasks()) {
+        if (runtime->onRunTasks()) {
             i = 0;
         } else {
             Sleep(1);

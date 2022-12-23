@@ -162,7 +162,7 @@ bool createDirectoryAll(cstr_t szDir)
     return true;
 }
 
-uint32_t isDirWritable(cstr_t szDir) {
+bool isDirWritable(cstr_t szDir) {
 #ifdef _WIN32
     uint32_t    dwAttr;
 

@@ -49,7 +49,7 @@ public:
 
 VMRuntime::VMRuntime() {
     _vm = nullptr;
-    rtCommon = nullptr;
+    _rtCommon = nullptr;
     _console = nullptr;
     _globalScope = nullptr;
 
@@ -81,6 +81,10 @@ VMRuntime::VMRuntime() {
 }
 
 VMRuntime::~VMRuntime() {
+    if (_globalScope) {
+        delete _globalScope;
+    }
+
     for (auto item : _objValues) {
         delete item;
     }
@@ -102,9 +106,10 @@ VMRuntime::~VMRuntime() {
     }
 }
 
-void VMRuntime::init(JsVirtualMachine *vm, VMRuntimeCommon *rtCommon) {
+void VMRuntime::init(JsVirtualMachine *vm) {
+    VMRuntimeCommon *rtCommon = VMRuntimeCommon::getInstance();
     this->_vm = vm;
-    this->rtCommon = rtCommon;
+    this->_rtCommon = rtCommon;
     _console = new StdIOConsole();
 
     _countCommonDobules = (int)rtCommon->_doubleValues.size();
@@ -118,7 +123,7 @@ void VMRuntime::init(JsVirtualMachine *vm, VMRuntimeCommon *rtCommon) {
     _stringValues = rtCommon->_stringValues;
     _nativeFunctions = rtCommon->_nativeFunctions;
 
-    _globalScope = rtCommon->_globalScope;
+    _globalScope = new VMGlobalScope(rtCommon->_globalScope);
 
     // 需要将 rtCommon 中的对象都复制一份.
     for (auto item : rtCommon->_objValues) {
@@ -148,7 +153,7 @@ void VMRuntime::dump(BinaryOutputStream &stream) {
     BinaryOutputStream os;
 
     stream.write("== Common VMRuntime ==\n");
-    rtCommon->dump(os);
+    _rtCommon->dump(os);
     writeIndent(stream, os.sizedStringStartNew(), SizedString("  "));
 
     for (auto rp : _resourcePools) {
@@ -862,6 +867,9 @@ uint32_t VMRuntime::garbageCollect() {
         item->markReferIdx(this);
     }
 
+    _timerTasks.markReferIdx(this);
+    _promiseTasks.markReferIdx(this);
+
     //
     // 释放未标记的对象
     //
@@ -1042,4 +1050,14 @@ void VMRuntime::convertUtf8ToUtf16(SizedStringUtf16 &str) {
     auto dataUtf16 = new utf16_t[str.size()];
     utf8ToUtf16(utf8Str.data, utf8Str.len, dataUtf16, str.size());
     str.setUtf16(dataUtf16, str.size());
+}
+
+bool VMRuntime::onRunTasks() {
+    bool hasTasks = _promiseTasks.run();
+
+    if (_timerTasks.run()) {
+        hasTasks = true;
+    }
+
+    return hasTasks;
 }

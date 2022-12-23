@@ -192,6 +192,77 @@ string stringFromColor(COLORREF clr);
 
 void stringFromColor(char szStr[], COLORREF clr);
 
+template<class _TCHARPTR, class _int_t>
+_TCHARPTR readInt_t(_TCHARPTR str, _int_t &value)
+{
+    bool        bNegative;
+
+    value = 0;
+    if (*str == '-')
+    {
+        bNegative = true;
+        str++;
+    }
+    else
+        bNegative = false;
+    while (isDigit(*str))
+    {
+        value *= 10;
+        value += *str - '0';
+        str++;
+    }
+    if (bNegative)
+        value = -value;
+
+    return str;
+}
+
+// szValue format: %d,%d,%d,%d
+template<class TCHARDEF, class _int_t>
+bool scan4IntX(TCHARDEF szValue, _int_t &n1, _int_t &n2, _int_t &n3, _int_t &n4)
+{
+    szValue = readInt_t(szValue, n1);
+    if (*szValue != ',')
+        return false;
+    szValue++;
+    while (*szValue == ' ')
+        szValue++;
+
+    szValue = readInt_t(szValue, n2);
+    if (*szValue != ',')
+        return false;
+    szValue++;
+    while (*szValue == ' ')
+        szValue++;
+
+    szValue = readInt_t(szValue, n3);
+    if (*szValue != ',')
+        return false;
+    szValue++;
+    while (*szValue == ' ')
+        szValue++;
+
+    szValue = readInt_t(szValue, n4);
+
+    return true;
+}
+
+// szValue format: %d,%d
+template<class TCHARDEF, class _int_t>
+bool scan2IntX(TCHARDEF szValue, _int_t &n1, _int_t &n2)
+{
+    szValue = readInt_t(szValue, n1);
+    if (*szValue != ',')
+        return false;
+    szValue++;
+    while (*szValue == ' ')
+        szValue++;
+
+    readInt_t(szValue, n2);
+
+    return true;
+}
+
 class SetStrLessICmp
 {
 public:

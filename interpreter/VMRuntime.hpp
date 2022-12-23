@@ -9,6 +9,8 @@
 #define VMRuntime_hpp
 
 #include "VMRuntimeCommon.hpp"
+#include "TimerTasks.hpp"
+#include "PromiseTasks.hpp"
 
 
 using VecVMScopes = vector<VMScope *>;
@@ -37,7 +39,16 @@ public:
     VMRuntime();
     virtual ~VMRuntime();
 
-    void init(JsVirtualMachine *vm, VMRuntimeCommon *rtCommon);
+    void init(JsVirtualMachine *vm);
+
+    //
+    // 任务相关的函数
+    //
+    inline void registerToRunPromise(JsPromiseObject *promise) { _promiseTasks.registerToRunPromise(promise); }
+    inline int registerTimer(VMContext *ctx, JsValue callback, int32_t duration, bool repeat)
+        { return _timerTasks.registerTimer(ctx, callback, duration, repeat); }
+    inline void unregisterTimer(int timerId) { _timerTasks.unregisterTimer(timerId); }
+    bool onRunTasks();
 
     void setConsole(IConsole *console) { if (this->_console) { delete this->_console; } this->_console = console; }
 
@@ -135,7 +146,7 @@ public:
     }
 
     uint32_t findString(const SizedString &str) {
-        return rtCommon->findStringValue(str);
+        return _rtCommon->findStringValue(str);
     }
 
     const SizedString &getStringByIdx(uint32_t index, const ResourcePool *pool) {
@@ -249,7 +260,7 @@ public:
     void convertUtf8ToUtf16(SizedStringUtf16 &str);
 
 protected:
-    VMRuntimeCommon             *rtCommon;
+    VMRuntimeCommon             *_rtCommon;
 
 protected:
     JsVirtualMachine            *_vm;
@@ -291,6 +302,9 @@ protected:
     IJsObject                   *_objPrototypeArray;
     IJsObject                   *_objPrototypeFunction;
     IJsObject                   *_objPrototypeWindow;
+
+    PromiseTasks                _promiseTasks;
+    TimerTasks                  _timerTasks;
 
     uint8_t                     _nextRefIdx;
     uint32_t                    _newAllocatedCount;

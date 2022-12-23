@@ -113,7 +113,7 @@ bool runJavascript(const string &code, string &output) {
 
     // 循环至少 3 次以上，因为后执行的 task 可能会添加新的 task.
     for (int i = 0; i < 3; i++) {
-        if (vm.onRunTasks()) {
+        if (runtime->onRunTasks()) {
             i = 0;
         } else {
             Sleep(1);

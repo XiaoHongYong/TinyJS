@@ -48,7 +48,7 @@ void JsPromiseObject::changeStatus(Status status, const JsValue &arg) {
         return;
     }
 
-    _ctx->vm->registerToRunPromise(this);
+    _ctx->runtime->registerToRunPromise(this);
 
     _fulfillRejectArg = arg;
     _status = status;

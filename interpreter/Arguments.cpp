@@ -66,6 +66,15 @@ int32_t Arguments::getIntAt(VMContext *ctx, uint32_t index, int32_t defVal) cons
     }
 }
 
+bool Arguments::getBoolAt(VMContext *ctx, uint32_t index, bool defVal) const {
+    if (index < capacity) {
+        auto v = data[index];
+        return ctx->runtime->testTrue(v);
+    } else {
+        return defVal;
+    }
+}
+
 int64_t Arguments::getInt64At(VMContext *ctx, uint32_t index, int64_t defVal) const {
     if (index < capacity) {
         auto v = data[index];

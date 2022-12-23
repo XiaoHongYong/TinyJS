@@ -11,9 +11,8 @@
 #include <unordered_map>
 #include <stack>
 #include "parser/ParserTypes.hpp"
-#include "CommonString.hpp"
-#include "ConstStrings.hpp"
-#include "StringPool.hpp"
+#include "strings/CommonString.hpp"
+#include "generated/ConstStrings.hpp"
 
 
 class VMScope;
@@ -40,10 +39,12 @@ class VMRuntimeCommon {
 private:
     VMRuntimeCommon(const VMRuntimeCommon &);
     VMRuntimeCommon &operator=(const VMRuntimeCommon &);
+    VMRuntimeCommon();
 
 public:
-    VMRuntimeCommon(JsVirtualMachine *vm);
     virtual ~VMRuntimeCommon();
+
+    static VMRuntimeCommon *getInstance();
 
     void dump(BinaryOutputStream &stream);
 
@@ -83,8 +84,6 @@ public:
     IJsObject                   *objPrototypeArray;
     IJsObject                   *objPrototypeFunction;
     IJsObject                   *objPrototypeWindow;
-
-    JsVirtualMachine            *vm;
 
 protected:
     friend class VMRuntime;

@@ -8,7 +8,7 @@
 #ifndef IJsObject_hpp
 #define IJsObject_hpp
 
-#include "VirtualMachine.hpp"
+#include "interpreter/VirtualMachine.hpp"
 
 
 inline JsValue getPropertyValue(VMContext *ctx, JsValue thiz, const JsValue *prop, JsValue defVal = jsValueUndefined) {
