@@ -73,7 +73,7 @@ bool writeFile(cstr_t fn, const SizedString &data) {
     return ret;
 }
 
-bool filetruncate(FILE *fp, int nLen) {
+bool filetruncate(FILE *fp, long nLen) {
     if (ftruncate(fileno(fp), nLen) == -1)
         return false;
 

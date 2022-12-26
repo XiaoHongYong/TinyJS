@@ -8,7 +8,7 @@
 #ifndef Lexer_hpp
 #define Lexer_hpp
 
-#include "utils/Utils.h"
+#include "../utils/Utils.h"
 #include "interpreter/VirtualMachineTypes.hpp"
 
 

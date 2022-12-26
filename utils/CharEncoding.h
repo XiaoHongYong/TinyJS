@@ -86,7 +86,7 @@ CharEncodingType getCharEncodingID(const char *szEncoding);
 EncodingCodePage &getSysDefaultCharEncoding();
 EncodingCodePage &getCharEncodingByID(CharEncodingType encoding);
 
-CharEncodingType detectFileEncoding(const void *lpData, int length, int &bomSize);
+CharEncodingType detectFileEncoding(const void *lpData, size_t length, int &bomSize);
 cstr_t getFileEncodingBom(CharEncodingType fe);
 string insertWithFileBom(const string &text);
 

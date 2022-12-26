@@ -127,20 +127,6 @@ bool decodeBytecode(uint8_t *bytecode, int lenBytecode, BinaryOutputStream &stre
     return true;
 }
 
-static bool isModified(int8_t dst, int8_t src) {
-    if (src != -1) {
-        assert(dst != -1);
-        return dst != src;
-    }
-    return false;
-}
-
-static inline void copyProperty(int8_t &dst, int8_t src) {
-    if (src != -1) {
-        dst = src;
-    }
-}
-
 string JsSymbol::toString() const {
     return "Symbol(" + name + ")";
 }

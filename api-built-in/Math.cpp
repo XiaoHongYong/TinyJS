@@ -46,49 +46,41 @@ void math_abs(VMContext *ctx, const JsValue &thiz, const Arguments &args) {
 }
 
 void math_acos(VMContext *ctx, const JsValue &thiz, const Arguments &args) {
-    auto runtime = ctx->runtime;
     assert(0);
     ctx->retValue = jsValueUndefined;
 }
 
 void math_acosh(VMContext *ctx, const JsValue &thiz, const Arguments &args) {
-    auto runtime = ctx->runtime;
     assert(0);
     ctx->retValue = jsValueUndefined;
 }
 
 void math_asin(VMContext *ctx, const JsValue &thiz, const Arguments &args) {
-    auto runtime = ctx->runtime;
     assert(0);
     ctx->retValue = jsValueUndefined;
 }
 
 void math_asinh(VMContext *ctx, const JsValue &thiz, const Arguments &args) {
-    auto runtime = ctx->runtime;
     assert(0);
     ctx->retValue = jsValueUndefined;
 }
 
 void math_atan(VMContext *ctx, const JsValue &thiz, const Arguments &args) {
-    auto runtime = ctx->runtime;
     assert(0);
     ctx->retValue = jsValueUndefined;
 }
 
 void math_atan2(VMContext *ctx, const JsValue &thiz, const Arguments &args) {
-    auto runtime = ctx->runtime;
     assert(0);
     ctx->retValue = jsValueUndefined;
 }
 
 void math_atanh(VMContext *ctx, const JsValue &thiz, const Arguments &args) {
-    auto runtime = ctx->runtime;
     assert(0);
     ctx->retValue = jsValueUndefined;
 }
 
 void math_cbrt(VMContext *ctx, const JsValue &thiz, const Arguments &args) {
-    auto runtime = ctx->runtime;
     assert(0);
     ctx->retValue = jsValueUndefined;
 }
@@ -122,31 +114,26 @@ void math_ceil(VMContext *ctx, const JsValue &thiz, const Arguments &args) {
 }
 
 void math_clz32(VMContext *ctx, const JsValue &thiz, const Arguments &args) {
-    auto runtime = ctx->runtime;
     assert(0);
     ctx->retValue = jsValueUndefined;
 }
 
 void math_cos(VMContext *ctx, const JsValue &thiz, const Arguments &args) {
-    auto runtime = ctx->runtime;
     assert(0);
     ctx->retValue = jsValueUndefined;
 }
 
 void math_cosh(VMContext *ctx, const JsValue &thiz, const Arguments &args) {
-    auto runtime = ctx->runtime;
     assert(0);
     ctx->retValue = jsValueUndefined;
 }
 
 void math_exp(VMContext *ctx, const JsValue &thiz, const Arguments &args) {
-    auto runtime = ctx->runtime;
     assert(0);
     ctx->retValue = jsValueUndefined;
 }
 
 void math_expm1(VMContext *ctx, const JsValue &thiz, const Arguments &args) {
-    auto runtime = ctx->runtime;
     assert(0);
     ctx->retValue = jsValueUndefined;
 }
@@ -179,43 +166,36 @@ void math_floor(VMContext *ctx, const JsValue &thiz, const Arguments &args) {
 }
 
 void math_fround(VMContext *ctx, const JsValue &thiz, const Arguments &args) {
-    auto runtime = ctx->runtime;
     assert(0);
     ctx->retValue = jsValueUndefined;
 }
 
 void math_hypot(VMContext *ctx, const JsValue &thiz, const Arguments &args) {
-    auto runtime = ctx->runtime;
     assert(0);
     ctx->retValue = jsValueUndefined;
 }
 
 void math_imul(VMContext *ctx, const JsValue &thiz, const Arguments &args) {
-    auto runtime = ctx->runtime;
     assert(0);
     ctx->retValue = jsValueUndefined;
 }
 
 void math_log(VMContext *ctx, const JsValue &thiz, const Arguments &args) {
-    auto runtime = ctx->runtime;
     assert(0);
     ctx->retValue = jsValueUndefined;
 }
 
 void math_log10(VMContext *ctx, const JsValue &thiz, const Arguments &args) {
-    auto runtime = ctx->runtime;
     assert(0);
     ctx->retValue = jsValueUndefined;
 }
 
 void math_log1p(VMContext *ctx, const JsValue &thiz, const Arguments &args) {
-    auto runtime = ctx->runtime;
     assert(0);
     ctx->retValue = jsValueUndefined;
 }
 
 void math_log2(VMContext *ctx, const JsValue &thiz, const Arguments &args) {
-    auto runtime = ctx->runtime;
     assert(0);
     ctx->retValue = jsValueUndefined;
 }
@@ -333,13 +313,11 @@ void math_sign(VMContext *ctx, const JsValue &thiz, const Arguments &args) {
 }
 
 void math_sin(VMContext *ctx, const JsValue &thiz, const Arguments &args) {
-    auto runtime = ctx->runtime;
     assert(0);
     ctx->retValue = jsValueUndefined;
 }
 
 void math_sinh(VMContext *ctx, const JsValue &thiz, const Arguments &args) {
-    auto runtime = ctx->runtime;
     assert(0);
     ctx->retValue = jsValueUndefined;
 }
@@ -362,19 +340,16 @@ void math_sqrt(VMContext *ctx, const JsValue &thiz, const Arguments &args) {
 }
 
 void math_tan(VMContext *ctx, const JsValue &thiz, const Arguments &args) {
-    auto runtime = ctx->runtime;
     assert(0);
     ctx->retValue = jsValueUndefined;
 }
 
 void math_tanh(VMContext *ctx, const JsValue &thiz, const Arguments &args) {
-    auto runtime = ctx->runtime;
     assert(0);
     ctx->retValue = jsValueUndefined;
 }
 
 void math_trunc(VMContext *ctx, const JsValue &thiz, const Arguments &args) {
-    auto runtime = ctx->runtime;
     assert(0);
     ctx->retValue = jsValueUndefined;
 }

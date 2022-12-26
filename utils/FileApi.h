@@ -21,7 +21,7 @@ bool readFile(const char *fn, std::string &str);
 bool writeFile(cstr_t fn, const SizedString &data);
 inline bool writeFile(cstr_t fn, const void *data, size_t len) { return writeFile(fn, SizedString(data, len)); }
 
-bool filetruncate(FILE *fp, int nLen);
+bool filetruncate(FILE *fp, long nLen);
 
 bool isFileExist(cstr_t szFileName);
 bool isDirExist(cstr_t szDir);

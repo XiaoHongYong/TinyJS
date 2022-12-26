@@ -437,7 +437,7 @@ struct JsString {
     } value;
 };
 
-static_assert(sizeof(JsString) == 32);
+static_assert(sizeof(JsString) == 32, "Should be same");
 
 const uint32_t LEN_MAX_STRING = 1024 * 124 * 512;
 const int32_t MAX_INT32 = 0x7FFFFFFF;

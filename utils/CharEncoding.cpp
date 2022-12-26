@@ -46,7 +46,7 @@ EncodingCodePage &getCharEncodingByID(CharEncodingType encoding)
     return g_encodingCodePages[encoding];
 }
 
-bool isUTF8Encoding(cstr_t str, int nLen) {
+bool isUTF8Encoding(cstr_t str, size_t nLen) {
     unsigned char* p = (unsigned char *)str;
     unsigned char* last = (unsigned char *)str + nLen;
 
@@ -106,7 +106,7 @@ bool isUTF8Encoding(cstr_t str, int nLen) {
     return !isAnsi;
 }
 
-CharEncodingType detectFileEncoding(const void *lpData, int length, int &bomSize)
+CharEncodingType detectFileEncoding(const void *lpData, size_t length, int &bomSize)
 {
     uint8_t *szBuffer = (uint8_t *)lpData;
     if (szBuffer[0] == 0xFF && szBuffer[1] == 0xFE)
