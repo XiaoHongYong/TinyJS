@@ -178,7 +178,12 @@ TEST(RunJavaScript, outputCheck) {
     FileFind finder;
 
     string path = "test-cases/check_output/";
-    ASSERT_TRUE(finder.openDir(path.c_str()));
+    if (isDirExist(path.c_str())) {
+        ASSERT_TRUE(finder.openDir(path.c_str()));
+    } else {
+        path = "TinyJS/test-cases/check_output/";
+        ASSERT_TRUE(finder.openDir(path.c_str()));
+    }
 
     char buf[256];
     getcwd(buf, sizeof(buf));

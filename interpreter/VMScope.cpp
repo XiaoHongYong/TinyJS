@@ -97,7 +97,7 @@ void VMGlobalScope::checkSpace() {
         for (auto &item : scopeDsc->varDeclares) {
             auto index = item.second->storageIndex;
             if (index >= orgSize && item.second->isImplicitDeclaration) {
-                vars[index] = jsValueEmpty.asProperty();
+                vars[index] = jsValueEmpty.asProperty(JP_DEFAULT | JP_EMPTY);
             }
         }
     }

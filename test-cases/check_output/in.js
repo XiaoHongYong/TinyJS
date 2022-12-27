@@ -92,6 +92,7 @@ true
 
 
 // Index: 1
+function gg() { }
 function f() {
     console.log(aa instanceof gg);
 }
