@@ -2,6 +2,8 @@
 //  Copyright (c) 2021 CrintSoft, Ltd. All rights reserved.
 //
 
+#pragma once
+
 #ifndef __BinaryStream__
 #define __BinaryStream__
 
@@ -10,23 +12,23 @@
 
 
 inline uint16_t uint16FromBE(uint8_t *buf) {
-	return buf[1] | (buf[0] << 8);
+    return buf[1] | (buf[0] << 8);
 }
 
 inline void uint16ToBE(uint16_t nValue, uint8_t *buf) {
-	buf[1] = nValue & 0xFF;
-	buf[0] = (nValue >> 8) & 0xFF;
+    buf[1] = nValue & 0xFF;
+    buf[0] = (nValue >> 8) & 0xFF;
 }
 
 inline uint32_t uint32FromBE(uint8_t *buf) {
-	return buf[3] | (buf[2] << 8) | (buf[1] << 16) | (buf[0] << 24);
+    return buf[3] | (buf[2] << 8) | (buf[1] << 16) | (buf[0] << 24);
 }
 
 inline void uint32ToBE(uint32_t nValue, uint8_t *buf) {
-	buf[3] = nValue & 0xFF;
-	buf[2] = (nValue >> 8) & 0xFF;
-	buf[1] = (nValue >> 16) & 0xFF;
-	buf[0] = (nValue >> 24) & 0xFF;
+    buf[3] = nValue & 0xFF;
+    buf[2] = (nValue >> 8) & 0xFF;
+    buf[1] = (nValue >> 16) & 0xFF;
+    buf[0] = (nValue >> 24) & 0xFF;
 }
 
 inline void uint64ToBE(uint64_t value, uint8_t buf[]) {
@@ -42,28 +44,28 @@ inline void uint64ToBE(uint64_t value, uint8_t buf[]) {
 
 inline uint64_t uint64FromBE(const uint8_t buf[]) {
     return (uint64_t)buf[7] | ((uint64_t)buf[6] << 8) | ((uint64_t)buf[5] << 16) |
-        ((uint64_t)buf[4] << 24) | ((uint64_t)buf[3] << 32) | ((uint64_t)buf[2] << 40) |
-        ((uint64_t)buf[1] << 48) | ((uint64_t)buf[0] << 56);
+    ((uint64_t)buf[4] << 24) | ((uint64_t)buf[3] << 32) | ((uint64_t)buf[2] << 40) |
+    ((uint64_t)buf[1] << 48) | ((uint64_t)buf[0] << 56);
 }
 
 inline uint16_t uint16FromLE(uint8_t *buf) {
-	return buf[0] | (buf[1] << 8);
+    return buf[0] | (buf[1] << 8);
 }
 
 inline void uint16ToLE(uint16_t nValue, uint8_t *buf) {
-	buf[0] = nValue & 0xFF;
-	buf[1] = (nValue >> 8) & 0xFF;
+    buf[0] = nValue & 0xFF;
+    buf[1] = (nValue >> 8) & 0xFF;
 }
 
 inline uint32_t uint32FromLE(uint8_t *buf) {
-	return buf[0] | (buf[1] << 8) | (buf[2] << 16) | (buf[3] << 24);
+    return buf[0] | (buf[1] << 8) | (buf[2] << 16) | (buf[3] << 24);
 }
 
 inline void uint32ToLE(uint32_t nValue, uint8_t *buf) {
-	buf[0] = nValue & 0xFF;
-	buf[1] = (nValue >> 8) & 0xFF;
-	buf[2] = (nValue >> 16) & 0xFF;
-	buf[3] = (nValue >> 24) & 0xFF;
+    buf[0] = nValue & 0xFF;
+    buf[1] = (nValue >> 8) & 0xFF;
+    buf[2] = (nValue >> 16) & 0xFF;
+    buf[3] = (nValue >> 24) & 0xFF;
 }
 
 class binaryStreamOutOfRange : public std::out_of_range {
@@ -219,15 +221,15 @@ public:
     bool isRemaining() { return _pos < _end; }
 
 protected:
-    uint8_t             *_buf;
-    uint8_t             *_pos, *_end;
+    uint8_t                     *_buf;
+    uint8_t                     *_pos, *_end;
 
 };
 
 
 struct StreamBuffer {
-    uint32_t            capacity;
-    LinkedString        data;
+    uint32_t                    capacity;
+    LinkedString                data;
 
     uint8_t *dataPtr() { return data.data; }
     uint8_t *endPtr() { return data.data + capacity; }
@@ -237,7 +239,7 @@ struct StreamBuffer {
 // 计算 streamBuffer 的可用空间.
 inline uint32_t streamBufferCapacity(uint32_t size) { return size - sizeof(StreamBuffer) + sizeof(LinkedString::data); }
 
-#define streamBufferLen(sb)     (size_t)(sb->last - sb->pos)
+#define streamBufferLen(sb) (size_t)(sb->last - sb->pos)
 
 class BinaryOutputStream {
 private:
@@ -560,14 +562,14 @@ protected:
     }
 
 protected:
-    AllocatorPool           *_pool;
-    bool                    _freePool;
-    uint32_t                _defBufCapacity;
+    AllocatorPool               *_pool;
+    bool                        _freePool;
+    uint32_t                    _defBufCapacity;
 
-    LinkedString            *_linkedStringStart;
-    LinkedString            *_linkedStringLast;
-    uint8_t                 *_last;
-    uint8_t                 *_end;
+    LinkedString                *_linkedStringStart;
+    LinkedString                *_linkedStringLast;
+    uint8_t                     *_last;
+    uint8_t                     *_end;
 
 };
 

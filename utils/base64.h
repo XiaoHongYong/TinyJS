@@ -4,6 +4,8 @@
 //  Created by HongyongXiao on 2021/11/20.
 //
 
+#pragma once
+
 #ifndef base64_hpp
 #define base64_hpp
 

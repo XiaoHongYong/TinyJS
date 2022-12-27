@@ -12,6 +12,7 @@
 
 #include "utils/unittest.h"
 
+
 SizedString makeParseNumberString(const char *str) {
     static uint8_t buf[256];
     size_t len = strlen(str);
@@ -180,4 +181,3 @@ TEST(JsLexer, parserNumber) {
 }
 
 #endif
-

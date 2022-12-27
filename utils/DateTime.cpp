@@ -30,8 +30,9 @@ inline int getDaysToYear(int year) {
 inline int getDaysToMonth(int year, int month) {
     assert(month >= 1 && month <= 12);
     int n = _MonthDays[month - 1];
-    if (DateTime::isLeapYear(year) && month > 2)
+    if (DateTime::isLeapYear(year) && month > 2) {
         n++;
+    }
     return n;
 }
 
@@ -289,15 +290,17 @@ DateTime DateTime::localTime() {
     return DateTime(::getTimeInMillisecond(), true);
 }
 
-bool DateTime::isLeapYear(int year)
-{
-    if (year % 4 != 0)
+bool DateTime::isLeapYear(int year) {
+    if (year % 4 != 0) {
         return false;
+    }
 
-    if (year % 400 == 0)
+    if (year % 400 == 0) {
         return true;
-    if (year % 100 == 0)
+    }
+    if (year % 100 == 0) {
         return false;
+    }
 
     return true;
 }

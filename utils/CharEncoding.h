@@ -5,6 +5,8 @@
 //  Created by HongyongXiao on 2021/11/21.
 //
 
+#pragma once
+
 #ifndef CharEncoding_hpp
 #define CharEncoding_hpp
 
@@ -12,67 +14,67 @@
 
 
 // FE = FileEncoding
-#define SZ_FE_UCS2              "\xFF\xFE"
-#define SZ_FE_UCS2_BE           "\xFE\xFF"
-#define SZ_FE_UTF8              "\xEF\xBB\xBF"
+#define SZ_FE_UCS2          "\xFF\xFE"
+#define SZ_FE_UCS2_BE       "\xFE\xFF"
+#define SZ_FE_UTF8          "\xEF\xBB\xBF"
 
-#define SZ_UTF8                 "utf-8"
-#define SZ_UNICODE              "unicode"
+#define SZ_UTF8             "utf-8"
+#define SZ_UNICODE          "unicode"
 
 
 enum CharEncodingType {
-    ED_SYSDEF,                      // System default encoding
-    ED_UNICODE,                     // unicode,
-    ED_UNICODE_BIG_ENDIAN,          // unicode big-endian,
-    ED_UTF8,                        // utf-8
-    ED_ARABIC,                      // windows-1256
+    ED_SYSDEF,                       // System default encoding
+    ED_UNICODE,                      // unicode,
+    ED_UNICODE_BIG_ENDIAN,           // unicode big-endian,
+    ED_UTF8,                         // utf-8
+    ED_ARABIC,                       // windows-1256
     // ED_BALTIC_ISO,               // iso-8859-4
-    ED_BALTIC_WINDOWS,              // windows-1257
+    ED_BALTIC_WINDOWS,               // windows-1257
     // ED_CENTRAL_EUROPEAN_ISO,     // iso-8859-2
-    ED_CENTRAL_EUROPEAN_WINDOWS,    // windows-1250,
-    ED_GB2312,                      // gb2312
-    ED_BIG5,                        // big5
+    ED_CENTRAL_EUROPEAN_WINDOWS,     // windows-1250,
+    ED_GB2312,                       // gb2312
+    ED_BIG5,                         // big5
     // ED_CYRILLIC,                 // iso-8859-5
-    ED_CYRILLIC_WINDOWS,            // windows-1251
+    ED_CYRILLIC_WINDOWS,             // windows-1251
     // ED_GREEK_ISO,                // iso-8859-7
-    ED_GREEK_WINDOWS,               // windows-1253
-    ED_HEBREW_WINDOWS,              // windows-1255
-    ED_JAPANESE_SHIFT_JIS,          //shift_jis
-    ED_KOREAN,                      // ks_c_5601-1987
-    ED_LATIN9_ISO,                  // iso-8859-15,
-    ED_THAI,                        // windows-874,
+    ED_GREEK_WINDOWS,                // windows-1253
+    ED_HEBREW_WINDOWS,               // windows-1255
+    ED_JAPANESE_SHIFT_JIS,           // shift_jis
+    ED_KOREAN,                       // ks_c_5601-1987
+    ED_LATIN9_ISO,                   // iso-8859-15,
+    ED_THAI,                         // windows-874,
     // ED_TURKISH_ISO,              // iso-8859-9
-    ED_TURKISH_WINDOWS,             // windows-1254,
-    ED_VIETNAMESE,                  // windows-1258
+    ED_TURKISH_WINDOWS,              // windows-1254,
+    ED_VIETNAMESE,                   // windows-1258
     // ED_WESTERN_EUROPEAN_ISO,     // iso-8859-1
-    ED_WESTERN_EUROPEAN_WINDOWS,    // Windows-1252,
-    ED_EASTERN_EUROPEAN_WINDOWS,    // Windows-1250,
-    ED_RUSSIAN_WINDOWS,             // Windows-1251,
-    ED_END = ED_RUSSIAN_WINDOWS,
+    ED_WESTERN_EUROPEAN_WINDOWS,     // Windows-1252,
+    ED_EASTERN_EUROPEAN_WINDOWS,     // Windows-1250,
+    ED_RUSSIAN_WINDOWS,              // Windows-1251,
+    ED_END                      = ED_RUSSIAN_WINDOWS,
 };
 
 struct EncodingCodePage {
-    CharEncodingType        encodingID;
+    CharEncodingType            encodingID;
 
 #ifdef _MAC_OS
-    int                     cfStringEncoding;
+    int                         cfStringEncoding;
 #endif
 
 #ifdef _WIN32
-    int                     codePage;        // windows codepage
-    int                     fontCharset;
+    int                         codePage;           // windows codepage
+    int                         fontCharset;
 #endif
 
-    cstr_t                  szEncoding;
-    cstr_t                  szAlias;
-    cstr_t                  szDesc;
+    cstr_t                      szEncoding;
+    cstr_t                      szAlias;
+    cstr_t                      szDesc;
 
 #ifdef _LINUX
-    cstr_t                  szIConvCode;
+    cstr_t                      szIConvCode;
 #endif
 
 #ifdef _ANDROID
-    cstr_t                  szIConvCode;
+    cstr_t                      szIConvCode;
 #endif
 
 };

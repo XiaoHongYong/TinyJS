@@ -3,32 +3,27 @@
 #include "StringEx.h"
 
 
-#define CHAR_ESCAPE        '\\'
+#define CHAR_ESCAPE         '\\'
 
-XCharSeparatedValues::XCharSeparatedValues(char chSeparator)
-{
+XCharSeparatedValues::XCharSeparatedValues(char chSeparator) {
     m_chSeparator = chSeparator;
 }
 
-XCharSeparatedValues::~XCharSeparatedValues()
-{
+XCharSeparatedValues::~XCharSeparatedValues() {
 }
 
-void XCharSeparatedValues::split(cstr_t szStr, VecStrings &vValues)
-{
+void XCharSeparatedValues::split(cstr_t szStr, VecStrings &vValues) {
     vValues.clear();
 
     const char *p = szStr;
 
-    string        strValue;
+    string strValue;
 
     // read until m_chSeparator or end of line.
-    while (*p)
-    {
-        if (*p == CHAR_ESCAPE)
+    while (*p) {
+        if (*p == CHAR_ESCAPE) {
             p++;
-        else if (*p == m_chSeparator)
-        {
+        } else if (*p == m_chSeparator) {
             vValues.push_back(strValue);
             strValue.clear();
             p++;
@@ -42,33 +37,29 @@ void XCharSeparatedValues::split(cstr_t szStr, VecStrings &vValues)
     vValues.push_back(strValue);
 }
 
-void XCharSeparatedValues::split(cstr_t szStr, MapStrings &mapNameValues, char chAssign)
-{
+void XCharSeparatedValues::split(cstr_t szStr, MapStrings &mapNameValues, char chAssign) {
     mapNameValues.clear();
 
-    VecStrings    vValues;
+    VecStrings vValues;
 
     split(szStr, vValues);
 
-    for (size_t i = 0; i < vValues.size(); i++)
-    {
+    for (size_t i = 0; i < vValues.size(); i++) {
         string key, value;
         strSplit(vValues[i].c_str(), chAssign, key, value);
         mapNameValues[key] = value;
     }
 }
 
-void XCharSeparatedValues::addValue(cstr_t szValue)
-{
-    if (m_strWriting.size() > 0)
+void XCharSeparatedValues::addValue(cstr_t szValue) {
+    if (m_strWriting.size() > 0) {
         m_strWriting += m_chSeparator;
+    }
 
     cstr_t szBegin = szValue;
     cstr_t p = szBegin;
-    while (*p)
-    {
-        if (*p == m_chSeparator || *p == CHAR_ESCAPE || *p == '\r' || *p == '\n')
-        {
+    while (*p) {
+        if (*p == m_chSeparator || *p == CHAR_ESCAPE || *p == '\r' || *p == '\n') {
             m_strWriting.append(szBegin, (size_t)(p - szBegin));
             m_strWriting += CHAR_ESCAPE;
             m_strWriting += *p;
@@ -80,19 +71,18 @@ void XCharSeparatedValues::addValue(cstr_t szValue)
     m_strWriting.append(szBegin);
 }
 
-void XCharSeparatedValues::addValue(int value)
-{
-    if (m_strWriting.size() > 0)
+void XCharSeparatedValues::addValue(int value) {
+    if (m_strWriting.size() > 0) {
         m_strWriting += m_chSeparator;
+    }
 
-    char        szBuff[32];
+    char szBuff[32];
 
     itoa(value, szBuff);
     m_strWriting += szBuff;
 }
 
-void XCharSeparatedValues::addNameValue(cstr_t szName, cstr_t szValue, char chAssign)
-{
+void XCharSeparatedValues::addNameValue(cstr_t szName, cstr_t szValue, char chAssign) {
     string str = szName;
     str += chAssign;
     str += szValue;
@@ -104,10 +94,10 @@ void XCharSeparatedValues::addNameValue(cstr_t szName, cstr_t szValue, char chAs
 
 #include "unittest.h"
 
-TEST(SepValues, testCSV)
-{
-    CColonSeparatedValues    csv;
-    CColonSeparatedValues    csv2;
+
+TEST(SepValues, testCSV) {
+    CColonSeparatedValues csv;
+    CColonSeparatedValues csv2;
 
     {
         VecStrings vValues;
@@ -118,8 +108,7 @@ TEST(SepValues, testCSV)
 
         cstr_t szValue[] = { "1", ":2", "33", "", };
         ASSERT_TRUE(vValues.size() == CountOf(szValue));
-        for (int i = 0; i < CountOf(szValue); i++)
-        {
+        for (int i = 0; i < CountOf(szValue); i++) {
             ASSERT_TRUE(vValues[i] == szValue[i]);
             csv2.addValue(szValue[i]);
         }
@@ -138,8 +127,7 @@ TEST(SepValues, testCSV)
 
         cstr_t szValue[] = { "" };
         ASSERT_TRUE(vValues.size() == CountOf(szValue));
-        for (int i = 0; i < CountOf(szValue); i++)
-        {
+        for (int i = 0; i < CountOf(szValue); i++) {
             ASSERT_TRUE(vValues[i] == szValue[i]);
             csv2.addValue(szValue[i]);
         }
@@ -149,5 +137,3 @@ TEST(SepValues, testCSV)
 }
 
 #endif // UNIT_TEST
-
-

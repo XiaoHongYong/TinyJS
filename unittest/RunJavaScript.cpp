@@ -12,6 +12,7 @@
 
 #include "utils/unittest.h"
 
+
 class StringStreamConsole : public IConsole {
 public:
     virtual void log(const SizedString &message) override {
@@ -88,8 +89,9 @@ bool compareTextIgnoreSpace(const SizedString &leftS, const SizedString &rightS)
         left = ignoreSpace(left, leftEnd);
         right = ignoreSpace(right, rightEnd);
 
-        if (p1 == left && p2 == right)
+        if (p1 == left && p2 == right) {
             break;
+        }
     }
 
     if (left != leftEnd || right != rightEnd) {
@@ -223,4 +225,3 @@ TEST(RunJavaScript, outputCheck) {
 }
 
 #endif
-

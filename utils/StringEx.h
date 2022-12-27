@@ -3,7 +3,7 @@
 #include "UtilsTypes.h"
 
 
-#define isSpace isspace
+#define isSpace             isspace
 
 inline bool isEmptyString(const char *s) { return s == nullptr || s[0] == '\0'; }
 inline void emptyStr(char *s) { s[0] = '\0'; }
@@ -193,54 +193,57 @@ string stringFromColor(COLORREF clr);
 void stringFromColor(char szStr[], COLORREF clr);
 
 template<class _TCHARPTR, class _int_t>
-_TCHARPTR readInt_t(_TCHARPTR str, _int_t &value)
-{
-    bool        bNegative;
+_TCHARPTR readInt_t(_TCHARPTR str, _int_t &value) {
+    bool bNegative;
 
     value = 0;
-    if (*str == '-')
-    {
+    if (*str == '-') {
         bNegative = true;
         str++;
-    }
-    else
+    } else {
         bNegative = false;
-    while (isDigit(*str))
-    {
+    }
+    while (isDigit(*str)) {
         value *= 10;
         value += *str - '0';
         str++;
     }
-    if (bNegative)
+    if (bNegative) {
         value = -value;
+    }
 
     return str;
 }
 
 // szValue format: %d,%d,%d,%d
 template<class TCHARDEF, class _int_t>
-bool scan4IntX(TCHARDEF szValue, _int_t &n1, _int_t &n2, _int_t &n3, _int_t &n4)
-{
+bool scan4IntX(TCHARDEF szValue, _int_t &n1, _int_t &n2, _int_t &n3, _int_t &n4) {
     szValue = readInt_t(szValue, n1);
-    if (*szValue != ',')
+    if (*szValue != ',') {
         return false;
+    }
     szValue++;
-    while (*szValue == ' ')
+    while (*szValue == ' ') {
         szValue++;
+    }
 
     szValue = readInt_t(szValue, n2);
-    if (*szValue != ',')
+    if (*szValue != ',') {
         return false;
+    }
     szValue++;
-    while (*szValue == ' ')
+    while (*szValue == ' ') {
         szValue++;
+    }
 
     szValue = readInt_t(szValue, n3);
-    if (*szValue != ',')
+    if (*szValue != ',') {
         return false;
+    }
     szValue++;
-    while (*szValue == ' ')
+    while (*szValue == ' ') {
         szValue++;
+    }
 
     szValue = readInt_t(szValue, n4);
 
@@ -249,27 +252,26 @@ bool scan4IntX(TCHARDEF szValue, _int_t &n1, _int_t &n2, _int_t &n3, _int_t &n4)
 
 // szValue format: %d,%d
 template<class TCHARDEF, class _int_t>
-bool scan2IntX(TCHARDEF szValue, _int_t &n1, _int_t &n2)
-{
+bool scan2IntX(TCHARDEF szValue, _int_t &n1, _int_t &n2) {
     szValue = readInt_t(szValue, n1);
-    if (*szValue != ',')
+    if (*szValue != ',') {
         return false;
+    }
     szValue++;
-    while (*szValue == ' ')
+    while (*szValue == ' ') {
         szValue++;
+    }
 
     readInt_t(szValue, n2);
 
     return true;
 }
 
-class SetStrLessICmp
-{
+class SetStrLessICmp {
 public:
-    bool operator()(const string &str1, const string &str2) const
-    {
+    bool operator()(const string &str1, const string &str2) const {
         return strcasecmp(str1.c_str(), str2.c_str()) < 0;
     }
 };
 
-typedef set<string, SetStrLessICmp>         SetICaseStr;
+typedef set<string, SetStrLessICmp> SetICaseStr;

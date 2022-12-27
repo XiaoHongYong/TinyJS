@@ -14,6 +14,7 @@
 #include "utils/unittest.h"
 #include <time.h>
 
+
 TEST(DateTime, fromTime) {
     time_t timeCur = 0;
     time(&timeCur);
@@ -40,7 +41,7 @@ TEST(DateTime, fromTime) {
         DateTime date(year, 1, 1);
         auto time = date.getTime();
 
-        DateTime    date2;
+        DateTime date2;
         date2.fromTime(time);
 
         ASSERT_EQ(date2.year(), year);
@@ -49,7 +50,7 @@ TEST(DateTime, fromTime) {
 
 static void checkFromString(cstr_t *strs, int count, int64_t expects[]) {
     for (int i = 0; i < count; i++) {
-        DateTime    date;
+        DateTime date;
 
         if (date.fromString(strs[i], (uint32_t)strlen(strs[i]))) {
             assert(date.getTimeInMs() == expects[i]);
@@ -100,4 +101,3 @@ TEST(DateTime, fromString) {
 }
 
 #endif // UNIT_TEST
-

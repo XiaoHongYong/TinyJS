@@ -81,7 +81,7 @@ int SizedString::strstr(const SizedString &find, int32_t start) const {
     const uint8_t *last = data + len - find.len;
     const uint8_t *s1 = data, *s2 = find.data;
     uint32_t len = find.len - 1;
-    uint8_t  c1, c2;
+    uint8_t c1, c2;
 
     if (start > 0) {
         s1 += start;
@@ -113,7 +113,7 @@ int SizedString::stristr(const SizedString &find) const {
     const uint8_t *last = data + len - find.len;
     const uint8_t *s1 = data, *s2 = find.data;
     uint32_t len = find.len - 1;
-    uint8_t  c1, c2;
+    uint8_t c1, c2;
 
     c2 = (uint8_t)*s2++;
 
@@ -141,7 +141,7 @@ int SizedString::strrstr(const SizedString &find, int32_t start) const {
     const uint8_t *s1 = data + len - find.len;
     const uint8_t *begin = data, *s2 = find.data;
     uint32_t len = find.len - 1;
-    uint8_t  c1, c2;
+    uint8_t c1, c2;
 
     if (start > 0) {
         auto tmp = data + start;

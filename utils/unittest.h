@@ -5,6 +5,8 @@
 //  Created by henry_xiao on 2022/7/28.
 //
 
+#pragma once
+
 #ifndef unittest_hpp
 #define unittest_hpp
 

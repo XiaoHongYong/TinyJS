@@ -137,19 +137,19 @@ public:
     uint32_t offsetOf(const void *p) const { return (uint32_t)((uint8_t *)p - data); }
 
 public:
-    uint8_t                         *data;
-    uint32_t                        len;
+    uint8_t                     *data;
+    uint32_t                    len;
 
 protected:
     friend class SizedStringUtf16;
 
     // 为 true 表示此字符串的 data 是稳定的 buffer，不会被释放.
-    uint32_t                        _isStable : 1;
+    uint32_t                    _isStable : 1;
 
     // 给 SizedStringUtf16 的成员变量
-    uint32_t                        _isAnsi : 1;
-    uint32_t                        _unused1 : 1;
-    uint32_t                        _lenUtf16 : 29;
+    uint32_t                    _isAnsi : 1;
+    uint32_t                    _unused1 : 1;
+    uint32_t                    _lenUtf16 : 29;
 
 };
 
@@ -224,10 +224,10 @@ protected:
     inline void setUtf16Size(uint32_t len) { _utf8Str._lenUtf16 = len; }
 
 protected:
-    SizedString                     _utf8Str;
+    SizedString                 _utf8Str;
 
     // _lenUtf16 是一定有效的，_dataUtf16 不一定有效
-    utf16_t                         *_dataUtf16;
+    utf16_t                     *_dataUtf16;
 
 };
 
@@ -235,7 +235,7 @@ protected:
 using VecSizedStrings = std::vector<SizedString>;
 using VecSizedStringUtf16s = std::vector<SizedStringUtf16>;
 
-#define MAKE_STABLE_STR(s)       SizedString(s, sizeof(s) - 1, true)
+#define MAKE_STABLE_STR(s)  SizedString(s, sizeof(s) - 1, true)
 
 inline SizedString makeStableStr(const char *str) { return SizedString(str, (uint32_t)strlen(str), true); }
 

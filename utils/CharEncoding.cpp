@@ -14,22 +14,27 @@ EncodingCodePage &getSysDefaultCharEncoding() {
 }
 
 CharEncodingType getCharEncodingID(const char *szEncoding) {
-    if (isEmptyString(szEncoding))
+    if (isEmptyString(szEncoding)) {
         return ED_SYSDEF;
+    }
 
     assert(ED_END + 1 == getCharEncodingCount());
     for (int i = getCharEncodingCount() - 1; i >= 0; i--) {
         EncodingCodePage &ec = g_encodingCodePages[i];
-        if (strcasecmp(szEncoding, ec.szEncoding) == 0)
+        if (strcasecmp(szEncoding, ec.szEncoding) == 0) {
             return ec.encodingID;
+        }
 
-        if (strcasecmp(szEncoding, ec.szAlias) == 0)
+        if (strcasecmp(szEncoding, ec.szAlias) == 0) {
             return ec.encodingID;
-        if (strcasecmp(szEncoding, ec.szDesc) == 0)
+        }
+        if (strcasecmp(szEncoding, ec.szDesc) == 0) {
             return ec.encodingID;
+        }
 #if defined(_LINUX) || defined(_ANDROID)
-        if (strcasecmp(szEncoding, ec.szIConvCode) == 0)
+        if (strcasecmp(szEncoding, ec.szIConvCode) == 0) {
             return ec.encodingID;
+        }
 #endif
 
     }
@@ -37,10 +42,10 @@ CharEncodingType getCharEncodingID(const char *szEncoding) {
     return ED_SYSDEF;
 }
 
-EncodingCodePage &getCharEncodingByID(CharEncodingType encoding)
-{
-    if (encoding >= getCharEncodingCount() || encoding < 0)
+EncodingCodePage &getCharEncodingByID(CharEncodingType encoding) {
+    if (encoding >= getCharEncodingCount() || encoding < 0) {
         encoding = ED_SYSDEF;
+    }
 
     assert(g_encodingCodePages[encoding].encodingID == encoding);
     return g_encodingCodePages[encoding];
@@ -52,53 +57,43 @@ bool isUTF8Encoding(cstr_t str, size_t nLen) {
 
     bool isAnsi = true;
     const int MAX_BOUND = 1024 * 100;
-    int        ul;
-    for (ul = 0; (p < last) && (ul < MAX_BOUND); )
-    {
+    int ul;
+    for (ul = 0; (p < last) && (ul < MAX_BOUND); ) {
         ul++;
-        if ((*p) < 0x80)
-        {
+        if ((*p) < 0x80) {
             p += 1;
             continue;
         }
 
         isAnsi = false;
-        if ((*p) < 0xc0)
-        {
+        if ((*p) < 0xc0) {
             return false;
-        }
-        else if ((*p) < 0xe0)
-        {
-            if (p[1] < 0x80)
+        } else if ((*p) < 0xe0) {
+            if (p[1] < 0x80) {
                 return false;
+            }
             p += 2;
-        }
-        else if ((*p) < 0xf0)
-        {
-            if (p[1] < 0x80 || p[2] < 0x80)
+        } else if ((*p) < 0xf0) {
+            if (p[1] < 0x80 || p[2] < 0x80) {
                 return false;
+            }
             p += 3;
-        }
-        else if ((*p) < 0xf8)
-        {
-            if (p[1] < 0x80 || p[2] < 0x80 || p[3] < 0x80)
+        } else if ((*p) < 0xf8) {
+            if (p[1] < 0x80 || p[2] < 0x80 || p[3] < 0x80) {
                 return false;
+            }
             p += 4;
-        }
-        else if ((*p) < 0xfc)
-        {
-            if (p[1] < 0x80 || p[2] < 0x80 || p[3] < 0x80 || p[4] < 0x80)
+        } else if ((*p) < 0xfc) {
+            if (p[1] < 0x80 || p[2] < 0x80 || p[3] < 0x80 || p[4] < 0x80) {
                 return false;
+            }
             p += 5;
-        }
-        else if ((*p) < 0xfe)
-        {
-            if (p[1] < 0x80 || p[2] < 0x80 || p[3] < 0x80 || p[4] < 0x80 || p[5] < 0x80)
+        } else if ((*p) < 0xfe) {
+            if (p[1] < 0x80 || p[2] < 0x80 || p[3] < 0x80 || p[4] < 0x80 || p[5] < 0x80) {
                 return false;
+            }
             p += 6;
-        }
-        else
-        {
+        } else {
             return false;
         }
     }
@@ -106,23 +101,17 @@ bool isUTF8Encoding(cstr_t str, size_t nLen) {
     return !isAnsi;
 }
 
-CharEncodingType detectFileEncoding(const void *lpData, size_t length, int &bomSize)
-{
+CharEncodingType detectFileEncoding(const void *lpData, size_t length, int &bomSize) {
     uint8_t *szBuffer = (uint8_t *)lpData;
-    if (szBuffer[0] == 0xFF && szBuffer[1] == 0xFE)
-    {
+    if (szBuffer[0] == 0xFF && szBuffer[1] == 0xFE) {
         // FF FE
         bomSize = 2;
         return ED_UNICODE;
-    }
-    else if (szBuffer[0] == 0xFE && szBuffer[1] == 0xFF)
-    {
+    } else if (szBuffer[0] == 0xFE && szBuffer[1] == 0xFF) {
         // FE FF
         bomSize = 2;
         return ED_UNICODE_BIG_ENDIAN;
-    }
-    else if (szBuffer[0] == 0xEF && szBuffer[1] == 0xBB && szBuffer[2] == 0xBF)
-    {
+    } else if (szBuffer[0] == 0xEF && szBuffer[1] == 0xBB && szBuffer[2] == 0xBF) {
         // EF BB BF
         bomSize = 3;
         return ED_UTF8;
@@ -130,20 +119,19 @@ CharEncodingType detectFileEncoding(const void *lpData, size_t length, int &bomS
 
     bomSize = 0;
 
-    if (isUTF8Encoding((cstr_t)szBuffer, length))
+    if (isUTF8Encoding((cstr_t)szBuffer, length)) {
         return ED_UTF8;
+    }
 
     return ED_SYSDEF;
 }
 
-cstr_t getFileEncodingBom(CharEncodingType encoding)
-{
-    switch (encoding)
-    {
-    case ED_UNICODE: return SZ_FE_UCS2;
-    case ED_UNICODE_BIG_ENDIAN: return SZ_FE_UCS2_BE;
-    case ED_UTF8: return SZ_FE_UTF8;
-    default: return "";
+cstr_t getFileEncodingBom(CharEncodingType encoding) {
+    switch (encoding) {
+        case ED_UNICODE: return SZ_FE_UCS2;
+        case ED_UNICODE_BIG_ENDIAN: return SZ_FE_UCS2_BE;
+        case ED_UTF8: return SZ_FE_UTF8;
+        default: return "";
     }
 }
 
@@ -189,24 +177,22 @@ bool readFileByBom(const char *fn, std::string &str) {
     return true;
 }
 
-bool isAnsiStr(const WCHAR *szStr)
-{
-    while (*szStr)
-    {
-        if (*szStr >= 128)
+bool isAnsiStr(const WCHAR *szStr) {
+    while (*szStr) {
+        if (*szStr >= 128) {
             return false;
+        }
         szStr++;
     }
 
     return true;
 }
 
-bool isAnsiStr(const char *szStr)
-{
-    while (*szStr)
-    {
-        if ((unsigned char)*szStr >= 128)
+bool isAnsiStr(const char *szStr) {
+    while (*szStr) {
+        if ((unsigned char)*szStr >= 128) {
             return false;
+        }
         szStr++;
     }
 
@@ -224,31 +210,24 @@ inline void ensureInputStrLen(const CHAR *str, int &nLen) {
     }
 }
 
-int ucs2ToUtf8(const WCHAR *str, int nLen, string &strOut)
-{
+int ucs2ToUtf8(const WCHAR *str, int nLen, string &strOut) {
     ensureInputStrLen(str, nLen);
 
-    const WCHAR    *wchBegin = str, *wEnd = str + nLen;
-    int            nOutPos = 0;
+    const WCHAR *wchBegin = str, *wEnd = str + nLen;
+    int nOutPos = 0;
 
     strOut.resize(nLen * 5);
 
-    while (wchBegin < wEnd)
-    {
-        if (*wchBegin < 0x80)
-        {
+    while (wchBegin < wEnd) {
+        if (*wchBegin < 0x80) {
             strOut[nOutPos] = (uint8_t)*wchBegin;
             nOutPos++;
-        }
-        else if (*wchBegin < 0x0800)
-        {
+        } else if (*wchBegin < 0x0800) {
             strOut[nOutPos] = (uint8_t)((*wchBegin >> 6) | 0xC0);
             nOutPos++;
             strOut[nOutPos] = (uint8_t)((*wchBegin & 0x3F) | 0x80);
             nOutPos++;
-        }
-        else
-        {
+        } else {
             strOut[nOutPos] = (uint8_t)((*wchBegin >> 12) | 0xE0);
             nOutPos++;
             strOut[nOutPos] = (uint8_t)((*wchBegin >> 6 & 0x3F) | 0x80);
@@ -263,15 +242,14 @@ int ucs2ToUtf8(const WCHAR *str, int nLen, string &strOut)
     return nOutPos;
 }
 
-#define MXS(c,x,s)            (((c) - (x)) <<  (s))
-#define M80S(c,s)             MXS(c,0x80,s)
-#define UTF8_1_to_UCS2(in)    ((utf16_t) (in)[0])
-#define UTF8_2_to_UCS2(in)    ((utf16_t) (MXS((in)[0],0xC0, 6) | M80S((in)[1], 0)))
-#define UTF8_3_to_UCS2(in)    ((utf16_t) (MXS((in)[0],0xE0,12) | M80S((in)[1], 6) | M80S((in)[2], 0) ))
-#define UTF8_4_to_UCS4(in)    ((utf32_t) (MXS((in)[0],0xF0,18) | M80S((in)[1],12) | M80S((in)[2], 6) | M80S((in)[3], 0) ))
+#define MXS(c,x,s)          (((c) - (x)) <<  (s))
+#define M80S(c,s)           MXS(c,0x80,s)
+#define UTF8_1_to_UCS2(in)  ((utf16_t) (in)[0])
+#define UTF8_2_to_UCS2(in)  ((utf16_t) (MXS((in)[0],0xC0, 6) | M80S((in)[1], 0)))
+#define UTF8_3_to_UCS2(in)  ((utf16_t) (MXS((in)[0],0xE0,12) | M80S((in)[1], 6) | M80S((in)[2], 0) ))
+#define UTF8_4_to_UCS4(in)  ((utf32_t) (MXS((in)[0],0xF0,18) | M80S((in)[1],12) | M80S((in)[2], 6) | M80S((in)[3], 0) ))
 
-int utf8ToUCS2(const char *str, int nLen, u16string &strOut)
-{
+int utf8ToUCS2(const char *str, int nLen, u16string &strOut) {
     ensureInputStrLen(str, nLen);
 
     strOut.resize(nLen);
@@ -279,47 +257,31 @@ int utf8ToUCS2(const char *str, int nLen, u16string &strOut)
     unsigned char* p = (unsigned char *)str;
     unsigned char* last = (unsigned char *)str + nLen;
     int ul = 0;
-    while (p < last)
-    {
-        if ((*p) < 0x80)
-        {
+    while (p < last) {
+        if ((*p) < 0x80) {
             strOut[ul++] = UTF8_1_to_UCS2(p);
             p += 1;
-        }
-        else if ((*p) < 0xc0)
-        {
-            assert((*p));    // Invalid UTF8 First Byte
+        } else if ((*p) < 0xc0) {
+            assert((*p)); // Invalid UTF8 First Byte
             strOut[ul++] = '?';
             p += 1;
-        }
-        else if ((*p) < 0xe0)
-        {
+        } else if ((*p) < 0xe0) {
             strOut[ul++] = UTF8_2_to_UCS2(p);
             p += 2;
-        }
-        else if ((*p) < 0xf0)
-        {
+        } else if ((*p) < 0xf0) {
             strOut[ul++] = UTF8_3_to_UCS2(p);
             p += 3;
-        }
-        else if ((*p) < 0xf8)
-        {
+        } else if ((*p) < 0xf8) {
             strOut[ul++] = '?';
             p += 4;
-        }
-        else if ((*p) < 0xfc)
-        {
+        } else if ((*p) < 0xfc) {
             strOut[ul++] = '?';
             p += 5;
-        }
-        else if ((*p) < 0xfe)
-        {
+        } else if ((*p) < 0xfe) {
             strOut[ul++] = '?';
             p += 6;
-        }
-        else
-        {
-            assert((*p));    // Invalid UTF8 First Byte
+        } else {
+            assert((*p)); // Invalid UTF8 First Byte
             strOut[ul++] = '?';
             p += 1;
         }
@@ -329,8 +291,7 @@ int utf8ToUCS2(const char *str, int nLen, u16string &strOut)
     return ul;
 }
 
-void ucs2EncodingReverse(WCHAR *str, uint32_t nLen)
-{
+void ucs2EncodingReverse(WCHAR *str, uint32_t nLen) {
     assert(nLen >= 0);
 
     uint8_t *p = (uint8_t *)str;
@@ -405,7 +366,7 @@ uint32_t utf8ToUtf16(const uint8_t *str, uint32_t len, utf16_t *u16BufOut, uint3
             u16BufOut[lenUtf16++] = UTF8_1_to_UCS2(p);
             p += 1;
         } else if ((*p) < 0xc0) {
-            assert((*p));    // Invalid UTF8 First Byte
+            assert((*p)); // Invalid UTF8 First Byte
             u16BufOut[lenUtf16++] = '?';
             p += 1;
         } else if ((*p) < 0xe0) {
@@ -418,8 +379,9 @@ uint32_t utf8ToUtf16(const uint8_t *str, uint32_t len, utf16_t *u16BufOut, uint3
             auto n = UTF8_4_to_UCS4(p);
             n -= 0x10000;
             u16BufOut[lenUtf16++] = 0xD800 + (n >> 10);
-            if (lenUtf16 < sizeU16Buf)
+            if (lenUtf16 < sizeU16Buf) {
                 u16BufOut[lenUtf16++] = 0xDC00 + (n & 0x3FF);
+            }
             p += 4;
         } else if ((*p) < 0xfc) {
             u16BufOut[lenUtf16++] = '?';
@@ -494,7 +456,7 @@ uint32_t utf8ToUtf32(const uint8_t *data, uint32_t len, utf32_t *bufOut, uint32_
             bufOut[lenUtf32] = UTF8_1_to_UCS2(p);
             p += 1;
         } else if ((*p) < 0xc0) {
-            assert((*p));    // Invalid UTF8 First Byte
+            assert((*p)); // Invalid UTF8 First Byte
             bufOut[lenUtf32] = '?';
             p += 1;
         } else if ((*p) < 0xe0) {

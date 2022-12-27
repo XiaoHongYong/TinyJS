@@ -5,7 +5,7 @@
 #include "BinaryStream.h"
 
 void BinaryOutputStream::writeFormat(const char *format, ...) {
-    va_list        args;
+    va_list args;
 
     va_start(args, format);
 

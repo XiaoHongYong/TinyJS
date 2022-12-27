@@ -64,8 +64,9 @@ bool readFile(const char *fileName, std::string &str) {
 
 bool writeFile(cstr_t fn, const SizedString &data) {
     auto fp = fopen(fn, "wb");
-    if (fp == nullptr)
+    if (fp == nullptr) {
         return false;
+    }
 
     bool ret = fwrite(data.data, 1, data.len, fp) == data.len;
     fclose(fp);
@@ -74,25 +75,22 @@ bool writeFile(cstr_t fn, const SizedString &data) {
 }
 
 bool filetruncate(FILE *fp, long nLen) {
-    if (ftruncate(fileno(fp), nLen) == -1)
+    if (ftruncate(fileno(fp), nLen) == -1) {
         return false;
+    }
 
     return true;
 }
 
-bool getFileLength(const char *fileName, uint64_t &length)
-{
+bool getFileLength(const char *fileName, uint64_t &length) {
     struct stat filestat;
 
     memset(&filestat, 0, sizeof(filestat));
     int ret = stat(fileName, &filestat);
-    if (ret == 0)
-    {
+    if (ret == 0) {
         length = filestat.st_size;
         return true;
-    }
-    else
-    {
+    } else {
         length = 0;
         return false;
     }
@@ -108,55 +106,51 @@ int64_t getFileLength(cstr_t fileName) {
 }
 
 bool deleteFile(const char *fileName) {
-    if (unlink(fileName) == 0)
+    if (unlink(fileName) == 0) {
         return true;
+    }
 
     return false;
 }
 
-bool moveFile(const char *oldname, const char *newname)
-{
+bool moveFile(const char *oldname, const char *newname) {
     return rename(oldname, newname) == 0;
 }
 
-bool removeDirectory(cstr_t lpPathName)
-{
+bool removeDirectory(cstr_t lpPathName) {
     return rmdir(lpPathName) == 0;
 }
 
-bool createDirectory(cstr_t lpPathName)
-{
+bool createDirectory(cstr_t lpPathName) {
     int n = mkdir(lpPathName, S_IRWXU | S_IRWXG | S_IROTH);
 
     return n == 0;
 }
 
-bool createDirectoryAll(cstr_t szDir)
-{
-    char    szTemp[512];
-    char    *szBeg;
+bool createDirectoryAll(cstr_t szDir) {
+    char szTemp[512];
+    char *szBeg;
 
     string tmp = szDir;
 
     szBeg = strchr((char *)tmp.c_str(), PATH_SEP_CHAR);
-    while (szBeg != nullptr)
-    {
+    while (szBeg != nullptr) {
         *szBeg = '\0';
 
-        if (!isEmptyString(szTemp) && !isDirExist(szTemp))
-        {
-            if (!createDirectory(szTemp))
+        if (!isEmptyString(szTemp) && !isDirExist(szTemp)) {
+            if (!createDirectory(szTemp)) {
                 return false;
+            }
         }
 
         *szBeg = PATH_SEP_CHAR;
         szBeg = strchr(szBeg + 1, PATH_SEP_CHAR);
     }
 
-    if (!isDirExist(szTemp))
-    {
-        if (!createDirectory(szDir))
+    if (!isDirExist(szTemp)) {
+        if (!createDirectory(szDir)) {
             return false;
+        }
     }
 
     return true;
@@ -164,79 +158,76 @@ bool createDirectoryAll(cstr_t szDir)
 
 bool isDirWritable(cstr_t szDir) {
 #ifdef _WIN32
-    uint32_t    dwAttr;
+    uint32_t dwAttr;
 
     dwAttr = GetFileAttributes(szDir);
-    if (dwAttr == 0xFFFFFFFF)
+    if (dwAttr == 0xFFFFFFFF) {
         return false;
+    }
 
-    if (!setFileAttributes(szDir, dwAttr))
+    if (!setFileAttributes(szDir, dwAttr)) {
         return false;
+    }
 
     // Try to create a file in the folder, then delete it.
     string strFile = szDir;
     dirStringAddSep(strFile);
     strFile += "temp.txt";
-    if (!writeFile(strFile.c_str(), "abc"))
+    if (!writeFile(strFile.c_str(), "abc")) {
         return false;
+    }
     deleteFile(strFile.c_str());
 #endif
 
     return true;
 }
 
-bool enumFilesInDir(cstr_t szBaseDir, cstr_t extFilter, vector<string> &vFiles, bool bEnumFullPath)
-{
-    FileFind            find;
+bool enumFilesInDir(cstr_t szBaseDir, cstr_t extFilter, vector<string> &vFiles, bool bEnumFullPath) {
+    FileFind find;
 
-    if (!find.openDir(szBaseDir, extFilter))
+    if (!find.openDir(szBaseDir, extFilter)) {
         return false;
+    }
 
-    while (find.findNext())
-    {
-        if (!find.isCurDir())
-        {
-            if (bEnumFullPath)
-            {
-                string        strFile;
+    while (find.findNext()) {
+        if (!find.isCurDir()) {
+            if (bEnumFullPath) {
+                string strFile;
 
                 strFile = szBaseDir;
                 dirStringAddSep(strFile);
                 strFile += find.getCurName();
 
                 vFiles.push_back(strFile);
-            }
-            else
+            } else {
                 vFiles.push_back(find.getCurName());
+            }
         }
     }
 
     return true;
 }
 
-bool enumDirsInDir(cstr_t szBaseDir, vector<string> &vFiles, bool bEnumFullPath)
-{
-    FileFind            find;
+bool enumDirsInDir(cstr_t szBaseDir, vector<string> &vFiles, bool bEnumFullPath) {
+    FileFind find;
 
-    if (!find.openDir(szBaseDir, "*"))
+    if (!find.openDir(szBaseDir, "*")) {
         return false;
+    }
 
-    while (find.findNext())
-    {
-        if (find.isCurDir())
-        {
-            if (bEnumFullPath)
-            {
-                string        strFile;
+    while (find.findNext()) {
+        if (find.isCurDir()) {
+            if (bEnumFullPath) {
+                string strFile;
 
                 strFile = szBaseDir;
                 dirStringAddSep(strFile);
                 strFile += find.getCurName();
 
                 vFiles.push_back(strFile);
-            }
-            else
+            } else {
                 vFiles.push_back(find.getCurName());
+            }
         }
     }
 
@@ -244,22 +235,18 @@ bool enumDirsInDir(cstr_t szBaseDir, vector<string> &vFiles, bool bEnumFullPath)
 }
 
 // typedef void (*FUNProcessFile)(cstr_t szFileName, cstr_t szDir, void *lpUserData);
-bool processFilesInfolder(cstr_t szBaseDir, FUNProcessFile funProc, void *lpUserData)
-{
-    FileFind            find;
+bool processFilesInfolder(cstr_t szBaseDir, FUNProcessFile funProc, void *lpUserData) {
+    FileFind find;
 
-    if (!find.openDir(szBaseDir, nullptr))
+    if (!find.openDir(szBaseDir, nullptr)) {
         return false;
+    }
 
-    while (find.findNext())
-    {
-        if (!find.isCurDir())
-        {
+    while (find.findNext()) {
+        if (!find.isCurDir()) {
             funProc(find.getCurName(), szBaseDir, lpUserData);
-        }
-        else if (strcmp(find.getCurName(), ".") != 0
-            && strcmp(find.getCurName(), "..") != 0)
-        {
+        } else if (strcmp(find.getCurName(), ".") != 0
+            && strcmp(find.getCurName(), "..") != 0) {
             string subDir = dirStringJoin(szBaseDir, find.getCurName());
             processFilesInfolder(subDir.c_str(), funProc, lpUserData);
         }
@@ -276,9 +263,8 @@ void dirStringAddSep(string &dir) {
     }
 }
 
-string dirStringJoin(cstr_t szDir, cstr_t szSubFileDir)
-{
-    string        strFile = szDir;
+string dirStringJoin(cstr_t szDir, cstr_t szSubFileDir) {
+    string strFile = szDir;
 
     dirStringAddSep(strFile);
     strFile += szSubFileDir;
@@ -286,8 +272,7 @@ string dirStringJoin(cstr_t szDir, cstr_t szSubFileDir)
     return strFile;
 }
 
-string dirStringJoin(cstr_t szDir, cstr_t szSubFileDir1, cstr_t szSubFileDir2)
-{
+string dirStringJoin(cstr_t szDir, cstr_t szSubFileDir1, cstr_t szSubFileDir2) {
     string strFile = szDir;
 
     dirStringAddSep(strFile);
@@ -300,183 +285,181 @@ string dirStringJoin(cstr_t szDir, cstr_t szSubFileDir1, cstr_t szSubFileDir2)
 }
 
 
-cstr_t urlGetName(cstr_t szFile)
-{
+cstr_t urlGetName(cstr_t szFile) {
     cstr_t szBeg, szBeg2;
 
     szBeg = strrchr(szFile, '/');
     szBeg2 = strrchr(szFile, '\\');
-    if (szBeg2 > szBeg)
+    if (szBeg2 > szBeg) {
         szBeg = szBeg2;
-    if (szBeg)
+    }
+    if (szBeg) {
         return szBeg + 1;
-    else
+    } else {
         return szFile;
-}
-
-cstr_t urlGetExt(cstr_t szFile)
-{
-    cstr_t        szBeg;
-
-    szBeg = strrchr(szFile, '.');
-    if (szBeg == nullptr)
-        return "";
-    else
-    {
-        cstr_t szTemp = strrchr(szFile, '/');
-        cstr_t szTemp2 = strrchr(szFile, '\\');
-        if (szTemp2 > szTemp)
-            szTemp = szTemp2;
-        if (szTemp == nullptr || szTemp < szBeg)
-            return szBeg;
-        else
-            return "";
     }
 }
 
-string urlGetTitle(cstr_t szFile)
-{
-    cstr_t        szBeg, szBeg2, szEnd;
-    size_t        nLen;
-    string        strFileTitle;
+cstr_t urlGetExt(cstr_t szFile) {
+    cstr_t szBeg;
+
+    szBeg = strrchr(szFile, '.');
+    if (szBeg == nullptr) {
+        return "";
+    } else {
+        cstr_t szTemp = strrchr(szFile, '/');
+        cstr_t szTemp2 = strrchr(szFile, '\\');
+        if (szTemp2 > szTemp) {
+            szTemp = szTemp2;
+        }
+        if (szTemp == nullptr || szTemp < szBeg) {
+            return szBeg;
+        } else {
+            return "";
+        }
+    }
+}
+
+string urlGetTitle(cstr_t szFile) {
+    cstr_t szBeg, szBeg2, szEnd;
+    size_t nLen;
+    string strFileTitle;
 
     szEnd = strrchr(szFile, '.');
 
     szBeg = strrchr(szFile, '/');
     szBeg2 = strrchr(szFile, '\\');
-    if (szBeg2 > szBeg)
+    if (szBeg2 > szBeg) {
         szBeg = szBeg2;
+    }
 
-    if (szBeg == nullptr)
+    if (szBeg == nullptr) {
         szBeg = szFile;
-    else
+    } else {
         szBeg++;
+    }
 
-    if (szEnd == nullptr || szBeg > szEnd)
+    if (szEnd == nullptr || szBeg > szEnd) {
         nLen = szFile - szBeg + strlen(szFile);
-    else
+    } else {
         nLen = szEnd - szBeg;
+    }
 
     strFileTitle.append(szBeg, nLen);
 
     return strFileTitle;
 }
 
-string fileGetPath(cstr_t szFile)
-{
+string fileGetPath(cstr_t szFile) {
     string strPath;
     long ilen = strlen(szFile);
     ilen -= 2;
-    while (ilen >= 0)
-    {
-        if (szFile[ilen] == PATH_SEP_CHAR)
+    while (ilen >= 0) {
+        if (szFile[ilen] == PATH_SEP_CHAR) {
             break;
+        }
         ilen--;
     }
 
     strPath.resize(0);
-    if (ilen >= 0)
+    if (ilen >= 0) {
         strPath.append(szFile, ilen + 1);
+    }
 
     return strPath;
 }
 
-void fileSetExt(string &strFile, cstr_t szExt)
-{
-    cstr_t        szFile = strFile.c_str();
-    long        len = strFile.size();
+void fileSetExt(string &strFile, cstr_t szExt) {
+    cstr_t szFile = strFile.c_str();
+    long len = strFile.size();
 
     len --;
-    while (len >= 0)
-    {
-        if (szFile[len] == PATH_SEP_CHAR || szFile[len] == '.')
+    while (len >= 0) {
+        if (szFile[len] == PATH_SEP_CHAR || szFile[len] == '.') {
             break;
+        }
         len --;
     }
 
-    if (len >= 0)
-    {
-        if (szFile[len] == '.')
+    if (len >= 0) {
+        if (szFile[len] == '.') {
             strFile.resize(len);
+        }
     }
 
     strFile += szExt;
 }
 
-bool fileIsExtSame(cstr_t szFile, cstr_t szExt)
-{
+bool fileIsExtSame(cstr_t szFile, cstr_t szExt) {
     return iEndsWith(szFile, szExt);
 }
 
 // /:*?"<>|
 #ifdef _WIN32
-const char    _SZ_FILE_NAME_INVALID_CHARS[] = "/:*?\"<>|";
+const char _SZ_FILE_NAME_INVALID_CHARS[] = "/:*?\"<>|";
 #else
-const char    _SZ_FILE_NAME_INVALID_CHARS[] = "\\:*?\"<>|";
+const char _SZ_FILE_NAME_INVALID_CHARS[] = "\\:*?\"<>|";
 #endif
-bool fileNameIsIncInvalidChars(cstr_t szFile)
-{
-    cstr_t        szBeg;
+bool fileNameIsIncInvalidChars(cstr_t szFile) {
+    cstr_t szBeg;
 
     szBeg = szFile;
 
 #ifdef _WIN32_DESKTOP
     // Ignore string like "c:\\"
-    if (IsCharAlpha(*szBeg))
-    {
+    if (IsCharAlpha(*szBeg)) {
         szBeg++;
-        if (*szBeg == ':')
-        {
-            if (*(szBeg + 1) == PATH_SEP_CHAR)
+        if (*szBeg == ':') {
+            if (*(szBeg + 1) == PATH_SEP_CHAR) {
                 szBeg += 2;
+            }
         }
     }
 #endif // _WIN32_DESKTOP
 
-    while (*szBeg)
-    {
-        cstr_t        szInv;
+    while (*szBeg) {
+        cstr_t szInv;
 
         szInv = _SZ_FILE_NAME_INVALID_CHARS;
-        while (*szInv && *szBeg != *szInv)
+        while (*szInv && *szBeg != *szInv) {
             szInv++;
-        if (*szInv != '\0')
+        }
+        if (*szInv != '\0') {
             return true;
+        }
 
         szBeg++;
     }
     return false;
 }
 
-string fileNameFilterInvalidChars(cstr_t szFile)
-{
-    cstr_t        szBeg = szFile;
-    string        strNewName;
+string fileNameFilterInvalidChars(cstr_t szFile) {
+    cstr_t szBeg = szFile;
+    string strNewName;
 
 #ifdef _WIN32_DESKTOP
-    if (IsCharAlpha(*szBeg))
-    {
+    if (IsCharAlpha(*szBeg)) {
         strNewName += *szBeg;
         szBeg++;
-        if (*szBeg == ':' && *(szBeg + 1) == PATH_SEP_CHAR)
-        {
+        if (*szBeg == ':' && *(szBeg + 1) == PATH_SEP_CHAR) {
             strNewName.append(szBeg, 2);
             szBeg += 2;
         }
     }
 #endif // _WIN32_DESKTOP
 
-    while (*szBeg)
-    {
-        cstr_t        szInv;
+    while (*szBeg) {
+        cstr_t szInv;
 
         szInv = _SZ_FILE_NAME_INVALID_CHARS;
-        while (*szInv && *szBeg != *szInv)
+        while (*szInv && *szBeg != *szInv) {
             szInv++;
-        if (*szInv != '\0')
+        }
+        if (*szInv != '\0') {
             strNewName += '_';
-        else
+        } else {
             strNewName += *szBeg;
+        }
 
         szBeg++;
     }
@@ -484,46 +467,42 @@ string fileNameFilterInvalidChars(cstr_t szFile)
     return strNewName;
 }
 
-const char    _SZ_FILE_PATH_INVALID_CHARS[] = ":*?\"<>|" PATH_SEP_STR;
+const char _SZ_FILE_PATH_INVALID_CHARS[] = ":*?\"<>|" PATH_SEP_STR;
 
-void filePathFilterInvalidChars(char * szFile)
-{
-    char *        szBeg;
+void filePathFilterInvalidChars(char * szFile) {
+    char * szBeg;
 
     szBeg = szFile;
 
 #ifdef _WIN32_DESKTOP
     // Ignore string like "c:\\"
-    if (IsCharAlpha(*szBeg))
-    {
+    if (IsCharAlpha(*szBeg)) {
         szBeg++;
-        if (*szBeg == ':')
-        {
-            if (*(szBeg + 1) == PATH_SEP_CHAR)
+        if (*szBeg == ':') {
+            if (*(szBeg + 1) == PATH_SEP_CHAR) {
                 szBeg += 2;
+            }
         }
     }
 #endif // _WIN32_DESKTOP
 
-    while (*szBeg)
-    {
-        cstr_t        szInv;
+    while (*szBeg) {
+        cstr_t szInv;
 
         szInv = _SZ_FILE_PATH_INVALID_CHARS;
-        while (*szInv && *szBeg != *szInv)
+        while (*szInv && *szBeg != *szInv) {
             szInv++;
-        if (*szInv != '\0')
+        }
+        if (*szInv != '\0') {
             *szBeg = '_';
-        else if (*szBeg == '.')
-        {
-            char *    szTemp;
+        } else if (*szBeg == '.') {
+            char * szTemp;
             szTemp = szBeg;
-            while (*szTemp == '.')
+            while (*szTemp == '.') {
                 szTemp++;
-            if (*szTemp == PATH_SEP_CHAR)
-            {
-                while (szBeg != szTemp)
-                {
+            }
+            if (*szTemp == PATH_SEP_CHAR) {
+                while (szBeg != szTemp) {
                     *szBeg = '_';
                     szBeg++;
                 }
@@ -533,38 +512,39 @@ void filePathFilterInvalidChars(char * szFile)
     }
 }
 
-bool copyDir(cstr_t lpExistingDir, cstr_t lpNewDir)
-{
+bool copyDir(cstr_t lpExistingDir, cstr_t lpNewDir) {
     FileFind finder;
-    if (!finder.openDir(lpExistingDir))
+    if (!finder.openDir(lpExistingDir)) {
         return false;
+    }
 
-    if (!isFileExist(lpNewDir))
+    if (!isFileExist(lpNewDir)) {
         createDirectory(lpNewDir);
+    }
 
-    while (finder.findNext())
-    {
+    while (finder.findNext()) {
         string src = dirStringJoin(lpExistingDir, finder.getCurName());
         string dst = dirStringJoin(lpNewDir, finder.getCurName());
 
         bool ret;
-        if (finder.isCurDir())
+        if (finder.isCurDir()) {
             ret = copyDir(src.c_str(), dst.c_str());
-        else
+        } else {
             ret = copyFile(src.c_str(), dst.c_str(), false);
-        if (!ret)
+        }
+        if (!ret) {
             return false;
+        }
     }
 
     return true;
 }
 
-bool copyFile(cstr_t existingFile, cstr_t newFile, bool failIfExists)
-{
-    if (!failIfExists)
-    {
-        if (isFileExist(newFile))
+bool copyFile(cstr_t existingFile, cstr_t newFile, bool failIfExists) {
+    if (!failIfExists) {
+        if (isFileExist(newFile)) {
             deleteFile(newFile);
+        }
     }
 
     int n = copyfile(existingFile, newFile, 0, COPYFILE_STAT | COPYFILE_DATA);
@@ -576,73 +556,75 @@ bool copyFile(cstr_t existingFile, cstr_t newFile, bool failIfExists)
 
 #include "unittest.h"
 
+
 //////////////////////////////////////////////////////////////////////////
 // CPPUnit test
 TEST(FileApi, testFileNameStr) {
 #ifdef _WIN32
-    cstr_t        SZ_DIR_CMP[] =  { "c:\\folder", "c:\\folder\\", "" };
-    cstr_t        SZ_DIR_CMP_OK[] = { "c:\\folder\\", "c:\\folder\\", "" };
+    cstr_t SZ_DIR_CMP[] = { "c:\\folder", "c:\\folder\\", "" };
+    cstr_t SZ_DIR_CMP_OK[] = { "c:\\folder\\", "c:\\folder\\", "" };
 #else
-    cstr_t        SZ_DIR_CMP[] = { "/tmp/folder", "/tmp/folder/", "" };
-    cstr_t        SZ_DIR_CMP_OK[] = { "/tmp/folder/", "/tmp/folder/", "" };
+    cstr_t SZ_DIR_CMP[] = { "/tmp/folder", "/tmp/folder/", "" };
+    cstr_t SZ_DIR_CMP_OK[] = { "/tmp/folder/", "/tmp/folder/", "" };
 #endif
     string strDir;
 
     assert(CountOf(SZ_DIR_CMP) == CountOf(SZ_DIR_CMP_OK));
-    for (int i = 0; i < CountOf(SZ_DIR_CMP); i++)
-    {
+    for (int i = 0; i < CountOf(SZ_DIR_CMP); i++) {
         strDir = SZ_DIR_CMP[i];
         dirStringAddSep(strDir);
-        if (!(strcmp(strDir.c_str(), SZ_DIR_CMP_OK[i]) == 0))
+        if (!(strcmp(strDir.c_str(), SZ_DIR_CMP_OK[i]) == 0)) {
             FAIL() << stringPrintf("dirStringAddSep(stl), case: %d, %s", i, SZ_DIR_CMP_OK[i]).c_str();
+        }
     }
 }
 
 TEST(FileApi, testGetRelatedDir) {
-// #ifdef _WIN32
-//         cstr_t        SZ_DIR[] =  { "c:\\a\\b\\c", "c:\\a\\b\\c", "c:\\a\\b\\c", "c:\\a\\b\\c", "c:\\a\\b\\c" };
-//         cstr_t        SZ_DIR_BASE[] =  { "c:\\a", "c:\\a\\", "", "c:\\a\\b\\c\\d", "c:\\a\\b\\e" };
-//         cstr_t        SZ_DIR_RELATED[] = { "b\\c", "b\\c", "c:\\a\\b\\c", "..\\", "..\\c" };
-// #else
-//         cstr_t        SZ_DIR[] =  { "/a/b/c", "/a/b/c", "/a/b/c", "/a/b/c", "/a/b/c" };
-//         cstr_t        SZ_DIR_BASE[] =  { "/a", "/a/", "", "/a/b/c/d", "/a/b/e" };
-//         cstr_t        SZ_DIR_RELATED[] = { "b/c", "b/c", "/a/b/c", "../", "../c" };
-// #endif
-//         char        szDirRelated[MAX_PATH];
-//
-//         assert(CountOf(SZ_DIR) == CountOf(SZ_DIR_BASE));
-//         assert(CountOf(SZ_DIR) == CountOf(SZ_DIR_RELATED));
-//         for (int i = 0; i < CountOf(SZ_DIR_RELATED); i++)
-//         {
-//             getRelatedPath(SZ_DIR[i], SZ_DIR_BASE[i], szDirRelated, CountOf(szDirRelated));
-//             if (!(strcmp(szDirRelated, SZ_DIR_RELATED[i]) == 0))
-//                 FAIL() << stringPrintf("GetRelatedDir, case: %d, %s", i, szDirRelated);
-//         }
+    // #ifdef _WIN32
+    //         cstr_t        SZ_DIR[] =  { "c:\\a\\b\\c", "c:\\a\\b\\c", "c:\\a\\b\\c", "c:\\a\\b\\c", "c:\\a\\b\\c" };
+    //         cstr_t        SZ_DIR_BASE[] =  { "c:\\a", "c:\\a\\", "", "c:\\a\\b\\c\\d", "c:\\a\\b\\e" };
+    //         cstr_t        SZ_DIR_RELATED[] = { "b\\c", "b\\c", "c:\\a\\b\\c", "..\\", "..\\c" };
+    // #else
+    //         cstr_t        SZ_DIR[] =  { "/a/b/c", "/a/b/c", "/a/b/c", "/a/b/c", "/a/b/c" };
+    //         cstr_t        SZ_DIR_BASE[] =  { "/a", "/a/", "", "/a/b/c/d", "/a/b/e" };
+    //         cstr_t        SZ_DIR_RELATED[] = { "b/c", "b/c", "/a/b/c", "../", "../c" };
+    // #endif
+    //         char        szDirRelated[MAX_PATH];
+    //
+    //         assert(CountOf(SZ_DIR) == CountOf(SZ_DIR_BASE));
+    //         assert(CountOf(SZ_DIR) == CountOf(SZ_DIR_RELATED));
+    //         for (int i = 0; i < CountOf(SZ_DIR_RELATED); i++)
+    //         {
+    //             getRelatedPath(SZ_DIR[i], SZ_DIR_BASE[i], szDirRelated, CountOf(szDirRelated));
+    //             if (!(strcmp(szDirRelated, SZ_DIR_RELATED[i]) == 0))
+    //                 FAIL() << stringPrintf("GetRelatedDir, case: %d, %s", i, szDirRelated);
+    //         }
 }
 
 TEST(FileApi, testFileSetExt) {
-    cstr_t        SZ_EXT = ".ext";
+    cstr_t SZ_EXT = ".ext";
 #ifdef _WIN32
-    cstr_t        SZ_FILE[] =  { "c:\\file.txt", "c:\\file.txt3", "", "c:\\file.t\\xt3" };
-    cstr_t        SZ_FILE_OK[] = { "c:\\file.ext", "c:\\file.ext", ".ext", "c:\\file.t\\xt3.ext" };
+    cstr_t SZ_FILE[] = { "c:\\file.txt", "c:\\file.txt3", "", "c:\\file.t\\xt3" };
+    cstr_t SZ_FILE_OK[] = { "c:\\file.ext", "c:\\file.ext", ".ext", "c:\\file.t\\xt3.ext" };
 #else
-    cstr_t        SZ_FILE[] =  { "/file.txt", "/file.txt3", "", "/file.t/xt3" };
-    cstr_t        SZ_FILE_OK[] = { "/file.ext", "/file.ext", ".ext", "/file.t/xt3.ext" };
+    cstr_t SZ_FILE[] = { "/file.txt", "/file.txt3", "", "/file.t/xt3" };
+    cstr_t SZ_FILE_OK[] = { "/file.ext", "/file.ext", ".ext", "/file.t/xt3.ext" };
 #endif
-    cstr_t        SZ_EXT_OK[] = { ".txt", ".txt3", "", "" };
+    cstr_t SZ_EXT_OK[] = { ".txt", ".txt3", "", "" };
 
-    string        strFile;
+    string strFile;
 
     assert(CountOf(SZ_FILE) == CountOf(SZ_FILE_OK));
-    for (int i = 0; i < CountOf(SZ_FILE); i++)
-    {
+    for (int i = 0; i < CountOf(SZ_FILE); i++) {
         strFile = SZ_FILE[i];
         fileSetExt(strFile, SZ_EXT);
-        if (!(strcmp(strFile.c_str(), SZ_FILE_OK[i]) == 0))
+        if (!(strcmp(strFile.c_str(), SZ_FILE_OK[i]) == 0)) {
             FAIL() << stringPrintf("fileSetExt(stl), case: %d, %s", i, SZ_FILE_OK[i]);
+        }
 
-        if (!(strcmp(fileGetExt(SZ_FILE[i]), SZ_EXT_OK[i]) == 0))
+        if (!(strcmp(fileGetExt(SZ_FILE[i]), SZ_EXT_OK[i]) == 0)) {
             FAIL() << stringPrintf("fileGetExt, case: %d, %s", i, SZ_EXT_OK[i]);
+        }
     }
 }
 
@@ -662,8 +644,7 @@ TEST(FileApi, testFileNameFilterInvalidChars) {
     };
 #endif
 
-    for (int i = 0; i < CountOf(szFile); i += 2)
-    {
+    for (int i = 0; i < CountOf(szFile); i += 2) {
         string strOut = fileNameFilterInvalidChars(szFile[i]);
         ASSERT_TRUE(strcmp(strOut.c_str(), szFile[i + 1]) == 0);
     }

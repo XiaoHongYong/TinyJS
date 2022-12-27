@@ -1,4 +1,3 @@
-
 #pragma once
 
 
@@ -7,8 +6,8 @@ int64_t getTimeInMillisecond();
 class DateTime {
 public:
     enum {
-        SECOND_IN_ONE_DAY = 60 * 60 * 24,
-        MILLIS_IN_ONE_DAY = 1000 * SECOND_IN_ONE_DAY,
+        SECOND_IN_ONE_DAY           = 60 * 60 * 24,
+        MILLIS_IN_ONE_DAY           = 1000 * SECOND_IN_ONE_DAY,
     };
 
 public:
@@ -61,13 +60,13 @@ protected:
     bool _parseEndCheck(cstr_t start, cstr_t end, cstr_t &p, bool datePart = true);
     void update();
 
-    int                     _year;
-    int                     _month, _day;
-    int                     _hour;
-    int                     _minute, _second;
-    int                     _ms;
-    int8_t                  _dayOfWeek;
-    int16_t                 _timeZoneOffset;
-    bool                    _isLocalTime;
+    int                         _year;
+    int                         _month, _day;
+    int                         _hour;
+    int                         _minute, _second;
+    int                         _ms;
+    int8_t                      _dayOfWeek;
+    int16_t                     _timeZoneOffset;
+    bool                        _isLocalTime;
 
 };

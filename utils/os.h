@@ -1,3 +1,5 @@
+#pragma once
+
 #ifndef __os__
 #define __os__
 
@@ -29,10 +31,10 @@ public:
     bool isCurDir();
 
 protected:
-    dirent                  *_dirp;
-    DIR                     *_dp;
-    std::string             _path;
-    std::string             _extFilter;
+    dirent                      *_dirp;
+    DIR                         *_dp;
+    std::string                 _path;
+    std::string                 _extFilter;
 
 };
 

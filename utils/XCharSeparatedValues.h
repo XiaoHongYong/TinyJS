@@ -3,8 +3,7 @@
 #include "UtilsTypes.h"
 
 
-class XCharSeparatedValues
-{
+class XCharSeparatedValues {
 public:
     XCharSeparatedValues(char chSeparator);
     virtual ~XCharSeparatedValues();
@@ -23,20 +22,18 @@ public:
     size_t size() const { return m_strWriting.size(); }
 
 protected:
-    char            m_chSeparator;
-    string            m_strWriting;
+    char                        m_chSeparator;
+    string                      m_strWriting;
 
 };
 
-class CCommaSeparatedValues : public XCharSeparatedValues
-{
+class CCommaSeparatedValues : public XCharSeparatedValues {
 public:
     CCommaSeparatedValues() : XCharSeparatedValues(',') { }
 
 };
 
-class CColonSeparatedValues : public XCharSeparatedValues
-{
+class CColonSeparatedValues : public XCharSeparatedValues {
 public:
     CColonSeparatedValues() : XCharSeparatedValues(':') { }
 

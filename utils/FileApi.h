@@ -2,15 +2,15 @@
 
 
 #ifndef INVALID_FILE_SIZE
-#define INVALID_FILE_SIZE ((uint32_t)0xFFFFFFFF)
+#define INVALID_FILE_SIZE ((uint32_t)   0xFFFFFFFF)
 #endif
 
 #ifdef WIN32
-#define PATH_SEP_CHAR           '\\'
-#define PATH_SEP_STR            "\\"
+#define PATH_SEP_CHAR       '\\'
+#define PATH_SEP_STR        "\\"
 #else
-#define PATH_SEP_CHAR           '/'
-#define PATH_SEP_STR            "/"
+#define PATH_SEP_CHAR       '/'
+#define PATH_SEP_STR        "/"
 #endif
 
 bool isFileExist(const char *filename);

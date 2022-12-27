@@ -99,7 +99,7 @@ void VMContext::throwException(JsError err, cstr_t format, ...) {
         return;
     }
 
-    va_list        args;
+    va_list args;
 
     va_start(args, format);
     auto message = stringPrintf(format, args);
@@ -460,7 +460,7 @@ void JsVirtualMachine::call(Function *function, VMContext *ctx, VecVMStackScopes
     }
 
 #ifdef DEBUG
-        printf("    > Call function: %d, %.*s\n", function->index, (int)function->name.len, function->name.data);
+    printf("    > Call function: %d, %.*s\n", function->index, (int)function->name.len, function->name.data);
 #endif
 
     auto prevFunctionScope = ctx->curFunctionScope;

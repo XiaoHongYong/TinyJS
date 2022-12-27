@@ -61,7 +61,7 @@ protected:
     Arguments                   *_args;
     VecJsProperties             *_argsDescriptors;
     JsObject                    *_obj;
-    JsValue                  _length;
+    JsValue                     _length;
 
 };
 

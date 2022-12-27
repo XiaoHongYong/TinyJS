@@ -12,6 +12,7 @@
 
 #include "utils/unittest.h"
 
+
 TEST(CharEncoding, utf8ToUtf16Length) {
     cstr_t input;
 
@@ -43,4 +44,3 @@ TEST(CharEncoding, utf8ToUtf16) {
 }
 
 #endif
-

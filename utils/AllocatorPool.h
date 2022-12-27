@@ -1,3 +1,5 @@
+#pragma once
+
 //
 //  Copyright (c) 2021 CrintSoft, Ltd. All rights reserved.
 //
@@ -9,7 +11,7 @@
 #include "LinkedString.hpp"
 
 
-#define alignPtr(p, a)  (uint8_t *) (((uintptr_t) (p) + ((uintptr_t)(a) - 1)) & ~((uintptr_t)(a) - 1))
+#define alignPtr(p, a)      (uint8_t *) (((uintptr_t) (p) + ((uintptr_t)(a) - 1)) & ~((uintptr_t)(a) - 1))
 
 
 class AllocatorPool {
@@ -19,7 +21,7 @@ private:
 
     struct PoolBlock {
         struct PoolBlock        *next;
-        uint8_t                 buf[8];
+        uint8_t                     buf[8];
     };
 
 public:
@@ -138,17 +140,16 @@ protected:
     }
 
 protected:
-    PoolBlock               *_poolBlock;
-    PoolBlock               *_poolBlockMax;
-    uint8_t                 *_start, *_end;
-    size_t                  _max;
+    PoolBlock                   *_poolBlock;
+    PoolBlock                   *_poolBlockMax;
+    uint8_t                     *_start, *_end;
+    size_t                      _max;
 
 };
 
 
 template <typename T, typename Pool>
-class Allocator_t
-{
+class Allocator_t {
 public:
     typedef size_t          size_type;
     typedef T              *pointer;
@@ -160,7 +161,7 @@ public:
     Allocator_t(Pool &pool) : _allocatorPool(pool) { }
     ~Allocator_t() { }
 
-    template <class U> struct rebind { typedef Allocator_t<U, Pool> other; };
+    template <class U> struct rebind { typedef  Allocator_t<U, Pool> other; };
     template <class U> Allocator_t(const Allocator_t<U, Pool> &other) : Allocator_t<T, Pool>(other.getPool()) { }
 
     pointer allocate(size_type n) {
@@ -175,7 +176,7 @@ public:
     Pool &getPool() const { return _allocatorPool; }
 
 protected:
-    Pool                    &_allocatorPool;
+    Pool                        &_allocatorPool;
 
 };
 

@@ -26,7 +26,7 @@ public:
     void unlock() { if (m_mutex) { m_mutex->unlock(); m_mutex = nullptr; } }
 
 private:
-    mutex           *m_mutex;
+    mutex                       *m_mutex;
 };
 
 class RMutexAutolock {
@@ -36,7 +36,7 @@ public:
     void unlock() { if (m_mutex) { m_mutex->unlock(); m_mutex = nullptr; } }
 
 private:
-    recursive_mutex *m_mutex;
+    recursive_mutex             *m_mutex;
 };
 
 #define CountOf(arr)        (sizeof(arr) / sizeof(arr[0]))
@@ -61,12 +61,12 @@ inline bool isFlagSet(T1 n, T2 flags) { return (n & flags) == flags; }
 template<typename T>
 inline bool tobool(T v) { return v != 0; }
 
-typedef char16_t            WCHAR;
-typedef const char *        cstr_t;
-typedef const WCHAR *       cwstr_t;
+typedef char16_t WCHAR;
+typedef const char * cstr_t;
+typedef const WCHAR * cwstr_t;
 
 #ifndef WIN32
-typedef uint32_t            COLORREF;
+typedef uint32_t COLORREF;
 #endif
 
 #include "SizedString.h"

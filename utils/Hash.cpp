@@ -1,6 +1,7 @@
 #include "UtilsTypes.h"
 #include "Hash.h"
 
+
 inline uint64_t rotl64(uint64_t x, int8_t r) {
     return (x << r) | (x >> (64 - r));
 }
@@ -34,13 +35,13 @@ uint64_t hashBytes(const void *data, size_t len, uint64_t seed) {
     const uint8_t *tail = (const uint8_t*)p;
     uint64_t k = 0;
     switch(len & 7) {
-    case 7: k ^= ((uint64_t)tail[6]) << 48;
-    case 6: k ^= ((uint64_t)tail[5]) << 40;
-    case 5: k ^= ((uint64_t)tail[4]) << 32;
-    case 4: k ^= ((uint64_t)tail[3]) << 24;
-    case 3: k ^= ((uint64_t)tail[2]) << 16;
-    case 2: k ^= ((uint64_t)tail[1]) << 8;
-    case 1: k ^= ((uint64_t)tail[0]) << 0;
+        case 7: k ^= ((uint64_t)tail[6]) << 48;
+        case 6: k ^= ((uint64_t)tail[5]) << 40;
+        case 5: k ^= ((uint64_t)tail[4]) << 32;
+        case 4: k ^= ((uint64_t)tail[3]) << 24;
+        case 3: k ^= ((uint64_t)tail[2]) << 16;
+        case 2: k ^= ((uint64_t)tail[1]) << 8;
+        case 1: k ^= ((uint64_t)tail[0]) << 0;
         k *= c; k = rotl64(k, 31); h ^= k;
     };
 

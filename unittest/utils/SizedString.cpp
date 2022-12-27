@@ -12,6 +12,7 @@
 
 #include "utils/unittest.h"
 
+
 TEST(SizedString, strstr) {
     cstr_t input;
 
@@ -90,4 +91,3 @@ TEST(SizedString, strrstr) {
 }
 
 #endif
-

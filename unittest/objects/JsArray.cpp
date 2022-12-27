@@ -12,6 +12,7 @@
 
 #include "utils/unittest.h"
 
+
 const uint32_t ARRAY_BLOCK_SIZE = 1024 * 32; // 32768
 const uint32_t ARRAY_RESERVE_MAX_SIZE = ARRAY_BLOCK_SIZE * 10; // 327680 个
 
@@ -172,4 +173,3 @@ TEST(JsArray, findToModifyBlock) {
 }
 
 #endif
-

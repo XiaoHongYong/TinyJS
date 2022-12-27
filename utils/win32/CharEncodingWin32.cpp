@@ -1,6 +1,4 @@
-﻿// CharEncoding.cpp: implementation of the CCharEncoding class.
-//
-//////////////////////////////////////////////////////////////////////
+﻿
 
 #include "stringex_t.h"
 #include "CharEncoding.h"
@@ -8,15 +6,15 @@
 #include "safestr.h"
 #include "xstr.h"
 
+
 #ifndef HANGUL_CHARSET
-#define HANGUL_CHARSET 129
+#define HANGUL_CHARSET      129
 #endif
 
 //
 // ED_XXX 的定义和 __encodingCodepage 的索引顺序是一直的。
 // 即__encodingCodepage[ED_XXX].encodingID = ED_XXX
-EncodingCodePage    __encodingCodepage[] = 
-{
+EncodingCodePage    __encodingCodepage[] = {
     { ED_SYSDEF, CP_ACP, DEFAULT_CHARSET, "", "", "Default" },
     { ED_UNICODE, 0, DEFAULT_CHARSET, "unicode", "", "Unicode" },
     { ED_UNICODE_BIG_ENDIAN, 0, DEFAULT_CHARSET, "Unicode (Big-Endian)", "", "Unicode (Big-Endian)" },
@@ -50,31 +48,25 @@ EncodingCodePage    __encodingCodepage[] =
 
 int getCharEncodingCount() { return __MaxEncodings; }
 
-EncodingCodePage &getSysDefaultCharEncoding()
-{
-    uint32_t        codePage;
+EncodingCodePage &getSysDefaultCharEncoding() {
+    uint32_t codePage;
 
     codePage = GetACP();
-    for (int i = 0; i < __MaxEncodings; i++)
-    {
-        if (codePage == __encodingCodepage[i].codePage)
+    for (int i = 0; i < __MaxEncodings; i++) {
+        if (codePage == __encodingCodepage[i].codePage) {
             return __encodingCodepage[i];
+        }
     }
 
     return __encodingCodepage[0];
 }
 
-int utf8ToMbcs(const char *str, int nLen, char *strOut, int nOut, int encodingID)
-{
-    if (encodingID == ED_UTF8)
-    {
-        if (nLen == -1)
-        {
+int utf8ToMbcs(const char *str, int nLen, char *strOut, int nOut, int encodingID) {
+    if (encodingID == ED_UTF8) {
+        if (nLen == -1) {
             strcpy_safe(strOut, nOut, str);
             return strlen(strOut);
-        }
-        else
-        {
+        } else {
             strncpysz_safe(strOut, nOut, str, nLen);
             return nLen;
         }
@@ -88,17 +80,12 @@ int utf8ToMbcs(const char *str, int nLen, char *strOut, int nOut, int encodingID
     return ucs2ToMbcs(ucs2.c_str(), ucs2.size(), strOut, nOut, encodingID);
 }
 
-int mbcsToUtf8(const char *str, int nLen, char *strOut, int nOut, int encodingID)
-{
-    if (encodingID == ED_UTF8)
-    {
-        if (nLen == -1)
-        {
+int mbcsToUtf8(const char *str, int nLen, char *strOut, int nOut, int encodingID) {
+    if (encodingID == ED_UTF8) {
+        if (nLen == -1) {
             strcpy_safe(strOut, nOut, str);
             return strlen(strOut);
-        }
-        else
-        {
+        } else {
             strncpysz_safe(strOut, nOut, str, nLen);
             return nLen;
         }

@@ -17,9 +17,9 @@
  * LinkedString 只能被作为指针使用，data 会被扩展超过 4 个字节的
  */
 struct LinkedString {
-    LinkedString                    *next;
-    uint32_t                        len;
-    uint8_t                         data[4];
+    LinkedString                *next;
+    uint32_t                    len;
+    uint8_t                     data[4];
 
     LinkedString() {
         static_assert(sizeof(LinkedString) == sizeof(uint64_t) * 2, "LinkedString should be 16 bytes long");
