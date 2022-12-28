@@ -78,16 +78,15 @@ EncodingCodePage &GetSysDefaultCharEncoding() {
     return g_encodingCodePages[ED_SYSDEF];
 }
 
-NSString *initNSString(const char *str, int nLen, int encodingID) {
+NSString *initNSString(const char *str, int size, int encodingID) {
     NSString *temp;
     string strIn;
-    if (str[nLen] != '\0') {
-        strIn.append(str, nLen);
+    if (str[size] != '\0') {
+        strIn.append(str, size);
         str = strIn.c_str();
     }
 
-    temp = [NSString stringWithCString:str encoding:(NSStringEncoding)
-        CFStringConvertEncodingToNSStringEncoding(
+    temp = [[NSString alloc] initWithBytes:str length:size encoding:CFStringConvertEncodingToNSStringEncoding(
         getCharEncodingByID((CharEncodingType)encodingID).cfStringEncoding)];
     if (!temp) {
         temp = [NSString stringWithCString:str encoding:(NSStringEncoding)NSISOLatin1StringEncoding];
@@ -96,19 +95,19 @@ NSString *initNSString(const char *str, int nLen, int encodingID) {
     return temp;
 }
 
-int mbcsToUtf8(const char *str, int nLen, string &strOut, int encodingID) {
+int mbcsToUtf8(const char *str, int size, string &strOut, int encodingID) {
     strOut.clear();
 
     if (encodingID == ED_UTF8) {
-        if (nLen == -1) {
+        if (size == -1) {
             strOut.assign(str);
         } else {
-            strOut.assign(str, nLen);
+            strOut.assign(str, size);
         }
         return (int)strOut.size();
     }
 
-    NSString *temp = initNSString(str, nLen, encodingID);
+    NSString *temp = initNSString(str, size, encodingID);
     if (temp) {
         strOut.assign([temp UTF8String]);
     } else {
@@ -118,25 +117,24 @@ int mbcsToUtf8(const char *str, int nLen, string &strOut, int encodingID) {
     return (int)strOut.size();
 }
 
-int utf8ToMbcs(const char *str, int nLen, string &strOut, int encodingID) {
+int utf8ToMbcs(const char *str, int size, string &strOut, int encodingID) {
+    if (size == -1) {
+        size = (int)strlen(str);
+    }
+
     if (encodingID == ED_UTF8) {
-        if (nLen == -1) {
-            strOut.assign(str);
-        } else {
-            strOut.assign(str, nLen);
-        }
+        strOut.assign(str, size);
         return (int)strOut.size();
     }
 
     NSString *temp = [NSString stringWithUTF8String:str];
     if (temp) {
-        strOut.resize(nLen + 5);
-        [temp getCString:(char *)strOut.c_str()
-            maxLength:strOut.size()
-            encoding:CFStringConvertEncodingToNSStringEncoding(
-            getCharEncodingByID((CharEncodingType)encodingID).cfStringEncoding)];
+        strOut.resize(size + 5);
+        NSUInteger length = 0;
+        [temp getBytes:(char *)strOut.c_str() maxLength:strOut.size() usedLength:&length encoding:CFStringConvertEncodingToNSStringEncoding(getCharEncodingByID((CharEncodingType)encodingID).cfStringEncoding) options:0 range:NSMakeRange(0, [temp length]) remainingRange:nullptr];
+        strOut.resize(length);
     } else {
-        return 0;
+        strOut.assign(str, size);
     }
 
     return (int)strOut.size();
