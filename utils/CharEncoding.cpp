@@ -254,41 +254,10 @@ int utf8ToUCS2(const char *str, int nLen, u16string &strOut) {
 
     strOut.resize(nLen);
 
-    unsigned char* p = (unsigned char *)str;
-    unsigned char* last = (unsigned char *)str + nLen;
-    int ul = 0;
-    while (p < last) {
-        if ((*p) < 0x80) {
-            strOut[ul++] = UTF8_1_to_UCS2(p);
-            p += 1;
-        } else if ((*p) < 0xc0) {
-            assert((*p)); // Invalid UTF8 First Byte
-            strOut[ul++] = '?';
-            p += 1;
-        } else if ((*p) < 0xe0) {
-            strOut[ul++] = UTF8_2_to_UCS2(p);
-            p += 2;
-        } else if ((*p) < 0xf0) {
-            strOut[ul++] = UTF8_3_to_UCS2(p);
-            p += 3;
-        } else if ((*p) < 0xf8) {
-            strOut[ul++] = '?';
-            p += 4;
-        } else if ((*p) < 0xfc) {
-            strOut[ul++] = '?';
-            p += 5;
-        } else if ((*p) < 0xfe) {
-            strOut[ul++] = '?';
-            p += 6;
-        } else {
-            assert((*p)); // Invalid UTF8 First Byte
-            strOut[ul++] = '?';
-            p += 1;
-        }
-    }
+    auto size = utf8ToUtf16((uint8_t *)str, nLen, (utf16_t *)strOut.data(), (uint32_t)strOut.size());
+    strOut.resize(size);
 
-    strOut.resize(ul);
-    return ul;
+    return size;
 }
 
 void ucs2EncodingReverse(WCHAR *str, uint32_t nLen) {

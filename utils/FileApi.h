@@ -23,9 +23,6 @@ inline bool writeFile(cstr_t fn, const void *data, size_t len) { return writeFil
 
 bool filetruncate(FILE *fp, long nLen);
 
-bool isFileExist(cstr_t szFileName);
-bool isDirExist(cstr_t szDir);
-
 bool getFileLength(const char *fileName, uint64_t &length);
 int64_t getFileLength(cstr_t szFileName);
 

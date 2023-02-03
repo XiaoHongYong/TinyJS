@@ -96,6 +96,10 @@ NSString *initNSString(const char *str, int size, int encodingID) {
 }
 
 int mbcsToUtf8(const char *str, int size, string &strOut, int encodingID) {
+    if (size == -1) {
+        size = (int)strlen(str);
+    }
+
     strOut.clear();
 
     if (encodingID == ED_UTF8) {

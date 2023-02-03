@@ -184,6 +184,22 @@ string strJoin(_iterator first, _iterator end, cstr_t seperator) {
     return str;
 }
 
+template<class _iterator>
+string strJoinConvert(_iterator first, _iterator end, cstr_t seperator) {
+    string str;
+    if (first != end) {
+        str += std::to_string(*first);
+        ++first;
+    }
+
+    for (; first != end; ++first) {
+        str += seperator;
+        str += std::to_string(*first);
+    }
+
+    return str;
+}
+
 int stringToInt(cstr_t str, int nDefault = 0);
 COLORREF stringToColor(cstr_t szColor, COLORREF nDefault = 0);
 

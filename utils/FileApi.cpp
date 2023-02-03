@@ -21,7 +21,7 @@ bool isDirExist(const char *filename) {
     struct stat filestat;
 
     memset(&filestat, 0, sizeof(filestat));
-    return stat(filename, &filestat) == 0;
+    return stat(filename, &filestat) == 0 && S_ISDIR(filestat.st_mode);
 }
 
 bool readFile(FILE *fp, std::string &str) {

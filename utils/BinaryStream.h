@@ -11,7 +11,7 @@
 #include "LinkedString.hpp"
 
 
-inline uint16_t uint16FromBE(uint8_t *buf) {
+inline uint16_t uint16FromBE(const uint8_t *buf) {
     return buf[1] | (buf[0] << 8);
 }
 
@@ -20,7 +20,7 @@ inline void uint16ToBE(uint16_t nValue, uint8_t *buf) {
     buf[0] = (nValue >> 8) & 0xFF;
 }
 
-inline uint32_t uint32FromBE(uint8_t *buf) {
+inline uint32_t uint32FromBE(const uint8_t *buf) {
     return buf[3] | (buf[2] << 8) | (buf[1] << 16) | (buf[0] << 24);
 }
 
@@ -48,7 +48,7 @@ inline uint64_t uint64FromBE(const uint8_t buf[]) {
     ((uint64_t)buf[1] << 48) | ((uint64_t)buf[0] << 56);
 }
 
-inline uint16_t uint16FromLE(uint8_t *buf) {
+inline uint16_t uint16FromLE(const uint8_t *buf) {
     return buf[0] | (buf[1] << 8);
 }
 
@@ -57,7 +57,7 @@ inline void uint16ToLE(uint16_t nValue, uint8_t *buf) {
     buf[1] = (nValue >> 8) & 0xFF;
 }
 
-inline uint32_t uint32FromLE(uint8_t *buf) {
+inline uint32_t uint32FromLE(const uint8_t *buf) {
     return buf[0] | (buf[1] << 8) | (buf[2] << 16) | (buf[3] << 24);
 }
 
@@ -68,9 +68,9 @@ inline void uint32ToLE(uint32_t nValue, uint8_t *buf) {
     buf[3] = (nValue >> 24) & 0xFF;
 }
 
-class binaryStreamOutOfRange : public std::out_of_range {
+class BinaryStreamOutOfRange : public std::out_of_range {
 public:
-    binaryStreamOutOfRange(int lineno) : std::out_of_range(formatLine(lineno)) { }
+    BinaryStreamOutOfRange(int lineno) : std::out_of_range(formatLine(lineno)) { }
 
     static std::string formatLine(int lineno) {
         char buf[256] = { 0 };
@@ -88,7 +88,7 @@ public:
         _end = (uint8_t *)s.data + s.len;
     }
 
-    BinaryInputStream(uint8_t *buf, size_t len) {
+    BinaryInputStream(const uint8_t *buf, size_t len) {
         _buf = buf;
         _pos = buf;
         _end = buf + len;
@@ -96,14 +96,14 @@ public:
 
     uint8_t readUInt8() {
         if (_pos + 1 > _end) {
-            throw binaryStreamOutOfRange(__LINE__);
+            throw BinaryStreamOutOfRange(__LINE__);
         }
         return *_pos++;
     }
 
     uint16_t readUInt16() {
         if (_pos + 2 > _end) {
-            throw binaryStreamOutOfRange(__LINE__);
+            throw BinaryStreamOutOfRange(__LINE__);
         }
         uint16_t n = *(uint16_t *)_pos;
         _pos += 2;
@@ -112,7 +112,7 @@ public:
 
     uint32_t readVarUint32() {
         if (_pos + 1 > _end) {
-            throw binaryStreamOutOfRange(__LINE__);
+            throw BinaryStreamOutOfRange(__LINE__);
         }
 
         uint8_t a0 = *_pos++;
@@ -120,25 +120,25 @@ public:
             return a0;
         } else if ((a0 & 0xc0) == 0x80) {
             if (_pos + 1 > _end) {
-                throw binaryStreamOutOfRange(__LINE__);
+                throw BinaryStreamOutOfRange(__LINE__);
             }
             return ((a0 & 0x3f) << 8) | *_pos++;
         } else if ((a0 & 0xe0) == 0xc0) {
             if (_pos + 2 > _end) {
-                throw binaryStreamOutOfRange(__LINE__);
+                throw BinaryStreamOutOfRange(__LINE__);
             }
             uint8_t a1 = *_pos++;
             return ((a0 & 0x1f) << 16) | (a1 << 8) | *_pos++;
         } else if ((a0 & 0xf0) == 0xe0) {
             if (_pos + 3 > _end) {
-                throw binaryStreamOutOfRange(__LINE__);
+                throw BinaryStreamOutOfRange(__LINE__);
             }
             uint8_t a1 = *_pos++;
             uint8_t a2 = *_pos++;
             return (((uint32_t)(a0 & 0xf)) << 24) | (a1 << 16) | (a2 << 8) | *_pos++;
         } else if ((a0 & 0xf8) == 0xf0) {
             if (_pos + 4 > _end) {
-                throw binaryStreamOutOfRange(__LINE__);
+                throw BinaryStreamOutOfRange(__LINE__);
             }
             assert(a0 == 0xf0);
             uint8_t a1 = *_pos++;
@@ -153,7 +153,7 @@ public:
 
     uint32_t readUInt32() {
         if (_pos + 4 > _end) {
-            throw binaryStreamOutOfRange(__LINE__);
+            throw BinaryStreamOutOfRange(__LINE__);
         }
         uint32_t n = *(uint32_t *)_pos;
         _pos += 4;
@@ -162,7 +162,7 @@ public:
 
     uint64_t readUInt64() {
         if (_pos + 8 > _end) {
-            throw binaryStreamOutOfRange(__LINE__);
+            throw BinaryStreamOutOfRange(__LINE__);
         }
         uint64_t n = *(uint64_t *)_pos;
         _pos += 8;
@@ -171,7 +171,7 @@ public:
 
     uint16_t readUInt16BE() {
         if (_pos + 2 > _end) {
-            throw binaryStreamOutOfRange(__LINE__);
+            throw BinaryStreamOutOfRange(__LINE__);
         }
         uint16_t n = uint16FromBE(_pos);
         _pos += 2;
@@ -180,7 +180,7 @@ public:
 
     uint32_t readUInt32BE() {
         if (_pos + 4 > _end) {
-            throw binaryStreamOutOfRange(__LINE__);
+            throw BinaryStreamOutOfRange(__LINE__);
         }
         uint32_t n = uint32FromBE(_pos);
         _pos += 4;
@@ -189,18 +189,18 @@ public:
 
     uint64_t readUInt64BE() {
         if (_pos + 8 > _end) {
-            throw binaryStreamOutOfRange(__LINE__);
+            throw BinaryStreamOutOfRange(__LINE__);
         }
         uint64_t n = uint64FromBE(_pos);
         _pos += 8;
         return n;
     }
 
-    uint8_t *currentPtr() { return _pos; }
+    const uint8_t *currentPtr() { return _pos; }
 
     SizedString readSizedStr(size_t len) {
         if (_pos + len > _end) {
-            throw binaryStreamOutOfRange(__LINE__);
+            throw BinaryStreamOutOfRange(__LINE__);
         }
 
         SizedString s(_pos, len);
@@ -211,7 +211,7 @@ public:
 
     void forward(size_t n) {
         if (_pos + n > _end) {
-            throw binaryStreamOutOfRange(__LINE__);
+            throw BinaryStreamOutOfRange(__LINE__);
         }
         _pos += n;
     }
@@ -221,8 +221,8 @@ public:
     bool isRemaining() { return _pos < _end; }
 
 protected:
-    uint8_t                     *_buf;
-    uint8_t                     *_pos, *_end;
+    const uint8_t               *_buf;
+    const uint8_t               *_pos, *_end;
 
 };
 
