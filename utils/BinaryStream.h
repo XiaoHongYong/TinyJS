@@ -209,14 +209,20 @@ public:
         return s;
     }
 
-    void forward(size_t n) {
-        if (_pos + n > _end) {
+    void forward(int n) {
+        if (_pos + n > _end || _pos + n < _buf) {
             throw BinaryStreamOutOfRange(__LINE__);
         }
         _pos += n;
     }
 
     size_t offset() { return (size_t)(_pos - _buf); }
+    void setOffset(uint32_t offset) {
+        if (_buf + offset > _end) {
+            throw BinaryStreamOutOfRange(__LINE__);
+        }
+        _pos = _buf + offset;
+    }
     size_t remainingSize() { return (size_t)(_end - _pos); }
     bool isRemaining() { return _pos < _end; }
 

@@ -276,7 +276,7 @@ void SizedString::trim(uint8_t charToTrim) {
         end--;
     }
 
-    len -= (p - data);
+    len = uint32_t(end - p);
     data = p;
 }
 

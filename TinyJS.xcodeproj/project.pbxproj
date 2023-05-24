@@ -12,6 +12,9 @@
 		C0443AAF28E5229C00CBF6DB /* CharEncoding.cpp in Sources */ = {isa = PBXBuildFile; fileRef = C0443AAE28E51F9800CBF6DB /* CharEncoding.cpp */; };
 		C0443AB128E7254000CBF6DB /* SizedString.cpp in Sources */ = {isa = PBXBuildFile; fileRef = C0443AB028E7254000CBF6DB /* SizedString.cpp */; };
 		C044A2852931B89E00178864 /* DateTime.cpp in Sources */ = {isa = PBXBuildFile; fileRef = C044A2842931B89E00178864 /* DateTime.cpp */; };
+		C055400C299F62910057629E /* BinaryFileStream.cpp in Sources */ = {isa = PBXBuildFile; fileRef = C055400A299F62910057629E /* BinaryFileStream.cpp */; };
+		C055400D299F62910057629E /* BinaryFileStream.cpp in Sources */ = {isa = PBXBuildFile; fileRef = C055400A299F62910057629E /* BinaryFileStream.cpp */; };
+		C055400E299F62910057629E /* BinaryFileStream.h in Headers */ = {isa = PBXBuildFile; fileRef = C055400B299F62910057629E /* BinaryFileStream.h */; };
 		C05589AD29291D1500CBDBD7 /* Math.cpp in Sources */ = {isa = PBXBuildFile; fileRef = C05589AC29291D1500CBDBD7 /* Math.cpp */; };
 		C05589AF2929DC0C00CBDBD7 /* JSON.cpp in Sources */ = {isa = PBXBuildFile; fileRef = C05589AE2929DC0C00CBDBD7 /* JSON.cpp */; };
 		C05589B1292B48D900CBDBD7 /* Date.cpp in Sources */ = {isa = PBXBuildFile; fileRef = C05589B0292B48D900CBDBD7 /* Date.cpp */; };
@@ -188,6 +191,8 @@
 		C0443AAE28E51F9800CBF6DB /* CharEncoding.cpp */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.cpp.cpp; path = CharEncoding.cpp; sourceTree = "<group>"; };
 		C0443AB028E7254000CBF6DB /* SizedString.cpp */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.cpp.cpp; path = SizedString.cpp; sourceTree = "<group>"; };
 		C044A2842931B89E00178864 /* DateTime.cpp */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.cpp.cpp; path = DateTime.cpp; sourceTree = "<group>"; };
+		C055400A299F62910057629E /* BinaryFileStream.cpp */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.cpp.cpp; path = BinaryFileStream.cpp; sourceTree = "<group>"; };
+		C055400B299F62910057629E /* BinaryFileStream.h */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.c.h; path = BinaryFileStream.h; sourceTree = "<group>"; };
 		C05589AC29291D1500CBDBD7 /* Math.cpp */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.cpp.cpp; path = Math.cpp; sourceTree = "<group>"; };
 		C05589AE2929DC0C00CBDBD7 /* JSON.cpp */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.cpp.cpp; path = JSON.cpp; sourceTree = "<group>"; };
 		C05589B0292B48D900CBDBD7 /* Date.cpp */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.cpp.cpp; path = Date.cpp; sourceTree = "<group>"; };
@@ -473,6 +478,8 @@
 				C08597D628D0D54C00577A8E /* AllocatorPool.h */,
 				C08597DB28D0D54C00577A8E /* Base64.cpp */,
 				C08597D928D0D54C00577A8E /* base64.h */,
+				C055400A299F62910057629E /* BinaryFileStream.cpp */,
+				C055400B299F62910057629E /* BinaryFileStream.h */,
 				C08597F128D0D54C00577A8E /* BinaryStream.cpp */,
 				C08597E428D0D54C00577A8E /* BinaryStream.h */,
 				C08597D528D0D54C00577A8E /* CharEncoding.cpp */,
@@ -604,6 +611,7 @@
 			isa = PBXHeadersBuildPhase;
 			buildActionMask = 2147483647;
 			files = (
+				C055400E299F62910057629E /* BinaryFileStream.h in Headers */,
 			);
 			runOnlyForDeploymentPostprocessing = 0;
 		};
@@ -762,6 +770,7 @@
 				C085982A28D0D54C00577A8E /* JsString.cpp in Sources */,
 				C085982128D0D54C00577A8E /* Array.cpp in Sources */,
 				C085982228D0D54C00577A8E /* BuiltIn.cpp in Sources */,
+				C055400C299F62910057629E /* BinaryFileStream.cpp in Sources */,
 				C06DEEA429332F1C0062C606 /* Reflect.cpp in Sources */,
 				C085982D28D0D54C00577A8E /* Console.cpp in Sources */,
 				C05589AD29291D1500CBDBD7 /* Math.cpp in Sources */,
@@ -839,6 +848,7 @@
 				C06C163B294EB0360022ADCA /* IJsObject.cpp in Sources */,
 				C06C163C294EB0360022ADCA /* JsArguments.cpp in Sources */,
 				C06C163D294EB0360022ADCA /* JsArray.cpp in Sources */,
+				C055400D299F62910057629E /* BinaryFileStream.cpp in Sources */,
 				C06C163E294EB0360022ADCA /* JsGlobalThis.cpp in Sources */,
 				C06C163F294EB0360022ADCA /* JsLibObject.cpp in Sources */,
 				C06C1640294EB0360022ADCA /* JsObject.cpp in Sources */,

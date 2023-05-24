@@ -12,6 +12,8 @@
 
 #include "gtest/gtest.h"
 
+const std::string &getSourceRootDir();
+
 // 仅仅运行 runUnittest 即可
 void runUnittest(int &argc, const char *argv[]);
 

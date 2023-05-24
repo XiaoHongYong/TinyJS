@@ -66,3 +66,30 @@ bool moveFile(const char *oldname, const char *newname);
 
 bool copyDir(cstr_t lpExistingDir, cstr_t lpNewDir);
 bool copyFile(cstr_t existingFile, cstr_t newFile, bool failIfExists);
+
+struct FileStatInfo {
+    int64_t                 fileSize = 0;
+    time_t                  createdTime = 0;
+    time_t                  moifiedTime = 0;
+    bool                    isDirectory = 0;
+};
+
+bool getFileStatInfo(cstr_t file, FileStatInfo &infoOut);
+
+class FilePtr {
+private:
+    FilePtr(const FilePtr &);
+    FilePtr &operator=(const FilePtr &);
+
+public:
+    FilePtr(FILE *fp) : m_fp(fp) { }
+    ~FilePtr() { if (m_fp) fclose(m_fp); }
+
+    operator FILE*() const { return (FILE*)m_fp; }
+
+    FILE *ptr() { return m_fp; }
+
+protected:
+    FILE                    *m_fp;
+
+};

@@ -551,6 +551,22 @@ bool copyFile(cstr_t existingFile, cstr_t newFile, bool failIfExists) {
     return n == 0;
 }
 
+bool getFileStatInfo(cstr_t file, FileStatInfo &infoOut) {
+    struct stat filestat;
+
+    memset(&filestat, 0, sizeof(filestat));
+    int ret = stat(file, &filestat);
+    if (ret != 0) {
+        return false;
+    }
+
+    infoOut.fileSize = filestat.st_size;
+    infoOut.createdTime = filestat.st_birthtime;
+    infoOut.moifiedTime = filestat.st_mtime;
+    infoOut.isDirectory = S_ISDIR(filestat.st_mode);
+    return true;
+}
+
 
 #if UNIT_TEST
 

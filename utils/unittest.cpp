@@ -6,12 +6,26 @@
 //
 
 #include "unittest.h"
+#include "StringEx.h"
 
+
+static string g_srcRootDir;
+
+const string &getSourceRootDir() { return g_srcRootDir; }
 
 void initUnittest(int &argc, const char *argv[]) {
 #if UNIT_TEST
     testing::InitGoogleTest(&argc, (char **)argv);
 #endif
+
+    static cstr_t SRC_ROOT = "--src_root=";
+
+    for (int i = 0; i < argc; i++) {
+        if (startsWith(argv[i], SRC_ROOT)) {
+            g_srcRootDir.assign(argv[i] + strlen(SRC_ROOT));
+            break;
+        }
+    }
 }
 
 void runAllUnittest() {
