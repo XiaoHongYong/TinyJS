@@ -76,7 +76,7 @@ bool VMGlobalScope::remove(VMContext *ctx, uint32_t index) {
     return true;
 }
 
-void VMGlobalScope::set(const SizedString &name, const JsValue &value) {
+void VMGlobalScope::set(const StringView &name, const JsValue &value) {
     auto id = PoolNew(_resourcePool.pool, IdentifierDeclare)(name, scopeDsc);
     id->storageIndex = scopeDsc->countLocalVars++;
     id->varStorageType = VST_GLOBAL_VAR;

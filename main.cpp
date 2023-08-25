@@ -66,7 +66,7 @@ int main(int argc, const char * argv[]) {
 
     vm.run(code, strlen(code), runtime);
     if (ctx->error) {
-        auto err = runtime->toSizedString(ctx, ctx->errorMessage);
+        auto err = runtime->toStringView(ctx, ctx->errorMessage);
         printf("Got exception: %.*s\n", int(err.len), err.data);
     }
 
@@ -81,7 +81,7 @@ int main(int argc, const char * argv[]) {
 //    code = "g('y');";
 //    vm.eval(code, strlen(code), runtime->mainCtx(), stackScopes, args);
 //    if (runtime->mainCtx()->error) {
-//        auto err = runtime->toSizedString(ctx, ctx->errorMessage);
+//        auto err = runtime->toStringView(ctx, ctx->errorMessage);
 //        printf("Got exception: %.*s\n", int(err.len), err.data);
 //    }
 

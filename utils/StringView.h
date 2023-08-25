@@ -2,8 +2,8 @@
 //  Created by HongyongXiao on 2021/11/12.
 //
 
-#ifndef SizedString_hpp
-#define SizedString_hpp
+#ifndef StringView_hpp
+#define StringView_hpp
 
 #pragma once
 
@@ -20,16 +20,16 @@ using namespace std;
 using utf16_t = uint16_t;
 using utf32_t = uint32_t;
 
-class SizedString {
+class StringView {
 public:
-    SizedString() { auto p = (uint64_t *)this; p[0] = 0; p[1] = 0; }
-    SizedString(const SizedString &other) { *this = other; }
-    SizedString(const char *data);
-    SizedString(const string &s) : data((uint8_t *)s.c_str()), len((uint32_t)s.size()), _isStable(false) { }
-    SizedString(const void *data, size_t len) : data((uint8_t *)data), len((uint32_t)len), _isStable(false) { }
-    SizedString(size_t len, const void *data) : data((uint8_t *)data), len((uint32_t)len), _isStable(false) { }
-    SizedString(const uint8_t *data, size_t len) : data((uint8_t *)data), len((uint32_t)len), _isStable(false) { }
-    SizedString(const void *data, size_t len, bool isStable) : data((uint8_t *)data), len((uint32_t)len), _isStable(isStable) { }
+    StringView() { auto p = (uint64_t *)this; p[0] = 0; p[1] = 0; }
+    StringView(const StringView &other) { *this = other; }
+    StringView(const char *data);
+    StringView(const string &s) : data((uint8_t *)s.c_str()), len((uint32_t)s.size()), _isStable(false) { }
+    StringView(const void *data, size_t len) : data((uint8_t *)data), len((uint32_t)len), _isStable(false) { }
+    StringView(size_t len, const void *data) : data((uint8_t *)data), len((uint32_t)len), _isStable(false) { }
+    StringView(const uint8_t *data, size_t len) : data((uint8_t *)data), len((uint32_t)len), _isStable(false) { }
+    StringView(const void *data, size_t len, bool isStable) : data((uint8_t *)data), len((uint32_t)len), _isStable(isStable) { }
 
     inline bool empty() const { return len == 0; }
 
@@ -42,29 +42,29 @@ public:
     uint8_t *strlchr(uint8_t c) const;
     uint8_t *strrchr(uint8_t c) const;
 
-    int strstr(const SizedString &find, int32_t start = 0) const;
-    int stristr(const SizedString &find) const;
-    int strrstr(const SizedString &find, int32_t start = 0x7FFFFFFF) const;
+    int strstr(const StringView &find, int32_t start = 0) const;
+    int stristr(const StringView &find) const;
+    int strrstr(const StringView &find, int32_t start = 0x7FFFFFFF) const;
 
-    int cmp(const SizedString &other) const;
-    int iCmp(const SizedString &other) const;
+    int cmp(const StringView &other) const;
+    int iCmp(const StringView &other) const;
 
     inline bool equal(const char *other) const {
-        return cmp(SizedString(other)) == 0;
+        return cmp(StringView(other)) == 0;
     }
 
-    inline bool equal(const SizedString &other) const {
+    inline bool equal(const StringView &other) const {
         return cmp(other) == 0;
     }
 
-    inline bool iEqual(const SizedString &other) const {
+    inline bool iEqual(const StringView &other) const {
         return iCmp(other) == 0;
     }
 
-    bool startsWith(const SizedString &with) const;
-    bool iStartsWith(const SizedString &with) const;
+    bool startsWith(const StringView &with) const;
+    bool iStartsWith(const StringView &with) const;
 
-    inline bool endsWith(const SizedString &with) const {
+    inline bool endsWith(const StringView &with) const {
         if (len >= with.len) {
             return memcmp(data + len - with.len, with.data, with.len) == 0;
         }
@@ -72,26 +72,26 @@ public:
     }
 
     void trim(uint8_t charToTrim);
-    void trim(const SizedString &toTrim);
+    void trim(const StringView &toTrim);
     void trim();
-    void trimStart(const SizedString &toTrim);
-    void trimEnd(const SizedString &toTrim);
+    void trimStart(const StringView &toTrim);
+    void trimEnd(const StringView &toTrim);
 
     void shrink(int startShrinkSize, int endShrinkSize = 0);
 
-    SizedString substr(uint32_t offset, uint32_t size) const;
-    SizedString substr(const uint8_t *start, const uint8_t *end) const {
+    StringView substr(uint32_t offset, uint32_t size) const;
+    StringView substr(const uint8_t *start, const uint8_t *end) const {
         assert(start <= end);
         assert(start >= data);
         assert(end <= data + len);
-        return SizedString(start, (uint32_t)(end - start), _isStable);
+        return StringView(start, (uint32_t)(end - start), _isStable);
     }
-    SizedString substr(const char *start, const char *end) const {
+    StringView substr(const char *start, const char *end) const {
         return substr((const uint8_t *)start, (const uint8_t *)end);
     }
 
     long atoi(bool &successful) const;
-    SizedString itoa(long num, char *str) const;
+    StringView itoa(long num, char *str) const;
 
     bool hasLowerCase() const;
     bool hasUpperCase() const;
@@ -129,8 +129,8 @@ public:
         container.push_back(tmp);
     }
 
-    bool split(char chSeparator, SizedString &left, SizedString &right);
-    bool split(const char *separator, SizedString &left, SizedString &right);
+    bool split(char chSeparator, StringView &left, StringView &right);
+    bool split(const char *separator, StringView &left, StringView &right);
 
     string toString() { return string((const char *)data, len); }
 
@@ -141,39 +141,39 @@ public:
     uint32_t                    len;
 
 protected:
-    friend class SizedStringUtf16;
+    friend class StringViewUtf16;
 
     // 为 true 表示此字符串的 data 是稳定的 buffer，不会被释放.
     uint32_t                    _isStable : 1;
 
-    // 给 SizedStringUtf16 的成员变量
+    // 给 StringViewUtf16 的成员变量
     uint32_t                    _isAnsi : 1;
     uint32_t                    _unused1 : 1;
     uint32_t                    _lenUtf16 : 29;
 
 };
 
-static_assert(sizeof(SizedString) == 16, "Expected same size.");
+static_assert(sizeof(StringView) == 16, "Expected same size.");
 
 /**
- * SizedString 保存的是 utf-8 编码, 而 dataUtf16 和 lenUtf16 保存的是 utf-16 编码
+ * StringView 保存的是 utf-8 编码, 而 dataUtf16 和 lenUtf16 保存的是 utf-16 编码
  */
-class SizedStringUtf16 {
+class StringViewUtf16 {
 public:
-    SizedStringUtf16() {
+    StringViewUtf16() {
         _dataUtf16 = nullptr;
         setAnsi(true);
     }
 
-    SizedStringUtf16(const utf16_t *dataUtf16, uint32_t lenUtf16) : _dataUtf16((uint16_t *)dataUtf16) {
+    StringViewUtf16(const utf16_t *dataUtf16, uint32_t lenUtf16) : _dataUtf16((uint16_t *)dataUtf16) {
         setUtf16Size(lenUtf16);
     }
 
-    SizedStringUtf16(const SizedString &s) : _utf8Str(s) {
+    StringViewUtf16(const StringView &s) : _utf8Str(s) {
         onSetUtf8String();
     }
 
-    SizedStringUtf16(const uint8_t *data, uint32_t len, bool isAnsi) : _utf8Str(data, len) {
+    StringViewUtf16(const uint8_t *data, uint32_t len, bool isAnsi) : _utf8Str(data, len) {
         if (isAnsi) {
             _dataUtf16 = nullptr;
             _utf8Str._lenUtf16 = len;
@@ -183,7 +183,7 @@ public:
         }
     }
 
-    void set(const SizedString &other) {
+    void set(const StringView &other) {
         _utf8Str = other;
         onSetUtf8String();
     }
@@ -194,7 +194,7 @@ public:
         setAnsi(false);
     }
 
-    const SizedString &utf8Str() const { return _utf8Str; }
+    const StringView &utf8Str() const { return _utf8Str; }
 
     inline uint32_t size() const { return _utf8Str._lenUtf16; }
     inline utf16_t *utf16Data() const { return _dataUtf16; }
@@ -213,10 +213,10 @@ public:
 
     bool equal(uint32_t code) const;
 
-    int indexOf(const SizedString &find, int32_t start = 0) const;
-    int lastIndexOf(const SizedString &find, int32_t start = 0x7FFFFFFF) const;
+    int indexOf(const StringView &find, int32_t start = 0) const;
+    int lastIndexOf(const StringView &find, int32_t start = 0x7FFFFFFF) const;
 
-    SizedString substr(uint32_t offset, uint32_t size) const;
+    StringView substr(uint32_t offset, uint32_t size) const;
 
 protected:
     void onSetUtf8String();
@@ -224,7 +224,7 @@ protected:
     inline void setUtf16Size(uint32_t len) { _utf8Str._lenUtf16 = len; }
 
 protected:
-    SizedString                 _utf8Str;
+    StringView                 _utf8Str;
 
     // _lenUtf16 是一定有效的，_dataUtf16 不一定有效
     utf16_t                     *_dataUtf16;
@@ -232,39 +232,39 @@ protected:
 };
 
 
-using VecSizedStrings = std::vector<SizedString>;
-using VecSizedStringUtf16s = std::vector<SizedStringUtf16>;
+using VecStringViews = std::vector<StringView>;
+using VecStringViewUtf16s = std::vector<StringViewUtf16>;
 
-#define MAKE_STABLE_STR(s)  SizedString(s, sizeof(s) - 1, true)
+#define MAKE_STABLE_STR(s)  StringView(s, sizeof(s) - 1, true)
 
-inline SizedString makeStableStr(const char *str) { return SizedString(str, (uint32_t)strlen(str), true); }
+inline StringView makeStableStr(const char *str) { return StringView(str, (uint32_t)strlen(str), true); }
 
-const SizedString sizedStringEmpty(nullptr, 0, true);
-const SizedString sizedStringBlanks(" \t\r\n");
+const StringView stringViewEmpty(nullptr, 0, true);
+const StringView stringViewBlanks(" \t\r\n");
 
 struct SizedStrCmpLess {
 
-    bool operator()(const SizedString &a, const SizedString &b) const {
+    bool operator()(const StringView &a, const StringView &b) const {
         return a.cmp(b) < 0;
     }
 
 };
 
 struct SizedStrCmpEqual {
-    bool operator()(const SizedString &first, const SizedString &other) const {
+    bool operator()(const StringView &first, const StringView &other) const {
         return first.equal(other);
     }
 };
 
 
-class SizedStringHash {
+class StringViewHash {
 public:
-    uint64_t operator()(const SizedString& s) const {
+    uint64_t operator()(const StringView& s) const {
         return hashBytes(s.data, s.len);
     }
 };
 
-bool strIsInList(SizedString &str, SizedString *arr, size_t count);
-bool IStrIsInList(SizedString &str, SizedString *arr, size_t count);
+bool strIsInList(StringView &str, StringView *arr, size_t count);
+bool IStrIsInList(StringView &str, StringView *arr, size_t count);
 
-#endif /* SizedString_hpp */
+#endif /* StringView_hpp */

@@ -22,23 +22,23 @@ public:
     JsArray(uint32_t length = 0);
     ~JsArray();
 
-    virtual void setPropertyByName(VMContext *ctx, const SizedString &name, const JsValue &descriptor) override;
+    virtual void setPropertyByName(VMContext *ctx, const StringView &name, const JsValue &descriptor) override;
     virtual void setPropertyByIndex(VMContext *ctx, uint32_t index, const JsValue &descriptor) override;
     virtual void setPropertyBySymbol(VMContext *ctx, uint32_t index, const JsValue &descriptor) override;
 
-    virtual JsError setByName(VMContext *ctx, const JsValue &thiz, const SizedString &name, const JsValue &value) override;
+    virtual JsError setByName(VMContext *ctx, const JsValue &thiz, const StringView &name, const JsValue &value) override;
     virtual JsError setByIndex(VMContext *ctx, const JsValue &thiz, uint32_t index, const JsValue &value) override;
     virtual JsError setBySymbol(VMContext *ctx, const JsValue &thiz, uint32_t index, const JsValue &value) override;
 
-    virtual JsValue increaseByName(VMContext *ctx, const JsValue &thiz, const SizedString &name, int n, bool isPost) override;
+    virtual JsValue increaseByName(VMContext *ctx, const JsValue &thiz, const StringView &name, int n, bool isPost) override;
     virtual JsValue increaseByIndex(VMContext *ctx, const JsValue &thiz, uint32_t index, int n, bool isPost) override;
     virtual JsValue increaseBySymbol(VMContext *ctx, const JsValue &thiz, uint32_t index, int n, bool isPost) override;
 
-    virtual JsValue *getRawByName(VMContext *ctx, const SizedString &name, bool includeProtoProp = true) override;
+    virtual JsValue *getRawByName(VMContext *ctx, const StringView &name, bool includeProtoProp = true) override;
     virtual JsValue *getRawByIndex(VMContext *ctx, uint32_t index, bool includeProtoProp = true) override;
     virtual JsValue *getRawBySymbol(VMContext *ctx, uint32_t index, bool includeProtoProp = true) override;
 
-    virtual bool removeByName(VMContext *ctx, const SizedString &name) override;
+    virtual bool removeByName(VMContext *ctx, const StringView &name) override;
     virtual bool removeByIndex(VMContext *ctx, uint32_t index) override;
     virtual bool removeBySymbol(VMContext *ctx, uint32_t index) override;
 

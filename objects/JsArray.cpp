@@ -68,7 +68,7 @@ public:
         return true;
     }
 
-    virtual bool next(SizedString *strKeyOut = nullptr, JsValue *keyOut = nullptr, JsValue *valueOut = nullptr) override {
+    virtual bool next(StringView *strKeyOut = nullptr, JsValue *keyOut = nullptr, JsValue *valueOut = nullptr) override {
         JsValue *prop = nullptr;
         while (true) {
             if (_pos >= _len()) {
@@ -131,7 +131,7 @@ protected:
     VMContext                       *_ctx;
     JsArray                         *_arr;
     uint32_t                        _pos;
-    NumberToSizedString             _keyBuf;
+    NumberToStringView             _keyBuf;
 
     IJsIterator                     *_itObj;
 
@@ -165,7 +165,7 @@ JsArray::~JsArray() {
     }
 }
 
-void JsArray::setPropertyByName(VMContext *ctx, const SizedString &name, const JsValue &descriptor) {
+void JsArray::setPropertyByName(VMContext *ctx, const StringView &name, const JsValue &descriptor) {
     if (name.len > 0 && isDigit(name.data[0])) {
         bool successful = false;
         auto n = name.atoi(successful);
@@ -206,7 +206,7 @@ void JsArray::setPropertyBySymbol(VMContext *ctx, uint32_t index, const JsValue 
     _obj->setPropertyBySymbol(ctx, index, descriptor);
 }
 
-JsError JsArray::setByName(VMContext *ctx, const JsValue &thiz, const SizedString &name, const JsValue &value) {
+JsError JsArray::setByName(VMContext *ctx, const JsValue &thiz, const StringView &name, const JsValue &value) {
     if (name.len > 0 && isDigit(name.data[0])) {
         bool successful = false;
         auto n = name.atoi(successful);
@@ -272,7 +272,7 @@ JsError JsArray::setBySymbol(VMContext *ctx, const JsValue &thiz, uint32_t index
     return _obj->setBySymbol(ctx, thiz, index, value);
 }
 
-JsValue JsArray::increaseByName(VMContext *ctx, const JsValue &thiz, const SizedString &name, int n, bool isPost) {
+JsValue JsArray::increaseByName(VMContext *ctx, const JsValue &thiz, const StringView &name, int n, bool isPost) {
     if (name.len > 0 && isDigit(name.data[0])) {
         bool successful = false;
         auto index = name.atoi(successful);
@@ -331,7 +331,7 @@ JsValue JsArray::increaseBySymbol(VMContext *ctx, const JsValue &thiz, uint32_t 
     return _obj->increaseBySymbol(ctx, thiz, index, n, isPost);
 }
 
-JsValue *JsArray::getRawByName(VMContext *ctx, const SizedString &name, bool includeProtoProp) {
+JsValue *JsArray::getRawByName(VMContext *ctx, const StringView &name, bool includeProtoProp) {
     if (name.len > 0 && isDigit(name.data[0])) {
         bool successful = false;
         auto n = name.atoi(successful);
@@ -390,7 +390,7 @@ JsValue *JsArray::getRawBySymbol(VMContext *ctx, uint32_t index, bool includePro
     return nullptr;
 }
 
-bool JsArray::removeByName(VMContext *ctx, const SizedString &name) {
+bool JsArray::removeByName(VMContext *ctx, const StringView &name) {
     if (_obj) {
         return _obj->removeByName(ctx, name);
     }
@@ -876,12 +876,12 @@ void JsArray::toString(VMContext *ctx, const JsValue &thiz, BinaryOutputStream &
         for (auto &item : b->items) {
             auto v = getPropertyValue(ctx, thiz, item, jsValueEmpty);
 
-            LockedSizedStringWrapper s;
+            LockedStringViewWrapper s;
             if (v.type == JDT_ARRAY) {
                 auto arr = (JsArray *)ctx->runtime->getObject(v);
                 arr->toString(ctx, v, stream);
             } else {
-                s = ctx->runtime->toSizedString(ctx, v);
+                s = ctx->runtime->toStringView(ctx, v);
             }
 
             if (empty) {

@@ -10,14 +10,14 @@
 #include "Statement.hpp"
 
 
-static SizedString NAME_ASYNC("async");
-static SizedString NAME_TARGET("target");
-static SizedString NAME_OF("of");
-static SizedString NAME_EVAL("eval");
+static StringView NAME_ASYNC("async");
+static StringView NAME_TARGET("target");
+static StringView NAME_OF("of");
+static StringView NAME_EVAL("eval");
 
 
-inline bool isTokenNameEqual(const Token &token, SizedString &name) {
-    return token.type == TK_NAME && tokenToSizedString(token).equal(name);
+inline bool isTokenNameEqual(const Token &token, StringView &name) {
+    return token.type == TK_NAME && tokenToStringView(token).equal(name);
 }
 
 JSParser::JSParser(VMRuntimeCommon *rtc, ResourcePool *resPool, const char *buf, size_t len) : JSLexer(resPool, buf, len) {
@@ -89,7 +89,7 @@ IJsNode *JSParser::_expectStatment() {
             _peekToken();
             if (_nextToken.type == TK_SEMI_COLON || _nextToken.newLineBefore || _nextToken.type == TK_CLOSE_BRACE) {
                 // 是一个字符串 statement, 需判断是不是指令?
-                if (tokenToSizedString(_curToken).equal("use strict")) {
+                if (tokenToStringView(_curToken).equal("use strict")) {
                     _curFunction->isStrictMode = true;
                 } else {
                     // 忽略其他的字符串语句.
@@ -681,7 +681,7 @@ IJsNode *JSParser::_expectFunctionDeclaration() {
         _expectToken(TK_NAME);
     }
 
-    child->name = tokenToSizedString(_curToken);
+    child->name = tokenToStringView(_curToken);
     parentScope->addFunctionDeclaration(_curToken, child);
     _readToken();
 
@@ -726,7 +726,7 @@ IJsNode *JSParser::_expectFunctionExpression(uint32_t functionFlags, bool ignore
     }
 
     if ((functionFlags & FT_EXPRESSION) && _curToken.type == TK_NAME) {
-        child->name = tokenToSizedString(_curToken);
+        child->name = tokenToStringView(_curToken);
         // TODO: 函数表达式的名字在函数的作用域内
         // child->addVarDeclaration(_curToken);
         _readToken();
@@ -1093,7 +1093,7 @@ IJsNode *JSParser::_expectExpression(Precedence pred, bool enableIn) {
 
                 VecInts indices;
                 indices.push_back(_getStringIndex(_curToken));
-                indices.push_back(_getStringIndex(_escapeString(tokenToSizedString(_curToken))));
+                indices.push_back(_getStringIndex(_escapeString(tokenToStringView(_curToken))));
 
                 expr = PoolNew(_pool, JsExprTemplateFunctionCall)(_resPool, expr, _getRawStringsIndex(indices));
                 break;
@@ -1298,7 +1298,7 @@ IJsNode *JSParser::_expectRawTemplateCall(IJsNode *func) {
     VecInts indices;
 
     indices.push_back(_getStringIndex(_curToken));
-    indices.push_back(_getStringIndex(_escapeString(tokenToSizedString(_curToken))));
+    indices.push_back(_getStringIndex(_escapeString(tokenToStringView(_curToken))));
 
     auto rawStringIdx = _getRawStringsIndex(indices);
     auto expr = PoolNew(_pool, JsExprTemplateFunctionCall)(_resPool, func, rawStringIdx);
@@ -1313,7 +1313,7 @@ IJsNode *JSParser::_expectRawTemplateCall(IJsNode *func) {
         _readInTemplateMid();
 
         indices.push_back(_getStringIndex(_curToken));
-        indices.push_back(_getStringIndex(_escapeString(tokenToSizedString(_curToken))));
+        indices.push_back(_getStringIndex(_escapeString(tokenToStringView(_curToken))));
 
         if (_curToken.type == TK_TEMPLATE_TAIL) {
             _readToken();
@@ -1506,7 +1506,7 @@ IJsNode *JSParser::_expectObjectLiteralExpression() {
                 return nullptr;
             }
 
-            SizedString funcName(name.buf, (uint32_t)(_nextToken.buf + _nextToken.len - name.buf));
+            StringView funcName(name.buf, (uint32_t)(_nextToken.buf + _nextToken.len - name.buf));
             auto nameIdx = _getStringIndex(_nextToken);
             _readToken();
 
@@ -1585,7 +1585,7 @@ IJsNode *JSParser::_expectObjectLiteralExpression() {
                 // 给函数赋值名字
                 auto f = ((JsFunctionExpr *)value)->getFunction();
                 if (f->name.empty()) {
-                    f->name = SizedString(nameStart, (uint32_t)(nameEnd - nameStart));
+                    f->name = StringView(nameStart, (uint32_t)(nameEnd - nameStart));
                 }
             }
 
@@ -1822,7 +1822,7 @@ int JSParser::_getDoubleIndex(double value) {
     return idx;
 }
 
-int JSParser::_getStringIndex(const SizedString &str) {
+int JSParser::_getStringIndex(const StringView &str) {
     if (_runtimeCommon) {
         auto idx = _runtimeCommon->findStringValue(str);
         if (idx != -1) {

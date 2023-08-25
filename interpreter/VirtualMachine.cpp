@@ -54,7 +54,7 @@ bool jsValueStrictLessThan(VMRuntime *runtime, const JsValue &left, const JsValu
             if (right.type == JDT_CHAR) {
                 return left.value.n32 < right.value.n32;
             } else if (right.type == JDT_STRING) {
-                SizedStringWrapper s1(left);
+                StringViewWrapper s1(left);
                 auto &s2 = runtime->getUtf8String(right);
                 return s1.cmp(s2) < 0;
             } else {
@@ -64,7 +64,7 @@ bool jsValueStrictLessThan(VMRuntime *runtime, const JsValue &left, const JsValu
         case JDT_STRING: {
             if (right.type == JDT_CHAR) {
                 auto &s1 = runtime->getUtf8String(left);
-                SizedStringWrapper s2(right);
+                StringViewWrapper s2(right);
                 return s1.cmp(s2) < 0;
             } else if (right.type == JDT_STRING) {
                 auto &s1 = runtime->getUtf8String(left);
@@ -105,7 +105,7 @@ void VMContext::throwException(JsError err, cstr_t format, ...) {
     auto message = stringPrintf(format, args);
     va_end(args);
 
-    auto errValue = runtime->pushString(SizedString(message.c_str(), message.size()));
+    auto errValue = runtime->pushString(StringView(message.c_str(), message.size()));
 
     throwException(err, newJsError(this, err, errValue));
 }
@@ -127,7 +127,7 @@ void VMContext::throwException(JsError err, JsValue errorMessage) {
 }
 
 void VMContext::throwExceptionFormatJsValue(JsError err, cstr_t format, const JsValue &value) {
-    auto s = runtime->toSizedString(this, value);
+    auto s = runtime->toStringView(this, value);
     throwException(err, format, s.len, s.data);
 }
 
@@ -152,7 +152,7 @@ void JsVirtualMachine::run(cstr_t code, size_t len, VMRuntime *runtime) {
 
     eval(code, len, ctx, stackScopes, args);
     if (ctx->error) {
-        auto message = runtime->toSizedString(ctx, ctx->errorMessage);
+        auto message = runtime->toStringView(ctx, ctx->errorMessage);
         runtime->console()->error(stringPrintf("Uncaught %.*s\n", message.len, message.data).c_str());
     }
 
@@ -192,7 +192,7 @@ void JsVirtualMachine::eval(cstr_t code, size_t len, VMContext *vmctx, VecVMStac
     if (0) {
         BinaryOutputStream stream;
         func->dump(stream);
-        auto s = stream.sizedStringStartNew();
+        auto s = stream.stringViewStartNew();
         printf("%s\n", code);
         printf("%.*s\n", (int)s.len, s.data);
     }
@@ -220,10 +220,10 @@ void JsVirtualMachine::dump(BinaryOutputStream &stream) {
     BinaryOutputStream os;
     _runtime.dump(os);
     stream.write("== VMRuntime ==\n");
-    writeIndent(stream, os.sizedStringStartNew(), SizedString("  "));
+    writeIndent(stream, os.stringViewStartNew(), StringView("  "));
 }
 
-void JsVirtualMachine::callMember(VMContext *ctx, const JsValue &thiz, const SizedString &memberName, const Arguments &args) {
+void JsVirtualMachine::callMember(VMContext *ctx, const JsValue &thiz, const StringView &memberName, const Arguments &args) {
     auto member = getMemberDot(ctx, thiz, memberName);
 
     callMember(ctx, thiz, member, args);
@@ -266,7 +266,7 @@ void JsVirtualMachine::callMember(VMContext *ctx, const JsValue &thiz, const JsV
     }
 }
 
-JsValue JsVirtualMachine::getMemberDot(VMContext *ctx, const JsValue &thiz, const SizedString &name, const JsValue &defVal) {
+JsValue JsVirtualMachine::getMemberDot(VMContext *ctx, const JsValue &thiz, const StringView &name, const JsValue &defVal) {
     auto runtime = ctx->runtime;
     switch (thiz.type) {
         case JDT_UNDEFINED:
@@ -304,7 +304,7 @@ JsValue JsVirtualMachine::getMemberDot(VMContext *ctx, const JsValue &thiz, cons
     return defVal;
 }
 
-void JsVirtualMachine::setMemberDot(VMContext *ctx, const JsValue &thiz, const SizedString &name, const JsValue &value) {
+void JsVirtualMachine::setMemberDot(VMContext *ctx, const JsValue &thiz, const StringView &name, const JsValue &value) {
     auto runtime = ctx->runtime;
     switch (thiz.type) {
         case JDT_UNDEFINED:
@@ -424,7 +424,7 @@ inline void opIncreaseIdentifier(VMContext *ctx, VMRuntime *runtime, uint8_t *&b
     ctx->stack.push_back(value);
 }
 
-JsValue searchIdentifierByName(VMContext *ctx, VecVMStackScopes &stackScopes, const SizedString &name) {
+JsValue searchIdentifierByName(VMContext *ctx, VecVMStackScopes &stackScopes, const StringView &name) {
     auto globalScope = ctx->runtime->globalScope();
     for (auto it = stackScopes.rbegin(); it != stackScopes.rend(); ++it) {
         auto scope = *it;
@@ -1401,8 +1401,8 @@ void JsVirtualMachine::call(Function *function, VMContext *ctx, VecVMStackScopes
                 JsValue right = stack.back(); stack.pop_back();
                 JsValue left = stack.back(); stack.pop_back();
                 if (right.type < JDT_OBJECT) {
-                    auto s1 = runtime->toSizedString(ctx, left);
-                    auto s2 = runtime->toSizedString(ctx, right);
+                    auto s1 = runtime->toStringView(ctx, left);
+                    auto s2 = runtime->toStringView(ctx, right);
                     ctx->throwException(JE_TYPE_ERROR, "Cannot use 'in' operator to search for '%.*s' in %.*s",
                         (int)s1.len, s1.data, (int)s2.len, s2.data);
                     break;

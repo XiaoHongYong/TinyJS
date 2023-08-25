@@ -35,21 +35,21 @@ void normalizeEnd(int &end, int length) {
     }
 }
 
-SizedString objectPrototypeToSizedString(const JsValue &thiz);
+StringView objectPrototypeToStringView(const JsValue &thiz);
 
 void throwModifyPropertyException(VMContext *ctx, JsError err, JsValue thiz, int index) {
     if (err == JE_TYPE_PROP_READ_ONLY) {
-        auto s = objectPrototypeToSizedString(thiz);
+        auto s = objectPrototypeToStringView(thiz);
         ctx->throwException(JE_TYPE_ERROR, "Cannot assign to read only property '%d' of object '%.*s'", index, s.len, s.data);
     } else if (err == JE_TYPE_NO_PROP_SETTER) {
-        auto s = objectPrototypeToSizedString(thiz);
+        auto s = objectPrototypeToStringView(thiz);
         ctx->throwException(JE_TYPE_ERROR, "Cannot set property %d of %.*s which has only a getter", index, s.len, s.data);
     } else if (err == JE_MAX_STACK_EXCEEDED) {
         ctx->throwException(JE_TYPE_ERROR, "Maximum call stack size exceeded");
     } else if (err == JE_TYPE_PREVENTED_EXTENSION) {
         ctx->throwException(JE_TYPE_ERROR, "Cannot add property 0, object is not extensible");
     } else if (err == JE_TYPE_PROP_NO_DELETABLE) {
-        auto s = objectPrototypeToSizedString(thiz);
+        auto s = objectPrototypeToStringView(thiz);
         ctx->throwException(JE_TYPE_ERROR, "Cannot delete property '%d' of %.*s", index, s.len, s.data);
     } else {
         assert(0);
@@ -59,7 +59,7 @@ void throwModifyPropertyException(VMContext *ctx, JsError err, JsValue thiz, int
 void setPropByIndexEx(VMContext *ctx, JsValue thiz, IJsObject *obj, JsValue value, int32_t index) {
     if (value.isEmpty()) {
         if (!obj->removeByIndex(ctx, index)) {
-            auto s = objectPrototypeToSizedString(thiz);
+            auto s = objectPrototypeToStringView(thiz);
             ctx->throwException(JE_TYPE_ERROR, "Cannot delete property '%d' of %.*s", index, s.len, s.data);
         }
     } else {
@@ -896,19 +896,19 @@ void arrayPrototypeIndexOf(VMContext *ctx, const JsValue &thiz, const Arguments 
 void arrayPrototypeJoin(VMContext *ctx, const JsValue &thiz, const Arguments &args) {
     auto runtime = ctx->runtime;
     auto sep = args.getAt(0);
-    auto sepStr = runtime->toSizedStringStrictly(ctx, sep);
+    auto sepStr = runtime->toStringViewStrictly(ctx, sep);
     if (ctx->error != JE_OK) {
         return;
     }
 
     if (sep.type == JDT_UNDEFINED) {
-        sepStr = SizedString(",");
+        sepStr = StringView(",");
     }
 
     BinaryOutputStream stream;
 
     arrayLikeActionEx<false>(ctx, thiz, [ctx, runtime, &stream, &sepStr](int index, JsValue item) {
-        auto s = runtime->toSizedStringStrictly(ctx, item);
+        auto s = runtime->toStringViewStrictly(ctx, item);
         if (ctx->error != JE_OK) {
             return true;
         }
@@ -917,7 +917,7 @@ void arrayPrototypeJoin(VMContext *ctx, const JsValue &thiz, const Arguments &ar
         return false;
     });
 
-    ctx->retValue = runtime->pushString(stream.toSizedString());
+    ctx->retValue = runtime->pushString(stream.toStringView());
 }
 
 
@@ -1061,7 +1061,7 @@ void arrayPrototypePop(VMContext *ctx, const JsValue &thiz, const Arguments &arg
         auto index = length - 1;
         auto v = obj->getByIndex(ctx, thiz, index);
         if (!obj->removeByIndex(ctx, index)) {
-            auto s = objectPrototypeToSizedString(thiz);
+            auto s = objectPrototypeToStringView(thiz);
             ctx->throwException(JE_TYPE_ERROR, "Cannot delete property '%d' of %.*s", index, s.len, s.data);
         } else {
             ctx->retValue = v;
@@ -1657,7 +1657,7 @@ void arrayPrototypeToString(VMContext *ctx, const JsValue &thiz, const Arguments
 
     BinaryOutputStream stream;
     arr->toString(ctx, thiz, stream);
-    ctx->retValue = runtime->pushString(stream.toSizedString());
+    ctx->retValue = runtime->pushString(stream.toStringView());
 }
 
 void arrayPrototypeUnshift(VMContext *ctx, const JsValue &thiz, const Arguments &args) {

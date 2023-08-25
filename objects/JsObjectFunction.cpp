@@ -88,7 +88,7 @@ void JsObjectBoundFunction::onInitLazyProperty(VMContext *ctx, JsLazyProperty *p
     prop->isLazyInit = false;
 
     if (name.equal(SS_NAME)) {
-        static SizedString SS_BOUND_PREFIX("bound ");
+        static StringView SS_BOUND_PREFIX("bound ");
 
         auto value = ctx->vm->getMemberDot(ctx, func, SS_NAME);
         prop->prop.setValue(ctx->runtime->plusString(SS_BOUND_PREFIX, value));

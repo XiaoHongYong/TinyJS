@@ -28,7 +28,7 @@ public:
     bool getBoolAt(VMContext *ctx, uint32_t index, bool defVal = false) const;
     int64_t getInt64At(VMContext *ctx, uint32_t index, int64_t defVal = 0) const;
     double getDoubleAt(VMContext *ctx, uint32_t index, double defVal = 0) const;
-    LockedSizedStringWrapper getStringAt(VMContext *ctx, uint32_t index, const SizedString &defVal = sizedStringEmpty) const;
+    LockedStringViewWrapper getStringAt(VMContext *ctx, uint32_t index, const StringView &defVal = stringViewEmpty) const;
 
     void copy(const Arguments &other, uint32_t minSize = 0);
 

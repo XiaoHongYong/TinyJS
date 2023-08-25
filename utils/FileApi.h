@@ -18,8 +18,8 @@ bool isDirExist(const char *filename);
 
 bool readFileByBom(const char *fn, std::string &str);
 bool readFile(const char *fn, std::string &str);
-bool writeFile(cstr_t fn, const SizedString &data);
-inline bool writeFile(cstr_t fn, const void *data, size_t len) { return writeFile(fn, SizedString(data, len)); }
+bool writeFile(cstr_t fn, const StringView &data);
+inline bool writeFile(cstr_t fn, const void *data, size_t len) { return writeFile(fn, StringView(data, len)); }
 
 bool filetruncate(FILE *fp, long nLen);
 

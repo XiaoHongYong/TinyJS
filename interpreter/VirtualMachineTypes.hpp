@@ -9,7 +9,7 @@
 #define VirtualMachineTypes_hpp
 
 #include <deque>
-#include "utils/SizedString.h"
+#include "utils/StringView.h"
 #include "utils/BinaryStream.h"
 
 
@@ -22,8 +22,8 @@ class Arguments;
 
 struct JsValue;
 
-extern SizedString SS_TRUE;
-extern SizedString SS_FALSE;
+extern StringView SS_TRUE;
+extern StringView SS_FALSE;
 
 #define OP_CODE_DEFINES \
     OP_ITEM(OP_INVALID, "not_used"), \
@@ -367,7 +367,7 @@ struct JsDouble {
  */
 struct JsSymbol {
     JsSymbol() { referIdx = 0; nextFreeIdx = 0; }
-    JsSymbol(const SizedString &name) { referIdx = 0; nextFreeIdx = 0; this->name.assign((cstr_t)name.data, name.len); }
+    JsSymbol(const StringView &name) { referIdx = 0; nextFreeIdx = 0; this->name.assign((cstr_t)name.data, name.len); }
 
     string toString() const;
 
@@ -419,7 +419,7 @@ struct JsJoinedString {
  */
 struct JsString {
     JsString() { referIdx = 0; nextFreeIdx = 0; isJoinedString = false; }
-    JsString(const SizedString &str) { referIdx = 0; nextFreeIdx = 0; isJoinedString = false; value.str.set(str); }
+    JsString(const StringView &str) { referIdx = 0; nextFreeIdx = 0; isJoinedString = false; value.str.set(str); }
     JsString(const JsJoinedString &joinedString) { referIdx = 0; nextFreeIdx = 0; isJoinedString = true; value.joinedString = joinedString; }
     JsString(const JsString &other) { *this = other; }
 
@@ -433,7 +433,7 @@ struct JsString {
     union Value {
         Value() { }
         JsJoinedString          joinedString;
-        SizedStringUtf16        str;
+        StringViewUtf16        str;
     } value;
 };
 
@@ -470,7 +470,7 @@ inline bool getJsValueBool(const JsValue &v) {
     return int32_t(v.value.n32);
 }
 
-inline const SizedString &getJsValueBoolString(const JsValue &v) {
+inline const StringView &getJsValueBoolString(const JsValue &v) {
     assert(v.type == JDT_BOOL);
     return v.value.n32 ? SS_TRUE : SS_FALSE;
 }

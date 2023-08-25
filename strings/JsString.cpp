@@ -36,7 +36,7 @@ JsValue getStringMemberIndex(VMContext *ctx, const JsValue &thiz, const JsValue 
         return value;
     }
 
-    auto strName = runtime->toSizedString(ctx, name);
+    auto strName = runtime->toStringView(ctx, name);
     if (strName.equal(SS_LENGTH)) {
         if (thiz.type == JDT_CHAR) {
             return makeJsValueInt32(1);

@@ -82,7 +82,7 @@ public:
 
 class BinaryInputStream {
 public:
-    BinaryInputStream(const SizedString &s) {
+    BinaryInputStream(const StringView &s) {
         _buf = (uint8_t *)s.data;
         _pos = (uint8_t *)s.data;
         _end = (uint8_t *)s.data + s.len;
@@ -198,12 +198,12 @@ public:
 
     const uint8_t *currentPtr() { return _pos; }
 
-    SizedString readSizedStr(size_t len) {
+    StringView readSizedStr(size_t len) {
         if (_pos + len > _end) {
             throw BinaryStreamOutOfRange(__LINE__);
         }
 
-        SizedString s(_pos, len);
+        StringView s(_pos, len);
         _pos += len;
 
         return s;
@@ -399,7 +399,7 @@ public:
         write(start, (size_t)(end - start));
     }
 
-    void write(const SizedString &s) {
+    void write(const StringView &s) {
         write(s.data, s.len);
     }
 
@@ -467,8 +467,8 @@ public:
         return p;
     }
 
-    SizedString sizedStringStartNew() {
-        auto ret = toSizedString();
+    StringView stringViewStartNew() {
+        auto ret = toStringView();
 
         startNew();
 
@@ -515,15 +515,15 @@ public:
         return _linkedStringStart;
     }
 
-    SizedString toSizedString() {
+    StringView toStringView() {
         auto ls = toLinkedString();
         if (ls == nullptr) {
-            return SizedString();
+            return StringView();
         }
 
         if (ls->next == nullptr) {
             // 只有一个 buffer
-            return SizedString(ls->data, ls->len);
+            return StringView(ls->data, ls->len);
         }
 
         auto *b = ls;
@@ -543,7 +543,7 @@ public:
             b = b->next;
         }
 
-        return SizedString(len, data);
+        return StringView(len, data);
     }
 
 protected:

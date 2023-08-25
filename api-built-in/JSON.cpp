@@ -128,7 +128,7 @@ public:
     }
     bool Double(double d) { onValue(_rt->pushDouble(d)); return true; }
     bool String(const char* str, SizeType length, bool copy) {
-        onValue(_rt->pushString(SizedString(str, length)));
+        onValue(_rt->pushString(StringView(str, length)));
         return true;
     }
     bool StartObject() {
@@ -186,7 +186,7 @@ protected:
     VMContext               *_ctx;
     string                  _keyBuf;
     IJsObject               *_obj;
-    SizedString             _key;
+    StringView             _key;
     JsValue                 _value;
 
 };
@@ -194,7 +194,7 @@ protected:
 void json_parse(VMContext *ctx, const JsValue &thiz, const Arguments &args) {
     auto runtime = ctx->runtime;
 
-    auto str = runtime->toSizedString(ctx, args.getAt(0));
+    auto str = runtime->toStringView(ctx, args.getAt(0));
 
     TsJsonHandler handler(ctx);
     Reader reader;
@@ -229,12 +229,12 @@ void stringify(VMContext *ctx, Writer<StringBuffer> &writer, JsValue value) {
             writer.Bool(value.value.n32);
             break;
         case JDT_CHAR: {
-            SizedStringWrapper s(value);
+            StringViewWrapper s(value);
             writer.String((char *)s.data, s.len, true);
             break;
         }
         case JDT_STRING: {
-            auto s = ctx->runtime->toSizedString(ctx, value);
+            auto s = ctx->runtime->toStringView(ctx, value);
             writer.String((char *)s.data, s.len, true);
             break;
         }
@@ -273,7 +273,7 @@ void stringify(VMContext *ctx, Writer<StringBuffer> &writer, JsValue value) {
             unique_ptr<IJsIterator> it;
             it.reset(obj->getIteratorObject(ctx));
 
-            SizedString key;
+            StringView key;
             JsValue v;
             while (it->next(&key, nullptr, &v)) {
                 if (v.type > JDT_NULL) {
@@ -302,7 +302,7 @@ void json_stringify(VMContext *ctx, const JsValue &thiz, const Arguments &args) 
     stringify(ctx, writer, value);
 
     if (ctx->error == JE_OK) {
-        ctx->retValue = runtime->pushString(SizedString(s.GetString(), s.GetSize()));
+        ctx->retValue = runtime->pushString(StringView(s.GetString(), s.GetSize()));
     }
 }
 

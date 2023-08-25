@@ -141,11 +141,11 @@ uint8_t *parseNumber(uint8_t *start, uint8_t *end, double &retValue) {
     return start;
 }
 
-uint8_t *parseNumber(const SizedString &str, double &retValue) {
+uint8_t *parseNumber(const StringView &str, double &retValue) {
     return parseNumber(str.data, str.data + str.len, retValue);
 }
 
-bool jsStringToNumber(const SizedString &org, double &retValue) {
+bool jsStringToNumber(const StringView &org, double &retValue) {
     auto str = org;
     str.trim();
     if (str.len == 0) {
@@ -184,7 +184,7 @@ bool jsStringToNumber(const SizedString &org, double &retValue) {
 }
 
 bool operator ==(const Token &token, const char *name) {
-    return token.buf[0] == name[0] && tokenToSizedString(token).equal(name);
+    return token.buf[0] == name[0] && tokenToStringView(token).equal(name);
 }
 
 bool isRegexAllowed(TokenType token) {
@@ -241,7 +241,7 @@ Keyword KEYWORDS[] = {
 };
 
 struct KeywordCompareLess {
-    bool operator()(const Keyword &left, const SizedString &right) {
+    bool operator()(const Keyword &left, const StringView &right) {
         const uint8_t *p1 = (uint8_t *)left.name;
         const uint8_t *p2 = right.data, *p2End = right.data + right.len;
 
@@ -653,7 +653,7 @@ void JSLexer::_readToken() {
             if ((code >= 'a' && code <= 'z') || (code >= 'A' && code <= 'Z') || code == '_' || code == '$' || code >= 0xaa) {
                 _readName();
 
-                SizedString str(_curToken.buf, (size_t)(_bufPos - _curToken.buf));
+                StringView str(_curToken.buf, (size_t)(_bufPos - _curToken.buf));
                 auto p = lower_bound(KEYWORDS, KEYWORDS + CountOf(KEYWORDS), str, KeywordCompareLess());
                 if (p < KEYWORDS + CountOf(KEYWORDS)) {
                     if (str.equal(p->name)) {
@@ -714,7 +714,7 @@ void JSLexer::_readString(uint8_t quote) {
         }
     } while (_bufPos < _bufEnd && c != quote);
 
-    SizedString str(start, size_t(_bufPos - start - 1));
+    StringView str(start, size_t(_bufPos - start - 1));
     if (needEscape) {
         str = _escapeString(str);
     }
@@ -738,7 +738,7 @@ void JSLexer::_readRegexp() {
     bool inBracket = false;
     uint8_t ch;
 
-    SizedString str(_bufPos, 0);
+    StringView str(_bufPos, 0);
 
     do {
         ch = *_bufPos++;
@@ -762,7 +762,7 @@ void JSLexer::_readRegexp() {
     str.len = (int)(_bufPos - str.data) - 1;
 
     // mods
-    SizedString mode(_bufPos, 0);
+    StringView mode(_bufPos, 0);
     _readName();
     mode.len = uint32_t(_bufPos - mode.data);
     uint32_t flags = 0;
@@ -868,7 +868,7 @@ inline void escapeOctalSequences(uint8_t *&out, uint8_t *&p, const uint8_t *pEnd
     out += utf32CodeToUtf8(n, out);
 }
 
-SizedString JSLexer::_escapeString(const SizedString &str) {
+StringView JSLexer::_escapeString(const StringView &str) {
     uint8_t c;
     auto p = str.data;
     auto end = str.data + str.len;
@@ -956,7 +956,7 @@ SizedString JSLexer::_escapeString(const SizedString &str) {
         }
     } while (p < end);
 
-    return SizedString(out, size_t(po - out));
+    return StringView(out, size_t(po - out));
 }
 
 void JSLexer::_parseError(cstr_t format, ...) {

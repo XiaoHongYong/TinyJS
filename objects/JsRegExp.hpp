@@ -23,11 +23,11 @@ enum RegexpFlags {
     RF_INDEX            = 1 << 20, // d    Generate indices for substring matches.    hasIndices
 };
 
-bool parseRegexpFlags(const SizedString &flags, uint32_t &flagsOut);
+bool parseRegexpFlags(const StringView &flags, uint32_t &flagsOut);
 
 class JsRegExp : public JsObjectLazy {
 public:
-    JsRegExp(const SizedString &str, const std::regex &re, uint32_t flags);
+    JsRegExp(const StringView &str, const std::regex &re, uint32_t flags);
     ~JsRegExp();
 
     const string &toString() const { return _strRe; }

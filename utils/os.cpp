@@ -10,7 +10,7 @@
 #include <unistd.h>
 #include <chrono>
 #include "UtilsTypes.h"
-#include "SizedString.h"
+#include "StringView.h"
 #include "StringEx.h"
 #include "os.h"
 
@@ -50,7 +50,7 @@ bool FileFind::openDir(const char *path, const char *extFilter) {
     _dp = opendir(path);
     _dirp = nullptr;
     _path = path;
-    if (!SizedString(_path).endsWith(SizedString("/"))) {
+    if (!StringView(_path).endsWith(StringView("/"))) {
         _path += "/";
     }
 

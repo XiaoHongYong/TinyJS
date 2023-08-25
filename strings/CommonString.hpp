@@ -8,23 +8,23 @@
 #ifndef CommonString_hpp
 #define CommonString_hpp
 
-#include "utils/SizedString.h"
+#include "utils/StringView.h"
 
 
 struct JsValue;
 
 const int MAX_INT_TO_CONST_STR = 999;
 
-SizedString intToSizedString(uint32_t n);
-SizedString makeCommonString(const char *str);
+StringView intToStringView(uint32_t n);
+StringView makeCommonString(const char *str);
 
 
-class NumberToSizedString : public SizedString {
+class NumberToStringView : public StringView {
 public:
-    NumberToSizedString(uint32_t n);
+    NumberToStringView(uint32_t n);
 
     void set(uint32_t n);
-    const SizedString &str() const { return *this; }
+    const StringView &str() const { return *this; }
 
 protected:
     uint8_t             _buf[32];
@@ -32,28 +32,28 @@ protected:
 };
 
 
-class SizedStringWrapper : public SizedString {
+class StringViewWrapper : public StringView {
 public:
-    SizedStringWrapper() : SizedString(_buf, 0) { };
-    SizedStringWrapper(int32_t n);
-    SizedStringWrapper(uint32_t n) : SizedStringWrapper(int32_t(n)) { }
-    SizedStringWrapper(double n);
-    SizedStringWrapper(const JsValue &v);
-    SizedStringWrapper(const SizedString &s);
-    SizedStringWrapper(const string &v);
+    StringViewWrapper() : StringView(_buf, 0) { };
+    StringViewWrapper(int32_t n);
+    StringViewWrapper(uint32_t n) : StringViewWrapper(int32_t(n)) { }
+    StringViewWrapper(double n);
+    StringViewWrapper(const JsValue &v);
+    StringViewWrapper(const StringView &s);
+    StringViewWrapper(const string &v);
 
-    SizedStringWrapper(const SizedStringWrapper &other);
-    SizedStringWrapper &operator =(const SizedStringWrapper &other);
+    StringViewWrapper(const StringViewWrapper &other);
+    StringViewWrapper &operator =(const StringViewWrapper &other);
 
     void clear();
 
     bool append(const JsValue &v);
-    bool append(const SizedString &s);
+    bool append(const StringView &s);
     bool append(double v);
     bool append(uint32_t n);
     bool append(int32_t n);
 
-    const SizedString &str() const { return *this; }
+    const StringView &str() const { return *this; }
 
     enum {
         MAX_SIZE = 128,
@@ -64,22 +64,22 @@ protected:
 
 };
 
-class LockedSizedStringWrapper : public SizedString {
+class LockedStringViewWrapper : public StringView {
 public:
-    LockedSizedStringWrapper() { }
-    LockedSizedStringWrapper(int32_t n);
-    LockedSizedStringWrapper(uint32_t n) : LockedSizedStringWrapper(int32_t(n)) { }
-    LockedSizedStringWrapper(double n);
-    LockedSizedStringWrapper(const JsValue &v);
-    LockedSizedStringWrapper(const SizedString &s) { *(SizedString *)this = s; }
-    LockedSizedStringWrapper(const string &v);
+    LockedStringViewWrapper() { }
+    LockedStringViewWrapper(int32_t n);
+    LockedStringViewWrapper(uint32_t n) : LockedStringViewWrapper(int32_t(n)) { }
+    LockedStringViewWrapper(double n);
+    LockedStringViewWrapper(const JsValue &v);
+    LockedStringViewWrapper(const StringView &s) { *(StringView *)this = s; }
+    LockedStringViewWrapper(const string &v);
 
-    LockedSizedStringWrapper(const LockedSizedStringWrapper &other);
-    LockedSizedStringWrapper &operator =(const LockedSizedStringWrapper &other);
+    LockedStringViewWrapper(const LockedStringViewWrapper &other);
+    LockedStringViewWrapper &operator =(const LockedStringViewWrapper &other);
 
     void clear();
 
-    void reset(const SizedString &s);
+    void reset(const StringView &s);
 
 protected:
     enum {

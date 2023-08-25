@@ -67,7 +67,7 @@ inline JsValue increaseJsValue(VMContext *ctx, JsValue &v, int inc, bool isPost)
     return isPost ? org : v;
 }
 
-inline JsValue increaseMemberDot(VMContext *ctx, const JsValue &obj, SizedString &name, int inc, bool isPost) {
+inline JsValue increaseMemberDot(VMContext *ctx, const JsValue &obj, StringView &name, int inc, bool isPost) {
     auto runtime = ctx->runtime;
 
     switch (obj.type) {

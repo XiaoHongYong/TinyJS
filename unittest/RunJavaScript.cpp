@@ -15,28 +15,28 @@
 
 class StringStreamConsole : public IConsole {
 public:
-    virtual void log(const SizedString &message) override {
+    virtual void log(const StringView &message) override {
         printf("%.*s\n", message.len, message.data);
         stream.write(message);
         stream.writeUInt8('\n');
     }
 
-    virtual void info(const SizedString &message) override {
+    virtual void info(const StringView &message) override {
         stream.write(message);
         stream.writeUInt8('\n');
     }
 
-    virtual void warn(const SizedString &message) override {
+    virtual void warn(const StringView &message) override {
         stream.write(message);
         stream.writeUInt8('\n');
     }
 
-    virtual void error(const SizedString &message) override {
+    virtual void error(const StringView &message) override {
         stream.write(message);
         stream.writeUInt8('\n');
     }
 
-    SizedString getOutput() { return stream.toSizedString(); }
+    StringView getOutput() { return stream.toStringView(); }
 
 protected:
     BinaryOutputStream          stream;
@@ -51,15 +51,15 @@ uint8_t *ignoreSpace(const uint8_t *text, const uint8_t *end) {
 /**
  * 找到字符串 [pos, len] 能在 orgRight 中唯一出现一次的长度. 用于打印出错的位置.
  */
-uint32_t uniqueLen(const SizedString &orgRight, const uint8_t *pos) {
+uint32_t uniqueLen(const StringView &orgRight, const uint8_t *pos) {
     uint32_t maxlen = (uint32_t)(orgRight.data + orgRight.len - pos);
     uint32_t len = min((uint32_t)100, maxlen);
     if (strlen((char *)pos) == 0) {
         return len;
     }
 
-    SizedString org(orgRight);
-    SizedString pt(pos, len);
+    StringView org(orgRight);
+    StringView pt(pos, len);
 
     // 去掉第一个相同的部分
     auto n = org.strstr(pt);
@@ -75,7 +75,7 @@ uint32_t uniqueLen(const SizedString &orgRight, const uint8_t *pos) {
     return pt.len;
 }
 
-bool compareTextIgnoreSpace(const SizedString &leftS, const SizedString &rightS) {
+bool compareTextIgnoreSpace(const StringView &leftS, const StringView &rightS) {
     auto left = leftS.data, right = rightS.data;
     auto leftEnd = left + leftS.len, rightEnd = right + rightS.len;
 
@@ -136,15 +136,15 @@ bool runJavascript(const string &code, string &output) {
 }
 
 void splitTestCodeAndOutput(string textOrg, VecStrings &vCodeOut, VecStrings &vOutputOut) {
-    SizedString text(textOrg);
+    StringView text(textOrg);
     while (true) {
-        SizedString code, remain;
+        StringView code, remain;
         if (text.split("/* OUTPUT", code, remain)) {
             if (remain.startsWith("-FIXED")) {
                 remain.shrink(6);
             }
 
-            SizedString output;
+            StringView output;
             if (!remain.split("*/", output, remain)) {
                 throw "Invalid output format";
             }

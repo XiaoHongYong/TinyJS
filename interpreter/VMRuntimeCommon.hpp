@@ -24,9 +24,9 @@ class IJsIterator;
 
 struct JsNativeFunctionInfo {
     JsNativeFunction            func;
-    SizedString                 name;
+    StringView                 name;
 
-    JsNativeFunctionInfo(JsNativeFunction f, const SizedString &name) : func(f), name(name) {
+    JsNativeFunctionInfo(JsNativeFunction f, const StringView &name) : func(f), name(name) {
     }
 };
 
@@ -59,17 +59,17 @@ public:
     }
 
     JsValue pushObject(IJsObject *value);
-    JsValue pushNativeFunction(JsNativeFunction f, const SizedString &name) {
+    JsValue pushNativeFunction(JsNativeFunction f, const StringView &name) {
         uint32_t n = (uint32_t)_nativeFunctions.size();
         _nativeFunctions.push_back(JsNativeFunctionInfo(f, name));
         return JsValue(JDT_NATIVE_FUNCTION, n);
     }
 
     JsValue pushDouble(double value);
-    JsValue pushStringValue(const SizedString &value);
+    JsValue pushStringValue(const StringView &value);
 
     uint32_t findDoubleValue(double value);
-    uint32_t findStringValue(const SizedString &value);
+    uint32_t findStringValue(const StringView &value);
 
     uint32_t countStringValues() const { return (uint32_t)_stringValues.size(); }
     uint32_t countDoubleValues() const { return (uint32_t)_doubleValues.size(); }
@@ -89,7 +89,7 @@ protected:
     friend class VMRuntime;
 
     using VecDoubles = std::vector<double>;
-    using MapStringToIdx = std::unordered_map<SizedString, uint32_t, SizedStringHash, SizedStrCmpEqual>;
+    using MapStringToIdx = std::unordered_map<StringView, uint32_t, StringViewHash, SizedStrCmpEqual>;
     using MapDoubleToIdx = std::unordered_map<double, uint32_t>;
 
     MapStringToIdx              _mapStrings;

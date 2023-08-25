@@ -69,4 +69,4 @@ typedef const WCHAR * cwstr_t;
 typedef uint32_t COLORREF;
 #endif
 
-#include "SizedString.h"
+#include "StringView.h"

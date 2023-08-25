@@ -19,7 +19,7 @@ JsObjectLazy::~JsObjectLazy() {
     }
 }
 
-void JsObjectLazy::setPropertyByName(VMContext *ctx, const SizedString &name, const JsValue &descriptor) {
+void JsObjectLazy::setPropertyByName(VMContext *ctx, const StringView &name, const JsValue &descriptor) {
     for (auto p = _props; p < _propsEnd; p++) {
         if (name.equal(p->name)) {
             p->prop = descriptor;
@@ -49,7 +49,7 @@ void JsObjectLazy::setPropertyBySymbol(VMContext *ctx, uint32_t index, const JsV
     _obj->setPropertyBySymbol(ctx, index, descriptor);
 }
 
-JsError JsObjectLazy::setByName(VMContext *ctx, const JsValue &thiz, const SizedString &name, const JsValue &value) {
+JsError JsObjectLazy::setByName(VMContext *ctx, const JsValue &thiz, const StringView &name, const JsValue &value) {
     for (auto p = _props; p < _propsEnd; p++) {
         if (name.equal(p->name)) {
             return setPropertyValue(ctx, &p->prop, thiz, value);
@@ -77,7 +77,7 @@ JsError JsObjectLazy::setBySymbol(VMContext *ctx, const JsValue &thiz, uint32_t 
     return _obj->setBySymbol(ctx, thiz, index, value);
 }
 
-JsValue JsObjectLazy::increaseByName(VMContext *ctx, const JsValue &thiz, const SizedString &name, int n, bool isPost) {
+JsValue JsObjectLazy::increaseByName(VMContext *ctx, const JsValue &thiz, const StringView &name, int n, bool isPost) {
     for (auto p = _props; p < _propsEnd; p++) {
         if (name.equal(p->name)) {
             return increasePropertyValue(ctx, &p->prop, thiz, n, isPost);
@@ -105,7 +105,7 @@ JsValue JsObjectLazy::increaseBySymbol(VMContext *ctx, const JsValue &thiz, uint
     return _obj->increaseBySymbol(ctx, thiz, index, n, isPost);
 }
 
-JsValue *JsObjectLazy::getRawByName(VMContext *ctx, const SizedString &name, bool includeProtoProp) {
+JsValue *JsObjectLazy::getRawByName(VMContext *ctx, const StringView &name, bool includeProtoProp) {
     for (auto p = _props; p < _propsEnd; p++) {
         if (name.equal(p->name)) {
             if (p->isLazyInit && p->prop.isEmpty()) {
@@ -150,7 +150,7 @@ JsValue *JsObjectLazy::getRawBySymbol(VMContext *ctx, uint32_t index, bool inclu
     return nullptr;
 }
 
-bool JsObjectLazy::removeByName(VMContext *ctx, const SizedString &name) {
+bool JsObjectLazy::removeByName(VMContext *ctx, const StringView &name) {
     for (auto p = _props; p < _propsEnd; p++) {
         if (name.equal(p->name)) {
             if (p->prop.isConfigurable()) {

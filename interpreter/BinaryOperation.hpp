@@ -397,7 +397,7 @@ inline JsValue plusOperate(VMContext *ctx, VMRuntime *rt, int32_t left, const Js
             throwSymbolConvertException(ctx);
             return jsValueNaN;
         case JDT_CHAR: {
-            SizedStringWrapper str;
+            StringViewWrapper str;
             if (leftStr.isValid()) {
                 str.append(rt->getUtf8String(leftStr));
             } else {
@@ -411,7 +411,7 @@ inline JsValue plusOperate(VMContext *ctx, VMRuntime *rt, int32_t left, const Js
             if (leftStr.isValid()) {
                 return rt->plusString(leftStr, right);
             } else {
-                SizedStringWrapper s(left);
+                StringViewWrapper s(left);
                 return rt->plusString(s.str(), right);
             }
         }
@@ -436,7 +436,7 @@ inline JsValue plusOperate(VMContext *ctx, VMRuntime *rt, const JsValue &left, c
                     throwSymbolConvertException(ctx);
                     return jsValueNaN;
                 case JDT_CHAR: {
-                    SizedStringWrapper str(SS_UNDEFINED);
+                    StringViewWrapper str(SS_UNDEFINED);
                     str.append(right);
                     return rt->pushString(str.str());
                 }
@@ -477,7 +477,7 @@ inline JsValue plusOperate(VMContext *ctx, VMRuntime *rt, const JsValue &left, c
                     return jsValueNaN;
                 case JDT_CHAR:
                 case JDT_STRING: {
-                    SizedStringWrapper s(n);
+                    StringViewWrapper s(n);
                     return rt->plusString(s, right);
                 }
                 default:
@@ -492,7 +492,7 @@ inline JsValue plusOperate(VMContext *ctx, VMRuntime *rt, const JsValue &left, c
                 case JDT_BOOL:
                 case JDT_INT32:
                 case JDT_CHAR: {
-                    SizedStringWrapper str(left);
+                    StringViewWrapper str(left);
                     str.append(right);
                     return rt->pushString(str.str());
                 }
@@ -500,7 +500,7 @@ inline JsValue plusOperate(VMContext *ctx, VMRuntime *rt, const JsValue &left, c
                     return rt->plusString(left, right);
                 }
                 case JDT_NUMBER: {
-                    SizedStringWrapper str(left);
+                    StringViewWrapper str(left);
                     str.append(rt->getDouble(right));
                     return rt->pushString(str.str());
                 }
@@ -521,7 +521,7 @@ inline JsValue plusOperate(VMContext *ctx, VMRuntime *rt, const JsValue &left, c
                 case JDT_BOOL:
                     return rt->plusString(left, right.value.n32 ? jsStringValueTrue : jsStringValueFalse);
                 case JDT_INT32: {
-                    SizedStringWrapper str(right.value.n32);
+                    StringViewWrapper str(right.value.n32);
                     return rt->plusString(left, str);
                 }
                 case JDT_CHAR: {
@@ -531,7 +531,7 @@ inline JsValue plusOperate(VMContext *ctx, VMRuntime *rt, const JsValue &left, c
                     return rt->plusString(left, right);
                 }
                 case JDT_NUMBER: {
-                    SizedStringWrapper str(rt->getDouble(right));
+                    StringViewWrapper str(rt->getDouble(right));
                     return rt->plusString(left, str);
                 }
                 case JDT_SYMBOL:
@@ -567,7 +567,7 @@ struct RelationalOpLessThan {
         return a < b;
     }
 
-    bool operator()(const SizedString &a, const SizedString &b) const {
+    bool operator()(const StringView &a, const StringView &b) const {
         return a.cmp(b) < 0;
     }
 };
@@ -588,7 +588,7 @@ struct RelationalOpLessEqThan {
         return a <= b;
     }
 
-    bool operator()(const SizedString &a, const SizedString &b) const {
+    bool operator()(const StringView &a, const StringView &b) const {
         return a.cmp(b) <= 0;
     }
 };
@@ -609,7 +609,7 @@ struct RelationalOpEq {
         return a == b;
     }
 
-    bool operator()(const SizedString &a, const SizedString &b) const {
+    bool operator()(const StringView &a, const StringView &b) const {
         return a.cmp(b) == 0;
     }
 };
@@ -630,7 +630,7 @@ struct RelationalOpGreaterThan {
         return a > b;
     }
 
-    bool operator()(const SizedString &a, const SizedString &b) const {
+    bool operator()(const StringView &a, const StringView &b) const {
         return a.cmp(b) > 0;
     }
 };
@@ -651,7 +651,7 @@ struct RelationalOpGreaterEqThan {
         return a >= b;
     }
 
-    bool operator()(const SizedString &a, const SizedString &b) const {
+    bool operator()(const StringView &a, const StringView &b) const {
         return a.cmp(b) >= 0;
     }
 };
@@ -683,7 +683,7 @@ inline bool relationalNumberCmp(VMContext *ctx, VMRuntime *rt, double left, cons
 
 // string <, <=, ==, >, >= 运算
 template<typename Operator>
-inline bool relationalStringCmp(VMContext *ctx, VMRuntime *rt, const SizedString &left, const JsValue &right, const Operator &op) {
+inline bool relationalStringCmp(VMContext *ctx, VMRuntime *rt, const StringView &left, const JsValue &right, const Operator &op) {
     switch (right.type) {
         case JDT_UNDEFINED:
             return false;
@@ -713,7 +713,7 @@ inline bool relationalStringCmp(VMContext *ctx, VMRuntime *rt, const SizedString
         case JDT_SYMBOL:
             return op.symbolVsOthers(ctx);
         case JDT_CHAR: {
-            SizedStringWrapper tmp(right);
+            StringViewWrapper tmp(right);
             return op(left, tmp.str());
         }
         case JDT_STRING: {
@@ -762,7 +762,7 @@ inline bool relationalOperate(VMContext *ctx, VMRuntime *rt, const JsValue &left
         case JDT_NUMBER:
             return relationalNumberCmp(ctx, rt, rt->getDouble(left), right, op);
         case JDT_CHAR: {
-            SizedStringWrapper str(left);
+            StringViewWrapper str(left);
             return relationalStringCmp(ctx, rt, str, right, op);
         }
         case JDT_STRING: {
@@ -895,8 +895,8 @@ inline bool instanceOf(VMContext *ctx, VMRuntime *rt, const JsValue &left, const
 
 inline bool convertToStringLessCmp(VMContext *ctx, JsValue left, JsValue right) {
     auto rt = ctx->runtime;
-    auto s1 = rt->toSizedString(ctx, left);
-    auto s2 = rt->toSizedString(ctx, right);
+    auto s1 = rt->toStringView(ctx, left);
+    auto s2 = rt->toStringView(ctx, right);
 
     return s1.cmp(s2) < 0;
 }

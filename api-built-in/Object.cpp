@@ -38,7 +38,7 @@ IJsIteratorPtr getJsIteratorPtr(VMContext *ctx, const JsValue &obj, bool include
     return IJsIteratorPtr(it);
 }
 
-SizedString objectPrototypeToSizedString(const JsValue &thiz) {
+StringView objectPrototypeToStringView(const JsValue &thiz) {
     switch (thiz.type) {
         case JDT_UNDEFINED: return MAKE_STABLE_STR("[object Undefined]");
         case JDT_NULL: return MAKE_STABLE_STR("[object Null]");
@@ -71,13 +71,13 @@ SizedString objectPrototypeToSizedString(const JsValue &thiz) {
     }
 }
 
-LockedSizedStringWrapper definePropertyXetterToString(VMContext *ctx, const JsValue &xetter) {
+LockedStringViewWrapper definePropertyXetterToString(VMContext *ctx, const JsValue &xetter) {
     if (xetter.type < JDT_OBJECT) {
-        return ctx->runtime->toSizedString(ctx, xetter);
+        return ctx->runtime->toStringView(ctx, xetter);
     } else if (xetter.type == JDT_OBJECT) {
         return MAKE_STABLE_STR("#<Object>");
     } else {
-        return objectPrototypeToSizedString(xetter);
+        return objectPrototypeToStringView(xetter);
     }
 }
 
@@ -336,7 +336,7 @@ bool getStringOwnPropertyDescriptor(VMContext *ctx, const JsValue &thiz, JsValue
     } else {
         bool ret = false;
 
-        auto str = runtime->toSizedString(ctx, name);
+        auto str = runtime->toStringView(ctx, name);
         if (str.equal(SS_LENGTH)) {
             descriptorOut = makeJsValueInt32(len).asProperty(JP_ENUMERABLE);
             ret = true;
@@ -454,7 +454,7 @@ void objectFromEntries(VMContext *ctx, const JsValue &thiz, const Arguments &arg
         it.reset(obj->getIteratorObject(ctx, false));
     } else {
         auto name = runtime->toTypeName(entries);
-        auto s = runtime->toSizedString(ctx, entries);
+        auto s = runtime->toStringView(ctx, entries);
         ctx->throwException(JE_TYPE_ERROR, "%.*s %.*s is not iterable (cannot read property Symbol(Symbol.iterator))",
                             name.len, name.data, s.len, s.data);
         return;
@@ -570,7 +570,7 @@ void hasOwnProperty(VMContext *ctx, const JsValue &obj, const JsValue &name) {
 
     if (obj.type < JDT_OBJECT) {
         if (obj.type == JDT_CHAR || obj.type == JDT_STRING) {
-            auto s = runtime->toSizedString(ctx, name);
+            auto s = runtime->toStringView(ctx, name);
             if (s.equal(SS_LENGTH)) {
                 ret = jsValueTrue;
             } else {
@@ -813,7 +813,7 @@ void objectPrototypeToString(VMContext *ctx, const JsValue &thiz, const Argument
         }
     }
 
-    auto str = objectPrototypeToSizedString(thiz);
+    auto str = objectPrototypeToStringView(thiz);
     ctx->retValue = ctx->runtime->pushString(str);
 }
 
@@ -867,7 +867,7 @@ void objectPrototypePropertyIsEnumerable(VMContext *ctx, const JsValue &thiz, co
 
     if (thiz.type < JDT_OBJECT) {
         if (thiz.type == JDT_CHAR || thiz.type == JDT_STRING) {
-            auto s = runtime->toSizedString(ctx, name);
+            auto s = runtime->toStringView(ctx, name);
             bool successful;
             auto index = s.atoi(successful);
             if (successful && index >= 0 && index < runtime->getStringLength(thiz)) {

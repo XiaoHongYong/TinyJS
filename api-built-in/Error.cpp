@@ -58,7 +58,7 @@ JsValue newJsError(VMContext *ctx, JsError errType, const JsValue &message) {
     auto err = runtime->pushObject(errObj);
 
     errObj->setByName(ctx, err, SS_MESSAGE, message.isString() ? message : runtime->toString(ctx, message));
-    errObj->setByName(ctx, err, SS_STACK, runtime->pushString(SizedString(getStack(ctx))));
+    errObj->setByName(ctx, err, SS_STACK, runtime->pushString(StringView(getStack(ctx))));
 
     return err;
 }
@@ -94,14 +94,14 @@ static void errorToString(VMContext *ctx, const JsValue &thiz, const Arguments &
         ctx->retValue = name;
     } else {
         string message;
-        auto s = runtime->toSizedString(ctx, name);
+        auto s = runtime->toStringView(ctx, name);
         message.append((cstr_t)s.data, s.len);
 
         message.append(": ");
-        s = runtime->toSizedString(ctx, msg);
+        s = runtime->toStringView(ctx, msg);
         message.append((cstr_t)s.data, s.len);
 
-        ctx->retValue = runtime->pushString(SizedString(message));
+        ctx->retValue = runtime->pushString(StringView(message));
     }
 }
 

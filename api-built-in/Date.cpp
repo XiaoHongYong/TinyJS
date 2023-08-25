@@ -42,7 +42,7 @@ void dateConstructor(VMContext *ctx, const JsValue &thiz, const Arguments &args)
     } else if (args.count == 1) {
         auto arg0 = args[0];
         if (arg0.type == JDT_STRING) {
-            auto s = runtime->toSizedString(ctx, arg0);
+            auto s = runtime->toStringView(ctx, arg0);
             DateTime date;
             JsDate *obj;
             if (date.fromString((char *)s.data, s.len)) {
@@ -106,7 +106,7 @@ void date_now(VMContext *ctx, const JsValue &thiz, const Arguments &args) {
 void date_parse(VMContext *ctx, const JsValue &thiz, const Arguments &args) {
     DateTime date;
 
-    auto str = ctx->runtime->toSizedString(ctx, args.getAt(0));
+    auto str = ctx->runtime->toStringView(ctx, args.getAt(0));
 
     if (!date.fromString((cstr_t)str.data, str.len)) {
         ctx->retValue = jsValueNaN;
@@ -509,7 +509,7 @@ void datePrototype_toXXString(VMContext *ctx, const JsValue &thiz, cstr_t format
     struct tm *tm = isLocalTime ? localtime(&time) : gmtime(&time);
     auto len = strftime(buf, sizeof(buf), format, tm);
 
-    ctx->retValue = ctx->runtime->pushString(SizedString(buf, len));
+    ctx->retValue = ctx->runtime->pushString(StringView(buf, len));
 }
 
 void datePrototype_toDateString(VMContext *ctx, const JsValue &thiz, const Arguments &args) {

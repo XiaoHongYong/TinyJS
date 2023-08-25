@@ -28,7 +28,7 @@ void dumpObject(VMContext *ctx, const JsValue &obj, string &out, SetUInts &histo
     IJsObject *pobj = runtime->getObject(obj);
     std::shared_ptr<IJsIterator> it(pobj->getIteratorObject(ctx, false, true));
 
-    SizedString key;
+    StringView key;
     JsValue value;
     vector<string> vs;
     vector<string> kvs;
@@ -36,15 +36,15 @@ void dumpObject(VMContext *ctx, const JsValue &obj, string &out, SetUInts &histo
     while (it->next(&key, nullptr, &value)) {
         if (obj.type == JDT_ARRAY && key.equal(SS_LENGTH)) continue;
 
-        auto s = runtime->toSizedString(ctx, value);
-        if (value.type == JDT_OBJ_BOOL) { s = SizedString("Boolean"); }
-        else if (value.type == JDT_OBJ_NUMBER) { s = SizedString("Number"); }
-        else if (value.type == JDT_OBJ_STRING) { s = SizedString("String"); }
-        else if (value.type == JDT_OBJ_SYMBOL) { s = SizedString("Symbol"); }
-        else if (value.type == JDT_OBJECT) { s = SizedString("Object"); }
+        auto s = runtime->toStringView(ctx, value);
+        if (value.type == JDT_OBJ_BOOL) { s = StringView("Boolean"); }
+        else if (value.type == JDT_OBJ_NUMBER) { s = StringView("Number"); }
+        else if (value.type == JDT_OBJ_STRING) { s = StringView("String"); }
+        else if (value.type == JDT_OBJ_SYMBOL) { s = StringView("Symbol"); }
+        else if (value.type == JDT_OBJECT) { s = StringView("Object"); }
         else if (value.type == JDT_ARRAY) {
             auto arr = (JsArray *)runtime->getObject(value);
-            s = LockedSizedStringWrapper(stringPrintf("Array(%d)", arr->length()));
+            s = LockedStringViewWrapper(stringPrintf("Array(%d)", arr->length()));
         }
 
         if (isArray && key.isNumeric()) {
@@ -130,7 +130,7 @@ void consoleLog(VMContext *ctx, const JsValue &thiz, const Arguments &args) {
         }
     }
 
-    runtime->console()->log(SizedString(out));
+    runtime->console()->log(StringView(out));
     ctx->retValue = jsValueUndefined;
 }
 

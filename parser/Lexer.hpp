@@ -140,8 +140,8 @@ struct Token {
 
 bool operator ==(const Token &token, const char *name);
 
-inline SizedString tokenToSizedString(const Token &token) {
-    return SizedString(token.buf, token.len);
+inline StringView tokenToStringView(const Token &token) {
+    return StringView(token.buf, token.len);
 }
 
 inline bool isKeyword(TokenType type) {
@@ -158,8 +158,8 @@ inline bool canTokenBeMemberName(TokenType type) {
 }
 
 uint8_t *parseNumber(uint8_t *start, uint8_t *end, double &retValue);
-uint8_t *parseNumber(const SizedString &str, double &retValue);
-bool jsStringToNumber(const SizedString &str, double &retValue);
+uint8_t *parseNumber(const StringView &str, double &retValue);
+bool jsStringToNumber(const StringView &str, double &retValue);
 
 class JSLexer {
 public:
@@ -183,7 +183,7 @@ protected:
 
     void _allowRegexp() { _prevTokenType = TK_EOF; }
 
-    SizedString _escapeString(const SizedString &str);
+    StringView _escapeString(const StringView &str);
 
     void _parseError(cstr_t format, ...);
 

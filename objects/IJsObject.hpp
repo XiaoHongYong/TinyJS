@@ -68,7 +68,7 @@ public:
     IJsObject(JsValue proto, JsDataType type);
     virtual ~IJsObject() {}
 
-    bool getBool(VMContext *ctx, const JsValue &thiz, const SizedString &name);
+    bool getBool(VMContext *ctx, const JsValue &thiz, const StringView &name);
     bool getBool(VMContext *ctx, const JsValue &thiz, const JsValue &name);
 
     void setProperty(VMContext *ctx, const JsValue &name, const JsValue &descriptor);
@@ -80,23 +80,23 @@ public:
     JsValue increase(VMContext *ctx, const JsValue &thiz, const JsValue &name, int n, bool isPost);
     bool remove(VMContext *ctx, const JsValue &name);
 
-    virtual void setPropertyByName(VMContext *ctx, const SizedString &name, const JsValue &descriptor) = 0;
+    virtual void setPropertyByName(VMContext *ctx, const StringView &name, const JsValue &descriptor) = 0;
     virtual void setPropertyByIndex(VMContext *ctx, uint32_t index, const JsValue &descriptor) = 0;
     virtual void setPropertyBySymbol(VMContext *ctx, uint32_t index, const JsValue &descriptor) = 0;
 
-    virtual JsError setByName(VMContext *ctx, const JsValue &thiz, const SizedString &name, const JsValue &value) = 0;
+    virtual JsError setByName(VMContext *ctx, const JsValue &thiz, const StringView &name, const JsValue &value) = 0;
     virtual JsError setByIndex(VMContext *ctx, const JsValue &thiz, uint32_t index, const JsValue &value) = 0;
     virtual JsError setBySymbol(VMContext *ctx, const JsValue &thiz, uint32_t index, const JsValue &value) = 0;
 
-    virtual JsValue increaseByName(VMContext *ctx, const JsValue &thiz, const SizedString &name, int n, bool isPost) = 0;
+    virtual JsValue increaseByName(VMContext *ctx, const JsValue &thiz, const StringView &name, int n, bool isPost) = 0;
     virtual JsValue increaseByIndex(VMContext *ctx, const JsValue &thiz, uint32_t index, int n, bool isPost) = 0;
     virtual JsValue increaseBySymbol(VMContext *ctx, const JsValue &thiz, uint32_t index, int n, bool isPost) = 0;
 
-    virtual JsValue *getRawByName(VMContext *ctx, const SizedString &name, bool includeProtoProp = true) = 0;
+    virtual JsValue *getRawByName(VMContext *ctx, const StringView &name, bool includeProtoProp = true) = 0;
     virtual JsValue *getRawByIndex(VMContext *ctx, uint32_t index, bool includeProtoProp = true) = 0;
     virtual JsValue *getRawBySymbol(VMContext *ctx, uint32_t index, bool includeProtoProp = true) = 0;
 
-    virtual bool removeByName(VMContext *ctx, const SizedString &name) = 0;
+    virtual bool removeByName(VMContext *ctx, const StringView &name) = 0;
     virtual bool removeByIndex(VMContext *ctx, uint32_t index) = 0;
     virtual bool removeBySymbol(VMContext *ctx, uint32_t index) = 0;
 
@@ -114,7 +114,7 @@ public:
 
     virtual bool getLength(VMContext *ctx, int32_t &lengthOut);
 
-    void addGetterSetterByName(VMContext *ctx, const SizedString &name, const JsValue &getter, const JsValue &setter);
+    void addGetterSetterByName(VMContext *ctx, const StringView &name, const JsValue &getter, const JsValue &setter);
 
     IJsObject *getPrototypeObject(VMContext *ctx) {
         if (__proto__.isEmpty()) {
@@ -127,7 +127,7 @@ public:
         return nullptr;
     }
 
-    bool getOwnPropertyDescriptorByName(VMContext *ctx, const SizedString &name, JsValue &descriptorOut) {
+    bool getOwnPropertyDescriptorByName(VMContext *ctx, const StringView &name, JsValue &descriptorOut) {
         auto prop = getRawByName(ctx, name, false);
         if (prop) {
             descriptorOut = *prop;
@@ -154,7 +154,7 @@ public:
         return false;
     }
 
-    JsValue getByName(VMContext *ctx, const JsValue &thiz, const SizedString &name, const JsValue &defVal = jsValueUndefined) {
+    JsValue getByName(VMContext *ctx, const JsValue &thiz, const StringView &name, const JsValue &defVal = jsValueUndefined) {
         auto prop = getRawByName(ctx, name, true);
         if (prop) {
             return getPropertyValue(ctx, thiz, prop, defVal);

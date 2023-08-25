@@ -8,7 +8,7 @@
 #include "JsRegExp.hpp"
 
 
-bool parseRegexpFlags(const SizedString &flags, uint32_t &flagsOut) {
+bool parseRegexpFlags(const StringView &flags, uint32_t &flagsOut) {
     flagsOut = 0;
     auto p = flags.data, end = flags.data + flags.len;
 
@@ -37,7 +37,7 @@ bool parseRegexpFlags(const SizedString &flags, uint32_t &flagsOut) {
     return true;
 }
 
-JsRegExp::JsRegExp(const SizedString &str, const std::regex &re, uint32_t flags) : JsObjectLazy(_props, CountOf(_props), jsValuePrototypeRegExp, JDT_REGEX),  _strRe((cstr_t)str.data, str.len), _flags(flags), _re(re)
+JsRegExp::JsRegExp(const StringView &str, const std::regex &re, uint32_t flags) : JsObjectLazy(_props, CountOf(_props), jsValuePrototypeRegExp, JDT_REGEX),  _strRe((cstr_t)str.data, str.len), _flags(flags), _re(re)
 {
     // isGSetter, isConfigurable, isEnumerable, isWritable
     JsLazyProperty props[] = {

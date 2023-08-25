@@ -48,7 +48,7 @@ TEST(BinaryStream, BinaryOutputStreamSize) {
         os.write(buf, sizeof(buf));
     }
 
-    SizedString str = os.toSizedString();
+    StringView str = os.toStringView();
     uint8_t *p = str.data;
     ASSERT_EQ(str.len, LOOP_TIMES * sizeof(buf));
     for (int i = 0; i < LOOP_TIMES; i++) {
@@ -129,7 +129,7 @@ TEST(BinaryStream, BinaryInputStream) {
         ASSERT_EQ(offset + 5, os.size());
     }
 
-    BinaryInputStream is(os.toSizedString());
+    BinaryInputStream is(os.toStringView());
 
     ASSERT_EQ(is.readUInt8(), 0);
     ASSERT_EQ(is.readUInt8(), 255);
@@ -189,21 +189,21 @@ TEST(BinaryStream, BinaryOutputStreamStartNew) {
         buf[i] = i % 256;
     }
 
-    SizedString s1, s2, s3, s4;
+    StringView s1, s2, s3, s4;
     for (int i = 0; i < LOOP_TIMES; i++) {
         if (i == 1) {
-            s1 = os.toSizedString();
+            s1 = os.toStringView();
             os.startNew();
         } else if (i == 3) {
-            s2 = os.toSizedString();
+            s2 = os.toStringView();
             os.startNew();
         } else if (i == 9) {
-            s3 = os.toSizedString();
+            s3 = os.toStringView();
             os.startNew();
         }
         os.write(buf, sizeof(buf));
     }
-    s4 = os.toSizedString();
+    s4 = os.toStringView();
     os.startNew();
 
     uint8_t *p = s1.data;
@@ -243,7 +243,7 @@ TEST(BinaryStream, BinaryInputStreamBE) {
     os.writeUInt64BE(0xFFFFFFFF);
     os.writeUInt64BE(0xFFFFFFFFFFFFFFFFL);
 
-    BinaryInputStream is(os.toSizedString());
+    BinaryInputStream is(os.toStringView());
 
     ASSERT_EQ(is.readUInt8(), 0);
 

@@ -49,7 +49,7 @@ public:
     JsValue increase(VMContext *ctx, uint32_t index, int inc, bool isPost);
     bool remove(VMContext *ctx, uint32_t index);
 
-    void set(const SizedString &name, const JsValue &val);
+    void set(const StringView &name, const JsValue &val);
 
     uint32_t countVars() const { return (uint32_t)vars.size(); }
 

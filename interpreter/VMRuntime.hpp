@@ -20,10 +20,10 @@ class IConsole {
 public:
     virtual ~IConsole() { }
 
-    virtual void log(const SizedString &message) = 0;
-    virtual void info(const SizedString &message) = 0;
-    virtual void warn(const SizedString &message) = 0;
-    virtual void error(const SizedString &message) = 0;
+    virtual void log(const StringView &message) = 0;
+    virtual void info(const StringView &message) = 0;
+    virtual void warn(const StringView &message) = 0;
+    virtual void error(const StringView &message) = 0;
 
 };
 
@@ -61,7 +61,7 @@ public:
         { return pushGetterSetter(JsGetterSetter(getter, setter)); }
     JsValue pushGetterSetter(const JsGetterSetter &value);
     JsValue pushString(const JsString &str);
-    JsValue pushString(const SizedString &str);
+    JsValue pushString(const StringView &str);
     JsValue pushString(const LinkedString *str);
 
     VMScope *newScope(Scope *scope);
@@ -72,7 +72,7 @@ public:
         return _nativeFunctions[i].func;
     }
 
-    const SizedString &getNativeFunctionName(uint32_t i) {
+    const StringView &getNativeFunctionName(uint32_t i) {
         assert(i < _nativeFunctions.size());
         return _nativeFunctions[i].name;
     }
@@ -98,7 +98,7 @@ public:
         return _symbolValues[val.value.index];
     }
 
-    const SizedStringUtf16 &getStringInResourcePool(uint32_t index, bool needRandAccess = false) {
+    const StringViewUtf16 &getStringInResourcePool(uint32_t index, bool needRandAccess = false) {
         uint16_t poolIndex = getPoolIndexOfResource(index);
         uint16_t strIndex = getIndexOfResource(index);
         assert(poolIndex < _resourcePools.size());
@@ -113,7 +113,7 @@ public:
         return str;
     }
 
-    const SizedStringUtf16 &getString(const JsValue &val, bool needRandAccess = false) {
+    const StringViewUtf16 &getString(const JsValue &val, bool needRandAccess = false) {
         assert(val.type == JDT_STRING);
         if (val.isInResourcePool) {
             return getStringInResourcePool(val.value.index, needRandAccess);
@@ -130,8 +130,8 @@ public:
         }
     }
 
-    inline const SizedString &getUtf8String(const JsValue &val) { return getString(val).utf8Str(); }
-    inline const SizedStringUtf16 &getStringWithRandAccess(const JsValue &val) { return getString(val, true); }
+    inline const StringView &getUtf8String(const JsValue &val) { return getString(val).utf8Str(); }
+    inline const StringViewUtf16 &getStringWithRandAccess(const JsValue &val) { return getString(val, true); }
 
     IJsObject *getObject(const JsValue &val) {
         assert(val.type >= JDT_OBJECT);
@@ -145,11 +145,11 @@ public:
         return _getterSetters[val.value.index];
     }
 
-    uint32_t findString(const SizedString &str) {
+    uint32_t findString(const StringView &str) {
         return _rtCommon->findStringValue(str);
     }
 
-    const SizedString &getStringByIdx(uint32_t index, const ResourcePool *pool) {
+    const StringView &getStringByIdx(uint32_t index, const ResourcePool *pool) {
         if (index < _countCommonStrings) {
             return _stringValues[index].value.str.utf8Str();
         }
@@ -181,24 +181,24 @@ public:
     }
 
     void joinString(JsString &js);
-    JsValue joinSmallString(const SizedString &sz1, const SizedString &sz2);
-    JsValue plusString(const SizedString &s1, const JsValue &s2);
-    JsValue plusString(const JsValue &s1, const SizedString &s2);
+    JsValue joinSmallString(const StringView &sz1, const StringView &sz2);
+    JsValue plusString(const StringView &s1, const JsValue &s2);
+    JsValue plusString(const JsValue &s1, const StringView &s2);
     JsValue plusString(const JsValue &s1, const JsValue &s2);
 
-    inline SizedString allocString(uint32_t size) { return SizedString(new uint8_t[size], size); }
-    inline void freeString(const SizedString &s) { assert(s.data); delete [] s.data; }
-    inline void freeUtf16String(const SizedStringUtf16 &s) { assert(s.isUtf16Valid()); delete [] s.utf16Data(); }
+    inline StringView allocString(uint32_t size) { return StringView(new uint8_t[size], size); }
+    inline void freeString(const StringView &s) { assert(s.data); delete [] s.data; }
+    inline void freeUtf16String(const StringViewUtf16 &s) { assert(s.isUtf16Valid()); delete [] s.utf16Data(); }
 
     double toNumber(VMContext *ctx, const JsValue &v);
     bool toNumber(VMContext *ctx, const JsValue &v, double &out);
     JsValue toString(VMContext *ctx, const JsValue &v);
-    LockedSizedStringWrapper toSizedString(VMContext *ctx, const JsValue &v, bool isStrict = false);
-    inline LockedSizedStringWrapper toSizedStringStrictly(VMContext *ctx, const JsValue &v) {
-        return toSizedString(ctx, v, true); }
+    LockedStringViewWrapper toStringView(VMContext *ctx, const JsValue &v, bool isStrict = false);
+    inline LockedStringViewWrapper toStringViewStrictly(VMContext *ctx, const JsValue &v) {
+        return toStringView(ctx, v, true); }
     JsValue jsObjectToString(VMContext *ctx, const JsValue &obj);
     JsValue tryCallJsObjectValueOf(VMContext *ctx, const JsValue &v);
-    SizedString toTypeName(const JsValue &v);
+    StringView toTypeName(const JsValue &v);
 
     bool isEmptyString(const JsValue &v);
     uint32_t getStringLength(const JsValue &v);
@@ -257,7 +257,7 @@ public:
 
     void markJoinedStringReferIdx(const JsJoinedString &joinedString);
 
-    void convertUtf8ToUtf16(SizedStringUtf16 &str);
+    void convertUtf8ToUtf16(StringViewUtf16 &str);
 
 protected:
     VMRuntimeCommon             *_rtCommon;

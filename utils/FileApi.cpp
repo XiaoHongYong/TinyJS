@@ -62,7 +62,7 @@ bool readFile(const char *fileName, std::string &str) {
     return bRet;
 }
 
-bool writeFile(cstr_t fn, const SizedString &data) {
+bool writeFile(cstr_t fn, const StringView &data) {
     auto fp = fopen(fn, "wb");
     if (fp == nullptr) {
         return false;

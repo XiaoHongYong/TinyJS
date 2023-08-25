@@ -9,8 +9,8 @@
 #include "VirtualMachine.hpp"
 
 
-SizedString makeCommonString(const char *str) {
-    SizedString s(str, strlen(str), true);
+StringView makeCommonString(const char *str) {
+    StringView s(str, strlen(str), true);
     return s;
 }
 
@@ -51,43 +51,43 @@ uint8_t *initializeInt2StrBuf() {
 
 const uint8_t *INT_STR_BUF = initializeInt2StrBuf();
 
-SizedString intToSizedString(uint32_t n) {
+StringView intToStringView(uint32_t n) {
     if (n < 10) {
-        return SizedString(INT_STR_BUF + n, 1, COMMON_STRINGS);
+        return StringView(INT_STR_BUF + n, 1, COMMON_STRINGS);
     } else if (n < 100) {
-        return SizedString(INT_STR_BUF + INT_STR_POS_10 + (n - 10) * 2, 2, COMMON_STRINGS);
+        return StringView(INT_STR_BUF + INT_STR_POS_10 + (n - 10) * 2, 2, COMMON_STRINGS);
     } else if (n < 1000) {
-        return SizedString(INT_STR_BUF + INT_STR_POS_100 + (n - 100) * 3, 3, COMMON_STRINGS);
+        return StringView(INT_STR_BUF + INT_STR_POS_100 + (n - 100) * 3, 3, COMMON_STRINGS);
     } else {
-        return SizedString(nullptr, 0, 0);
+        return StringView(nullptr, 0, 0);
     }
 }
 
-NumberToSizedString::NumberToSizedString(uint32_t n) {
+NumberToStringView::NumberToStringView(uint32_t n) {
     set(n);
 }
 
-void NumberToSizedString::set(uint32_t n) {
-    auto ss = intToSizedString(n);
+void NumberToStringView::set(uint32_t n) {
+    auto ss = intToStringView(n);
     if (ss.len == 0) {
         len = (uint32_t)::itoa(n, (char *)_buf);
         data = _buf;
     } else {
-        *(SizedString *)this = ss;
+        *(StringView *)this = ss;
     }
 }
 
-SizedStringWrapper::SizedStringWrapper(int32_t n) {
+StringViewWrapper::StringViewWrapper(int32_t n) {
     len = (uint32_t)::itoa(n, (char *)_buf);
     data = _buf;
 }
 
-SizedStringWrapper::SizedStringWrapper(double n) {
+StringViewWrapper::StringViewWrapper(double n) {
     len = floatToString(n, (char *)_buf);
     data = _buf;
 }
 
-SizedStringWrapper::SizedStringWrapper(const JsValue &v) {
+StringViewWrapper::StringViewWrapper(const JsValue &v) {
     data = _buf;
 
     if (v.type == JDT_CHAR) {
@@ -99,33 +99,33 @@ SizedStringWrapper::SizedStringWrapper(const JsValue &v) {
     } else if (v.type == JDT_BOOL) {
         append(v.value.n32 ? SS_TRUE : SS_FALSE);
     } else if (v.type == JDT_INT32) {
-        SizedStringWrapper s2(v.value.n32);
+        StringViewWrapper s2(v.value.n32);
         append(s2.str());
     } else {
         assert(0);
     }
 }
 
-SizedStringWrapper::SizedStringWrapper(const SizedString &s) {
+StringViewWrapper::StringViewWrapper(const StringView &s) {
     data = _buf;
     len = 0;
 
     append(s);
 }
 
-SizedStringWrapper::SizedStringWrapper(const string &v) {
+StringViewWrapper::StringViewWrapper(const string &v) {
     data = _buf;
     len = min((int)v.size(), (int)CountOf(_buf));
     memcpy(_buf, v.c_str(), len);
 }
 
-SizedStringWrapper::SizedStringWrapper(const SizedStringWrapper &other) {
+StringViewWrapper::StringViewWrapper(const StringViewWrapper &other) {
     data = _buf;
     len = other.len;
     memcpy(_buf, other._buf, other.len);
 }
 
-SizedStringWrapper &SizedStringWrapper::operator =(const SizedStringWrapper &other) {
+StringViewWrapper &StringViewWrapper::operator =(const StringViewWrapper &other) {
     data = _buf;
     len = other.len;
     memcpy(_buf, other._buf, other.len);
@@ -133,12 +133,12 @@ SizedStringWrapper &SizedStringWrapper::operator =(const SizedStringWrapper &oth
     return *this;
 }
 
-void SizedStringWrapper::clear() {
+void StringViewWrapper::clear() {
     len = 0;
     data = _buf;
 }
 
-bool SizedStringWrapper::append(const JsValue &v) {
+bool StringViewWrapper::append(const JsValue &v) {
     if (v.type == JDT_CHAR) {
         if (len + utf32CodeToUtf8Length(v.value.n32) < CountOf(_buf)) {
             len += utf32CodeToUtf8(v.value.n32, _buf + len);
@@ -154,7 +154,7 @@ bool SizedStringWrapper::append(const JsValue &v) {
     } else if (v.type == JDT_BOOL) {
         return append(v.value.n32 ? SS_TRUE : SS_FALSE);
     } else if (v.type == JDT_INT32) {
-        SizedStringWrapper s2(v.value.n32);
+        StringViewWrapper s2(v.value.n32);
         return append(s2.str());
     } else {
         assert(0);
@@ -163,7 +163,7 @@ bool SizedStringWrapper::append(const JsValue &v) {
     return false;
 }
 
-bool SizedStringWrapper::append(const SizedString &s) {
+bool StringViewWrapper::append(const StringView &s) {
     if (len + s.len < CountOf(_buf)) {
         memcpy(_buf + len, s.data, s.len);
         len += s.len;
@@ -174,7 +174,7 @@ bool SizedStringWrapper::append(const SizedString &s) {
     }
 }
 
-bool SizedStringWrapper::append(double v) {
+bool StringViewWrapper::append(double v) {
     if (len + 32 < CountOf(_buf)) {
         len += floatToString(v, (char *)_buf + len);
         return true;
@@ -184,7 +184,7 @@ bool SizedStringWrapper::append(double v) {
     }
 }
 
-bool SizedStringWrapper::append(uint32_t n) {
+bool StringViewWrapper::append(uint32_t n) {
     if (len + 12 < CountOf(_buf)) {
         len += (uint32_t)::itoa(n, (char *)_buf + len);
         return true;
@@ -194,7 +194,7 @@ bool SizedStringWrapper::append(uint32_t n) {
     return false;
 }
 
-bool SizedStringWrapper::append(int32_t n) {
+bool StringViewWrapper::append(int32_t n) {
     if (len + 12 < CountOf(_buf)) {
         len += (uint32_t)::itoa(n, (char *)_buf + len);
         return true;
@@ -205,62 +205,62 @@ bool SizedStringWrapper::append(int32_t n) {
 }
 
 
-LockedSizedStringWrapper::LockedSizedStringWrapper(int32_t n) {
-    auto ss = intToSizedString(n);
+LockedStringViewWrapper::LockedStringViewWrapper(int32_t n) {
+    auto ss = intToStringView(n);
     if (ss.len == 0) {
         len = (uint32_t)::itoa(n, (char *)_buf);
         data = _buf;
     } else {
-        *(SizedString *)this = ss;
+        *(StringView *)this = ss;
     }
 }
 
-LockedSizedStringWrapper::LockedSizedStringWrapper(double n) {
+LockedStringViewWrapper::LockedStringViewWrapper(double n) {
     len = floatToString(n, (char *)_buf);
     data = _buf;
 }
 
-LockedSizedStringWrapper::LockedSizedStringWrapper(const JsValue &v) {
+LockedStringViewWrapper::LockedStringViewWrapper(const JsValue &v) {
     data = _buf;
 
     if (v.type == JDT_CHAR) {
         len = utf32CodeToUtf8(v.value.n32, data);
     } else if (v.type == JDT_UNDEFINED) {
-        *(SizedString *)this = SS_UNDEFINED;
+        *(StringView *)this = SS_UNDEFINED;
     } else if (v.type == JDT_NULL) {
-        *(SizedString *)this = SS_NULL;
+        *(StringView *)this = SS_NULL;
     } else if (v.type == JDT_BOOL) {
-        *(SizedString *)this = v.value.n32 ? SS_TRUE : SS_FALSE;
+        *(StringView *)this = v.value.n32 ? SS_TRUE : SS_FALSE;
     } else if (v.type == JDT_INT32) {
         auto n = v.value.index;
-        auto ss = intToSizedString(n);
+        auto ss = intToStringView(n);
         if (ss.len == 0) {
             len = (uint32_t)::itoa(n, (char *)_buf);
             data = _buf;
         } else {
-            *(SizedString *)this = ss;
+            *(StringView *)this = ss;
         }
     } else {
         assert(0);
     }
 }
 
-LockedSizedStringWrapper::LockedSizedStringWrapper(const string &v) {
+LockedStringViewWrapper::LockedStringViewWrapper(const string &v) {
     data = _buf;
     len = min((int)v.size(), (int)CountOf(_buf));
     memcpy(_buf, v.c_str(), len);
 }
 
-void LockedSizedStringWrapper::clear() {
+void LockedStringViewWrapper::clear() {
     len = 0;
     data = _buf;
 }
 
-void LockedSizedStringWrapper::reset(const SizedString &s) {
-    *(SizedString *)this = s;
+void LockedStringViewWrapper::reset(const StringView &s) {
+    *(StringView *)this = s;
 }
 
-LockedSizedStringWrapper::LockedSizedStringWrapper(const LockedSizedStringWrapper &other) {
+LockedStringViewWrapper::LockedStringViewWrapper(const LockedStringViewWrapper &other) {
     len = other.len;
     if (other.data == other._buf) {
         memcpy(_buf, other._buf, other.len);
@@ -273,7 +273,7 @@ LockedSizedStringWrapper::LockedSizedStringWrapper(const LockedSizedStringWrappe
     }
 }
 
-LockedSizedStringWrapper &LockedSizedStringWrapper::operator =(const LockedSizedStringWrapper &other) {
+LockedStringViewWrapper &LockedStringViewWrapper::operator =(const LockedStringViewWrapper &other) {
     len = other.len;
     if (other.data == other._buf) {
         memcpy(_buf, other._buf, other.len);

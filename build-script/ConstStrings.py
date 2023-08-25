@@ -128,8 +128,8 @@ def build():
             raise Exception('{} exists already in const string: CONST_STRINGS'.format(name))
         names.add(upper_name)
 
-        EXTERN_SS_XXS.append('extern SizedString SS_{};'.format(upper_name));
-        SS_XXS.append('SizedString SS_{} = makeCommonString("{}");'.format(upper_name, value));
+        EXTERN_SS_XXS.append('extern StringView SS_{};'.format(upper_name));
+        SS_XXS.append('StringView SS_{} = makeCommonString("{}");'.format(upper_name, value));
         enum_jsStringValueIndices.append('    JS_STRING_IDX_{},'.format(upper_name));
         jsStringValues.append('const JsValue jsStringValue{} = JsValue(JDT_STRING, JS_STRING_IDX_{});'.format(name, upper_name))
 

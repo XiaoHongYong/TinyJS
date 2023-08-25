@@ -13,7 +13,7 @@
 #include "utils/unittest.h"
 
 
-SizedString makeParseNumberString(const char *str) {
+StringView makeParseNumberString(const char *str) {
     static uint8_t buf[256];
     size_t len = strlen(str);
     memcpy(buf, str, len);
@@ -21,11 +21,11 @@ SizedString makeParseNumberString(const char *str) {
     buf[len + 1] = '0';
     buf[len + 2] = '2';
 
-    return SizedString(buf, len);
+    return StringView(buf, len);
 }
 
 TEST(JsLexer, parserNumber) {
-    SizedString str;
+    StringView str;
     double v;
     uint8_t *p;
 

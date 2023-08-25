@@ -58,7 +58,7 @@ void stringFromCodePoint(VMContext *ctx, const JsValue &thiz, const Arguments &a
         if (code == (uint32_t)code && code <= 0x10FFFF) {
             utf32CodeToUtf8((uint32_t)code, str);
         } else {
-            SizedStringWrapper str(code);
+            StringViewWrapper str(code);
             ctx->throwException(JE_RANGE_ERROR, "Invalid code point %.*s", str.len, str.data);
             return;
         }
@@ -223,7 +223,7 @@ void stringPrototypeEndsWith(VMContext *ctx, const JsValue &thiz, const Argument
         return;
     }
 
-    auto s = runtime->toSizedString(ctx, strVal);
+    auto s = runtime->toStringView(ctx, strVal);
     auto with = args.getStringAt(ctx, 0, SS_UNDEFINED);
     if (ctx->error != JE_OK) {
         return;
@@ -267,7 +267,7 @@ void stringPrototypeIncludes(VMContext *ctx, const JsValue &thiz, const Argument
         return;
     }
 
-    auto s = runtime->toSizedString(ctx, strVal);
+    auto s = runtime->toStringView(ctx, strVal);
     auto p = args.getStringAt(ctx, 0, SS_UNDEFINED);
     if (ctx->error != JE_OK) {
         return;
@@ -291,8 +291,8 @@ void stringPrototypeIndexOf(VMContext *ctx, const JsValue &thiz, const Arguments
     }
 
     // 转换为 utf16 的 string
-    SizedStringWrapper tmp;
-    SizedStringUtf16 s;
+    StringViewWrapper tmp;
+    StringViewUtf16 s;
     if (strVal.type == JDT_CHAR) {
         tmp.append(strVal);
         s.set(tmp);
@@ -318,8 +318,8 @@ void stringPrototypeLastIndexOf(VMContext *ctx, const JsValue &thiz, const Argum
     auto p = args.getStringAt(ctx, 0, SS_UNDEFINED);
 
     // 转换为 utf16 的 string
-    SizedStringWrapper tmp;
-    SizedStringUtf16 s;
+    StringViewWrapper tmp;
+    StringViewUtf16 s;
     if (strVal.type == JDT_CHAR) {
         tmp.append(strVal);
         s.set(tmp);
@@ -343,7 +343,7 @@ void stringPrototypeLocaleCompare(VMContext *ctx, const JsValue &thiz, const Arg
     ctx->retValue = strVal;
 }
 
-inline JsValue regexMatch(VMContext *ctx, VMRuntime *runtime, std::regex &re, uint32_t flags, const SizedString &str, const JsValue &strVal) {
+inline JsValue regexMatch(VMContext *ctx, VMRuntime *runtime, std::regex &re, uint32_t flags, const StringView &str, const JsValue &strVal) {
     JsValue ret = jsValueNull;
 
     if (flags & RegexpFlags::RF_GLOBAL_SEARCH) {
@@ -387,7 +387,7 @@ void stringPrototypeMatch(VMContext *ctx, const JsValue &thiz, const Arguments &
         return;
     }
 
-    auto str = runtime->toSizedString(ctx, strVal);
+    auto str = runtime->toStringView(ctx, strVal);
 
     auto pattern = args.getAt(0, jsStringValueEmpty);
     if (pattern.type == JDT_REGEX) {
@@ -401,7 +401,7 @@ void stringPrototypeMatch(VMContext *ctx, const JsValue &thiz, const Arguments &
             pattern = jsStringValueEmpty;
         }
 
-        auto strRe = runtime->toSizedStringStrictly(ctx, pattern);
+        auto strRe = runtime->toStringViewStrictly(ctx, pattern);
         auto flags = std::regex::flag_type::ECMAScript;
         std::regex re((cstr_t)strRe.data, strRe.len, flags);
 
@@ -411,7 +411,7 @@ void stringPrototypeMatch(VMContext *ctx, const JsValue &thiz, const Arguments &
 
 class StringMatchAllIterator : public IJsIterator {
 public:
-    StringMatchAllIterator(VMContext *ctx, std::regex &re, uint32_t flags, const SizedString &str, const JsValue &strVal) : IJsIterator(false, false), _ctx(ctx), _re(re), _flags(flags), _strBegin(str.data), _strEnd(str.data + str.len), _strVal(strVal), _offset(0)
+    StringMatchAllIterator(VMContext *ctx, std::regex &re, uint32_t flags, const StringView &str, const JsValue &strVal) : IJsIterator(false, false), _ctx(ctx), _re(re), _flags(flags), _strBegin(str.data), _strEnd(str.data + str.len), _strVal(strVal), _offset(0)
     {
         _isOfIterable = true;
     }
@@ -423,7 +423,7 @@ public:
         if (std::regex_search((cstr_t)_strBegin, (cstr_t)_strEnd, matches, _re)) {
             auto arr = new JsArray();
             auto ret = runtime->pushObject(arr);
-            SizedString str(_strBegin, uint32_t(_strEnd - _strBegin));
+            StringView str(_strBegin, uint32_t(_strEnd - _strBegin));
 
             for (auto &m : matches) {
                 arr->push(_ctx, runtime->pushString(str.substr(m.first, m.second)));
@@ -445,7 +445,7 @@ public:
         return false;
     }
 
-    virtual bool next(SizedString *strKeyOut = nullptr, JsValue *keyOut = nullptr, JsValue *valueOut = nullptr) override {
+    virtual bool next(StringView *strKeyOut = nullptr, JsValue *keyOut = nullptr, JsValue *valueOut = nullptr) override {
         return false;
     }
 
@@ -473,7 +473,7 @@ void stringPrototypeMatchAll(VMContext *ctx, const JsValue &thiz, const Argument
         return;
     }
 
-    auto str = runtime->toSizedString(ctx, strVal);
+    auto str = runtime->toStringView(ctx, strVal);
 
     auto pattern = args.getAt(0, jsStringValueEmpty);
     if (pattern.type == JDT_REGEX) {
@@ -491,7 +491,7 @@ void stringPrototypeMatchAll(VMContext *ctx, const JsValue &thiz, const Argument
             pattern = jsStringValueEmpty;
         }
 
-        auto strRe = runtime->toSizedStringStrictly(ctx, pattern);
+        auto strRe = runtime->toStringViewStrictly(ctx, pattern);
         auto flags = std::regex::flag_type::ECMAScript;
         std::regex re((cstr_t)strRe.data, strRe.len, flags);
 
@@ -517,7 +517,7 @@ void stringPrototypePadEnd(VMContext *ctx, const JsValue &thiz, const Arguments 
         return;
     }
 
-    auto str = runtime->toSizedString(ctx, strVal);
+    auto str = runtime->toStringView(ctx, strVal);
     auto lenVal = args.getAt(0);
     auto len = runtime->toNumber(ctx, lenVal);
     if (str.len >= len || isnan(len) || ctx->error != JE_OK) {
@@ -535,7 +535,7 @@ void stringPrototypePadEnd(VMContext *ctx, const JsValue &thiz, const Arguments 
         pad = makeJsValueChar(' ');
     }
 
-    auto sPad = runtime->toSizedStringStrictly(ctx, pad);
+    auto sPad = runtime->toStringViewStrictly(ctx, pad);
     if (sPad.len == 0) {
         ctx->retValue = strVal;
         return;
@@ -565,7 +565,7 @@ void stringPrototypePadStart(VMContext *ctx, const JsValue &thiz, const Argument
     }
 
     auto runtime = ctx->runtime;
-    auto str = runtime->toSizedString(ctx, strVal);
+    auto str = runtime->toStringView(ctx, strVal);
     auto lenVal = args.getAt(0);
     auto len = runtime->toNumber(ctx, lenVal);
     if (str.len >= len || isnan(len) || ctx->error != JE_OK) {
@@ -583,7 +583,7 @@ void stringPrototypePadStart(VMContext *ctx, const JsValue &thiz, const Argument
         pad = makeJsValueChar(' ');
     }
 
-    auto sPad = runtime->toSizedStringStrictly(ctx, pad);
+    auto sPad = runtime->toStringViewStrictly(ctx, pad);
     if (sPad.len == 0) {
         ctx->retValue = strVal;
         return;
@@ -614,7 +614,7 @@ void stringPrototypeRepeat(VMContext *ctx, const JsValue &thiz, const Arguments 
     }
 
     auto runtime = ctx->runtime;
-    auto str = runtime->toSizedString(ctx, strVal);
+    auto str = runtime->toStringView(ctx, strVal);
     auto countVal = args.getAt(0);
     auto count = runtime->toNumber(ctx, countVal);
     if (isinf(count) || count < 0) {
@@ -643,7 +643,7 @@ void stringPrototypeRepeat(VMContext *ctx, const JsValue &thiz, const Arguments 
     }
 }
 
-void doStringReplaceWithFunction(VMContext *ctx, const SizedString &str, const JsValue &strVal, uint32_t matchBegin, uint32_t matchEnd, const std::cmatch &matches, const JsValue &replacementFunc, string &out, uint32_t offset) {
+void doStringReplaceWithFunction(VMContext *ctx, const StringView &str, const JsValue &strVal, uint32_t matchBegin, uint32_t matchEnd, const std::cmatch &matches, const JsValue &replacementFunc, string &out, uint32_t offset) {
 
     assert(replacementFunc.type == JDT_FUNCTION);
 
@@ -665,11 +665,11 @@ void doStringReplaceWithFunction(VMContext *ctx, const SizedString &str, const J
         return;
     }
 
-    auto s = runtime->toSizedString(ctx, ctx->retValue);
+    auto s = runtime->toStringView(ctx, ctx->retValue);
     out.append((cstr_t)s.data, s.len);
 }
 
-void doStringReplaceWithString(VMContext *ctx, const SizedString &str, uint32_t matchBegin, uint32_t matchEnd, const std::cmatch &matches, const SizedString &replacement, string &out) {
+void doStringReplaceWithString(VMContext *ctx, const StringView &str, uint32_t matchBegin, uint32_t matchEnd, const std::cmatch &matches, const StringView &replacement, string &out) {
 
     auto p = replacement.data, end = p + replacement.len;
 
@@ -727,14 +727,14 @@ public:
             regexp = (JsRegExp *)ctx->runtime->getObject(patternVal);
         } else {
             regexp = nullptr;
-            pattern = ctx->runtime->toSizedStringStrictly(ctx, patternVal);
+            pattern = ctx->runtime->toStringViewStrictly(ctx, patternVal);
             if (ctx->error != JE_OK) {
                 return;
             }
         }
     }
 
-    virtual bool search(const SizedString &str, uint32_t &matchBegin, uint32_t &matchEnd, std::cmatch &matches) {
+    virtual bool search(const StringView &str, uint32_t &matchBegin, uint32_t &matchEnd, std::cmatch &matches) {
         if (regexp) {
             if (std::regex_search((cstr_t)str.data, (cstr_t)str.data + str.len, matches, regexp->getRegexp())) {
                 auto &m0 = matches[0];
@@ -759,7 +759,7 @@ public:
     }
 
 public:
-    LockedSizedStringWrapper    pattern;
+    LockedStringViewWrapper    pattern;
     JsRegExp                    *regexp;
 
 };
@@ -771,7 +771,7 @@ void stringPrototypeReplace(VMContext *ctx, const JsValue &thiz, const Arguments
     }
 
     auto runtime = ctx->runtime;
-    auto str = runtime->toSizedString(ctx, strVal);
+    auto str = runtime->toStringView(ctx, strVal);
     auto replacementVal = args.getAt(1, jsValueUndefined);
 
     StringSearch pattern(ctx, args.getAt(0));
@@ -785,7 +785,7 @@ void stringPrototypeReplace(VMContext *ctx, const JsValue &thiz, const Arguments
             auto offset = utf8ToUtf16Length(str.data, matchBegin);
             doStringReplaceWithFunction(ctx, str, strVal, matchBegin, matchEnd, matches, replacementVal, ret, offset);
         } else {
-            auto replacement = runtime->toSizedStringStrictly(ctx, replacementVal);
+            auto replacement = runtime->toStringViewStrictly(ctx, replacementVal);
             if (ctx->error != JE_OK) {
                 return;
             }
@@ -793,7 +793,7 @@ void stringPrototypeReplace(VMContext *ctx, const JsValue &thiz, const Arguments
         }
 
         ret.append((cstr_t)str.data + matchEnd, str.len - matchEnd);
-        ctx->retValue = runtime->pushString(SizedString(ret));
+        ctx->retValue = runtime->pushString(StringView(ret));
     } else {
         // 找不到
         ctx->retValue = strVal;
@@ -815,12 +815,12 @@ void stringPrototypeReplaceAll(VMContext *ctx, const JsValue &thiz, const Argume
         }
     }
 
-    auto str = runtime->toSizedString(ctx, strVal);
+    auto str = runtime->toStringView(ctx, strVal);
     auto replacementVal = args.getAt(1, jsValueUndefined);
 
-    LockedSizedStringWrapper replacement;
+    LockedStringViewWrapper replacement;
     if (replacementVal.type != JDT_FUNCTION) {
-        replacement = runtime->toSizedStringStrictly(ctx, replacementVal);
+        replacement = runtime->toStringViewStrictly(ctx, replacementVal);
         if (ctx->error != JE_OK) {
             return;
         }
@@ -834,7 +834,7 @@ void stringPrototypeReplaceAll(VMContext *ctx, const JsValue &thiz, const Argume
     while (p < strEnd) {
         uint32_t matchBegin, matchEnd;
         std::cmatch matches;
-        SizedString remain = SizedString(p, uint32_t(strEnd - p));
+        StringView remain = StringView(p, uint32_t(strEnd - p));
 
         if (pattern.search(remain, matchBegin, matchEnd, matches)) {
             ret.append((cstr_t)remain.data, matchBegin);
@@ -855,13 +855,13 @@ void stringPrototypeReplaceAll(VMContext *ctx, const JsValue &thiz, const Argume
 
     if (replaced) {
         ret.append((cstr_t)p, uint32_t(strEnd - p));
-        ctx->retValue = runtime->pushString(SizedString(ret));
+        ctx->retValue = runtime->pushString(StringView(ret));
     } else {
         ctx->retValue = strVal;
     }
 }
 
-inline void regexSearch(VMContext *ctx, std::regex &re, const SizedString &str) {
+inline void regexSearch(VMContext *ctx, std::regex &re, const StringView &str) {
     std::cmatch matches;
     if (std::regex_search((cstr_t)str.data, (cstr_t)str.data + str.len, matches, re)) {
         ctx->retValue = makeJsValueInt32(utf8ToUtf16Length(str.data, (uint32_t)(matches[0].first - (cstr_t)str.data)));
@@ -877,7 +877,7 @@ void stringPrototypeSearch(VMContext *ctx, const JsValue &thiz, const Arguments 
     }
 
     auto runtime = ctx->runtime;
-    auto str = runtime->toSizedString(ctx, strVal);
+    auto str = runtime->toStringView(ctx, strVal);
 
     auto pattern = args.getAt(0, jsStringValueEmpty);
     if (pattern.type == JDT_REGEX) {
@@ -890,7 +890,7 @@ void stringPrototypeSearch(VMContext *ctx, const JsValue &thiz, const Arguments 
             pattern = jsStringValueEmpty;
         }
 
-        auto strRe = runtime->toSizedStringStrictly(ctx, pattern);
+        auto strRe = runtime->toStringViewStrictly(ctx, pattern);
         std::regex re((cstr_t)strRe.data, strRe.len, std::regex::flag_type::ECMAScript);
 
         regexSearch(ctx, re, str);
@@ -958,7 +958,7 @@ void stringPrototypeSplit(VMContext *ctx, const JsValue &thiz, const Arguments &
         return;
     }
 
-    auto str = runtime->toSizedString(ctx, strVal);
+    auto str = runtime->toStringView(ctx, strVal);
 
     if (sep.type == JDT_REGEX) {
         auto regexp = (JsRegExp *)runtime->getObject(sep);
@@ -980,7 +980,7 @@ void stringPrototypeSplit(VMContext *ctx, const JsValue &thiz, const Arguments &
             str.len -= pos;
         }
     } else {
-        auto sepStr = runtime->toSizedStringStrictly(ctx, sep);
+        auto sepStr = runtime->toStringViewStrictly(ctx, sep);
         if (sepStr.len == 0) {
             // 分为 utf-16 的字符串数组
             vector<utf16_t> u16s;
@@ -1021,7 +1021,7 @@ void stringPrototypeStartsWith(VMContext *ctx, const JsValue &thiz, const Argume
     auto with = args.getStringAt(ctx, 0, SS_UNDEFINED);
     auto start = args.getIntAt(ctx, 0, 0);
     if (start <= 0) {
-        auto str = runtime->toSizedString(ctx, strVal);
+        auto str = runtime->toStringView(ctx, strVal);
         ctx->retValue = makeJsValueBool(str.startsWith(with));
         return;
     }
@@ -1035,7 +1035,7 @@ void stringPrototypeStartsWith(VMContext *ctx, const JsValue &thiz, const Argume
     auto &su8 = str.utf8Str();
     auto p = utf8ToUtf16Seek(su8.data, su8.len, start);
 
-    ctx->retValue = makeJsValueBool(SizedString(p, uint32_t(su8.data + su8.len - p)).startsWith(with));
+    ctx->retValue = makeJsValueBool(StringView(p, uint32_t(su8.data + su8.len - p)).startsWith(with));
 }
 
 void stringPrototypeSubstr(VMContext *ctx, const JsValue &thiz, const Arguments &args) {
@@ -1225,7 +1225,7 @@ void stringPrototypeTrimEnd(VMContext *ctx, const JsValue &thiz, const Arguments
     auto runtime = ctx->runtime;
     auto &orgStr = runtime->getString(strVal).utf8Str();
     auto str = orgStr;
-    str.trimEnd(sizedStringBlanks);
+    str.trimEnd(stringViewBlanks);
     if (str.len != orgStr.len) {
         ctx->retValue = runtime->pushString(str);
     } else {
@@ -1251,7 +1251,7 @@ void stringPrototypeTrimStart(VMContext *ctx, const JsValue &thiz, const Argumen
     auto runtime = ctx->runtime;
     auto &orgStr = runtime->getString(strVal).utf8Str();
     auto str = orgStr;
-    str.trimStart(sizedStringBlanks);
+    str.trimStart(stringViewBlanks);
     if (str.len != orgStr.len) {
         ctx->retValue = runtime->pushString(str);
     } else {
@@ -1330,7 +1330,7 @@ static JsLibProperty stringPrototypeFunctions[] = {
 
 class StringPrototypeObject : public JsLibObject {
 public:
-    JsValue *getRawByName(VMContext *ctx, const SizedString &name, bool includeProtoProp) {
+    JsValue *getRawByName(VMContext *ctx, const StringView &name, bool includeProtoProp) {
         if (name.len > 0 && isDigit(name.data[0])) {
             bool successful = false;
             auto n = name.atoi(successful);

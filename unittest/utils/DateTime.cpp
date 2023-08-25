@@ -1,5 +1,5 @@
 //
-//  SizedString.cpp
+//  StringView.cpp
 //  TinyJS
 //
 //  Created by henry_xiao on 2022/8/1.

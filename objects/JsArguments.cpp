@@ -40,7 +40,7 @@ public:
         return true;
     }
 
-    virtual bool next(SizedString *strKeyOut = nullptr, JsValue *keyOut = nullptr, JsValue *valueOut = nullptr) override {
+    virtual bool next(StringView *strKeyOut = nullptr, JsValue *keyOut = nullptr, JsValue *valueOut = nullptr) override {
         if (_pos >= _len()) {
             if (_includeProtoProp) {
                 if (_itObj == nullptr) {
@@ -75,7 +75,7 @@ protected:
     VMContext                       *_ctx;
     JsArguments                     *_args;
     uint32_t                        _pos;
-    NumberToSizedString             _keyBuf;
+    NumberToStringView             _keyBuf;
 
     IJsIterator                     *_itObj;
 
@@ -95,7 +95,7 @@ JsArguments::~JsArguments() {
     if (_argsDescriptors) delete _argsDescriptors;
 }
 
-void JsArguments::setPropertyByName(VMContext *ctx, const SizedString &name, const JsValue &descriptor) {
+void JsArguments::setPropertyByName(VMContext *ctx, const StringView &name, const JsValue &descriptor) {
     if (name.len > 0 && isDigit(name.data[0])) {
         bool successful = false;
         auto n = name.atoi(successful);
@@ -119,7 +119,7 @@ void JsArguments::setPropertyByName(VMContext *ctx, const SizedString &name, con
 
 void JsArguments::setPropertyByIndex(VMContext *ctx, uint32_t index, const JsValue &descriptor) {
     if (index >= _args->count) {
-        NumberToSizedString ss(index);
+        NumberToStringView ss(index);
         setPropertyByName(ctx, ss, descriptor);
         return;
     }
@@ -145,7 +145,7 @@ void JsArguments::setPropertyBySymbol(VMContext *ctx, uint32_t index, const JsVa
     _obj->setPropertyBySymbol(ctx, index, descriptor);
 }
 
-JsError JsArguments::setByName(VMContext *ctx, const JsValue &thiz, const SizedString &name, const JsValue &value) {
+JsError JsArguments::setByName(VMContext *ctx, const JsValue &thiz, const StringView &name, const JsValue &value) {
     if (name.len > 0 && isDigit(name.data[0])) {
         bool successful = false;
         auto n = name.atoi(successful);
@@ -166,7 +166,7 @@ JsError JsArguments::setByName(VMContext *ctx, const JsValue &thiz, const SizedS
 
 JsError JsArguments::setByIndex(VMContext *ctx, const JsValue &thiz, uint32_t index, const JsValue &value) {
     if (index >= _args->count) {
-        NumberToSizedString name(index);
+        NumberToStringView name(index);
         return setByName(ctx, thiz, name, value);
     }
 
@@ -191,7 +191,7 @@ JsError JsArguments::setBySymbol(VMContext *ctx, const JsValue &thiz, uint32_t i
     return _obj->setBySymbol(ctx, thiz, index, value);
 }
 
-JsValue JsArguments::increaseByName(VMContext *ctx, const JsValue &thiz, const SizedString &name, int n, bool isPost) {
+JsValue JsArguments::increaseByName(VMContext *ctx, const JsValue &thiz, const StringView &name, int n, bool isPost) {
     if (name.len > 0 && isDigit(name.data[0])) {
         bool successful = false;
         auto index = name.atoi(successful);
@@ -212,7 +212,7 @@ JsValue JsArguments::increaseByName(VMContext *ctx, const JsValue &thiz, const S
 
 JsValue JsArguments::increaseByIndex(VMContext *ctx, const JsValue &thiz, uint32_t index, int n, bool isPost) {
     if (index >= _args->count) {
-        NumberToSizedString name(index);
+        NumberToStringView name(index);
         return increaseByName(ctx, thiz, name, n, isPost);
     }
 
@@ -237,7 +237,7 @@ JsValue JsArguments::increaseBySymbol(VMContext *ctx, const JsValue &thiz, uint3
     return _obj->increaseBySymbol(ctx, thiz, index, n, isPost);
 }
 
-JsValue *JsArguments::getRawByName(VMContext *ctx, const SizedString &name, bool includeProtoProp) {
+JsValue *JsArguments::getRawByName(VMContext *ctx, const StringView &name, bool includeProtoProp) {
     if (name.len > 0 && isDigit(name.data[0])) {
         bool successful = false;
         auto n = name.atoi(successful);
@@ -264,7 +264,7 @@ JsValue *JsArguments::getRawByName(VMContext *ctx, const SizedString &name, bool
 
 JsValue *JsArguments::getRawByIndex(VMContext *ctx, uint32_t index, bool includeProtoProp) {
     if (index >= _args->count) {
-        NumberToSizedString name(index);
+        NumberToStringView name(index);
         return getRawByName(ctx, name, includeProtoProp);
     }
 
@@ -286,7 +286,7 @@ JsValue *JsArguments::getRawBySymbol(VMContext *ctx, uint32_t index, bool includ
     return nullptr;
 }
 
-bool JsArguments::removeByName(VMContext *ctx, const SizedString &name) {
+bool JsArguments::removeByName(VMContext *ctx, const StringView &name) {
     if (_obj) {
         return _obj->removeByName(ctx, name);
     }
@@ -296,7 +296,7 @@ bool JsArguments::removeByName(VMContext *ctx, const SizedString &name) {
 
 bool JsArguments::removeByIndex(VMContext *ctx, uint32_t index) {
     if (index >= _args->count) {
-        NumberToSizedString name(index);
+        NumberToStringView name(index);
         return removeByName(ctx, name);
     }
 

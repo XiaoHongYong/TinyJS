@@ -1,5 +1,5 @@
 //
-//  SizedString.cpp
+//  StringView.cpp
 //  TinyJS
 //
 //  Created by henry_xiao on 2022/8/1.
@@ -13,26 +13,26 @@
 #include "utils/unittest.h"
 
 
-TEST(SizedString, strstr) {
+TEST(StringView, strstr) {
     cstr_t input;
 
     {
         input = "";
-        SizedString s(input);
+        StringView s(input);
         ASSERT_EQ(s.strstr(""), 0);
         ASSERT_EQ(s.strstr("", -1), 0);
     }
 
     {
         input = "";
-        SizedString s(input);
+        StringView s(input);
         ASSERT_EQ(s.strstr("abc"), -1);
         ASSERT_EQ(s.strstr("abc", -1), -1);
     }
 
     {
         input = "abcbc";
-        SizedString s(input);
+        StringView s(input);
         ASSERT_EQ(s.strstr("c"), 2);
         ASSERT_EQ(s.strstr("c", 4), 4);
         ASSERT_EQ(s.strstr("c", 3), 4);
@@ -52,26 +52,26 @@ TEST(SizedString, strstr) {
     }
 }
 
-TEST(SizedString, strrstr) {
+TEST(StringView, strrstr) {
     cstr_t input;
 
     {
         input = "";
-        SizedString s(input);
+        StringView s(input);
         ASSERT_EQ(s.strrstr(""), 0);
         ASSERT_EQ(s.strrstr("", -1), 0);
     }
 
     {
         input = "";
-        SizedString s(input);
+        StringView s(input);
         ASSERT_EQ(s.strrstr("abc"), -1);
         ASSERT_EQ(s.strrstr("abc", -1), -1);
     }
 
     {
         input = "abcbc";
-        SizedString s(input);
+        StringView s(input);
         ASSERT_EQ(s.strrstr("c"), 4);
         ASSERT_EQ(s.strrstr("c", 4), 4);
         ASSERT_EQ(s.strrstr("c", 3), 2);

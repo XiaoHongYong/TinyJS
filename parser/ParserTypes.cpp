@@ -31,7 +31,7 @@ const char *varStorageTypeToString(VarStorageType type) {
 /**
  * 将 str 中内容的每一行自动插入 indent.
  */
-void writeIndent(BinaryOutputStream &stream, SizedString str, const SizedString &indent) {
+void writeIndent(BinaryOutputStream &stream, StringView str, const StringView &indent) {
     while (str.len) {
         size_t n;
         const uint8_t *p = str.strlchr('\n');
@@ -93,7 +93,7 @@ void Scope::dump(BinaryOutputStream &stream) {
     stream.write("Variables: \n");
     for (auto &item : varDeclares) {
         item.second->dump(os);
-        writeIndent(stream, os.sizedStringStartNew(), SizedString("  "));
+        writeIndent(stream, os.stringViewStartNew(), StringView("  "));
     }
     stream.write("\n");
 
@@ -113,7 +113,7 @@ void Scope::dump(BinaryOutputStream &stream) {
         // Dump 同一函数的 child
         stream.write("Child scope:\n");
         child->dump(os);
-        writeIndent(stream, os.sizedStringStartNew(), SizedString("  "));
+        writeIndent(stream, os.stringViewStartNew(), StringView("  "));
     }
 
     if (sibling) {
@@ -121,7 +121,7 @@ void Scope::dump(BinaryOutputStream &stream) {
     }
 }
 
-IdentifierDeclare *Scope::addVarDeclaration(const SizedString &nameStr, bool isConst, bool isScopeVar) {
+IdentifierDeclare *Scope::addVarDeclaration(const StringView &nameStr, bool isConst, bool isScopeVar) {
     auto it = varDeclares.find(nameStr);
     if (it == varDeclares.end()) {
         auto &pool = function->resourcePool->pool;
@@ -141,7 +141,7 @@ IdentifierDeclare *Scope::addVarDeclaration(const SizedString &nameStr, bool isC
     }
 }
 
-void Scope::addArgumentDeclaration(const SizedString &name, int index) {
+void Scope::addArgumentDeclaration(const StringView &name, int index) {
     assert(isFunctionScope);
     assert(index + 1 > countArguments);
 
@@ -184,7 +184,7 @@ void Scope::addImplicitVarDeclaration(JsExprIdentifier *id) {
 void Scope::addFunctionDeclaration(const Token &name, Function *child) {
     IdentifierDeclare *declare = nullptr;
     auto functionScope = function->scope;
-    auto it = functionScope->varDeclares.find(tokenToSizedString(name));
+    auto it = functionScope->varDeclares.find(tokenToStringView(name));
     if (it != functionScope->varDeclares.end()) {
         declare = (*it).second;
         if (declare->varStorageType == VST_ARGUMENT) {
@@ -265,7 +265,7 @@ void Scope::addVarReference(JsExprIdentifier *id) {
     }
 }
 
-IdentifierDeclare::IdentifierDeclare(const SizedString &name, Scope *scope) : name(name), scope(scope) {
+IdentifierDeclare::IdentifierDeclare(const StringView &name, Scope *scope) : name(name), scope(scope) {
     isConst = 0;
     isScopeVar = 0;
     isImplicitDeclaration = 0;
@@ -396,14 +396,14 @@ void Function::dump(BinaryOutputStream &stream) {
     stream.write("Children scopes:\n");
     BinaryOutputStream os;
     scope->dump(os);
-    writeIndent(stream, os.sizedStringStartNew(), SizedString("  "));
+    writeIndent(stream, os.stringViewStartNew(), StringView("  "));
 
     stream.write("\nChildren functions:\n");
     for (auto f : functions) {
         f->dump(os);
 
         stream.writeFormat("  ------- Child function: %d, %llx -------\n", f->index, f);
-        writeIndent(stream, os.sizedStringStartNew(), SizedString("  "));
+        writeIndent(stream, os.stringViewStartNew(), StringView("  "));
     }
 }
 
@@ -420,14 +420,14 @@ ResourcePool::~ResourcePool() {
     free();
 }
 
-void ResourcePool::addRegexp(Token &token, const SizedString &str, uint32_t flags) {
+void ResourcePool::addRegexp(Token &token, const StringView &str, uint32_t flags) {
     token.param.index = (uint32_t)regexps.size();
 
-    regexps.push_back({ SizedString(token.buf, token.len),
+    regexps.push_back({ StringView(token.buf, token.len),
         std::regex((cstr_t)str.data, (cstr_t)str.data + str.len, (std::regex::flag_type)flags), flags });
 }
 
-void ResourcePool::convertUtf8ToUtf16(SizedStringUtf16 &str) {
+void ResourcePool::convertUtf8ToUtf16(StringViewUtf16 &str) {
     auto &utf8Str = str.utf8Str();
     auto dataUtf16 = (utf16_t *)pool.allocate(str.size() * sizeof(utf16_t));
     utf8ToUtf16(utf8Str.data, utf8Str.len, dataUtf16, str.size());

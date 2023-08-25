@@ -19,7 +19,7 @@ public:
     ~JsGlobalThisIterator() {
     }
 
-    virtual bool next(SizedString *strKeyOut = nullptr, JsValue *keyOut = nullptr, JsValue *valueOut = nullptr) override {
+    virtual bool next(StringView *strKeyOut = nullptr, JsValue *keyOut = nullptr, JsValue *valueOut = nullptr) override {
         while (true) {
             if (_it == _scopeDesc->varDeclares.end()) {
                 return false;
@@ -70,7 +70,7 @@ JsGlobalThis::JsGlobalThis(VMGlobalScope *scope) : IJsObject(jsValuePrototypeWin
 JsGlobalThis::~JsGlobalThis() {
 }
 
-void JsGlobalThis::setPropertyByName(VMContext *ctx, const SizedString &name, const JsValue &descriptor) {
+void JsGlobalThis::setPropertyByName(VMContext *ctx, const StringView &name, const JsValue &descriptor) {
     auto declare = _scopeDesc->getVarDeclarationByName(name);
     if (!declare) {
         declare = PoolNew(_scopeDesc->function->resourcePool->pool, IdentifierDeclare)(name, _scopeDesc);
@@ -96,7 +96,7 @@ void JsGlobalThis::setPropertyBySymbol(VMContext *ctx, uint32_t index, const JsV
     _obj->setPropertyBySymbol(ctx, index, descriptor);
 }
 
-JsError JsGlobalThis::setByName(VMContext *ctx, const JsValue &thiz, const SizedString &name, const JsValue &value) {
+JsError JsGlobalThis::setByName(VMContext *ctx, const JsValue &thiz, const StringView &name, const JsValue &value) {
     auto declare = _scopeDesc->getVarDeclarationByName(name);
     if (declare) {
         return _scope->set(ctx, declare->storageIndex, value);
@@ -135,7 +135,7 @@ JsError JsGlobalThis::setBySymbol(VMContext *ctx, const JsValue &thiz, uint32_t 
     return _obj->setBySymbol(ctx, thiz, index, value);
 }
 
-JsValue JsGlobalThis::increaseByName(VMContext *ctx, const JsValue &thiz, const SizedString &name, int n, bool isPost) {
+JsValue JsGlobalThis::increaseByName(VMContext *ctx, const JsValue &thiz, const StringView &name, int n, bool isPost) {
     auto declare = _scopeDesc->getVarDeclarationByName(name);
     if (declare) {
         return _scope->increase(ctx, declare->storageIndex, n, isPost);
@@ -170,7 +170,7 @@ JsValue JsGlobalThis::increaseByName(VMContext *ctx, const JsValue &thiz, const 
     return _scope->increase(ctx, idx, n, isPost);
 }
 
-uint32_t JsGlobalThis::_newIdentifier(const SizedString &name) {
+uint32_t JsGlobalThis::_newIdentifier(const StringView &name) {
     auto &pool = _scopeDesc->function->resourcePool->pool;
     auto nameNew = pool.duplicate(name);
     auto declare = PoolNew(_scopeDesc->function->resourcePool->pool, IdentifierDeclare)(nameNew, _scopeDesc);
@@ -195,7 +195,7 @@ JsValue JsGlobalThis::increaseBySymbol(VMContext *ctx, const JsValue &thiz, uint
     return _obj->increaseBySymbol(ctx, thiz, index, n, isPost);
 }
 
-JsValue *JsGlobalThis::getRawByName(VMContext *ctx, const SizedString &name, bool includeProtoProp) {
+JsValue *JsGlobalThis::getRawByName(VMContext *ctx, const StringView &name, bool includeProtoProp) {
     auto declare = _scopeDesc->getVarDeclarationByName(name);
     if (!declare) {
         if (includeProtoProp) {
@@ -225,7 +225,7 @@ JsValue *JsGlobalThis::getRawBySymbol(VMContext *ctx, uint32_t index, bool inclu
     return nullptr;
 }
 
-bool JsGlobalThis::removeByName(VMContext *ctx, const SizedString &name) {
+bool JsGlobalThis::removeByName(VMContext *ctx, const StringView &name) {
     auto declare = _scopeDesc->getVarDeclarationByName(name);
     if (!declare) {
         return true;

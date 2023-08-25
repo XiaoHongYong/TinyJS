@@ -68,14 +68,14 @@ public:
         }
     }
 
-    SizedString duplicate(const SizedString &s) {
+    StringView duplicate(const StringView &s) {
         uint8_t *p = (uint8_t *)allocate(s.len);
         memcpy(p, s.data, s.len);
 
-        return SizedString(p, s.len);
+        return StringView(p, s.len);
     }
 
-    SizedString duplicate(const LinkedString *s) {
+    StringView duplicate(const LinkedString *s) {
         assert(s != nullptr);
 
         // 计算长度
@@ -96,7 +96,7 @@ public:
             ps = ps->next;
         } while (ps);
 
-        return SizedString(data, len);
+        return StringView(data, len);
     }
 
     char *duplicate(const char *s) {

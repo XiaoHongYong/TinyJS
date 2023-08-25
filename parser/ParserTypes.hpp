@@ -25,7 +25,7 @@ class JsNodeParameters;
 class JsStmtSwitch;
 class VMRuntime;
 
-using MapNameToIdentifiers = unordered_map<SizedString, IdentifierDeclare *, SizedStringHash, SizedStrCmpEqual>;
+using MapNameToIdentifiers = unordered_map<StringView, IdentifierDeclare *, StringViewHash, SizedStrCmpEqual>;
 using VecScopes = vector<Scope *>;
 using VecFunctions = vector<Function *>;
 using VecResourcePools = vector<ResourcePool *>;
@@ -170,12 +170,12 @@ const char *varStorageTypeToString(VarStorageType type);
 
 class IdentifierDeclare {
 public:
-    IdentifierDeclare(const SizedString &name, Scope *scope);
-    IdentifierDeclare(const Token &token, Scope *scope) : IdentifierDeclare(tokenToSizedString(token), scope) { }
+    IdentifierDeclare(const StringView &name, Scope *scope);
+    IdentifierDeclare(const Token &token, Scope *scope) : IdentifierDeclare(tokenToStringView(token), scope) { }
 
     void dump(BinaryOutputStream &stream);
 
-    SizedString             name;
+    StringView             name;
 
     // 此变量所在的 scope
     Scope                   *scope;
@@ -237,16 +237,16 @@ public:
 
     void dump(BinaryOutputStream &stream);
 
-    IdentifierDeclare *addVarDeclaration(const SizedString &name, bool isConst = false, bool isScopeVar = false);
+    IdentifierDeclare *addVarDeclaration(const StringView &name, bool isConst = false, bool isScopeVar = false);
     IdentifierDeclare *addVarDeclaration(const Token &token, bool isConst = false, bool isScopeVar = false) {
-        return addVarDeclaration(tokenToSizedString(token), isConst, isScopeVar);
+        return addVarDeclaration(tokenToStringView(token), isConst, isScopeVar);
     }
-    void addArgumentDeclaration(const SizedString &name, int index);
-    void addArgumentDeclaration(const Token &token, int index) { addArgumentDeclaration(tokenToSizedString(token), index); }
+    void addArgumentDeclaration(const StringView &name, int index);
+    void addArgumentDeclaration(const Token &token, int index) { addArgumentDeclaration(tokenToStringView(token), index); }
     void addImplicitVarDeclaration(JsExprIdentifier *id);
     void addFunctionDeclaration(const Token &name, Function *child);
     IdentifierDeclare *getVarDeclarationByIndex(int index);
-    IdentifierDeclare *getVarDeclarationByName(const SizedString &name) {
+    IdentifierDeclare *getVarDeclarationByName(const StringView &name) {
         auto it = varDeclares.find(name);
         if (it == varDeclares.end()) {
             return nullptr;
@@ -284,8 +284,8 @@ public:
 public:
     ResourcePool            *resourcePool;
 
-    SizedString             name;
-    SizedString             srcCode;
+    StringView             name;
+    StringView             srcCode;
     JsValue                 srcCodeValue;
     int                     line, col;
 
@@ -372,7 +372,7 @@ struct SwitchJump {
 };
 
 struct RegexpInfo {
-    SizedString             str;
+    StringView             str;
     std::regex              re;
     uint32_t                flags;
 };
@@ -389,7 +389,7 @@ public:
     uint32_t                nextFreeIdx; // 下一个空闲的索引位置
 
     AllocatorPool           pool;
-    VecSizedStringUtf16s    strings;
+    VecStringViewUtf16s    strings;
     vector<double>          doubles;
     VecSwitchJumps          switchCaseJumps;
     vector<RegexpInfo>      regexps;
@@ -402,12 +402,12 @@ public:
     ResourcePool(uint32_t index = 0);
     ~ResourcePool();
 
-    void addRegexp(Token &token, const SizedString &str, uint32_t flags);
+    void addRegexp(Token &token, const StringView &str, uint32_t flags);
 
     inline void needDestructJsNode(IJsNode *node) { toDestructNodes.push_back(node); }
     inline void needDestructScope(Scope *scope) { toDestructScopes.push_back(scope); }
 
-    void convertUtf8ToUtf16(SizedStringUtf16 &str);
+    void convertUtf8ToUtf16(StringViewUtf16 &str);
 
     void dump(BinaryOutputStream &stream);
 
@@ -415,6 +415,6 @@ public:
 
 };
 
-void writeIndent(BinaryOutputStream &stream, SizedString str, const SizedString &indent);
+void writeIndent(BinaryOutputStream &stream, StringView str, const StringView &indent);
 
 #endif /* ParserTypes_hpp */

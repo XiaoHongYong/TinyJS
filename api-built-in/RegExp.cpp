@@ -32,8 +32,8 @@ void regExpConstructor(VMContext *ctx, const JsValue &thiz, const Arguments &arg
         return;
     }
 
-    LockedSizedStringWrapper strRe = ctx->runtime->toSizedStringStrictly(ctx, strVal);
-    LockedSizedStringWrapper strFlags = ctx->runtime->toSizedStringStrictly(ctx, flagsVal);
+    LockedStringViewWrapper strRe = ctx->runtime->toStringViewStrictly(ctx, strVal);
+    LockedStringViewWrapper strFlags = ctx->runtime->toStringViewStrictly(ctx, flagsVal);
     string all = stringPrintf("/%.*s/%.*s", strRe.len, strRe.data, strFlags.len, strFlags.data);
 
     uint32_t flags;
@@ -42,7 +42,7 @@ void regExpConstructor(VMContext *ctx, const JsValue &thiz, const Arguments &arg
         return;
     }
     std::regex re((cstr_t)strRe.data, strRe.len, (std::regex::flag_type)flags);
-    auto reObj = new JsRegExp(SizedString(all), re, flags);
+    auto reObj = new JsRegExp(StringView(all), re, flags);
 
     ctx->retValue = runtime->pushObject(reObj);
 }
@@ -67,7 +67,7 @@ void regexp_exec(VMContext *ctx, const JsValue &thiz, const Arguments &args) {
     auto &re = regexp->getRegexp();
     auto flags = regexp->flags();
     int lastIndex = 0;
-    SizedString str = strU16.utf8Str();
+    StringView str = strU16.utf8Str();
 
     if (flags & RF_GLOBAL_SEARCH) {
         lastIndex = regexp->getByName(ctx, thiz, SS_LASTINDEX).value.n32;
@@ -118,7 +118,7 @@ void regexp_test(VMContext *ctx, const JsValue &thiz, const Arguments &args) {
     auto &re = regexp->getRegexp();
     auto flags = regexp->flags();
     int lastIndex = 0;
-    SizedString str = strU16.utf8Str();
+    StringView str = strU16.utf8Str();
 
     if (flags & RF_GLOBAL_SEARCH) {
         lastIndex = regexp->getByName(ctx, thiz, SS_LASTINDEX).value.n32;
@@ -153,7 +153,7 @@ void regExpPrototypeToString(VMContext *ctx, const JsValue &thiz, const Argument
     auto re = (JsRegExp *)ctx->runtime->getObject(thiz);
     auto &str = re->toString();
 
-    ctx->retValue = ctx->runtime->pushString(SizedString(str));
+    ctx->retValue = ctx->runtime->pushString(StringView(str));
 }
 
 static JsLibProperty regExpPrototypeFunctions[] = {

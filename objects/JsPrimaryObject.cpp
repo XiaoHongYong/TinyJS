@@ -28,7 +28,7 @@ public:
 
         if (str.type == JDT_CHAR) {
             auto len = utf32CodeToUtf8(str.value.n32, _chars);
-            _strUtf16.set(SizedString(_chars, len));
+            _strUtf16.set(StringView(_chars, len));
             _u16[0] = (utf16_t)str.value.n32;
             _strUtf16.setUtf16(_u16, 1);
         } else {
@@ -49,7 +49,7 @@ public:
         return true;
     }
 
-    virtual bool next(SizedString *strKeyOut = nullptr, JsValue *keyOut = nullptr, JsValue *valueOut = nullptr) override {
+    virtual bool next(StringView *strKeyOut = nullptr, JsValue *keyOut = nullptr, JsValue *valueOut = nullptr) override {
         if (_pos >= _len) {
             if (_itObjStr) {
                 return _itObjStr->next(strKeyOut, keyOut, valueOut);
@@ -88,10 +88,10 @@ protected:
     VMRuntime                       *_runtime;
     IJsIterator                     *_itObjStr;
     JsValue                         _str;
-    SizedStringUtf16                _strUtf16;
+    StringViewUtf16                _strUtf16;
     uint32_t                        _len;
     uint32_t                        _pos;
-    NumberToSizedString             _keyBuf;
+    NumberToStringView             _keyBuf;
 
     uint8_t                         _chars[4];
     utf16_t                         _u16[2];
@@ -108,7 +108,7 @@ JsStringObject::JsStringObject(const JsValue &value) : JsObjectLazy(nullptr, 0, 
     _isOfIterable = true;
 }
 
-void JsStringObject::setPropertyByName(VMContext *ctx, const SizedString &name, const JsValue &descriptor) {
+void JsStringObject::setPropertyByName(VMContext *ctx, const StringView &name, const JsValue &descriptor) {
     _updateLength(ctx);
 
     if (name.len > 0 && isDigit(name.data[0])) {
@@ -138,7 +138,7 @@ void JsStringObject::setPropertyByIndex(VMContext *ctx, uint32_t index, const Js
     JsObjectLazy::setPropertyByIndex(ctx, index, descriptor);
 }
 
-JsError JsStringObject::setByName(VMContext *ctx, const JsValue &thiz, const SizedString &name, const JsValue &value) {
+JsError JsStringObject::setByName(VMContext *ctx, const JsValue &thiz, const StringView &name, const JsValue &value) {
     _updateLength(ctx);
 
     if (name.len > 0 && isDigit(name.data[0])) {
@@ -166,7 +166,7 @@ JsError JsStringObject::setByIndex(VMContext *ctx, const JsValue &thiz, uint32_t
     return JsObjectLazy::setByIndex(ctx, thiz, index, value);
 }
 
-JsValue JsStringObject::increaseByName(VMContext *ctx, const JsValue &thiz, const SizedString &name, int n, bool isPost) {
+JsValue JsStringObject::increaseByName(VMContext *ctx, const JsValue &thiz, const StringView &name, int n, bool isPost) {
     _updateLength(ctx);
 
     if (name.len > 0 && isDigit(name.data[0])) {
@@ -201,7 +201,7 @@ JsValue JsStringObject::increaseByIndex(VMContext *ctx, const JsValue &thiz, uin
     return jsValueNaN;
 }
 
-JsValue *JsStringObject::getRawByName(VMContext *ctx, const SizedString &name, bool includeProtoProp) {
+JsValue *JsStringObject::getRawByName(VMContext *ctx, const StringView &name, bool includeProtoProp) {
     _updateLength(ctx);
 
     if (name.len > 0 && isDigit(name.data[0])) {
@@ -237,7 +237,7 @@ JsValue *JsStringObject::getRawByIndex(VMContext *ctx, uint32_t index, bool incl
     return &prop;
 }
 
-bool JsStringObject::removeByName(VMContext *ctx, const SizedString &name) {
+bool JsStringObject::removeByName(VMContext *ctx, const StringView &name) {
     _updateLength(ctx);
 
     if (name.len > 0 && isDigit(name.data[0])) {

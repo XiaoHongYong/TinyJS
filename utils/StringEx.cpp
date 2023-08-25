@@ -67,8 +67,8 @@ bool iEndsWith(cstr_t szText, cstr_t szEndWith) {
 }
 
 char *stristr(cstr_t source, cstr_t find) {
-    SizedString str(source);
-    int pos = str.stristr(SizedString(find));
+    StringView str(source);
+    int pos = str.stristr(StringView(find));
     if (pos == -1) {
         return nullptr;
     }
@@ -340,11 +340,11 @@ void trimStr(VecStrings &vStrs, char ch) {
 }
 
 void strSplit(const char *str, char sep, VecStrings &vStrs) {
-    SizedString(str).split(sep, vStrs);
+    StringView(str).split(sep, vStrs);
 }
 
 bool strSplit(const char *str, char sep, string &leftOut, string &rightOut) {
-    SizedString s(str), left, right;
+    StringView s(str), left, right;
 
     if (s.split(sep, left, right)) {
         leftOut.assign((const char *)left.data, left.len);
@@ -356,7 +356,7 @@ bool strSplit(const char *str, char sep, string &leftOut, string &rightOut) {
 }
 
 bool strSplit(const char *str, const char *sep, string &leftOut, string &rightOut) {
-    SizedString s(str), left, right;
+    StringView s(str), left, right;
 
     if (s.split(sep, left, right)) {
         leftOut.assign((const char *)left.data, left.len);
@@ -896,19 +896,19 @@ TEST(StringEx, roundFloatString) {
 
     strcpy(buf, "1.9"); pos = 3; zeroPos = 3;
     roundFloatString(buf, pos, zeroPos);
-    ASSERT_TRUE(SizedString(buf, pos).equal("2.0"));
+    ASSERT_TRUE(StringView(buf, pos).equal("2.0"));
     ASSERT_EQ(pos, 3);
     ASSERT_EQ(zeroPos, 1);
 
     strcpy(buf, "9.9"); pos = 3; zeroPos = 3;
     roundFloatString(buf, pos, zeroPos);
-    ASSERT_TRUE(SizedString(buf, pos).equal("10.0"));
+    ASSERT_TRUE(StringView(buf, pos).equal("10.0"));
     ASSERT_EQ(pos, 4);
     ASSERT_EQ(zeroPos, 2);
 
     strcpy(buf, "9.999"); pos = 5; zeroPos = 5;
     roundFloatString(buf, pos, zeroPos);
-    ASSERT_TRUE(SizedString(buf, pos).equal("10.000"));
+    ASSERT_TRUE(StringView(buf, pos).equal("10.000"));
     ASSERT_EQ(pos, 6);
     ASSERT_EQ(zeroPos, 2);
 }
@@ -918,74 +918,74 @@ TEST(StringEx, floatToString) {
     uint32_t len;
 
     len = floatToString(1 / 2.0, buf);
-    ASSERT_TRUE(SizedString(buf, len).equal("0.5"));
+    ASSERT_TRUE(StringView(buf, len).equal("0.5"));
 
     len = floatToString(1.5 * 20.0, buf);
-    ASSERT_TRUE(SizedString(buf, len).equal("30"));
+    ASSERT_TRUE(StringView(buf, len).equal("30"));
 
     len = floatToString(1e-7, buf);
-    ASSERT_TRUE(SizedString(buf, len).equal("1e-7"));
+    ASSERT_TRUE(StringView(buf, len).equal("1e-7"));
 
     len = floatToString(1e-6, buf);
-    ASSERT_TRUE(SizedString(buf, len).equal("0.000001"));
+    ASSERT_TRUE(StringView(buf, len).equal("0.000001"));
 
     len = floatToString(9.999e-6, buf);
-    ASSERT_TRUE(SizedString(buf, len).equal("0.000009999"));
+    ASSERT_TRUE(StringView(buf, len).equal("0.000009999"));
 
     len = floatToString(1.332e-10, buf);
-    ASSERT_TRUE(SizedString(buf, len).equal("1.332e-10"));
+    ASSERT_TRUE(StringView(buf, len).equal("1.332e-10"));
 
     len = floatToString(5e-324, buf);
-    ASSERT_TRUE(SizedString(buf, len).equal("5e-324"));
+    ASSERT_TRUE(StringView(buf, len).equal("5e-324"));
 
     len = floatToString(9.999999999999981568e20, buf);
-    ASSERT_TRUE(SizedString(buf, len).equal("999999999999998200000"));
+    ASSERT_TRUE(StringView(buf, len).equal("999999999999998200000"));
 
     len = floatToString(1e21, buf);
-    ASSERT_TRUE(SizedString(buf, len).equal("1e+21"));
+    ASSERT_TRUE(StringView(buf, len).equal("1e+21"));
 
     // 1.7976931348623157e+308
     len = floatToString(1.7976931348623157e+308, buf);
-    ASSERT_TRUE(SizedString(buf, len).equal("1.7976931348623157e+308"));
+    ASSERT_TRUE(StringView(buf, len).equal("1.7976931348623157e+308"));
 
     len = floatToString(-9.2233720368547758E+18, buf);
-    ASSERT_TRUE(SizedString(buf, len).equal("-9223372036854776000"));
+    ASSERT_TRUE(StringView(buf, len).equal("-9223372036854776000"));
 
     len = floatToString(1 / 3.0, buf);
-    ASSERT_TRUE(SizedString(buf, len).equal("0.3333333333333333"));
+    ASSERT_TRUE(StringView(buf, len).equal("0.3333333333333333"));
 
     len = floatToString(1 / 300.0, buf);
-    ASSERT_TRUE(SizedString(buf, len).equal("0.0033333333333333335"));
+    ASSERT_TRUE(StringView(buf, len).equal("0.0033333333333333335"));
 
     len = floatToString(-1 / 2.0, buf);
-    ASSERT_TRUE(SizedString(buf, len).equal("-0.5"));
+    ASSERT_TRUE(StringView(buf, len).equal("-0.5"));
 
     len = floatToString(-1.5 * 20.0, buf);
-    ASSERT_TRUE(SizedString(buf, len).equal("-30"));
+    ASSERT_TRUE(StringView(buf, len).equal("-30"));
 
     len = floatToString(-1 / 3.0, buf);
-    ASSERT_TRUE(SizedString(buf, len).equal("-0.3333333333333333"));
+    ASSERT_TRUE(StringView(buf, len).equal("-0.3333333333333333"));
 
     len = floatToString(-1 / 300.0, buf);
-    ASSERT_TRUE(SizedString(buf, len).equal("-0.0033333333333333335"));
+    ASSERT_TRUE(StringView(buf, len).equal("-0.0033333333333333335"));
 
     len = floatToString(INFINITY, buf);
-    ASSERT_TRUE(SizedString(buf, len).equal("Infinity"));
+    ASSERT_TRUE(StringView(buf, len).equal("Infinity"));
 
     len = floatToString(-INFINITY, buf);
-    ASSERT_TRUE(SizedString(buf, len).equal("-Infinity"));
+    ASSERT_TRUE(StringView(buf, len).equal("-Infinity"));
 
     len = floatToString(NAN, buf);
-    ASSERT_TRUE(SizedString(buf, len).equal("NaN"));
+    ASSERT_TRUE(StringView(buf, len).equal("NaN"));
 
     len = floatToString(-NAN, buf);
-    ASSERT_TRUE(SizedString(buf, len).equal("NaN"));
+    ASSERT_TRUE(StringView(buf, len).equal("NaN"));
 
     len = floatToStringEx(1234.5, buf, sizeof(buf), 2, F_FIXED_PRECISION);
-    ASSERT_TRUE(SizedString(buf, len).equal("1.2e+3"));
+    ASSERT_TRUE(StringView(buf, len).equal("1.2e+3"));
 
     len = floatToStringEx(0.1234, buf, sizeof(buf), 1, F_FIXED_PRECISION);
-    ASSERT_TRUE(SizedString(buf, len).equal("0.1"));
+    ASSERT_TRUE(StringView(buf, len).equal("0.1"));
 }
 
 TEST(StringEx, testTrimStrRight) {

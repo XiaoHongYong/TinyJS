@@ -108,11 +108,11 @@ double Arguments::getDoubleAt(VMContext *ctx, uint32_t index, double defVal) con
     }
 }
 
-LockedSizedStringWrapper Arguments::getStringAt(VMContext *ctx, uint32_t index, const SizedString &defVal) const {
+LockedStringViewWrapper Arguments::getStringAt(VMContext *ctx, uint32_t index, const StringView &defVal) const {
     if (index < capacity) {
         auto v = data[index];
 
-        return ctx->runtime->toSizedStringStrictly(ctx, v);
+        return ctx->runtime->toStringViewStrictly(ctx, v);
     } else {
         return defVal;
     }

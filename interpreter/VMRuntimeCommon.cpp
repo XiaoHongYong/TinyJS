@@ -147,7 +147,7 @@ JsValue VMRuntimeCommon::pushDouble(double value) {
     }
 }
 
-JsValue VMRuntimeCommon::pushStringValue(const SizedString &value) {
+JsValue VMRuntimeCommon::pushStringValue(const StringView &value) {
     assert(value.isStable());
 
     auto it = _mapStrings.find(value);
@@ -172,7 +172,7 @@ uint32_t VMRuntimeCommon::findDoubleValue(double value) {
     }
 }
 
-uint32_t VMRuntimeCommon::findStringValue(const SizedString &value) {
+uint32_t VMRuntimeCommon::findStringValue(const StringView &value) {
     auto it = _mapStrings.find(value);
     if (it == _mapStrings.end()) {
         return -1;

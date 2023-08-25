@@ -30,7 +30,7 @@ public:
         return _it->nextOf(valueOut);
     }
 
-    virtual bool next(SizedString *strKeyOut = nullptr, JsValue *keyOut = nullptr, JsValue *valueOut = nullptr) override {
+    virtual bool next(StringView *strKeyOut = nullptr, JsValue *keyOut = nullptr, JsValue *valueOut = nullptr) override {
         if (_itObj == nullptr) {
             if (_it->_obj) {
                 _itObj = _it->_obj->getIteratorObject(_ctx, _includeProtoProp, _includeNoneEnumerable);
@@ -51,7 +51,7 @@ protected:
 };
 
 
-void IJsIterator::setPropertyByName(VMContext *ctx, const SizedString &name, const JsValue &descriptor) {
+void IJsIterator::setPropertyByName(VMContext *ctx, const StringView &name, const JsValue &descriptor) {
     if (!_obj) {
         _newObject(ctx);
     }
@@ -60,7 +60,7 @@ void IJsIterator::setPropertyByName(VMContext *ctx, const SizedString &name, con
 }
 
 void IJsIterator::setPropertyByIndex(VMContext *ctx, uint32_t index, const JsValue &descriptor) {
-    NumberToSizedString name(index);
+    NumberToStringView name(index);
     setPropertyByName(ctx, name, descriptor);
 }
 
@@ -72,7 +72,7 @@ void IJsIterator::setPropertyBySymbol(VMContext *ctx, uint32_t index, const JsVa
     _obj->setPropertyBySymbol(ctx, index, descriptor);
 }
 
-JsError IJsIterator::setByName(VMContext *ctx, const JsValue &thiz, const SizedString &name, const JsValue &value) {
+JsError IJsIterator::setByName(VMContext *ctx, const JsValue &thiz, const StringView &name, const JsValue &value) {
     if (!_obj) {
         _newObject(ctx);
     }
@@ -81,7 +81,7 @@ JsError IJsIterator::setByName(VMContext *ctx, const JsValue &thiz, const SizedS
 }
 
 JsError IJsIterator::setByIndex(VMContext *ctx, const JsValue &thiz, uint32_t index, const JsValue &value) {
-    NumberToSizedString name(index);
+    NumberToStringView name(index);
     return setByName(ctx, thiz, name, value);
 }
 
@@ -92,7 +92,7 @@ JsError IJsIterator::setBySymbol(VMContext *ctx, const JsValue &thiz, uint32_t i
     return _obj->setBySymbol(ctx, thiz, index, value);
 }
 
-JsValue IJsIterator::increaseByName(VMContext *ctx, const JsValue &thiz, const SizedString &name, int n, bool isPost) {
+JsValue IJsIterator::increaseByName(VMContext *ctx, const JsValue &thiz, const StringView &name, int n, bool isPost) {
     if (!_obj) {
         _newObject(ctx);
     }
@@ -101,7 +101,7 @@ JsValue IJsIterator::increaseByName(VMContext *ctx, const JsValue &thiz, const S
 }
 
 JsValue IJsIterator::increaseByIndex(VMContext *ctx, const JsValue &thiz, uint32_t index, int n, bool isPost) {
-    NumberToSizedString name(index);
+    NumberToStringView name(index);
     return increaseByName(ctx, thiz, name, n, isPost);
 }
 
@@ -112,7 +112,7 @@ JsValue IJsIterator::increaseBySymbol(VMContext *ctx, const JsValue &thiz, uint3
     return _obj->increaseBySymbol(ctx, thiz, index, n, isPost);
 }
 
-JsValue *IJsIterator::getRawByName(VMContext *ctx, const SizedString &name, bool includeProtoProp) {
+JsValue *IJsIterator::getRawByName(VMContext *ctx, const StringView &name, bool includeProtoProp) {
     if (_obj) {
         return _obj->getRawByName(ctx, name, includeProtoProp);
     }
@@ -148,7 +148,7 @@ JsValue *IJsIterator::getRawBySymbol(VMContext *ctx, uint32_t index, bool includ
     return nullptr;
 }
 
-bool IJsIterator::removeByName(VMContext *ctx, const SizedString &name) {
+bool IJsIterator::removeByName(VMContext *ctx, const StringView &name) {
     if (_obj) {
         return _obj->removeByName(ctx, name);
     }
@@ -157,7 +157,7 @@ bool IJsIterator::removeByName(VMContext *ctx, const SizedString &name) {
 }
 
 bool IJsIterator::removeByIndex(VMContext *ctx, uint32_t index) {
-    NumberToSizedString name(index);
+    NumberToStringView name(index);
     return removeByName(ctx, name);
 }
 

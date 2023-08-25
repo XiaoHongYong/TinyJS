@@ -116,11 +116,11 @@ public:
     void run(cstr_t code, size_t len, VMRuntime *runtime = nullptr);
 
     void eval(cstr_t code, size_t len, VMContext *ctx, VecVMStackScopes &stackScopes, const Arguments &args);
-    void callMember(VMContext *ctx, const JsValue &thiz, const SizedString &memberName, const Arguments &args);
+    void callMember(VMContext *ctx, const JsValue &thiz, const StringView &memberName, const Arguments &args);
     void callMember(VMContext *ctx, const JsValue &thiz, const JsValue &memberFunc, const Arguments &args);
 
-    JsValue getMemberDot(VMContext *ctx, const JsValue &thiz, const SizedString &name, const JsValue &defVal = jsValueUndefined);
-    void setMemberDot(VMContext *ctx, const JsValue &thiz, const SizedString &name, const JsValue &value);
+    JsValue getMemberDot(VMContext *ctx, const JsValue &thiz, const StringView &name, const JsValue &defVal = jsValueUndefined);
+    void setMemberDot(VMContext *ctx, const JsValue &thiz, const StringView &name, const JsValue &value);
 
     JsValue getMemberIndex(VMContext *ctx, const JsValue &thiz, const JsValue &prop);
     void setMemberIndex(VMContext *ctx, const JsValue &thiz, const JsValue &prop, const JsValue &value);

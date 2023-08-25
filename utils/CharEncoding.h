@@ -104,7 +104,7 @@ int utf8ToUCS2(const char *str, int nLen, u16string &strOut);
 int utf8ToMbcs(const char *str, int nLen, string &strOut, int encodingID = ED_SYSDEF);
 
 uint32_t utf8ToUtf16Length(const uint8_t *str, uint32_t len);
-inline uint32_t utf8ToUtf16Length(const SizedString &str) { return utf8ToUtf16Length(str.data, str.len); }
+inline uint32_t utf8ToUtf16Length(const StringView &str) { return utf8ToUtf16Length(str.data, str.len); }
 uint32_t utf8ToUtf16(const uint8_t *str, uint32_t len, utf16_t *u16BufOut, uint32_t sizeU16Buf);
 
 uint32_t utf8FirstByteLength(uint8_t c);

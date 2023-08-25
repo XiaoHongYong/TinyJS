@@ -18,7 +18,7 @@ IJsObject::IJsObject(JsValue proto, JsDataType type) : __proto__(proto), type(ty
     nextFreeIdx = 0;
 }
 
-bool IJsObject::getBool(VMContext *ctx, const JsValue &thiz, const SizedString &name) {
+bool IJsObject::getBool(VMContext *ctx, const JsValue &thiz, const StringView &name) {
     auto value = getByName(ctx, thiz, name);
     return ctx->runtime->testTrue(value);
 }
@@ -42,11 +42,11 @@ void IJsObject::setProperty(VMContext *ctx, const JsValue &nameOrg, const JsValu
         case JDT_NUMBER: {
             char buf[64];
             auto len = floatToString(ctx->runtime->getDouble(name), buf);
-            setPropertyByName(ctx, SizedString(buf, len), descriptor);
+            setPropertyByName(ctx, StringView(buf, len), descriptor);
             break;
         }
         case JDT_CHAR: {
-            SizedStringWrapper str(name);
+            StringViewWrapper str(name);
             setPropertyByName(ctx, str, descriptor);
             break;
         }
@@ -78,10 +78,10 @@ bool IJsObject::getOwnPropertyDescriptor(VMContext *ctx, const JsValue &nameOrg,
         case JDT_NUMBER: {
             char buf[64];
             auto len = floatToString(ctx->runtime->getDouble(name), buf);
-            return getOwnPropertyDescriptorByName(ctx, SizedString(buf, len), descriptorOut);
+            return getOwnPropertyDescriptorByName(ctx, StringView(buf, len), descriptorOut);
         }
         case JDT_CHAR: {
-            SizedStringWrapper str(name);
+            StringViewWrapper str(name);
             return getOwnPropertyDescriptorByName(ctx, str.str(), descriptorOut);
         }
         case JDT_STRING: {
@@ -111,12 +111,12 @@ JsValue *IJsObject::getRaw(VMContext *ctx, const JsValue &name, bool includeProt
             } else {
                 char buf[64];
                 auto len = floatToString(d, buf);
-                return getRawByName(ctx, SizedString(buf, len), includeProtoProp);
+                return getRawByName(ctx, StringView(buf, len), includeProtoProp);
             }
             break;
         }
         case JDT_CHAR: {
-            SizedStringWrapper str(name);
+            StringViewWrapper str(name);
             return getRawByName(ctx, str.str(), includeProtoProp);
         }
         case JDT_STRING: {
@@ -163,12 +163,12 @@ void IJsObject::set(VMContext *ctx, const JsValue &thiz, const JsValue &nameOrg,
             } else {
                 char buf[64];
                 auto len = floatToString(d, buf);
-                setByName(ctx, thiz, SizedString(buf, len), value);
+                setByName(ctx, thiz, StringView(buf, len), value);
             }
             break;
         }
         case JDT_CHAR: {
-            SizedStringWrapper s(name);
+            StringViewWrapper s(name);
             setByName(ctx, thiz, s.str(), value);
             break;
         }
@@ -205,12 +205,12 @@ JsValue IJsObject::increase(VMContext *ctx, const JsValue &thiz, const JsValue &
             } else {
                 char buf[64];
                 auto len = floatToString(d, buf);
-                return increaseByName(ctx, thiz, SizedString(buf, len), n, isPost);
+                return increaseByName(ctx, thiz, StringView(buf, len), n, isPost);
             }
             break;
         }
         case JDT_CHAR: {
-            SizedStringWrapper str(name);
+            StringViewWrapper str(name);
             return increaseByName(ctx, thiz, str.str(), n, isPost);
         }
         case JDT_STRING: {
@@ -240,11 +240,11 @@ bool IJsObject::remove(VMContext *ctx, const JsValue &propOrg) {
         case JDT_NUMBER: {
             char buf[64];
             auto len = floatToString(ctx->runtime->getDouble(prop), buf);
-            return removeByName(ctx, SizedString(buf, len));
+            return removeByName(ctx, StringView(buf, len));
             break;
         }
         case JDT_CHAR: {
-            SizedStringWrapper str(prop);
+            StringViewWrapper str(prop);
             return removeByName(ctx, str.str());
         }
         case JDT_STRING: {
@@ -276,7 +276,7 @@ bool IJsObject::getLength(VMContext *ctx, int32_t &lengthOut) {
 /**
  * 通过 { get x() {}, set x() {} } 时调用.
  */
-void IJsObject::addGetterSetterByName(VMContext *ctx, const SizedString &name, const JsValue &getter, const JsValue &setter) {
+void IJsObject::addGetterSetterByName(VMContext *ctx, const StringView &name, const JsValue &getter, const JsValue &setter) {
     auto prop = getRawByName(ctx, name);
     if (prop == nullptr) {
         auto gs = ctx->runtime->pushGetterSetter(getter, setter);
@@ -302,7 +302,7 @@ public:
         _includeProtoProp = includeProtoProp;
     }
 
-    virtual bool next(SizedString *strKeyOut = nullptr, JsValue *keyOut = nullptr, JsValue *valueOut = nullptr) override {
+    virtual bool next(StringView *strKeyOut = nullptr, JsValue *keyOut = nullptr, JsValue *valueOut = nullptr) override {
         if (_itProto) {
             return _itProto->next(strKeyOut, keyOut, valueOut);
         }

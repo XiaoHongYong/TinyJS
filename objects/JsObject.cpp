@@ -9,7 +9,7 @@
 #include "JsObject.hpp"
 
 
-SizedString copyPropertyIfNeed(SizedString name) {
+StringView copyPropertyIfNeed(StringView name) {
     if (!name.isStable()) {
         auto p = new uint8_t[name.len];
         memcpy(p, name.data, name.len);
@@ -32,7 +32,7 @@ public:
         _itProto = nullptr;
     }
 
-    virtual bool next(SizedString *strKeyOut = nullptr, JsValue *keyOut = nullptr, JsValue *valueOut = nullptr) override {
+    virtual bool next(StringView *strKeyOut = nullptr, JsValue *keyOut = nullptr, JsValue *valueOut = nullptr) override {
         if (_itProto) {
             return _itProto->next(strKeyOut, keyOut, valueOut);
         }
@@ -104,7 +104,7 @@ JsObject::~JsObject() {
     }
 }
 
-void JsObject::setPropertyByName(VMContext *ctx, const SizedString &name, const JsValue &descriptor) {
+void JsObject::setPropertyByName(VMContext *ctx, const StringView &name, const JsValue &descriptor) {
     auto it = _props.find(name);
     if (it == _props.end()) {
         if (isPreventedExtensions) {
@@ -124,7 +124,7 @@ void JsObject::setPropertyByName(VMContext *ctx, const SizedString &name, const 
 }
 
 void JsObject::setPropertyByIndex(VMContext *ctx, uint32_t index, const JsValue &descriptor) {
-    NumberToSizedString name(index);
+    NumberToStringView name(index);
     return setPropertyByName(ctx, name, descriptor);
 }
 
@@ -147,7 +147,7 @@ void JsObject::setPropertyBySymbol(VMContext *ctx, uint32_t index, const JsValue
     (*_symbolProps)[index] = descriptor;
 }
 
-JsError JsObject::setByName(VMContext *ctx, const JsValue &thiz, const SizedString &name, const JsValue &value) {
+JsError JsObject::setByName(VMContext *ctx, const JsValue &thiz, const StringView &name, const JsValue &value) {
     auto it = _props.find(name);
     if (it == _props.end()) {
         if (name.equal(SS___PROTO__)) {
@@ -185,7 +185,7 @@ JsError JsObject::setByName(VMContext *ctx, const JsValue &thiz, const SizedStri
 }
 
 JsError JsObject::setByIndex(VMContext *ctx, const JsValue &thiz, uint32_t index, const JsValue &value) {
-    NumberToSizedString name(index);
+    NumberToStringView name(index);
     return setByName(ctx, thiz, name, value);
 }
 
@@ -208,7 +208,7 @@ JsError JsObject::setBySymbol(VMContext *ctx, const JsValue &thiz, uint32_t inde
     }
 }
 
-JsValue JsObject::increaseByName(VMContext *ctx, const JsValue &thiz, const SizedString &name, int n, bool isPost) {
+JsValue JsObject::increaseByName(VMContext *ctx, const JsValue &thiz, const StringView &name, int n, bool isPost) {
     auto it = _props.find(name);
     if (it == _props.end()) {
         if (name.equal(SS___PROTO__)) {
@@ -251,7 +251,7 @@ JsValue JsObject::increaseByName(VMContext *ctx, const JsValue &thiz, const Size
 }
 
 JsValue JsObject::increaseByIndex(VMContext *ctx, const JsValue &thiz, uint32_t index, int n, bool isPost) {
-    NumberToSizedString name(index);
+    NumberToStringView name(index);
     return increaseByName(ctx, thiz, name, n, isPost);
 }
 
@@ -275,7 +275,7 @@ JsValue JsObject::increaseBySymbol(VMContext *ctx, const JsValue &thiz, uint32_t
     }
 }
 
-JsValue *JsObject::getRawByName(VMContext *ctx, const SizedString &name, bool includeProtoProp) {
+JsValue *JsObject::getRawByName(VMContext *ctx, const StringView &name, bool includeProtoProp) {
     auto it = _props.find(name);
     if (it == _props.end()) {
         if (name.equal(SS___PROTO__)) {
@@ -296,7 +296,7 @@ JsValue *JsObject::getRawByName(VMContext *ctx, const SizedString &name, bool in
 }
 
 JsValue *JsObject::getRawByIndex(VMContext *ctx, uint32_t index, bool includeProtoProp) {
-    NumberToSizedString name(index);
+    NumberToStringView name(index);
     return getRawByName(ctx, name, includeProtoProp);
 }
 
@@ -320,7 +320,7 @@ JsValue *JsObject::getRawBySymbol(VMContext *ctx, uint32_t index, bool includePr
     return nullptr;
 }
 
-bool JsObject::removeByName(VMContext *ctx, const SizedString &name) {
+bool JsObject::removeByName(VMContext *ctx, const StringView &name) {
     auto it = _props.find(name);
     if (it != _props.end()) {
         auto &prop = (*it).second;
@@ -344,7 +344,7 @@ bool JsObject::removeByName(VMContext *ctx, const SizedString &name) {
 }
 
 bool JsObject::removeByIndex(VMContext *ctx, uint32_t index) {
-    NumberToSizedString name(index);
+    NumberToStringView name(index);
     return removeByName(ctx, name);
 }
 

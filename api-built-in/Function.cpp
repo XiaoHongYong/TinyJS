@@ -22,12 +22,12 @@ static void functionConstructor(VMContext *ctx, const JsValue &thiz, const Argum
             functionStr.append(",");
         }
 
-        auto s = runtime->toSizedStringStrictly(ctx, args[i]);
+        auto s = runtime->toStringViewStrictly(ctx, args[i]);
         functionStr.append((char *)s.data, s.len);
     }
     functionStr.append("){");
     if (args.count > 0) {
-        auto s = runtime->toSizedStringStrictly(ctx, args[args.count - 1]);
+        auto s = runtime->toStringViewStrictly(ctx, args[args.count - 1]);
         functionStr.append((char *)s.data, s.len);
     }
     functionStr.append("})");

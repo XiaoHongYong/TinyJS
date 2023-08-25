@@ -14,11 +14,11 @@ public:
         return a.name.cmp(b.name) < 0;
     }
 
-    bool operator ()(const JsLibProperty &a, const SizedString &b) {
+    bool operator ()(const JsLibProperty &a, const StringView &b) {
         return a.name.cmp(b) < 0;
     }
 
-    bool operator ()(const SizedString &a, const JsLibProperty &b) {
+    bool operator ()(const StringView &a, const JsLibProperty &b) {
         return a.cmp(b.name) < 0;
     }
 
@@ -26,7 +26,7 @@ public:
 
 JsLibObject::JsLibObject(VMRuntimeCommon *rt, JsLibProperty *libProps, int countProps, cstr_t name, JsNativeFunction constructor, const JsValue &proto) : IJsObject(proto, JDT_LIB_OBJECT), _libProps(libProps), _libPropsEnd(libProps + countProps), _constructor(constructor)
 {
-    _name = name ? makeCommonString(name) : sizedStringEmpty;
+    _name = name ? makeCommonString(name) : stringViewEmpty;
     _obj = nullptr;
     _modified = false;
     _isOfIterable = false;
@@ -65,7 +65,7 @@ JsLibObject::~JsLibObject() {
     }
 }
 
-void JsLibObject::setPropertyByName(VMContext *ctx, const SizedString &name, const JsValue &descriptor) {
+void JsLibObject::setPropertyByName(VMContext *ctx, const StringView &name, const JsValue &descriptor) {
     auto first = std::lower_bound(_libProps, _libPropsEnd, name, JsLibFunctionLessCmp());
     if (first != _libPropsEnd && first->name.equal(name)) {
         // 修改现有的属性
@@ -84,7 +84,7 @@ void JsLibObject::setPropertyByName(VMContext *ctx, const SizedString &name, con
 }
 
 void JsLibObject::setPropertyByIndex(VMContext *ctx, uint32_t index, const JsValue &descriptor) {
-    NumberToSizedString name(index);
+    NumberToStringView name(index);
     setPropertyByName(ctx, name, descriptor);
 }
 
@@ -96,7 +96,7 @@ void JsLibObject::setPropertyBySymbol(VMContext *ctx, uint32_t index, const JsVa
     _obj->setPropertyBySymbol(ctx, index, descriptor);
 }
 
-JsError JsLibObject::setByName(VMContext *ctx, const JsValue &thiz, const SizedString &name, const JsValue &value) {
+JsError JsLibObject::setByName(VMContext *ctx, const JsValue &thiz, const StringView &name, const JsValue &value) {
     if (thiz.type < JDT_OBJECT) {
         // Primitive types 不能被修改，但是其 setter 函数会被调用
         if (_obj) {
@@ -126,7 +126,7 @@ JsError JsLibObject::setByName(VMContext *ctx, const JsValue &thiz, const SizedS
 }
 
 JsError JsLibObject::setByIndex(VMContext *ctx, const JsValue &thiz, uint32_t index, const JsValue &value) {
-    NumberToSizedString name(index);
+    NumberToStringView name(index);
     return setByName(ctx, thiz, name, value);
 }
 
@@ -137,7 +137,7 @@ JsError JsLibObject::setBySymbol(VMContext *ctx, const JsValue &thiz, uint32_t i
     return _obj->setBySymbol(ctx, thiz, index, value);
 }
 
-JsValue JsLibObject::increaseByName(VMContext *ctx, const JsValue &thiz, const SizedString &name, int n, bool isPost) {
+JsValue JsLibObject::increaseByName(VMContext *ctx, const JsValue &thiz, const StringView &name, int n, bool isPost) {
     if (thiz.type < JDT_OBJECT) {
         // Primitive types 不能被修改，但是其 setter 函数会被调用
         if (_obj) {
@@ -166,7 +166,7 @@ JsValue JsLibObject::increaseByName(VMContext *ctx, const JsValue &thiz, const S
 }
 
 JsValue JsLibObject::increaseByIndex(VMContext *ctx, const JsValue &thiz, uint32_t index, int n, bool isPost) {
-    NumberToSizedString name(index);
+    NumberToStringView name(index);
     return increaseByName(ctx, thiz, name, n, isPost);
 }
 
@@ -177,7 +177,7 @@ JsValue JsLibObject::increaseBySymbol(VMContext *ctx, const JsValue &thiz, uint3
     return _obj->increaseBySymbol(ctx, thiz, index, n, isPost);
 }
 
-JsValue *JsLibObject::getRawByName(VMContext *ctx, const SizedString &name, bool includeProtoProp) {
+JsValue *JsLibObject::getRawByName(VMContext *ctx, const StringView &name, bool includeProtoProp) {
     // 使用二分查找
     auto first = std::lower_bound(_libProps, _libPropsEnd, name, JsLibFunctionLessCmp());
     if (first != _libPropsEnd && first->name.equal(name)) {
@@ -219,7 +219,7 @@ JsValue *JsLibObject::getRawBySymbol(VMContext *ctx, uint32_t index, bool includ
     return nullptr;
 }
 
-bool JsLibObject::removeByName(VMContext *ctx, const SizedString &name) {
+bool JsLibObject::removeByName(VMContext *ctx, const StringView &name) {
     auto first = std::lower_bound(_libProps, _libPropsEnd, name, JsLibFunctionLessCmp());
     if (first != _libPropsEnd && first->name.equal(name)) {
         if (!first->prop.isConfigurable()) {
@@ -241,7 +241,7 @@ bool JsLibObject::removeByName(VMContext *ctx, const SizedString &name) {
 }
 
 bool JsLibObject::removeByIndex(VMContext *ctx, uint32_t index) {
-    NumberToSizedString name(index);
+    NumberToStringView name(index);
     return removeByName(ctx, name);
 }
 

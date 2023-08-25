@@ -10,7 +10,7 @@
 
 static JsValue __errorPrototype;
 static JsValue __errorToStringPrefix;
-static SizedString SS_ERR_STRING_PREFIX = makeCommonString("Error: ");
+static StringView SS_ERR_STRING_PREFIX = makeCommonString("Error: ");
 
 
 // https://developer.mozilla.org/en-US/docs/Web/JavaScript/Reference/Global_Objects/eval

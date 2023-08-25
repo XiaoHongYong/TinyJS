@@ -113,9 +113,9 @@ protected:
     void _buildExprIdentifiers();
     void _allocateIdentifierStorage(Scope *scope, int registerIndex);
 
-    int _getStringIndex(const SizedString &str);
+    int _getStringIndex(const StringView &str);
     int _getDoubleIndex(double value);
-    int _getStringIndex(const Token &token) { return _getStringIndex(SizedString(token.buf, token.len)); }
+    int _getStringIndex(const Token &token) { return _getStringIndex(StringView(token.buf, token.len)); }
 
     int _getRawStringsIndex(const VecInts &indices);
 
@@ -131,7 +131,7 @@ protected:
     void _leaveBreakContinueArea();
 
 protected:
-    using MapStringToIdx = std::unordered_map<SizedString, int, SizedStringHash, SizedStrCmpEqual>;
+    using MapStringToIdx = std::unordered_map<StringView, int, StringViewHash, SizedStrCmpEqual>;
     using MapDoubleToIdx = std::unordered_map<double, int>;
 
     VMRuntimeCommon             *_runtimeCommon;

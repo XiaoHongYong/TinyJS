@@ -86,7 +86,7 @@ void numberParseFloat(VMContext *ctx, const JsValue &thiz, const Arguments &args
             double d = NAN;
             bool negative = false;
 
-            str.trimStart(sizedStringBlanks);
+            str.trimStart(stringViewBlanks);
             if (str.len > 0) {
                 if (str.data[0] == '-') {
                     negative = true;
@@ -132,7 +132,7 @@ void numberParseFloat(VMContext *ctx, const JsValue &thiz, const Arguments &args
             ctx->retValue = v;
         } else if (v.type == JDT_SYMBOL) {
             // 抛出异常
-            ctx->runtime->toSizedStringStrictly(ctx, v);
+            ctx->runtime->toStringViewStrictly(ctx, v);
         } else if (v.type >= JDT_OBJECT) {
             v = ctx->runtime->toString(ctx, v);
             continue;
@@ -210,8 +210,8 @@ void numberParseInt(VMContext *ctx, const JsValue &thiz, const Arguments &args) 
     auto v = args.getAt(0);
     auto base = args.getIntAt(ctx, 1, -1);
 
-    auto str = runtime->toSizedStringStrictly(ctx, v);
-    str.trimStart(sizedStringBlanks);
+    auto str = runtime->toStringViewStrictly(ctx, v);
+    str.trimStart(stringViewBlanks);
 
     auto d = parseInt(str.data, str.data + str.len, base);
     int32_t n = (int32_t)d;
@@ -291,7 +291,7 @@ void numberPrototypeToExponential(VMContext *ctx, const JsValue &thiz, const Arg
         size = floatToStringEx(d, buf, sizeof(buf), fractionDigits + 1, F_EXPONENTIAL_NOTATION);
     }
 
-    ctx->retValue = runtime->pushString(SizedString(buf, size));
+    ctx->retValue = runtime->pushString(StringView(buf, size));
 }
 
 void numberPrototypeToFixed(VMContext *ctx, const JsValue &thiz, const Arguments &args) {
@@ -317,7 +317,7 @@ void numberPrototypeToFixed(VMContext *ctx, const JsValue &thiz, const Arguments
         size = floatToString(d, buf);
     }
 
-    ctx->retValue = runtime->pushString(SizedString(buf, size));
+    ctx->retValue = runtime->pushString(StringView(buf, size));
 }
 
 void numberPrototypeToPrecision(VMContext *ctx, const JsValue &thiz, const Arguments &args) {
@@ -343,7 +343,7 @@ void numberPrototypeToPrecision(VMContext *ctx, const JsValue &thiz, const Argum
         size = floatToStringEx(d, buf, sizeof(buf), precision, F_FIXED_PRECISION);
     }
 
-    ctx->retValue = runtime->pushString(SizedString(buf, size));
+    ctx->retValue = runtime->pushString(StringView(buf, size));
 }
 
 void numberPrototypeToString(VMContext *ctx, const JsValue &thiz, const Arguments &args) {
@@ -372,7 +372,7 @@ void numberPrototypeToString(VMContext *ctx, const JsValue &thiz, const Argument
         size = floatToStringWithRadix(v, buf, sizeof(buf), radix);
     }
 
-    ctx->retValue = runtime->pushString(SizedString(buf, size));
+    ctx->retValue = runtime->pushString(StringView(buf, size));
 }
 
 void numberPrototypeValueOf(VMContext *ctx, const JsValue &thiz, const Arguments &args) {
@@ -397,8 +397,8 @@ void registerNumber(VMRuntimeCommon *rt) {
 
     auto obj = setGlobalLibObject("Number", rt, numberFunctions, CountOf(numberFunctions), numberConstructor, jsValuePrototypeFunction);
 
-    rt->setGlobalValue("isFinite", obj->getByName(nullptr, obj->self, SizedString("isFinite")));
-    rt->setGlobalValue("isNaN", obj->getByName(nullptr, obj->self, SizedString("isNaN")));
-    rt->setGlobalValue("parseInt", obj->getByName(nullptr, obj->self, SizedString("parseInt")));
-    rt->setGlobalValue("parseFloat", obj->getByName(nullptr, obj->self, SizedString("parseFloat")));
+    rt->setGlobalValue("isFinite", obj->getByName(nullptr, obj->self, StringView("isFinite")));
+    rt->setGlobalValue("isNaN", obj->getByName(nullptr, obj->self, StringView("isNaN")));
+    rt->setGlobalValue("parseInt", obj->getByName(nullptr, obj->self, StringView("parseInt")));
+    rt->setGlobalValue("parseFloat", obj->getByName(nullptr, obj->self, StringView("parseFloat")));
 }

@@ -164,7 +164,7 @@ public:
  */
 class JsExprIdentifier : public IJsNode {
 public:
-    JsExprIdentifier(const Token &name, Scope *scope) : IJsNode(NT_IDENTIFIER), name(tokenToSizedString(name)), scope(scope) {
+    JsExprIdentifier(const Token &name, Scope *scope) : IJsNode(NT_IDENTIFIER), name(tokenToStringView(name)), scope(scope) {
         nameStringIdx = -1;
         isModified = false;
         isUsedNotAsFunctionCall = true;
@@ -252,7 +252,7 @@ public:
         writeAddress(stream);
     }
 
-    SizedString             name;
+    StringView             name;
 
     // 当在有 eval/with 的 scope 时才有效
     uint32_t                nameStringIdx;

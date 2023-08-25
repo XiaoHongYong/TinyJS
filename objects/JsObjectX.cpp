@@ -17,7 +17,7 @@ JsObjectX::~JsObjectX() {
     }
 }
 
-void JsObjectX::setPropertyByName(VMContext *ctx, const SizedString &name, const JsValue &descriptor) {
+void JsObjectX::setPropertyByName(VMContext *ctx, const StringView &name, const JsValue &descriptor) {
     if (onSetValue(ctx, name, descriptor)) {
         return;
     }
@@ -44,7 +44,7 @@ void JsObjectX::setPropertyBySymbol(VMContext *ctx, uint32_t index, const JsValu
     _obj->setPropertyBySymbol(ctx, index, descriptor);
 }
 
-JsError JsObjectX::setByName(VMContext *ctx, const JsValue &thiz, const SizedString &name, const JsValue &value) {
+JsError JsObjectX::setByName(VMContext *ctx, const JsValue &thiz, const StringView &name, const JsValue &value) {
     if (onSetValue(ctx, name, value)) {
         return JE_OK;
     }
@@ -70,7 +70,7 @@ JsError JsObjectX::setBySymbol(VMContext *ctx, const JsValue &thiz, uint32_t ind
     return _obj->setBySymbol(ctx, thiz, index, value);
 }
 
-JsValue JsObjectX::increaseByName(VMContext *ctx, const JsValue &thiz, const SizedString &name, int n, bool isPost) {
+JsValue JsObjectX::increaseByName(VMContext *ctx, const JsValue &thiz, const StringView &name, int n, bool isPost) {
     auto value = onGetValue(ctx, name);
     if (value.isValid()) {
         auto newValue = increase(ctx, value, n);
@@ -99,7 +99,7 @@ JsValue JsObjectX::increaseBySymbol(VMContext *ctx, const JsValue &thiz, uint32_
     return _obj->increaseBySymbol(ctx, thiz, index, n, isPost);
 }
 
-JsValue *JsObjectX::getRawByName(VMContext *ctx, const SizedString &name, bool includeProtoProp) {
+JsValue *JsObjectX::getRawByName(VMContext *ctx, const StringView &name, bool includeProtoProp) {
     _tmpRawHolder = onGetValue(ctx, name);
     if (_tmpRawHolder.isValid()) {
         return &_tmpRawHolder;
@@ -140,7 +140,7 @@ JsValue *JsObjectX::getRawBySymbol(VMContext *ctx, uint32_t index, bool includeP
     return nullptr;
 }
 
-bool JsObjectX::removeByName(VMContext *ctx, const SizedString &name) {
+bool JsObjectX::removeByName(VMContext *ctx, const StringView &name) {
     if (onSetValue(ctx, name, jsValueEmpty)) {
         return true;
     }

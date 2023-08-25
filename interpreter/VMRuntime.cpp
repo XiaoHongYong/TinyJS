@@ -29,19 +29,19 @@ const uint32_t GC_ALLOCATED_COUNT_THRESHOLD = (uint32_t)1e5;
 
 class StdIOConsole : public IConsole {
 public:
-    virtual void log(const SizedString &message) override {
+    virtual void log(const StringView &message) override {
         printf("%.*s\n", message.len, message.data);
     }
 
-    virtual void info(const SizedString &message) override {
+    virtual void info(const StringView &message) override {
         printf("[info] %.*s\n", message.len, message.data);
     }
 
-    virtual void warn(const SizedString &message) override {
+    virtual void warn(const StringView &message) override {
         printf("[warn] %.*s\n", message.len, message.data);
     }
 
-    virtual void error(const SizedString &message) override {
+    virtual void error(const StringView &message) override {
         printf("[error] %.*s\n", message.len, message.data);
     }
 
@@ -154,7 +154,7 @@ void VMRuntime::dump(BinaryOutputStream &stream) {
 
     stream.write("== Common VMRuntime ==\n");
     _rtCommon->dump(os);
-    writeIndent(stream, os.sizedStringStartNew(), SizedString("  "));
+    writeIndent(stream, os.stringViewStartNew(), StringView("  "));
 
     for (auto rp : _resourcePools) {
         rp->dump(stream);
@@ -267,7 +267,7 @@ void VMRuntime::joinString(JsString &js) {
                     joinedStr = &head.value.joinedString;
                     continue;
                 } else {
-                    // head 是 SizedString 类型
+                    // head 是 StringView 类型
                     auto &ss = head.value.str.utf8Str();
                     memcpy(p, ss.data, ss.len);
                     p += ss.len;
@@ -286,7 +286,7 @@ void VMRuntime::joinString(JsString &js) {
                     joinedStr = &tail.value.joinedString;
                     continue;
                 } else {
-                    // 是 SizedString 类型
+                    // 是 StringView 类型
                     auto &ss = tail.value.str.utf8Str();
                     memcpy(p, ss.data, ss.len);
                 }
@@ -300,7 +300,7 @@ void VMRuntime::joinString(JsString &js) {
     js.value.str = targStr;
 }
 
-JsValue VMRuntime::joinSmallString(const SizedString &sz1, const SizedString &sz2) {
+JsValue VMRuntime::joinSmallString(const StringView &sz1, const StringView &sz2) {
     if (sz1.len + sz2.len == 0) {
         return jsStringValueEmpty;
     }
@@ -314,10 +314,10 @@ JsValue VMRuntime::joinSmallString(const SizedString &sz1, const SizedString &sz
     return pushString(JsString(str));
 }
 
-JsValue VMRuntime::plusString(const SizedString &str1, const JsValue &s2) {
+JsValue VMRuntime::plusString(const StringView &str1, const JsValue &s2) {
     assert(s2.type == JDT_STRING || s2.type == JDT_CHAR);
     if (s2.type == JDT_CHAR) {
-        SizedStringWrapper str2(s2);
+        StringViewWrapper str2(s2);
         return joinSmallString(str1, str2);
     }
 
@@ -333,10 +333,10 @@ JsValue VMRuntime::plusString(const SizedString &str1, const JsValue &s2) {
     }
 }
 
-JsValue VMRuntime::plusString(const JsValue &s1, const SizedString &str2) {
+JsValue VMRuntime::plusString(const JsValue &s1, const StringView &str2) {
     assert(s1.type == JDT_STRING || s1.type == JDT_CHAR);
     if (s1.type == JDT_CHAR) {
-        SizedStringWrapper str1(s1);
+        StringViewWrapper str1(s1);
         return joinSmallString(str1, str2);
     }
 
@@ -357,13 +357,13 @@ JsValue VMRuntime::plusString(const JsValue &s1, const JsValue &s2) {
     assert(s2.type == JDT_STRING || s2.type == JDT_CHAR);
 
     bool isJoinedString = false;
-    SizedStringUtf16 ss1, ss2;
+    StringViewUtf16 ss1, ss2;
     uint32_t lenUtf16 = 0;
     uint8_t buf1[8], buf2[8];
 
     if (s1.type == JDT_CHAR) {
         lenUtf16 = utf32CodeToUtf16Length(s1.value.index);
-        ss1.set(SizedString(buf1, utf32CodeToUtf8(s1.value.index, buf1)));
+        ss1.set(StringView(buf1, utf32CodeToUtf8(s1.value.index, buf1)));
     } else {
         if (s1.isInResourcePool) {
             ss1 = getStringInResourcePool(s1.value.index);
@@ -381,7 +381,7 @@ JsValue VMRuntime::plusString(const JsValue &s1, const JsValue &s2) {
 
     if (s2.type == JDT_CHAR) {
         lenUtf16 += utf32CodeToUtf16Length(s2.value.index);
-        ss2.set(SizedString(buf2, utf32CodeToUtf8(s2.value.index, buf2)));
+        ss2.set(StringView(buf2, utf32CodeToUtf8(s2.value.index, buf2)));
     } else {
         if (s2.isInResourcePool) {
             ss2 = getStringInResourcePool(s2.value.index);
@@ -497,7 +497,7 @@ JsValue VMRuntime::pushString(const JsString &str) {
     return JsValue(JDT_STRING, n);
 }
 
-JsValue VMRuntime::pushString(const SizedString &str) {
+JsValue VMRuntime::pushString(const StringView &str) {
     if (str.len <= 1) {
         if (str.len == 0) {
             return jsStringValueEmpty;
@@ -652,16 +652,16 @@ JsValue VMRuntime::toString(VMContext *ctx, const JsValue &v) {
         case JDT_NULL: return jsStringValueNull;
         case JDT_BOOL: return val.value.n32 ? jsStringValueTrue : jsStringValueFalse;
         case JDT_INT32: {
-            SizedStringWrapper str(val.value.n32);
+            StringViewWrapper str(val.value.n32);
             return pushString(str);
         }
         case JDT_NUMBER: {
             char buf[64];
             auto len = floatToString(getDouble(val), buf);
-            return pushString(SizedString(buf, len));
+            return pushString(StringView(buf, len));
         }
         case JDT_CHAR: {
-            SizedStringWrapper str(val);
+            StringViewWrapper str(val);
             return pushString(str.str());
         }
         case JDT_STRING: {
@@ -670,7 +670,7 @@ JsValue VMRuntime::toString(VMContext *ctx, const JsValue &v) {
         case JDT_SYMBOL: {
             auto index = val.value.n32;
             assert(index < _symbolValues.size());
-            return pushString(SizedString(_symbolValues[index].toString()));
+            return pushString(StringView(_symbolValues[index].toString()));
         }
         default: {
             ctx->throwException(JE_TYPE_ERROR, "Cannot convert object to primitive value");
@@ -680,13 +680,13 @@ JsValue VMRuntime::toString(VMContext *ctx, const JsValue &v) {
     return jsValueUndefined;
 }
 
-LockedSizedStringWrapper VMRuntime::toSizedString(VMContext *ctx, const JsValue &v, bool isStrict) {
+LockedStringViewWrapper VMRuntime::toStringView(VMContext *ctx, const JsValue &v, bool isStrict) {
     JsValue val = v;
     if (val.type >= JDT_OBJECT) {
         ctx->vm->callMember(ctx, v, SS_TOSTRING, Arguments());
         if (ctx->retValue.type >= JDT_OBJECT) {
             ctx->throwException(JE_TYPE_ERROR, " Cannot convert object to primitive value");
-            return SizedString();
+            return StringView();
         }
         val = ctx->retValue;
     }
@@ -694,19 +694,19 @@ LockedSizedStringWrapper VMRuntime::toSizedString(VMContext *ctx, const JsValue 
     switch (val.type) {
         case JDT_UNDEFINED: return SS_UNDEFINED;
         case JDT_NULL: return SS_NULL;
-        case JDT_BOOL: return LockedSizedStringWrapper(val.value.n32 ? SS_TRUE : SS_FALSE);
-        case JDT_INT32: return LockedSizedStringWrapper(val.value.n32);
-        case JDT_NUMBER: return LockedSizedStringWrapper(getDouble(val));
-        case JDT_CHAR: return LockedSizedStringWrapper(val);
+        case JDT_BOOL: return LockedStringViewWrapper(val.value.n32 ? SS_TRUE : SS_FALSE);
+        case JDT_INT32: return LockedStringViewWrapper(val.value.n32);
+        case JDT_NUMBER: return LockedStringViewWrapper(getDouble(val));
+        case JDT_CHAR: return LockedStringViewWrapper(val);
         case JDT_STRING: return getUtf8String(val);
         case JDT_SYMBOL: {
             if (isStrict) {
                 ctx->throwException(JE_TYPE_ERROR, "Cannot convert a Symbol value to a string");
-                return LockedSizedStringWrapper();
+                return LockedStringViewWrapper();
             }
             auto index = val.value.n32;
             assert(index < _symbolValues.size());
-            return LockedSizedStringWrapper(_symbolValues[index].toString());
+            return LockedStringViewWrapper(_symbolValues[index].toString());
         }
         default: {
             ctx->throwException(JE_TYPE_ERROR, "Cannot convert object to primitive value");
@@ -716,7 +716,7 @@ LockedSizedStringWrapper VMRuntime::toSizedString(VMContext *ctx, const JsValue 
     return SS_EMPTY;
 }
 
-SizedString VMRuntime::toTypeName(const JsValue &value) {
+StringView VMRuntime::toTypeName(const JsValue &value) {
     switch (value.type) {
         case JDT_UNDEFINED: return SS_UNDEFINED;
         case JDT_NULL: return SS_NULL;
@@ -1043,7 +1043,7 @@ void VMRuntime::markJoinedStringReferIdx(const JsJoinedString &joinedString) {
     }
 }
 
-void VMRuntime::convertUtf8ToUtf16(SizedStringUtf16 &str) {
+void VMRuntime::convertUtf8ToUtf16(StringViewUtf16 &str) {
     assert(str.utf16Data() == nullptr);
 
     auto &utf8Str = str.utf8Str();
