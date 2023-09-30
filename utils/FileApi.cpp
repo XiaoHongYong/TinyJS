@@ -567,6 +567,31 @@ bool getFileStatInfo(cstr_t file, FileStatInfo &infoOut) {
     return true;
 }
 
+bool FilePtr::open(const char *fileName, const char *mode) {
+    m_fp = fopen(fileName, mode);
+    return m_fp != nullptr;
+}
+
+long FilePtr::fileSize() {
+    auto n = ftell(m_fp);
+    fseek(m_fp, 0, SEEK_END);
+    auto len = ftell(m_fp);
+    fseek(m_fp, n, SEEK_SET);
+
+    return len;
+}
+
+bool FilePtr::seek(long pos, int whence) {
+    return fseek(m_fp, pos, whence) == 0;
+}
+
+size_t FilePtr::write(const void *buf, size_t len) {
+    return fwrite(buf, 1, len, m_fp);
+}
+
+size_t FilePtr::read(void *buf, size_t len) {
+    return fread(buf, 1, len, m_fp);
+}
 
 #if UNIT_TEST
 

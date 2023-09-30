@@ -343,6 +343,10 @@ void strSplit(const char *str, char sep, VecStrings &vStrs) {
     StringView(str).split(sep, vStrs);
 }
 
+void strSplit(const char *str, char sep, VecStringViews &vStrs) {
+    StringView(str).split(sep, vStrs);
+}
+
 bool strSplit(const char *str, char sep, string &leftOut, string &rightOut) {
     StringView s(str), left, right;
 
@@ -695,7 +699,7 @@ string stringPrintf(cstr_t format, va_list args) {
 
     while (1) {
         auto capacity = str.size();
-        int size = vsnprintf(str.data(), capacity, format, args);
+        int size = vsnprintf((char *)str.data(), capacity, format, args);
 
         if (size < 0) {
             if (capacity >= 100 * 1024) {

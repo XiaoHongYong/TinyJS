@@ -135,14 +135,9 @@ cstr_t getFileEncodingBom(CharEncodingType encoding) {
     }
 }
 
-string insertWithFileBom(const string &text) {
+void autoInsertWithUtf8Bom(string &text) {
     if (!isAnsiStr(text.c_str())) {
-        string out;
-        out.append(SZ_FE_UTF8);
-        out.append(text);
-        return out;
-    } else {
-        return text;
+        text.insert(0, SZ_FE_UTF8);
     }
 }
 
@@ -154,11 +149,11 @@ string strToUtf8ByBom(const char *data, size_t size) {
 
     std::string str;
     if (encoding == ED_UNICODE) {
-        ucs2ToUtf8((WCHAR *)data, (int)size / 2, str);
+        ucs2ToUtf8((utf16_t *)data, (int)size / 2, str);
     } else if (encoding == ED_UNICODE_BIG_ENDIAN) {
-        ucs2EncodingReverse((WCHAR *)data, (int)size / 2);
-        ucs2ToUtf8((WCHAR *)data, (int)size / 2, str);
-    } if (encoding == ED_UTF8) {
+        ucs2EncodingReverse((utf16_t *)data, (int)size / 2);
+        ucs2ToUtf8((utf16_t *)data, (int)size / 2, str);
+    } else if (encoding == ED_UTF8) {
         str.assign(data, size);
     } else {
         str.assign(data, size);
@@ -177,7 +172,7 @@ bool readFileByBom(const char *fn, std::string &str) {
     return true;
 }
 
-bool isAnsiStr(const WCHAR *szStr) {
+bool isAnsiStr(const utf16_t *szStr) {
     while (*szStr) {
         if (*szStr >= 128) {
             return false;
@@ -210,10 +205,10 @@ inline void ensureInputStrLen(const CHAR *str, int &nLen) {
     }
 }
 
-int ucs2ToUtf8(const WCHAR *str, int nLen, string &strOut) {
+int ucs2ToUtf8(const utf16_t *str, int nLen, string &strOut) {
     ensureInputStrLen(str, nLen);
 
-    const WCHAR *wchBegin = str, *wEnd = str + nLen;
+    const utf16_t *wchBegin = str, *wEnd = str + nLen;
     int nOutPos = 0;
 
     strOut.resize(nLen * 5);
@@ -260,11 +255,11 @@ int utf8ToUCS2(const char *str, int nLen, u16string &strOut) {
     return size;
 }
 
-void ucs2EncodingReverse(WCHAR *str, uint32_t nLen) {
+void ucs2EncodingReverse(utf16_t *str, uint32_t nLen) {
     assert(nLen >= 0);
 
     uint8_t *p = (uint8_t *)str;
-    int lenBytes = nLen * sizeof(WCHAR);
+    int lenBytes = nLen * sizeof(utf16_t);
     for (int i = 0; i < lenBytes; i += 2) {
         uint8_t t = p[i];
         p[i] = p[i + 1];

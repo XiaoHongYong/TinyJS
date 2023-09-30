@@ -82,11 +82,10 @@ void numberParseFloat(VMContext *ctx, const JsValue &thiz, const Arguments &args
                 ctx->retValue = jsValueNaN;
             }
         } else if (v.type == JDT_STRING) {
-            auto str = ctx->runtime->getString(v).utf8Str();
+            auto str = ctx->runtime->getString(v).utf8Str().trimStart(stringViewBlanks);
             double d = NAN;
             bool negative = false;
 
-            str.trimStart(stringViewBlanks);
             if (str.len > 0) {
                 if (str.data[0] == '-') {
                     negative = true;
@@ -143,7 +142,7 @@ void numberParseFloat(VMContext *ctx, const JsValue &thiz, const Arguments &args
     }
 }
 
-double parseInt(uint8_t *start, uint8_t *end, int base = -1) {
+double parseInt(char *start, char *end, int base = -1) {
     if (start >= end || base > 36) {
         return NAN;
     }
@@ -210,10 +209,9 @@ void numberParseInt(VMContext *ctx, const JsValue &thiz, const Arguments &args) 
     auto v = args.getAt(0);
     auto base = args.getIntAt(ctx, 1, -1);
 
-    auto str = runtime->toStringViewStrictly(ctx, v);
-    str.trimStart(stringViewBlanks);
+    auto str = runtime->toStringViewStrictly(ctx, v).trimStart(stringViewBlanks);
 
-    auto d = parseInt(str.data, str.data + str.len, base);
+    double d = parseInt(str.data, str.data + str.len, base);
     int32_t n = (int32_t)d;
     if (n == d) {
         ctx->retValue = makeJsValueInt32(n);

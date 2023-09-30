@@ -17,13 +17,20 @@ private:
     BinaryFileInputStream &operator=(const BinaryFileInputStream &);
 
 public:
-    BinaryFileInputStream(FILE *fp) : m_fp(fp) { }
+    BinaryFileInputStream(FILE *fp) : m_fp(fp) { fseek(fp, 0, SEEK_SET); }
     BinaryFileInputStream(cstr_t file) { m_fp = fopen(file, "rb"); m_needClose = true; }
     ~BinaryFileInputStream() {
-        if (m_fp) {
+        if (m_needClose && m_fp) {
             fclose(m_fp);
         }
     }
+
+    bool isOK() { return m_fp != nullptr; }
+
+    void find(const StringView &pattern, int maxSearchSize = -1);
+
+    // Search back from current position.
+    void rfind(const StringView &pattern, int maxSearchSize = -1);
 
     uint8_t readUInt8() {
         uint8_t n;
@@ -41,6 +48,15 @@ public:
         return n;
     }
 
+    uint32_t readUint24() {
+        uint8_t buf[8];
+        if (fread(buf, 1, 3, m_fp) != 3) {
+            throw BinaryStreamOutOfRange(__LINE__);
+        }
+
+        return buf[0] | (buf[1] << 8) | (buf[2] << 16);
+    }
+
     uint32_t readUInt32() {
         uint32_t n;
         if (fread(&n, 1, sizeof(uint32_t), m_fp) != sizeof(uint32_t)) {
@@ -55,6 +71,15 @@ public:
             throw BinaryStreamOutOfRange(__LINE__);
         }
         return n;
+    }
+
+    uint32_t readUint24BE() {
+        uint8_t buf[8];
+        if (fread(buf, 1, 3, m_fp) != 3) {
+            throw BinaryStreamOutOfRange(__LINE__);
+        }
+
+        return buf[2] | (buf[1] << 8) | (buf[0] << 16);
     }
 
     uint16_t readUInt16BE() {
@@ -107,12 +132,32 @@ public:
         }
     }
 
+    void backward(int n) {
+        if (fseek(m_fp, -n, SEEK_CUR) != 0) {
+            throw BinaryStreamOutOfRange(__LINE__);
+        }
+    }
+
     size_t offset() { return ftell(m_fp); }
     void setOffset(uint32_t offset) {
         if (fseek(m_fp, offset, SEEK_SET) != 0) {
             throw BinaryStreamOutOfRange(__LINE__);
         }
     }
+    void setOffsetToEnd() {
+        if (fseek(m_fp, 0, SEEK_END) != 0) {
+            throw BinaryStreamOutOfRange(__LINE__);
+        }
+    }
+
+    size_t size() {
+        auto org = ftell(m_fp);
+        fseek(m_fp, 0, SEEK_END);
+        auto size = ftell(m_fp);
+        fseek(m_fp, org, SEEK_SET);
+        return (size_t)size;
+    }
+
     size_t remainingSize() {
         auto org = ftell(m_fp);
         fseek(m_fp, 0, SEEK_END);
@@ -121,6 +166,7 @@ public:
         return (size_t)(size - org);
     }
     bool isRemaining() { return !feof(m_fp); }
+    bool isEof() { return feof(m_fp) != 0; }
 
 protected:
     FILE                        *m_fp;

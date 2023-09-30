@@ -10,7 +10,7 @@
 #include <climits>
 
 
-StringView::StringView(const char *data) : data((uint8_t *)data), len((uint32_t)strlen((const char *)data)) {
+StringView::StringView(const char *data) : data((char *)data), len((uint32_t)strlen((const char *)data)) {
 }
 
 bool StringView::isNumeric() const {
@@ -27,8 +27,8 @@ bool StringView::isNumeric() const {
 }
 
 bool StringView::isAnsi() const {
-    auto end = data + len;
-    auto p = data;
+    auto end = (uint8_t *)data + len;
+    auto p = (uint8_t *)data;
 
     for (; p < end; ++p) {
         if (*p > 127) {
@@ -39,36 +39,32 @@ bool StringView::isAnsi() const {
     return true;
 }
 
-uint8_t *StringView::strlchr(uint8_t c) const {
-    const uint8_t *p = data, *last = data + len;
+int StringView::strchr(uint8_t c, int start) const {
+    const auto *p = data + start, *last = data + len;
 
     while (p < last) {
         if (*p == c) {
-            return (uint8_t *)p;
+            return (int)(p - data);
         }
 
         p++;
     }
 
-    return nullptr;
+    return -1;
 }
 
-uint8_t *StringView::strrchr(uint8_t c) const {
-    const uint8_t *start = data, *p = data + len;
-
-    if (len == 0) {
-        return nullptr;
-    }
+int StringView::strrchr(uint8_t c, int startPos) const {
+    const auto *start = data, *p = data + startPos;
 
     while (p >= start) {
         if (*p == c) {
-            return (uint8_t *)p;
+            return (int)(p - data);
         }
 
         p--;
     }
 
-    return nullptr;
+    return -1;
 }
 
 int StringView::strstr(const StringView &find, int32_t start) const {
@@ -78,10 +74,10 @@ int StringView::strstr(const StringView &find, int32_t start) const {
         return 0;
     }
 
-    const uint8_t *last = data + len - find.len;
-    const uint8_t *s1 = data, *s2 = find.data;
+    const auto *last = data + len - find.len;
+    const auto *s1 = data, *s2 = find.data;
     uint32_t len = find.len - 1;
-    uint8_t c1, c2;
+    char c1, c2;
 
     if (start > 0) {
         s1 += start;
@@ -103,17 +99,17 @@ int StringView::strstr(const StringView &find, int32_t start) const {
     return (int)(s1 - data - 1);
 }
 
-int StringView::stristr(const StringView &find) const {
+int StringView::stristr(const StringView &find, int32_t start) const {
     if (len < find.len) {
         return -1;
     } else if (find.len == 0) {
         return 0;
     }
 
-    const uint8_t *last = data + len - find.len;
-    const uint8_t *s1 = data, *s2 = find.data;
+    const auto *last = data + len - find.len;
+    const auto *s1 = data + start, *s2 = find.data;
     uint32_t len = find.len - 1;
-    uint8_t c1, c2;
+    char c1, c2;
 
     c2 = (uint8_t)*s2++;
 
@@ -138,10 +134,10 @@ int StringView::strrstr(const StringView &find, int32_t start) const {
         return len;
     }
 
-    const uint8_t *s1 = data + len - find.len;
-    const uint8_t *begin = data, *s2 = find.data;
+    const auto *s1 = data + len - find.len;
+    const auto *begin = data, *s2 = find.data;
     uint32_t len = find.len - 1;
-    uint8_t c1, c2;
+    char c1, c2;
 
     if (start > 0) {
         auto tmp = data + start;
@@ -169,8 +165,8 @@ int StringView::strrstr(const StringView &find, int32_t start) const {
 }
 
 int StringView::cmp(const StringView &other) const {
-    const uint8_t *p1 = data, *p1End = data + len;
-    const uint8_t *p2 = other.data, *p2End = other.data + other.len;
+    const uint8_t *p1 = (uint8_t *)data, *p1End = (uint8_t *)data + len;
+    const uint8_t *p2 = (uint8_t *)other.data, *p2End = (uint8_t *)other.data + other.len;
 
     for (; p1 < p1End && p2 < p2End; p1++, p2++) {
         if (*p1 == *p2) {
@@ -190,8 +186,8 @@ int StringView::cmp(const StringView &other) const {
 }
 
 int StringView::iCmp(const StringView &other) const {
-    const uint8_t *p1 = data, *p1End = data + len;
-    const uint8_t *p2 = other.data, *p2End = other.data + other.len;
+    const uint8_t *p1 = (uint8_t *)data, *p1End = (uint8_t *)data + len;
+    const uint8_t *p2 = (uint8_t *)other.data, *p2End = (uint8_t *)other.data + other.len;
 
     for (; p1 < p1End && p2 < p2End; p1++, p2++) {
         uint8_t c1 = *p1, c2 = *p2;
@@ -224,8 +220,8 @@ bool StringView::startsWith(const StringView &with) const {
         return false;
     }
 
-    const uint8_t *p1 = data, *p1End = data + len;
-    const uint8_t *p2 = with.data, *p2End = with.data + with.len;
+    const auto *p1 = data, *p1End = data + len;
+    const auto *p2 = with.data, *p2End = with.data + with.len;
 
     for (; p1 < p1End && p2 < p2End; p1++, p2++) {
         if (*p1 == *p2) {
@@ -242,8 +238,8 @@ bool StringView::iStartsWith(const StringView &with) const {
         return false;
     }
 
-    const uint8_t *p1 = data, *p1End = data + len;
-    const uint8_t *p2 = with.data, *p2End = with.data + with.len;
+    const auto *p1 = data, *p1End = data + len;
+    const auto *p2 = with.data, *p2End = with.data + with.len;
 
     for (; p1 < p1End && p2 < p2End; p1++, p2++) {
         uint8_t c1 = *p1, c2 = *p2;
@@ -264,9 +260,9 @@ bool StringView::iStartsWith(const StringView &with) const {
     return p2 == p2End;
 }
 
-void StringView::trim(uint8_t charToTrim) {
-    uint8_t *end = data + len;
-    uint8_t *p = data;
+StringView StringView::trim(uint8_t charToTrim) const {
+    auto *end = data + len;
+    auto *p = data;
 
     while (p < end && *p == (uint8_t)charToTrim) {
         p++;
@@ -276,15 +272,14 @@ void StringView::trim(uint8_t charToTrim) {
         end--;
     }
 
-    len = uint32_t(end - p);
-    data = p;
+    return StringView(p, uint32_t(end - p), _isStable);
 }
 
-void StringView::trim(const StringView &toTrim) {
+StringView StringView::trim(const StringView &toTrim) const {
     // Trim from tail
-    uint8_t *start = data, *end = data + len;
+    auto *start = data, *end = data + len;
     while (start < end) {
-        if (toTrim.strlchr(*(end - 1)) == nullptr) {
+        if (toTrim.strchr(*(end - 1)) == -1) {
             break;
         }
         --end;
@@ -292,46 +287,43 @@ void StringView::trim(const StringView &toTrim) {
 
     // Trim from head
     while (start < end) {
-        if (toTrim.strlchr(*(start)) == nullptr) {
+        if (toTrim.strchr(*(start)) == -1) {
             break;
         }
         ++start;
     }
 
-    data = start;
-    len = (uint32_t)(end - start);
+    return StringView(start, (uint32_t)(end - start), _isStable);
 }
 
-void StringView::trim() {
-    trim(stringViewBlanks);
+StringView StringView::trim() const {
+    return trim(stringViewBlanks);
 }
 
-void StringView::trimStart(const StringView &toTrim) {
-    uint8_t *start = data, *end = data + len;
+StringView StringView::trimStart(const StringView &toTrim) const {
+    auto *start = data, *end = data + len;
     // Trim from head
     while (start < end) {
-        if (toTrim.strlchr(*(start)) == nullptr) {
+        if (toTrim.strchr(*(start)) == -1) {
             break;
         }
         ++start;
     }
 
-    data = start;
-    len = (uint32_t)(end - start);
+    return StringView(start, (uint32_t)(end - start), _isStable);
 }
 
-void StringView::trimEnd(const StringView &toTrim) {
+StringView StringView::trimEnd(const StringView &toTrim) const {
     // Trim from tail
-    uint8_t *start = data, *end = data + len;
+    auto *start = data, *end = data + len;
     while (start < end) {
-        if (toTrim.strlchr(*(end - 1)) == nullptr) {
+        if (toTrim.strchr(*(end - 1)) == -1) {
             break;
         }
         --end;
     }
 
-    data = start;
-    len = (uint32_t)(end - start);
+    return StringView(start, (uint32_t)(end - start), _isStable);
 }
 
 void StringView::shrink(int startShrinkSize, int endShrinkSize) {
@@ -344,7 +336,8 @@ void StringView::shrink(int startShrinkSize, int endShrinkSize) {
 }
 
 StringView StringView::substr(uint32_t offset, uint32_t size) const {
-    if (offset + size <= len) {
+    auto end = offset + size;
+    if (end <= len && end >= size) {
         return StringView(data + offset, size, _isStable);
     } else if (offset <= len) {
         return StringView(data + offset, len - offset, _isStable);
@@ -365,7 +358,7 @@ long StringView::atoi(bool &successful) const {
     cutlim = LONG_MAX % 10;
 
     int n = (int)len;
-    const uint8_t *p = data;
+    const auto *p = data;
     bool negative = false;
 
     if (*p == '-') {
@@ -487,9 +480,9 @@ void StringView::toLowerCase() {
     }
 }
 
-bool StringView::split(char chSeparator, StringView &left, StringView &right) {
-    uint8_t *p = data;
-    uint8_t *end = data + len;
+bool StringView::split(char chSeparator, StringView &left, StringView &right) const {
+    auto *p = data;
+    auto *end = data + len;
 
     while (p < end && *p != chSeparator) {
         p++;
@@ -504,7 +497,7 @@ bool StringView::split(char chSeparator, StringView &left, StringView &right) {
     return true;
 }
 
-bool StringView::split(const char *separator, StringView &left, StringView &right) {
+bool StringView::split(const char *separator, StringView &left, StringView &right) const {
     size_t lenSep = strlen(separator);
     const char *p = (const char *)data;
     const char *end = p + len - lenSep + 1;
@@ -513,7 +506,7 @@ bool StringView::split(const char *separator, StringView &left, StringView &righ
         if (*p == *separator && strncmp(p, separator, lenSep) == 0) {
             // Found it.
             auto lenOrg = len;
-            left = StringView(data, (uint32_t)((uint8_t *)p - data), _isStable);
+            left = StringView(data, (uint32_t)(p - data), _isStable);
             right = StringView((uint8_t *)p + lenSep, (uint32_t)(lenOrg - left.len - lenSep), _isStable);
             return true;
         }
@@ -553,14 +546,14 @@ bool StringViewUtf16::equal(uint32_t code) const {
     }
 
     utf16_t buf[8];
-    utf8ToUtf16(_utf8Str.data, _utf8Str.len, buf, CountOf(buf));
+    utf8ToUtf16((uint8_t *)_utf8Str.data, _utf8Str.len, buf, CountOf(buf));
     return buf[0] == code;
 }
 
 void StringViewUtf16::onSetUtf8String() {
     _dataUtf16 = nullptr;
 
-    setUtf16Size(utf8ToUtf16Length(_utf8Str.data, _utf8Str.len));
+    setUtf16Size(utf8ToUtf16Length((uint8_t *)_utf8Str.data, _utf8Str.len));
     setAnsi(size() == _utf8Str.len);
 }
 
@@ -595,8 +588,8 @@ int StringViewUtf16::indexOf(const StringView &find, int32_t start) const {
     int32_t pos;
     if (start > 0) {
         // 将 utf-16 的偏移转换为 utf-8 的
-        auto p = utf8ToUtf16Seek(_utf8Str.data, _utf8Str.len, start);
-        pos = StringView(p, _utf8Str.len - (p - _utf8Str.data)).strstr(find);
+        auto p = utf8ToUtf16Seek((uint8_t *)_utf8Str.data, _utf8Str.len, start);
+        pos = StringView(p, _utf8Str.len - (p - (uint8_t *)_utf8Str.data)).strstr(find);
         if (pos >= 0) {
             // 需要转换为 utf-16 的偏移地址
             pos = start + utf8ToUtf16Length(p, pos);
@@ -605,7 +598,7 @@ int StringViewUtf16::indexOf(const StringView &find, int32_t start) const {
         pos = _utf8Str.strstr(find);
         if (pos >= 0) {
             // 需要转换为 utf-16 的偏移地址
-            pos = utf8ToUtf16Length(_utf8Str.data, pos);
+            pos = utf8ToUtf16Length((uint8_t *)_utf8Str.data, pos);
         }
     }
 
@@ -620,15 +613,15 @@ int StringViewUtf16::lastIndexOf(const StringView &find, int32_t start) const {
     int32_t pos;
     if (start > 0) {
         // 将 utf-16 的偏移转换为 utf-8 的
-        auto p = utf8ToUtf16Seek(_utf8Str.data, _utf8Str.len, start);
-        start = int32_t(p - _utf8Str.data);
+        auto p = utf8ToUtf16Seek((uint8_t *)_utf8Str.data, _utf8Str.len, start);
+        start = int32_t(p - (uint8_t *)_utf8Str.data);
     }
 
     pos = _utf8Str.strrstr(find, start);
 
     if (pos > 0) {
         // 需要转换为 utf-16 的偏移地址
-        pos = utf8ToUtf16Length(_utf8Str.data, pos);
+        pos = utf8ToUtf16Length((uint8_t *)_utf8Str.data, pos);
     }
 
     return pos;
@@ -643,12 +636,13 @@ StringView StringViewUtf16::substr(uint32_t offset, uint32_t size) const {
         return stringViewEmpty;
     }
 
-    auto start = utf8ToUtf16Seek(_utf8Str.data, _utf8Str.len, offset);
-    if (offset + size <= _utf8Str._lenUtf16) {
-        auto end = utf8ToUtf16Seek(start, (uint32_t)(_utf8Str.data + _utf8Str.len - start), size);
+    auto start = utf8ToUtf16Seek((uint8_t *)_utf8Str.data, _utf8Str.len, offset);
+    auto end = offset + size;
+    if (end <= _utf8Str._lenUtf16 && end >= size) {
+        auto end = utf8ToUtf16Seek(start, (uint32_t)((uint8_t *)_utf8Str.data + _utf8Str.len - start), size);
         return StringView(start, (uint32_t)(end - start), _utf8Str._isStable);
     } else {
-        return StringView(start, (uint32_t)(_utf8Str.data + _utf8Str.len - start), _utf8Str._isStable);
+        return StringView(start, (uint32_t)((uint8_t *)_utf8Str.data + _utf8Str.len - start), _utf8Str._isStable);
     }
 
     return stringViewEmpty;

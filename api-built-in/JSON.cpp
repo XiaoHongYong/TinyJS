@@ -143,9 +143,9 @@ public:
     bool Key(const char* str, SizeType length, bool copy) {
         if (copy) {
             _keyBuf.assign(str, length);
-            _key.data = (uint8_t *)_keyBuf.data();
+            _key.data = (char *)_keyBuf.data();
         } else {
-            _key.data = (uint8_t *)str;
+            _key.data = (char *)str;
         }
         _key.len = length;
         return true;
@@ -200,7 +200,7 @@ void json_parse(VMContext *ctx, const JsValue &thiz, const Arguments &args) {
     Reader reader;
     //StringStream ss(str.data, str.len);
     // StringStream ss("1");
-    Stream ss(str.data, str.len);
+    Stream ss((uint8_t *)str.data, str.len);
     auto result = reader.Parse(ss, handler);
     if (result.Code() == kParseErrorNone) {
         ctx->retValue = handler.value();

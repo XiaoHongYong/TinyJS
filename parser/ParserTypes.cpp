@@ -32,11 +32,12 @@ const char *varStorageTypeToString(VarStorageType type) {
  * 将 str 中内容的每一行自动插入 indent.
  */
 void writeIndent(BinaryOutputStream &stream, StringView str, const StringView &indent) {
+    int pos = 0;
     while (str.len) {
         size_t n;
-        const uint8_t *p = str.strlchr('\n');
-        if (p) {
-            n = size_t(p - str.data) + 1;
+        pos = str.strchr('\n', pos);
+        if (pos == -1) {
+            n = pos + 1;
         } else {
             n = str.len;
         }
@@ -351,7 +352,7 @@ void Function::generateByteCode() {
     LinkedString *data = stream.startNew();
     if (data) {
         auto bc = resourcePool->pool.duplicate(data);
-        bytecode = bc.data;
+        bytecode = (uint8_t *)bc.data;
         lenByteCode = (int)bc.len;
     } else {
         bytecode = nullptr;

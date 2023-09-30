@@ -51,7 +51,7 @@ uint8_t *ignoreSpace(const uint8_t *text, const uint8_t *end) {
 /**
  * 找到字符串 [pos, len] 能在 orgRight 中唯一出现一次的长度. 用于打印出错的位置.
  */
-uint32_t uniqueLen(const StringView &orgRight, const uint8_t *pos) {
+uint32_t uniqueLen(const StringView &orgRight, const char *pos) {
     uint32_t maxlen = (uint32_t)(orgRight.data + orgRight.len - pos);
     uint32_t len = min((uint32_t)100, maxlen);
     if (strlen((char *)pos) == 0) {
@@ -76,7 +76,7 @@ uint32_t uniqueLen(const StringView &orgRight, const uint8_t *pos) {
 }
 
 bool compareTextIgnoreSpace(const StringView &leftS, const StringView &rightS) {
-    auto left = leftS.data, right = rightS.data;
+    const char *left = leftS.data, *right = rightS.data;
     auto leftEnd = left + leftS.len, rightEnd = right + rightS.len;
 
     while (true) {
@@ -154,11 +154,10 @@ void splitTestCodeAndOutput(string textOrg, VecStrings &vCodeOut, VecStrings &vO
                 output = "";
             }
             vCodeOut.push_back(code.toString());
-            output.trim();
-            vOutputOut.push_back(output.toString());
+            vOutputOut.push_back(output.trim().toString());
             text = remain;
         } else {
-            text.trim();
+            text = text.trim();
             if (text.len > 0) {
                 printf("NO OUTPUT is specified: %.*s\n", text.len, text.data);
             }

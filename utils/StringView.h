@@ -17,19 +17,25 @@
 
 using namespace std;
 
-using utf16_t = uint16_t;
-using utf32_t = uint32_t;
+using utf16_t = char16_t;
+using utf32_t = char32_t;
 
 class StringView {
 public:
     StringView() { auto p = (uint64_t *)this; p[0] = 0; p[1] = 0; }
     StringView(const StringView &other) { *this = other; }
     StringView(const char *data);
-    StringView(const string &s) : data((uint8_t *)s.c_str()), len((uint32_t)s.size()), _isStable(false) { }
-    StringView(const void *data, size_t len) : data((uint8_t *)data), len((uint32_t)len), _isStable(false) { }
-    StringView(size_t len, const void *data) : data((uint8_t *)data), len((uint32_t)len), _isStable(false) { }
-    StringView(const uint8_t *data, size_t len) : data((uint8_t *)data), len((uint32_t)len), _isStable(false) { }
-    StringView(const void *data, size_t len, bool isStable) : data((uint8_t *)data), len((uint32_t)len), _isStable(isStable) { }
+    StringView(const string &s) : data((char *)s.c_str()), len((uint32_t)s.size()), _isStable(false) { }
+    StringView(const void *data, size_t len) : data((char *)data), len((uint32_t)len), _isStable(false) { }
+    StringView(size_t len, const void *data) : data((char *)data), len((uint32_t)len), _isStable(false) { }
+    StringView(const uint8_t *data, size_t len) : data((char *)data), len((uint32_t)len), _isStable(false) { }
+    StringView(const void *data, size_t len, bool isStable) : data((char *)data), len((uint32_t)len), _isStable(isStable) { }
+
+    void assign(const void *data, size_t len, bool isStable = false) {
+        this->data = (char *)data;
+        this->len = (uint32_t)len;
+        this->_isStable = isStable;
+    }
 
     inline bool empty() const { return len == 0; }
 
@@ -39,11 +45,12 @@ public:
     bool isNumeric() const;
     bool isAnsi() const;
 
-    uint8_t *strlchr(uint8_t c) const;
-    uint8_t *strrchr(uint8_t c) const;
+    int strchr(uint8_t c, int start = 0) const;
+    int strrchr(uint8_t c, int start) const;
+    int strrchr(uint8_t c) const { return strrchr(c, len - 1); }
 
     int strstr(const StringView &find, int32_t start = 0) const;
-    int stristr(const StringView &find) const;
+    int stristr(const StringView &find, int32_t start = 0) const;
     int strrstr(const StringView &find, int32_t start = 0x7FFFFFFF) const;
 
     int cmp(const StringView &other) const;
@@ -71,23 +78,30 @@ public:
         return false;
     }
 
-    void trim(uint8_t charToTrim);
-    void trim(const StringView &toTrim);
-    void trim();
-    void trimStart(const StringView &toTrim);
-    void trimEnd(const StringView &toTrim);
+    StringView trim(uint8_t charToTrim) const;
+    StringView trim(const StringView &toTrim) const;
+    StringView trim() const;
+    StringView trimStart(const StringView &toTrim) const;
+    StringView trimEnd(const StringView &toTrim) const;
 
     void shrink(int startShrinkSize, int endShrinkSize = 0);
 
+    StringView substr(uint32_t offset) const {
+        if (offset < len) {
+            return StringView(data + offset, len - offset, _isStable);
+        }
+        return StringView();
+    }
+
     StringView substr(uint32_t offset, uint32_t size) const;
-    StringView substr(const uint8_t *start, const uint8_t *end) const {
+    StringView substr(const char *start, const char *end) const {
         assert(start <= end);
         assert(start >= data);
         assert(end <= data + len);
         return StringView(start, (uint32_t)(end - start), _isStable);
     }
-    StringView substr(const char *start, const char *end) const {
-        return substr((const uint8_t *)start, (const uint8_t *)end);
+    StringView substr(const uint8_t *start, const uint8_t *end) const {
+        return substr((const char *)start, (const char *)end);
     }
 
     long atoi(bool &successful) const;
@@ -98,16 +112,51 @@ public:
     void toLowerCase();
 
     template <class _Container>
-    void split(char chSeparator, _Container &container, int count = -1) {
+    void splitLines(_Container &container) const {
         if (len == 0) {
             return;
         }
 
-        const uint8_t *p, *start, *end;
+        const char *p = data, *start = data, *end = data + len;
 
-        start = p = data;
-        end = data + len;
-        while (p < end && container.size() + 1 < (unsigned int)count) {
+        while (p < end) {
+            while (p < end && *p != '\n' && *p != '\r') {
+                p++;
+            }
+
+            if (p < end) {
+                auto size = size_t(p - start);
+                if (*p == '\r' && size + 1 < len && start[size + 1] == '\n') {
+                    // \r\n 是一起的
+                    p++;
+                }
+
+                typename _Container::value_type tmp((const char *)start, size);
+                container.push_back(tmp);
+                p++;
+            } else {
+                auto size = size_t(end - start);
+                typename _Container::value_type tmp((const char *)start, size);
+                container.push_back(tmp);
+                return;
+            }
+
+            start = p;
+        }
+
+        typename _Container::value_type tmp((const char *)start, size_t(end - start));
+        container.push_back(tmp);
+    }
+
+    template <class _Container>
+    void split(char chSeparator, _Container &container, int count = -1) const {
+        if (len == 0) {
+            return;
+        }
+
+        const char *p = data, *start = data, *end = data + len;
+
+        while (p < end && count != 0) {
             while (p < end && *p != chSeparator) {
                 p++;
             }
@@ -115,6 +164,7 @@ public:
             if (p < end) {
                 typename _Container::value_type tmp((const char *)start, size_t(p - start));
                 container.push_back(tmp);
+                count--;
                 p++;
             } else {
                 typename _Container::value_type tmp((const char *)start, size_t(end - start));
@@ -129,15 +179,16 @@ public:
         container.push_back(tmp);
     }
 
-    bool split(char chSeparator, StringView &left, StringView &right);
-    bool split(const char *separator, StringView &left, StringView &right);
+    bool split(char chSeparator, StringView &left, StringView &right) const;
+    bool split(const char *separator, StringView &left, StringView &right) const;
 
-    string toString() { return string((const char *)data, len); }
+    string toString() const { return string(data, len); }
+    void toString(string &outStr) const { outStr.assign(data, len); }
 
-    uint32_t offsetOf(const void *p) const { return (uint32_t)((uint8_t *)p - data); }
+    uint32_t offsetOf(const void *p) const { return (uint32_t)((char *)p - data); }
 
 public:
-    uint8_t                     *data;
+    char                        *data;
     uint32_t                    len;
 
 protected:
@@ -165,7 +216,7 @@ public:
         setAnsi(true);
     }
 
-    StringViewUtf16(const utf16_t *dataUtf16, uint32_t lenUtf16) : _dataUtf16((uint16_t *)dataUtf16) {
+    StringViewUtf16(const utf16_t *dataUtf16, uint32_t lenUtf16) : _dataUtf16((utf16_t *)dataUtf16) {
         setUtf16Size(lenUtf16);
     }
 
@@ -266,5 +317,15 @@ public:
 
 bool strIsInList(StringView &str, StringView *arr, size_t count);
 bool IStrIsInList(StringView &str, StringView *arr, size_t count);
+
+inline void operator+=(std::string &str, const StringView &other) {
+    str.append(other.data, other.len);
+}
+
+namespace testing {
+inline std::string PrintToString(const StringView &value) {
+    return value.toString();
+}
+}
 
 #endif /* StringView_hpp */

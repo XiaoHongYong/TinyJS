@@ -411,7 +411,7 @@ void stringPrototypeMatch(VMContext *ctx, const JsValue &thiz, const Arguments &
 
 class StringMatchAllIterator : public IJsIterator {
 public:
-    StringMatchAllIterator(VMContext *ctx, std::regex &re, uint32_t flags, const StringView &str, const JsValue &strVal) : IJsIterator(false, false), _ctx(ctx), _re(re), _flags(flags), _strBegin(str.data), _strEnd(str.data + str.len), _strVal(strVal), _offset(0)
+    StringMatchAllIterator(VMContext *ctx, std::regex &re, uint32_t flags, const StringView &str, const JsValue &strVal) : IJsIterator(false, false), _ctx(ctx), _re(re), _flags(flags), _strBegin((uint8_t *)str.data), _strEnd((uint8_t *)str.data + str.len), _strVal(strVal), _offset(0)
     {
         _isOfIterable = true;
     }
@@ -976,7 +976,7 @@ void stringPrototypeSplit(VMContext *ctx, const JsValue &thiz, const Arguments &
             arrObj->push(ctx, runtime->pushString(str.substr(0, pos)));
 
             pos = (uint32_t)(m0.second - (cstr_t)str.data);
-            str.data = (uint8_t *)m0.second;
+            str.data = (char *)m0.second;
             str.len -= pos;
         }
     } else {
@@ -1198,8 +1198,7 @@ void stringPrototypeTrim(VMContext *ctx, const JsValue &thiz, const Arguments &a
 
     auto runtime = ctx->runtime;
     auto &orgStr = runtime->getString(strVal).utf8Str();
-    auto str = orgStr;
-    str.trim();
+    auto str = orgStr.trim();
     if (str.len != orgStr.len) {
         ctx->retValue = runtime->pushString(str);
     } else {
@@ -1224,8 +1223,7 @@ void stringPrototypeTrimEnd(VMContext *ctx, const JsValue &thiz, const Arguments
 
     auto runtime = ctx->runtime;
     auto &orgStr = runtime->getString(strVal).utf8Str();
-    auto str = orgStr;
-    str.trimEnd(stringViewBlanks);
+    auto str = orgStr.trimEnd(stringViewBlanks);
     if (str.len != orgStr.len) {
         ctx->retValue = runtime->pushString(str);
     } else {
@@ -1250,8 +1248,7 @@ void stringPrototypeTrimStart(VMContext *ctx, const JsValue &thiz, const Argumen
 
     auto runtime = ctx->runtime;
     auto &orgStr = runtime->getString(strVal).utf8Str();
-    auto str = orgStr;
-    str.trimStart(stringViewBlanks);
+    auto str = orgStr.trimStart(stringViewBlanks);
     if (str.len != orgStr.len) {
         ctx->retValue = runtime->pushString(str);
     } else {

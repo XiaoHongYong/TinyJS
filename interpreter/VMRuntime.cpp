@@ -1048,7 +1048,7 @@ void VMRuntime::convertUtf8ToUtf16(StringViewUtf16 &str) {
 
     auto &utf8Str = str.utf8Str();
     auto dataUtf16 = new utf16_t[str.size()];
-    utf8ToUtf16(utf8Str.data, utf8Str.len, dataUtf16, str.size());
+    utf8ToUtf16((uint8_t *)utf8Str.data, utf8Str.len, dataUtf16, str.size());
     str.setUtf16(dataUtf16, str.size());
 }
 

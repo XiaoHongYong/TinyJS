@@ -11,7 +11,7 @@
 
 StringView copyPropertyIfNeed(StringView name) {
     if (!name.isStable()) {
-        auto p = new uint8_t[name.len];
+        auto p = new char[name.len];
         memcpy(p, name.data, name.len);
         name.data = p;
     }

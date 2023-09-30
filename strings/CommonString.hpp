@@ -27,7 +27,7 @@ public:
     const StringView &str() const { return *this; }
 
 protected:
-    uint8_t             _buf[32];
+    char                _buf[32];
 
 };
 
@@ -60,7 +60,7 @@ public:
     };
 
 protected:
-    uint8_t             _buf[MAX_SIZE];
+    char                _buf[MAX_SIZE];
 
 };
 
@@ -86,7 +86,7 @@ protected:
         MAX_SIZE = 128,
     };
 
-    uint8_t             _buf[MAX_SIZE];
+    char                _buf[MAX_SIZE];
 
 };
 

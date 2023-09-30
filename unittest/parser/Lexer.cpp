@@ -27,7 +27,7 @@ StringView makeParseNumberString(const char *str) {
 TEST(JsLexer, parserNumber) {
     StringView str;
     double v;
-    uint8_t *p;
+    cstr_t p;
 
     str = makeParseNumberString("9.999999999999999");
     p = parseNumber(str, v);

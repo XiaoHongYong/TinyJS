@@ -44,7 +44,7 @@ private:
 #ifndef _WIN32
 // Windows types and defines.
 #define MAKEWORD(a, b)      ((uint16_t)(((uint8_t)((a) & 0xff)) | ((uint16_t)((uint8_t)((b) & 0xff))) << 8))
-#define MAKEINT(a, b)       ((uint32_t)(((uint16_t)((a) & 0xffff)) | ((Duint16_t)((uint16_t)((b) & 0xffff))) << 16))
+#define MAKEINT(a, b)       ((uint32_t)(((uint16_t)((a) & 0xffff)) | ((uint16_t)((uint16_t)((b) & 0xffff))) << 16))
 #define LOWORD(l)           ((uint16_t)((l) & 0xffff))
 #define HIWORD(l)           ((uint16_t)((l) >> 16))
 #define LOBYTE(w)           ((uint8_t)((w) & 0xff))

@@ -1695,7 +1695,7 @@ void JSParser::_relocateIdentifierInParentFunction(Function *codeBlock, Function
     // 分配变量地址
     auto functionScope = parent->scope;
     for (auto &item : codeBlock->scope->varDeclares) {
-        token.buf = item.first.data;
+        token.buf = (uint8_t *)item.first.data;
         token.len = item.first.len;
 
         auto curId = item.second;
@@ -1854,7 +1854,7 @@ Function *JSParser::_enterFunction(const Token &tokenStart, bool isCodeBlock, bo
 
     child->line = tokenStart.line;
     child->col = tokenStart.col;
-    child->srcCode.data = tokenStart.buf;
+    child->srcCode.data = (char *)tokenStart.buf;
 
     if (!isArrowFunction && !isCodeBlock) {
         // Codeblock, Arrow Function 的 this, arguments 使用的是父函数的.
@@ -1882,7 +1882,7 @@ Function *JSParser::_enterFunction(const Token &tokenStart, bool isCodeBlock, bo
 }
 
 void JSParser::_leaveFunction() {
-    _curFunction->srcCode.len = uint32_t(_prevTokenEndPos - _curFunction->srcCode.data);
+    _curFunction->srcCode.len = uint32_t(_prevTokenEndPos - (uint8_t *)_curFunction->srcCode.data);
 
     _curFunction = _stackFunctions.back(); _stackFunctions.pop_back();
 

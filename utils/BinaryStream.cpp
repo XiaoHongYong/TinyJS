@@ -49,7 +49,7 @@ TEST(BinaryStream, BinaryOutputStreamSize) {
     }
 
     StringView str = os.toStringView();
-    uint8_t *p = str.data;
+    auto *p = (uint8_t *)str.data;
     ASSERT_EQ(str.len, LOOP_TIMES * sizeof(buf));
     for (int i = 0; i < LOOP_TIMES; i++) {
         for (size_t k = 0; k < sizeof(buf); k++) {
@@ -206,14 +206,14 @@ TEST(BinaryStream, BinaryOutputStreamStartNew) {
     s4 = os.toStringView();
     os.startNew();
 
-    uint8_t *p = s1.data;
+    auto *p = (uint8_t *)s1.data;
     for (int i = 0; i < LOOP_TIMES; i++) {
         if (i == 1) {
-            p = s2.data;
+            p = (uint8_t *)s2.data;
         } else if (i == 3) {
-            p = s3.data;
+            p = (uint8_t *)s3.data;
         } else if (i == 9) {
-            p = s4.data;
+            p = (uint8_t *)s4.data;
         }
 
         for (size_t k = 0; k < sizeof(buf); k++) {

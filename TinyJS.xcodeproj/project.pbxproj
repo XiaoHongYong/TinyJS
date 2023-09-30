@@ -7,94 +7,22 @@
 	objects = {
 
 /* Begin PBXBuildFile section */
+		C006BAA72AAC9E840045EA52 /* StringParser.cpp in Sources */ = {isa = PBXBuildFile; fileRef = C006BA822AAAB3B70045EA52 /* StringParser.cpp */; };
 		C00E4787283FBC5700F9BC35 /* libasmjit.a in Frameworks */ = {isa = PBXBuildFile; fileRef = C00E4784283FBBE300F9BC35 /* libasmjit.a */; };
 		C0443AAC28DE07D900CBF6DB /* Window.cpp in Sources */ = {isa = PBXBuildFile; fileRef = C0443AAB28DE07D900CBF6DB /* Window.cpp */; };
 		C0443AAF28E5229C00CBF6DB /* CharEncoding.cpp in Sources */ = {isa = PBXBuildFile; fileRef = C0443AAE28E51F9800CBF6DB /* CharEncoding.cpp */; };
 		C0443AB128E7254000CBF6DB /* StringView.cpp in Sources */ = {isa = PBXBuildFile; fileRef = C0443AB028E7254000CBF6DB /* StringView.cpp */; };
 		C044A2852931B89E00178864 /* DateTime.cpp in Sources */ = {isa = PBXBuildFile; fileRef = C044A2842931B89E00178864 /* DateTime.cpp */; };
 		C055400C299F62910057629E /* BinaryFileStream.cpp in Sources */ = {isa = PBXBuildFile; fileRef = C055400A299F62910057629E /* BinaryFileStream.cpp */; };
-		C055400D299F62910057629E /* BinaryFileStream.cpp in Sources */ = {isa = PBXBuildFile; fileRef = C055400A299F62910057629E /* BinaryFileStream.cpp */; };
-		C055400E299F62910057629E /* BinaryFileStream.h in Headers */ = {isa = PBXBuildFile; fileRef = C055400B299F62910057629E /* BinaryFileStream.h */; };
 		C05589AD29291D1500CBDBD7 /* Math.cpp in Sources */ = {isa = PBXBuildFile; fileRef = C05589AC29291D1500CBDBD7 /* Math.cpp */; };
 		C05589AF2929DC0C00CBDBD7 /* JSON.cpp in Sources */ = {isa = PBXBuildFile; fileRef = C05589AE2929DC0C00CBDBD7 /* JSON.cpp */; };
 		C05589B1292B48D900CBDBD7 /* Date.cpp in Sources */ = {isa = PBXBuildFile; fileRef = C05589B0292B48D900CBDBD7 /* Date.cpp */; };
-		C05D73FE2954319C00294F50 /* JsObjectX.cpp in Sources */ = {isa = PBXBuildFile; fileRef = C05D73FA2953FC3300294F50 /* JsObjectX.cpp */; };
 		C06C15FC294D8D740022ADCA /* VMScope.cpp in Sources */ = {isa = PBXBuildFile; fileRef = C06C15F8294D750D0022ADCA /* VMScope.cpp */; };
 		C06C15FD294D8D740022ADCA /* Arguments.cpp in Sources */ = {isa = PBXBuildFile; fileRef = C06C15FA294D75AD0022ADCA /* Arguments.cpp */; };
 		C06C1600294DD1150022ADCA /* VMRuntimeCommon.cpp in Sources */ = {isa = PBXBuildFile; fileRef = C06C15FE294DBDF10022ADCA /* VMRuntimeCommon.cpp */; };
 		C06C1605294DD6A00022ADCA /* PromiseTasks.cpp in Sources */ = {isa = PBXBuildFile; fileRef = C06C1604294DD6520022ADCA /* PromiseTasks.cpp */; };
 		C06C1606294DD6A00022ADCA /* TimerTasks.cpp in Sources */ = {isa = PBXBuildFile; fileRef = C06C1602294DD6520022ADCA /* TimerTasks.cpp */; };
 		C06C1609294DD6FF0022ADCA /* JsPromiseObject.cpp in Sources */ = {isa = PBXBuildFile; fileRef = C06C1607294DD6FF0022ADCA /* JsPromiseObject.cpp */; };
-		C06C161E294EB0360022ADCA /* Array.cpp in Sources */ = {isa = PBXBuildFile; fileRef = C08597B928D0D54C00577A8E /* Array.cpp */; };
-		C06C161F294EB0360022ADCA /* Boolean.cpp in Sources */ = {isa = PBXBuildFile; fileRef = C08597BC28D0D54C00577A8E /* Boolean.cpp */; };
-		C06C1620294EB0360022ADCA /* BuiltIn.cpp in Sources */ = {isa = PBXBuildFile; fileRef = C08597BB28D0D54C00577A8E /* BuiltIn.cpp */; };
-		C06C1621294EB0360022ADCA /* Error.cpp in Sources */ = {isa = PBXBuildFile; fileRef = C08597B528D0D54C00577A8E /* Error.cpp */; };
-		C06C1622294EB0360022ADCA /* Date.cpp in Sources */ = {isa = PBXBuildFile; fileRef = C05589B0292B48D900CBDBD7 /* Date.cpp */; };
-		C06C1623294EB0360022ADCA /* eval.cpp in Sources */ = {isa = PBXBuildFile; fileRef = C08597BD28D0D54C00577A8E /* eval.cpp */; };
-		C06C1624294EB0360022ADCA /* Function.cpp in Sources */ = {isa = PBXBuildFile; fileRef = C08597B828D0D54C00577A8E /* Function.cpp */; };
-		C06C1625294EB0360022ADCA /* JSON.cpp in Sources */ = {isa = PBXBuildFile; fileRef = C05589AE2929DC0C00CBDBD7 /* JSON.cpp */; };
-		C06C1626294EB0360022ADCA /* Math.cpp in Sources */ = {isa = PBXBuildFile; fileRef = C05589AC29291D1500CBDBD7 /* Math.cpp */; };
-		C06C1627294EB0360022ADCA /* Number.cpp in Sources */ = {isa = PBXBuildFile; fileRef = C08597BE28D0D54C00577A8E /* Number.cpp */; };
-		C06C1628294EB0360022ADCA /* Object.cpp in Sources */ = {isa = PBXBuildFile; fileRef = C08597B628D0D54C00577A8E /* Object.cpp */; };
-		C06C1629294EB0360022ADCA /* Promise.cpp in Sources */ = {isa = PBXBuildFile; fileRef = C06DEEA529345A9F0062C606 /* Promise.cpp */; };
-		C06C162A294EB0360022ADCA /* RegExp.cpp in Sources */ = {isa = PBXBuildFile; fileRef = C08597B428D0D54C00577A8E /* RegExp.cpp */; };
-		C06C162B294EB0360022ADCA /* Reflect.cpp in Sources */ = {isa = PBXBuildFile; fileRef = C06DEEA329332F1C0062C606 /* Reflect.cpp */; };
-		C06C162C294EB0360022ADCA /* String.cpp in Sources */ = {isa = PBXBuildFile; fileRef = C08597B728D0D54C00577A8E /* String.cpp */; };
-		C06C162D294EB0360022ADCA /* Symbol.cpp in Sources */ = {isa = PBXBuildFile; fileRef = C08597B328D0D54C00577A8E /* Symbol.cpp */; };
-		C06C162E294EB0360022ADCA /* Console.cpp in Sources */ = {isa = PBXBuildFile; fileRef = C08597CE28D0D54C00577A8E /* Console.cpp */; };
-		C06C162F294EB0360022ADCA /* Window.cpp in Sources */ = {isa = PBXBuildFile; fileRef = C0443AAB28DE07D900CBF6DB /* Window.cpp */; };
-		C06C1630294EB0360022ADCA /* WebAPI.cpp in Sources */ = {isa = PBXBuildFile; fileRef = C08597CF28D0D54C00577A8E /* WebAPI.cpp */; };
-		C06C1631294EB0360022ADCA /* ConstStrings.cpp in Sources */ = {isa = PBXBuildFile; fileRef = C08597F328D0D54C00577A8E /* ConstStrings.cpp */; };
-		C06C1632294EB0360022ADCA /* PromiseTasks.cpp in Sources */ = {isa = PBXBuildFile; fileRef = C06C1604294DD6520022ADCA /* PromiseTasks.cpp */; };
-		C06C1633294EB0360022ADCA /* TimerTasks.cpp in Sources */ = {isa = PBXBuildFile; fileRef = C06C1602294DD6520022ADCA /* TimerTasks.cpp */; };
-		C06C1634294EB0360022ADCA /* Arguments.cpp in Sources */ = {isa = PBXBuildFile; fileRef = C06C15FA294D75AD0022ADCA /* Arguments.cpp */; };
-		C06C1635294EB0360022ADCA /* VirtualMachine.cpp in Sources */ = {isa = PBXBuildFile; fileRef = C08597FC28D0D54C00577A8E /* VirtualMachine.cpp */; };
-		C06C1636294EB0360022ADCA /* VirtualMachineTypes.cpp in Sources */ = {isa = PBXBuildFile; fileRef = C08597F628D0D54C00577A8E /* VirtualMachineTypes.cpp */; };
-		C06C1637294EB0360022ADCA /* VMRuntime.cpp in Sources */ = {isa = PBXBuildFile; fileRef = C08597FD28D0D54C00577A8E /* VMRuntime.cpp */; };
-		C06C1638294EB0360022ADCA /* VMRuntimeCommon.cpp in Sources */ = {isa = PBXBuildFile; fileRef = C06C15FE294DBDF10022ADCA /* VMRuntimeCommon.cpp */; };
-		C06C1639294EB0360022ADCA /* VMScope.cpp in Sources */ = {isa = PBXBuildFile; fileRef = C06C15F8294D750D0022ADCA /* VMScope.cpp */; };
-		C06C163A294EB0360022ADCA /* IJsIterator.cpp in Sources */ = {isa = PBXBuildFile; fileRef = C06EE44128F40552000F0E41 /* IJsIterator.cpp */; };
-		C06C163B294EB0360022ADCA /* IJsObject.cpp in Sources */ = {isa = PBXBuildFile; fileRef = C085980728D0D54C00577A8E /* IJsObject.cpp */; };
-		C06C163C294EB0360022ADCA /* JsArguments.cpp in Sources */ = {isa = PBXBuildFile; fileRef = C085980228D0D54C00577A8E /* JsArguments.cpp */; };
-		C06C163D294EB0360022ADCA /* JsArray.cpp in Sources */ = {isa = PBXBuildFile; fileRef = C085980828D0D54C00577A8E /* JsArray.cpp */; };
-		C06C163E294EB0360022ADCA /* JsGlobalThis.cpp in Sources */ = {isa = PBXBuildFile; fileRef = C085985028D9A0A100577A8E /* JsGlobalThis.cpp */; };
-		C06C163F294EB0360022ADCA /* JsLibObject.cpp in Sources */ = {isa = PBXBuildFile; fileRef = C085980A28D0D54C00577A8E /* JsLibObject.cpp */; };
-		C06C1640294EB0360022ADCA /* JsObject.cpp in Sources */ = {isa = PBXBuildFile; fileRef = C06EE43E28F40406000F0E41 /* JsObject.cpp */; };
-		C06C1641294EB0360022ADCA /* JsObjectFunction.cpp in Sources */ = {isa = PBXBuildFile; fileRef = C085980628D0D54C00577A8E /* JsObjectFunction.cpp */; };
-		C06C1642294EB0360022ADCA /* JsObjectLazy.cpp in Sources */ = {isa = PBXBuildFile; fileRef = C06EE44529091177000F0E41 /* JsObjectLazy.cpp */; };
-		C06C1643294EB0360022ADCA /* JsPrimaryObject.cpp in Sources */ = {isa = PBXBuildFile; fileRef = C0A3AF2D29167B4900BBEE8E /* JsPrimaryObject.cpp */; };
-		C06C1644294EB0360022ADCA /* JsRegExp.cpp in Sources */ = {isa = PBXBuildFile; fileRef = C08597FF28D0D54C00577A8E /* JsRegExp.cpp */; };
-		C06C1645294EB0360022ADCA /* JsPromiseObject.cpp in Sources */ = {isa = PBXBuildFile; fileRef = C06C1607294DD6FF0022ADCA /* JsPromiseObject.cpp */; };
-		C06C1646294EB0360022ADCA /* ByteCodeStream.cpp in Sources */ = {isa = PBXBuildFile; fileRef = C085981328D0D54C00577A8E /* ByteCodeStream.cpp */; };
-		C06C1647294EB0360022ADCA /* Expression.cpp in Sources */ = {isa = PBXBuildFile; fileRef = C085981828D0D54C00577A8E /* Expression.cpp */; };
-		C06C1648294EB0360022ADCA /* Lexer.cpp in Sources */ = {isa = PBXBuildFile; fileRef = C085981128D0D54C00577A8E /* Lexer.cpp */; };
-		C06C1649294EB0360022ADCA /* Parser.cpp in Sources */ = {isa = PBXBuildFile; fileRef = C085981928D0D54C00577A8E /* Parser.cpp */; };
-		C06C164A294EB0360022ADCA /* ParserTypes.cpp in Sources */ = {isa = PBXBuildFile; fileRef = C085981728D0D54C00577A8E /* ParserTypes.cpp */; };
-		C06C164B294EB0360022ADCA /* Statement.cpp in Sources */ = {isa = PBXBuildFile; fileRef = C085981028D0D54C00577A8E /* Statement.cpp */; };
-		C06C164C294EB0360022ADCA /* CommonString.cpp in Sources */ = {isa = PBXBuildFile; fileRef = C08597C828D0D54C00577A8E /* CommonString.cpp */; };
-		C06C164D294EB0360022ADCA /* JsString.cpp in Sources */ = {isa = PBXBuildFile; fileRef = C08597C728D0D54C00577A8E /* JsString.cpp */; };
-		C06C164F294EB0360022ADCA /* StringView.cpp in Sources */ = {isa = PBXBuildFile; fileRef = C0443AB028E7254000CBF6DB /* StringView.cpp */; };
-		C06C1650294EB0360022ADCA /* DateTime.cpp in Sources */ = {isa = PBXBuildFile; fileRef = C044A2842931B89E00178864 /* DateTime.cpp */; };
-		C06C1651294EB0360022ADCA /* CharEncoding.cpp in Sources */ = {isa = PBXBuildFile; fileRef = C0443AAE28E51F9800CBF6DB /* CharEncoding.cpp */; };
-		C06C1652294EB0360022ADCA /* JsArray.cpp in Sources */ = {isa = PBXBuildFile; fileRef = C08597C128D0D54C00577A8E /* JsArray.cpp */; };
-		C06C1653294EB0360022ADCA /* Lexer.cpp in Sources */ = {isa = PBXBuildFile; fileRef = C08597C328D0D54C00577A8E /* Lexer.cpp */; };
-		C06C1654294EB0360022ADCA /* Parser.cpp in Sources */ = {isa = PBXBuildFile; fileRef = C08597C428D0D54C00577A8E /* Parser.cpp */; };
-		C06C1655294EB0360022ADCA /* RunJavaScript.cpp in Sources */ = {isa = PBXBuildFile; fileRef = C08597C528D0D54C00577A8E /* RunJavaScript.cpp */; };
-		C06C1656294EB0360022ADCA /* AllocatorPool.cpp in Sources */ = {isa = PBXBuildFile; fileRef = C08597E928D0D54C00577A8E /* AllocatorPool.cpp */; };
-		C06C1657294EB0360022ADCA /* Base64.cpp in Sources */ = {isa = PBXBuildFile; fileRef = C08597DB28D0D54C00577A8E /* Base64.cpp */; };
-		C06C1658294EB0360022ADCA /* BinaryStream.cpp in Sources */ = {isa = PBXBuildFile; fileRef = C08597F128D0D54C00577A8E /* BinaryStream.cpp */; };
-		C06C1659294EB0360022ADCA /* CharEncoding.cpp in Sources */ = {isa = PBXBuildFile; fileRef = C08597D528D0D54C00577A8E /* CharEncoding.cpp */; };
-		C06C165A294EB0360022ADCA /* DateTime.cpp in Sources */ = {isa = PBXBuildFile; fileRef = C08597EC28D0D54C00577A8E /* DateTime.cpp */; };
-		C06C165B294EB0360022ADCA /* FileApi.cpp in Sources */ = {isa = PBXBuildFile; fileRef = C08597DA28D0D54C00577A8E /* FileApi.cpp */; };
-		C06C165C294EB0360022ADCA /* Hash.cpp in Sources */ = {isa = PBXBuildFile; fileRef = C08597EB28D0D54C00577A8E /* Hash.cpp */; };
-		C06C165D294EB0360022ADCA /* LinkedString.cpp in Sources */ = {isa = PBXBuildFile; fileRef = C08597D428D0D54C00577A8E /* LinkedString.cpp */; };
-		C06C165E294EB0360022ADCA /* os.cpp in Sources */ = {isa = PBXBuildFile; fileRef = C08597D728D0D54C00577A8E /* os.cpp */; };
-		C06C165F294EB0360022ADCA /* StringView.cpp in Sources */ = {isa = PBXBuildFile; fileRef = C08597E328D0D54C00577A8E /* StringView.cpp */; };
-		C06C1660294EB0360022ADCA /* StringEx.cpp in Sources */ = {isa = PBXBuildFile; fileRef = C08597E028D0D54C00577A8E /* StringEx.cpp */; };
-		C06C1661294EB0360022ADCA /* unittest.cpp in Sources */ = {isa = PBXBuildFile; fileRef = C08597F028D0D54C00577A8E /* unittest.cpp */; };
-		C06C1662294EB0360022ADCA /* XCharSeparatedValues.cpp in Sources */ = {isa = PBXBuildFile; fileRef = C08597DD28D0D54C00577A8E /* XCharSeparatedValues.cpp */; };
-		C06C1667294EB1210022ADCA /* libThirdPartiesSDK.a in Frameworks */ = {isa = PBXBuildFile; fileRef = C08597AA28D0D4C200577A8E /* libThirdPartiesSDK.a */; };
-		C06C1668294EB1580022ADCA /* CharEncodingMac.mm in Sources */ = {isa = PBXBuildFile; fileRef = C08597E628D0D54C00577A8E /* CharEncodingMac.mm */; };
 		C06DEEA429332F1C0062C606 /* Reflect.cpp in Sources */ = {isa = PBXBuildFile; fileRef = C06DEEA329332F1C0062C606 /* Reflect.cpp */; };
 		C06DEEA629345A9F0062C606 /* Promise.cpp in Sources */ = {isa = PBXBuildFile; fileRef = C06DEEA529345A9F0062C606 /* Promise.cpp */; };
 		C06EE43F28F40406000F0E41 /* JsObject.cpp in Sources */ = {isa = PBXBuildFile; fileRef = C06EE43E28F40406000F0E41 /* JsObject.cpp */; };
@@ -153,6 +81,130 @@
 		C085984E28D0D54C00577A8E /* Parser.cpp in Sources */ = {isa = PBXBuildFile; fileRef = C085981928D0D54C00577A8E /* Parser.cpp */; };
 		C085985128D9A0A100577A8E /* JsGlobalThis.cpp in Sources */ = {isa = PBXBuildFile; fileRef = C085985028D9A0A100577A8E /* JsGlobalThis.cpp */; };
 		C0A3AF2E29167B4900BBEE8E /* JsPrimaryObject.cpp in Sources */ = {isa = PBXBuildFile; fileRef = C0A3AF2D29167B4900BBEE8E /* JsPrimaryObject.cpp */; };
+		C0A81F7F2ABDDF9700CDF309 /* Array.cpp in Sources */ = {isa = PBXBuildFile; fileRef = C08597B928D0D54C00577A8E /* Array.cpp */; };
+		C0A81F802ABDDF9700CDF309 /* Boolean.cpp in Sources */ = {isa = PBXBuildFile; fileRef = C08597BC28D0D54C00577A8E /* Boolean.cpp */; };
+		C0A81F812ABDDF9700CDF309 /* BuiltIn.cpp in Sources */ = {isa = PBXBuildFile; fileRef = C08597BB28D0D54C00577A8E /* BuiltIn.cpp */; };
+		C0A81F822ABDDF9700CDF309 /* BuiltIn.hpp in Sources */ = {isa = PBXBuildFile; fileRef = C08597B228D0D54C00577A8E /* BuiltIn.hpp */; };
+		C0A81F832ABDDF9700CDF309 /* Error.cpp in Sources */ = {isa = PBXBuildFile; fileRef = C08597B528D0D54C00577A8E /* Error.cpp */; };
+		C0A81F842ABDDF9700CDF309 /* Date.cpp in Sources */ = {isa = PBXBuildFile; fileRef = C05589B0292B48D900CBDBD7 /* Date.cpp */; };
+		C0A81F852ABDDF9700CDF309 /* eval.cpp in Sources */ = {isa = PBXBuildFile; fileRef = C08597BD28D0D54C00577A8E /* eval.cpp */; };
+		C0A81F862ABDDF9700CDF309 /* Function.cpp in Sources */ = {isa = PBXBuildFile; fileRef = C08597B828D0D54C00577A8E /* Function.cpp */; };
+		C0A81F872ABDDF9700CDF309 /* JSON.cpp in Sources */ = {isa = PBXBuildFile; fileRef = C05589AE2929DC0C00CBDBD7 /* JSON.cpp */; };
+		C0A81F882ABDDF9700CDF309 /* Math.cpp in Sources */ = {isa = PBXBuildFile; fileRef = C05589AC29291D1500CBDBD7 /* Math.cpp */; };
+		C0A81F892ABDDF9700CDF309 /* Number.cpp in Sources */ = {isa = PBXBuildFile; fileRef = C08597BE28D0D54C00577A8E /* Number.cpp */; };
+		C0A81F8A2ABDDF9700CDF309 /* Object.cpp in Sources */ = {isa = PBXBuildFile; fileRef = C08597B628D0D54C00577A8E /* Object.cpp */; };
+		C0A81F8B2ABDDF9700CDF309 /* Promise.cpp in Sources */ = {isa = PBXBuildFile; fileRef = C06DEEA529345A9F0062C606 /* Promise.cpp */; };
+		C0A81F8C2ABDDF9700CDF309 /* RegExp.cpp in Sources */ = {isa = PBXBuildFile; fileRef = C08597B428D0D54C00577A8E /* RegExp.cpp */; };
+		C0A81F8D2ABDDF9700CDF309 /* Reflect.cpp in Sources */ = {isa = PBXBuildFile; fileRef = C06DEEA329332F1C0062C606 /* Reflect.cpp */; };
+		C0A81F8E2ABDDF9700CDF309 /* String.cpp in Sources */ = {isa = PBXBuildFile; fileRef = C08597B728D0D54C00577A8E /* String.cpp */; };
+		C0A81F8F2ABDDF9700CDF309 /* Symbol.cpp in Sources */ = {isa = PBXBuildFile; fileRef = C08597B328D0D54C00577A8E /* Symbol.cpp */; };
+		C0A81F902ABDDF9700CDF309 /* Console.cpp in Sources */ = {isa = PBXBuildFile; fileRef = C08597CE28D0D54C00577A8E /* Console.cpp */; };
+		C0A81F912ABDDF9700CDF309 /* Window.cpp in Sources */ = {isa = PBXBuildFile; fileRef = C0443AAB28DE07D900CBF6DB /* Window.cpp */; };
+		C0A81F922ABDDF9700CDF309 /* WebAPI.cpp in Sources */ = {isa = PBXBuildFile; fileRef = C08597CF28D0D54C00577A8E /* WebAPI.cpp */; };
+		C0A81F932ABDDF9700CDF309 /* WebAPI.hpp in Sources */ = {isa = PBXBuildFile; fileRef = C08597D028D0D54C00577A8E /* WebAPI.hpp */; };
+		C0A81F942ABDDF9700CDF309 /* ConstStrings.cpp in Sources */ = {isa = PBXBuildFile; fileRef = C08597F328D0D54C00577A8E /* ConstStrings.cpp */; };
+		C0A81F952ABDDF9700CDF309 /* ConstStrings.hpp in Sources */ = {isa = PBXBuildFile; fileRef = C08597F428D0D54C00577A8E /* ConstStrings.hpp */; };
+		C0A81F962ABDDF9700CDF309 /* PromiseTasks.cpp in Sources */ = {isa = PBXBuildFile; fileRef = C06C1604294DD6520022ADCA /* PromiseTasks.cpp */; };
+		C0A81F972ABDDF9700CDF309 /* PromiseTasks.hpp in Sources */ = {isa = PBXBuildFile; fileRef = C06C1601294DD6520022ADCA /* PromiseTasks.hpp */; };
+		C0A81F982ABDDF9700CDF309 /* TimerTasks.cpp in Sources */ = {isa = PBXBuildFile; fileRef = C06C1602294DD6520022ADCA /* TimerTasks.cpp */; };
+		C0A81F992ABDDF9700CDF309 /* TimerTasks.hpp in Sources */ = {isa = PBXBuildFile; fileRef = C06C1603294DD6520022ADCA /* TimerTasks.hpp */; };
+		C0A81F9A2ABDDF9700CDF309 /* Arguments.cpp in Sources */ = {isa = PBXBuildFile; fileRef = C06C15FA294D75AD0022ADCA /* Arguments.cpp */; };
+		C0A81F9B2ABDDF9700CDF309 /* Arguments.hpp in Sources */ = {isa = PBXBuildFile; fileRef = C06C15FB294D75AD0022ADCA /* Arguments.hpp */; };
+		C0A81F9C2ABDDF9700CDF309 /* BinaryOperation.hpp in Sources */ = {isa = PBXBuildFile; fileRef = C08597F728D0D54C00577A8E /* BinaryOperation.hpp */; };
+		C0A81F9D2ABDDF9700CDF309 /* UnaryOperation.hpp in Sources */ = {isa = PBXBuildFile; fileRef = C08597FA28D0D54C00577A8E /* UnaryOperation.hpp */; };
+		C0A81F9E2ABDDF9700CDF309 /* VirtualMachine.cpp in Sources */ = {isa = PBXBuildFile; fileRef = C08597FC28D0D54C00577A8E /* VirtualMachine.cpp */; };
+		C0A81F9F2ABDDF9700CDF309 /* VirtualMachine.hpp in Sources */ = {isa = PBXBuildFile; fileRef = C08597F828D0D54C00577A8E /* VirtualMachine.hpp */; };
+		C0A81FA02ABDDF9700CDF309 /* VirtualMachineTypes.cpp in Sources */ = {isa = PBXBuildFile; fileRef = C08597F628D0D54C00577A8E /* VirtualMachineTypes.cpp */; };
+		C0A81FA12ABDDF9700CDF309 /* VirtualMachineTypes.hpp in Sources */ = {isa = PBXBuildFile; fileRef = C08597FB28D0D54C00577A8E /* VirtualMachineTypes.hpp */; };
+		C0A81FA22ABDDF9700CDF309 /* VMRuntime.cpp in Sources */ = {isa = PBXBuildFile; fileRef = C08597FD28D0D54C00577A8E /* VMRuntime.cpp */; };
+		C0A81FA32ABDDF9700CDF309 /* VMRuntime.hpp in Sources */ = {isa = PBXBuildFile; fileRef = C08597F928D0D54C00577A8E /* VMRuntime.hpp */; };
+		C0A81FA42ABDDF9700CDF309 /* VMRuntimeCommon.cpp in Sources */ = {isa = PBXBuildFile; fileRef = C06C15FE294DBDF10022ADCA /* VMRuntimeCommon.cpp */; };
+		C0A81FA52ABDDF9700CDF309 /* VMRuntimeCommon.hpp in Sources */ = {isa = PBXBuildFile; fileRef = C06C15FF294DBDF10022ADCA /* VMRuntimeCommon.hpp */; };
+		C0A81FA62ABDDF9700CDF309 /* VMScope.cpp in Sources */ = {isa = PBXBuildFile; fileRef = C06C15F8294D750D0022ADCA /* VMScope.cpp */; };
+		C0A81FA72ABDDF9700CDF309 /* VMScope.hpp in Sources */ = {isa = PBXBuildFile; fileRef = C06C15F9294D750D0022ADCA /* VMScope.hpp */; };
+		C0A81FA92ABDDF9700CDF309 /* IJsIterator.cpp in Sources */ = {isa = PBXBuildFile; fileRef = C06EE44128F40552000F0E41 /* IJsIterator.cpp */; };
+		C0A81FAA2ABDDF9700CDF309 /* IJsIterator.hpp in Sources */ = {isa = PBXBuildFile; fileRef = C06EE44228F40552000F0E41 /* IJsIterator.hpp */; };
+		C0A81FAB2ABDDF9700CDF309 /* IJsObject.cpp in Sources */ = {isa = PBXBuildFile; fileRef = C085980728D0D54C00577A8E /* IJsObject.cpp */; };
+		C0A81FAC2ABDDF9700CDF309 /* IJsObject.hpp in Sources */ = {isa = PBXBuildFile; fileRef = C085980128D0D54C00577A8E /* IJsObject.hpp */; };
+		C0A81FAD2ABDDF9700CDF309 /* JsArguments.cpp in Sources */ = {isa = PBXBuildFile; fileRef = C085980228D0D54C00577A8E /* JsArguments.cpp */; };
+		C0A81FAE2ABDDF9700CDF309 /* JsArguments.hpp in Sources */ = {isa = PBXBuildFile; fileRef = C085980928D0D54C00577A8E /* JsArguments.hpp */; };
+		C0A81FAF2ABDDF9700CDF309 /* JsArray.cpp in Sources */ = {isa = PBXBuildFile; fileRef = C085980828D0D54C00577A8E /* JsArray.cpp */; };
+		C0A81FB02ABDDF9700CDF309 /* JsArray.hpp in Sources */ = {isa = PBXBuildFile; fileRef = C085980328D0D54C00577A8E /* JsArray.hpp */; };
+		C0A81FB12ABDDF9700CDF309 /* JsDummyObject.hpp in Sources */ = {isa = PBXBuildFile; fileRef = C06EE44028F40495000F0E41 /* JsDummyObject.hpp */; };
+		C0A81FB22ABDDF9700CDF309 /* JsGlobalThis.cpp in Sources */ = {isa = PBXBuildFile; fileRef = C085985028D9A0A100577A8E /* JsGlobalThis.cpp */; };
+		C0A81FB32ABDDF9700CDF309 /* JsGlobalThis.hpp in Sources */ = {isa = PBXBuildFile; fileRef = C085984F28D9A08F00577A8E /* JsGlobalThis.hpp */; };
+		C0A81FB42ABDDF9700CDF309 /* JsLibObject.cpp in Sources */ = {isa = PBXBuildFile; fileRef = C085980A28D0D54C00577A8E /* JsLibObject.cpp */; };
+		C0A81FB52ABDDF9700CDF309 /* JsLibObject.hpp in Sources */ = {isa = PBXBuildFile; fileRef = C085980428D0D54C00577A8E /* JsLibObject.hpp */; };
+		C0A81FB62ABDDF9700CDF309 /* JsObject.cpp in Sources */ = {isa = PBXBuildFile; fileRef = C06EE43E28F40406000F0E41 /* JsObject.cpp */; };
+		C0A81FB72ABDDF9700CDF309 /* JsObject.hpp in Sources */ = {isa = PBXBuildFile; fileRef = C06EE43D28F40406000F0E41 /* JsObject.hpp */; };
+		C0A81FB82ABDDF9700CDF309 /* JsObjectFunction.cpp in Sources */ = {isa = PBXBuildFile; fileRef = C085980628D0D54C00577A8E /* JsObjectFunction.cpp */; };
+		C0A81FB92ABDDF9700CDF309 /* JsObjectFunction.hpp in Sources */ = {isa = PBXBuildFile; fileRef = C085980028D0D54C00577A8E /* JsObjectFunction.hpp */; };
+		C0A81FBA2ABDDF9700CDF309 /* JsObjectLazy.cpp in Sources */ = {isa = PBXBuildFile; fileRef = C06EE44529091177000F0E41 /* JsObjectLazy.cpp */; };
+		C0A81FBB2ABDDF9700CDF309 /* JsObjectLazy.hpp in Sources */ = {isa = PBXBuildFile; fileRef = C06EE44429091177000F0E41 /* JsObjectLazy.hpp */; };
+		C0A81FBC2ABDDF9700CDF309 /* JsPrimaryObject.cpp in Sources */ = {isa = PBXBuildFile; fileRef = C0A3AF2D29167B4900BBEE8E /* JsPrimaryObject.cpp */; };
+		C0A81FBD2ABDDF9700CDF309 /* JsPrimaryObject.hpp in Sources */ = {isa = PBXBuildFile; fileRef = C085980528D0D54C00577A8E /* JsPrimaryObject.hpp */; };
+		C0A81FBE2ABDDF9700CDF309 /* JsRegExp.cpp in Sources */ = {isa = PBXBuildFile; fileRef = C08597FF28D0D54C00577A8E /* JsRegExp.cpp */; };
+		C0A81FBF2ABDDF9700CDF309 /* JsRegExp.hpp in Sources */ = {isa = PBXBuildFile; fileRef = C085980C28D0D54C00577A8E /* JsRegExp.hpp */; };
+		C0A81FC02ABDDF9700CDF309 /* JsPromiseObject.cpp in Sources */ = {isa = PBXBuildFile; fileRef = C06C1607294DD6FF0022ADCA /* JsPromiseObject.cpp */; };
+		C0A81FC12ABDDF9700CDF309 /* JsPromiseObject.hpp in Sources */ = {isa = PBXBuildFile; fileRef = C06C1608294DD6FF0022ADCA /* JsPromiseObject.hpp */; };
+		C0A81FC22ABDDF9700CDF309 /* JsObjectX.cpp in Sources */ = {isa = PBXBuildFile; fileRef = C05D73FA2953FC3300294F50 /* JsObjectX.cpp */; };
+		C0A81FC32ABDDF9700CDF309 /* JsObjectX.hpp in Sources */ = {isa = PBXBuildFile; fileRef = C05D73FB2953FC3300294F50 /* JsObjectX.hpp */; };
+		C0A81FC42ABDDF9700CDF309 /* ByteCodeStream.cpp in Sources */ = {isa = PBXBuildFile; fileRef = C085981328D0D54C00577A8E /* ByteCodeStream.cpp */; };
+		C0A81FC52ABDDF9800CDF309 /* ByteCodeStream.hpp in Sources */ = {isa = PBXBuildFile; fileRef = C085981628D0D54C00577A8E /* ByteCodeStream.hpp */; };
+		C0A81FC62ABDDF9800CDF309 /* Expression.cpp in Sources */ = {isa = PBXBuildFile; fileRef = C085981828D0D54C00577A8E /* Expression.cpp */; };
+		C0A81FC72ABDDF9800CDF309 /* Expression.hpp in Sources */ = {isa = PBXBuildFile; fileRef = C085980E28D0D54C00577A8E /* Expression.hpp */; };
+		C0A81FC82ABDDF9800CDF309 /* Lexer.cpp in Sources */ = {isa = PBXBuildFile; fileRef = C085981128D0D54C00577A8E /* Lexer.cpp */; };
+		C0A81FC92ABDDF9800CDF309 /* Lexer.hpp in Sources */ = {isa = PBXBuildFile; fileRef = C085981528D0D54C00577A8E /* Lexer.hpp */; };
+		C0A81FCA2ABDDF9800CDF309 /* Parser.cpp in Sources */ = {isa = PBXBuildFile; fileRef = C085981928D0D54C00577A8E /* Parser.cpp */; };
+		C0A81FCB2ABDDF9800CDF309 /* Parser.hpp in Sources */ = {isa = PBXBuildFile; fileRef = C085980F28D0D54C00577A8E /* Parser.hpp */; };
+		C0A81FCC2ABDDF9800CDF309 /* ParserTypes.cpp in Sources */ = {isa = PBXBuildFile; fileRef = C085981728D0D54C00577A8E /* ParserTypes.cpp */; };
+		C0A81FCD2ABDDF9800CDF309 /* ParserTypes.hpp in Sources */ = {isa = PBXBuildFile; fileRef = C085981228D0D54C00577A8E /* ParserTypes.hpp */; };
+		C0A81FCE2ABDDF9800CDF309 /* Statement.cpp in Sources */ = {isa = PBXBuildFile; fileRef = C085981028D0D54C00577A8E /* Statement.cpp */; };
+		C0A81FCF2ABDDF9800CDF309 /* Statement.hpp in Sources */ = {isa = PBXBuildFile; fileRef = C085981428D0D54C00577A8E /* Statement.hpp */; };
+		C0A81FD02ABDDF9800CDF309 /* CommonString.cpp in Sources */ = {isa = PBXBuildFile; fileRef = C08597C828D0D54C00577A8E /* CommonString.cpp */; };
+		C0A81FD12ABDDF9800CDF309 /* CommonString.hpp in Sources */ = {isa = PBXBuildFile; fileRef = C08597CA28D0D54C00577A8E /* CommonString.hpp */; };
+		C0A81FD22ABDDF9800CDF309 /* JsString.cpp in Sources */ = {isa = PBXBuildFile; fileRef = C08597C728D0D54C00577A8E /* JsString.cpp */; };
+		C0A81FD32ABDDF9800CDF309 /* JsString.hpp in Sources */ = {isa = PBXBuildFile; fileRef = C08597CB28D0D54C00577A8E /* JsString.hpp */; };
+		C0A81FD42ABDDF9800CDF309 /* StringView.cpp in Sources */ = {isa = PBXBuildFile; fileRef = C0443AB028E7254000CBF6DB /* StringView.cpp */; };
+		C0A81FD52ABDDF9800CDF309 /* DateTime.cpp in Sources */ = {isa = PBXBuildFile; fileRef = C044A2842931B89E00178864 /* DateTime.cpp */; };
+		C0A81FD62ABDDF9800CDF309 /* CharEncoding.cpp in Sources */ = {isa = PBXBuildFile; fileRef = C0443AAE28E51F9800CBF6DB /* CharEncoding.cpp */; };
+		C0A81FD72ABDDF9800CDF309 /* JsArray.cpp in Sources */ = {isa = PBXBuildFile; fileRef = C08597C128D0D54C00577A8E /* JsArray.cpp */; };
+		C0A81FD82ABDDF9800CDF309 /* Lexer.cpp in Sources */ = {isa = PBXBuildFile; fileRef = C08597C328D0D54C00577A8E /* Lexer.cpp */; };
+		C0A81FD92ABDDF9800CDF309 /* Parser.cpp in Sources */ = {isa = PBXBuildFile; fileRef = C08597C428D0D54C00577A8E /* Parser.cpp */; };
+		C0A81FDA2ABDDF9800CDF309 /* RunJavaScript.cpp in Sources */ = {isa = PBXBuildFile; fileRef = C08597C528D0D54C00577A8E /* RunJavaScript.cpp */; };
+		C0A81FDB2ABDDF9800CDF309 /* AllocatorPool.cpp in Sources */ = {isa = PBXBuildFile; fileRef = C08597E928D0D54C00577A8E /* AllocatorPool.cpp */; };
+		C0A81FDC2ABDDF9800CDF309 /* AllocatorPool.h in Sources */ = {isa = PBXBuildFile; fileRef = C08597D628D0D54C00577A8E /* AllocatorPool.h */; };
+		C0A81FDD2ABDDF9800CDF309 /* Base64.cpp in Sources */ = {isa = PBXBuildFile; fileRef = C08597DB28D0D54C00577A8E /* Base64.cpp */; };
+		C0A81FDE2ABDDF9800CDF309 /* base64.h in Sources */ = {isa = PBXBuildFile; fileRef = C08597D928D0D54C00577A8E /* base64.h */; };
+		C0A81FDF2ABDDF9800CDF309 /* BinaryFileStream.cpp in Sources */ = {isa = PBXBuildFile; fileRef = C055400A299F62910057629E /* BinaryFileStream.cpp */; };
+		C0A81FE02ABDDF9800CDF309 /* BinaryFileStream.h in Sources */ = {isa = PBXBuildFile; fileRef = C055400B299F62910057629E /* BinaryFileStream.h */; };
+		C0A81FE12ABDDF9800CDF309 /* BinaryStream.cpp in Sources */ = {isa = PBXBuildFile; fileRef = C08597F128D0D54C00577A8E /* BinaryStream.cpp */; };
+		C0A81FE22ABDDF9800CDF309 /* BinaryStream.h in Sources */ = {isa = PBXBuildFile; fileRef = C08597E428D0D54C00577A8E /* BinaryStream.h */; };
+		C0A81FE32ABDDF9800CDF309 /* CharEncoding.cpp in Sources */ = {isa = PBXBuildFile; fileRef = C08597D528D0D54C00577A8E /* CharEncoding.cpp */; };
+		C0A81FE42ABDDF9800CDF309 /* CharEncoding.h in Sources */ = {isa = PBXBuildFile; fileRef = C08597E828D0D54C00577A8E /* CharEncoding.h */; };
+		C0A81FE52ABDDF9800CDF309 /* DateTime.cpp in Sources */ = {isa = PBXBuildFile; fileRef = C08597EC28D0D54C00577A8E /* DateTime.cpp */; };
+		C0A81FE62ABDDF9800CDF309 /* DateTime.h in Sources */ = {isa = PBXBuildFile; fileRef = C08597E228D0D54C00577A8E /* DateTime.h */; };
+		C0A81FE72ABDDF9800CDF309 /* FileApi.cpp in Sources */ = {isa = PBXBuildFile; fileRef = C08597DA28D0D54C00577A8E /* FileApi.cpp */; };
+		C0A81FE82ABDDF9800CDF309 /* FileApi.h in Sources */ = {isa = PBXBuildFile; fileRef = C08597D828D0D54C00577A8E /* FileApi.h */; };
+		C0A81FE92ABDDF9800CDF309 /* Hash.cpp in Sources */ = {isa = PBXBuildFile; fileRef = C08597EB28D0D54C00577A8E /* Hash.cpp */; };
+		C0A81FEA2ABDDF9800CDF309 /* Hash.h in Sources */ = {isa = PBXBuildFile; fileRef = C08597EF28D0D54C00577A8E /* Hash.h */; };
+		C0A81FEB2ABDDF9800CDF309 /* LinkedString.cpp in Sources */ = {isa = PBXBuildFile; fileRef = C08597D428D0D54C00577A8E /* LinkedString.cpp */; };
+		C0A81FEC2ABDDF9800CDF309 /* LinkedString.hpp in Sources */ = {isa = PBXBuildFile; fileRef = C08597EA28D0D54C00577A8E /* LinkedString.hpp */; };
+		C0A81FED2ABDDF9800CDF309 /* CharEncodingMac.mm in Sources */ = {isa = PBXBuildFile; fileRef = C08597E628D0D54C00577A8E /* CharEncodingMac.mm */; };
+		C0A81FEE2ABDDF9800CDF309 /* os.cpp in Sources */ = {isa = PBXBuildFile; fileRef = C08597D728D0D54C00577A8E /* os.cpp */; };
+		C0A81FEF2ABDDF9800CDF309 /* os.h in Sources */ = {isa = PBXBuildFile; fileRef = C08597DF28D0D54C00577A8E /* os.h */; };
+		C0A81FF02ABDDF9800CDF309 /* StringView.cpp in Sources */ = {isa = PBXBuildFile; fileRef = C08597E328D0D54C00577A8E /* StringView.cpp */; };
+		C0A81FF12ABDDF9800CDF309 /* StringView.h in Sources */ = {isa = PBXBuildFile; fileRef = C08597D228D0D54C00577A8E /* StringView.h */; };
+		C0A81FF22ABDDF9800CDF309 /* StringEx.cpp in Sources */ = {isa = PBXBuildFile; fileRef = C08597E028D0D54C00577A8E /* StringEx.cpp */; };
+		C0A81FF32ABDDF9800CDF309 /* StringEx.h in Sources */ = {isa = PBXBuildFile; fileRef = C08597DC28D0D54C00577A8E /* StringEx.h */; };
+		C0A81FF42ABDDF9800CDF309 /* unittest.cpp in Sources */ = {isa = PBXBuildFile; fileRef = C08597F028D0D54C00577A8E /* unittest.cpp */; };
+		C0A81FF52ABDDF9800CDF309 /* unittest.h in Sources */ = {isa = PBXBuildFile; fileRef = C08597E128D0D54C00577A8E /* unittest.h */; };
+		C0A81FF62ABDDF9800CDF309 /* Utils.h in Sources */ = {isa = PBXBuildFile; fileRef = C08597D328D0D54C00577A8E /* Utils.h */; };
+		C0A81FF72ABDDF9800CDF309 /* UtilsTypes.h in Sources */ = {isa = PBXBuildFile; fileRef = C08597DE28D0D54C00577A8E /* UtilsTypes.h */; };
+		C0A81FF82ABDDF9800CDF309 /* XCharSeparatedValues.cpp in Sources */ = {isa = PBXBuildFile; fileRef = C08597DD28D0D54C00577A8E /* XCharSeparatedValues.cpp */; };
+		C0A81FF92ABDDF9800CDF309 /* XCharSeparatedValues.h in Sources */ = {isa = PBXBuildFile; fileRef = C08597E728D0D54C00577A8E /* XCharSeparatedValues.h */; };
+		C0A81FFA2ABDDF9800CDF309 /* StringParser.cpp in Sources */ = {isa = PBXBuildFile; fileRef = C006BA822AAAB3B70045EA52 /* StringParser.cpp */; };
+		C0A81FFB2ABDDF9800CDF309 /* StringParser.hpp in Sources */ = {isa = PBXBuildFile; fileRef = C006BA832AAAB3B70045EA52 /* StringParser.hpp */; };
 /* End PBXBuildFile section */
 
 /* Begin PBXContainerItemProxy section */
@@ -185,6 +237,8 @@
 /* End PBXCopyFilesBuildPhase section */
 
 /* Begin PBXFileReference section */
+		C006BA822AAAB3B70045EA52 /* StringParser.cpp */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.cpp.cpp; path = StringParser.cpp; sourceTree = "<group>"; };
+		C006BA832AAAB3B70045EA52 /* StringParser.hpp */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.cpp.h; path = StringParser.hpp; sourceTree = "<group>"; };
 		C00E4784283FBBE300F9BC35 /* libasmjit.a */ = {isa = PBXFileReference; lastKnownFileType = archive.ar; name = libasmjit.a; path = "third-parties/asmjit/mac/libasmjit.a"; sourceTree = "<group>"; };
 		C03E44422839CECC00864631 /* TinyJS */ = {isa = PBXFileReference; explicitFileType = "compiled.mach-o.executable"; includeInIndex = 0; path = TinyJS; sourceTree = BUILT_PRODUCTS_DIR; };
 		C0443AAB28DE07D900CBF6DB /* Window.cpp */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.cpp.cpp; path = Window.cpp; sourceTree = "<group>"; };
@@ -210,7 +264,6 @@
 		C06C1604294DD6520022ADCA /* PromiseTasks.cpp */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.cpp.cpp; path = PromiseTasks.cpp; sourceTree = "<group>"; };
 		C06C1607294DD6FF0022ADCA /* JsPromiseObject.cpp */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.cpp.cpp; path = JsPromiseObject.cpp; sourceTree = "<group>"; };
 		C06C1608294DD6FF0022ADCA /* JsPromiseObject.hpp */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.cpp.h; path = JsPromiseObject.hpp; sourceTree = "<group>"; };
-		C06C1615294EAFF70022ADCA /* libTinyJsLib.dylib */ = {isa = PBXFileReference; explicitFileType = "compiled.mach-o.dylib"; includeInIndex = 0; path = libTinyJsLib.dylib; sourceTree = BUILT_PRODUCTS_DIR; };
 		C06DEEA329332F1C0062C606 /* Reflect.cpp */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.cpp.cpp; path = Reflect.cpp; sourceTree = "<group>"; };
 		C06DEEA529345A9F0062C606 /* Promise.cpp */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.cpp.cpp; path = Promise.cpp; sourceTree = "<group>"; };
 		C06EE43D28F40406000F0E41 /* JsObject.hpp */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.cpp.h; path = JsObject.hpp; sourceTree = "<group>"; };
@@ -312,6 +365,7 @@
 		C085984F28D9A08F00577A8E /* JsGlobalThis.hpp */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.cpp.h; path = JsGlobalThis.hpp; sourceTree = "<group>"; };
 		C085985028D9A0A100577A8E /* JsGlobalThis.cpp */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.cpp.cpp; path = JsGlobalThis.cpp; sourceTree = "<group>"; };
 		C0A3AF2D29167B4900BBEE8E /* JsPrimaryObject.cpp */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.cpp.cpp; path = JsPrimaryObject.cpp; sourceTree = "<group>"; };
+		C0A81F742ABDDF4800CDF309 /* libTinyJsStaticLib.a */ = {isa = PBXFileReference; explicitFileType = archive.ar; includeInIndex = 0; path = libTinyJsStaticLib.a; sourceTree = BUILT_PRODUCTS_DIR; };
 /* End PBXFileReference section */
 
 /* Begin PBXFrameworksBuildPhase section */
@@ -324,11 +378,10 @@
 			);
 			runOnlyForDeploymentPostprocessing = 0;
 		};
-		C06C1613294EAFF70022ADCA /* Frameworks */ = {
+		C0A81F722ABDDF4800CDF309 /* Frameworks */ = {
 			isa = PBXFrameworksBuildPhase;
 			buildActionMask = 2147483647;
 			files = (
-				C06C1667294EB1210022ADCA /* libThirdPartiesSDK.a in Frameworks */,
 			);
 			runOnlyForDeploymentPostprocessing = 0;
 		};
@@ -349,7 +402,7 @@
 			isa = PBXGroup;
 			children = (
 				C03E44422839CECC00864631 /* TinyJS */,
-				C06C1615294EAFF70022ADCA /* libTinyJsLib.dylib */,
+				C0A81F742ABDDF4800CDF309 /* libTinyJsStaticLib.a */,
 			);
 			name = Products;
 			sourceTree = "<group>";
@@ -505,6 +558,8 @@
 				C08597DE28D0D54C00577A8E /* UtilsTypes.h */,
 				C08597DD28D0D54C00577A8E /* XCharSeparatedValues.cpp */,
 				C08597E728D0D54C00577A8E /* XCharSeparatedValues.h */,
+				C006BA822AAAB3B70045EA52 /* StringParser.cpp */,
+				C006BA832AAAB3B70045EA52 /* StringParser.hpp */,
 			);
 			path = utils;
 			sourceTree = "<group>";
@@ -607,11 +662,10 @@
 /* End PBXGroup section */
 
 /* Begin PBXHeadersBuildPhase section */
-		C06C1611294EAFF70022ADCA /* Headers */ = {
+		C0A81F702ABDDF4800CDF309 /* Headers */ = {
 			isa = PBXHeadersBuildPhase;
 			buildActionMask = 2147483647;
 			files = (
-				C055400E299F62910057629E /* BinaryFileStream.h in Headers */,
 			);
 			runOnlyForDeploymentPostprocessing = 0;
 		};
@@ -637,22 +691,22 @@
 			productReference = C03E44422839CECC00864631 /* TinyJS */;
 			productType = "com.apple.product-type.tool";
 		};
-		C06C1614294EAFF70022ADCA /* TinyJsLib */ = {
+		C0A81F732ABDDF4800CDF309 /* TinyJsStaticLib */ = {
 			isa = PBXNativeTarget;
-			buildConfigurationList = C06C161D294EAFF70022ADCA /* Build configuration list for PBXNativeTarget "TinyJsLib" */;
+			buildConfigurationList = C0A81F7E2ABDDF4800CDF309 /* Build configuration list for PBXNativeTarget "TinyJsStaticLib" */;
 			buildPhases = (
-				C06C1611294EAFF70022ADCA /* Headers */,
-				C06C1612294EAFF70022ADCA /* Sources */,
-				C06C1613294EAFF70022ADCA /* Frameworks */,
+				C0A81F702ABDDF4800CDF309 /* Headers */,
+				C0A81F712ABDDF4800CDF309 /* Sources */,
+				C0A81F722ABDDF4800CDF309 /* Frameworks */,
 			);
 			buildRules = (
 			);
 			dependencies = (
 			);
-			name = TinyJsLib;
-			productName = TinyJsLib;
-			productReference = C06C1615294EAFF70022ADCA /* libTinyJsLib.dylib */;
-			productType = "com.apple.product-type.library.dynamic";
+			name = TinyJsStaticLib;
+			productName = TinyJsStaticLib;
+			productReference = C0A81F742ABDDF4800CDF309 /* libTinyJsStaticLib.a */;
+			productType = "com.apple.product-type.library.static";
 		};
 /* End PBXNativeTarget section */
 
@@ -666,7 +720,7 @@
 					C03E44412839CECC00864631 = {
 						CreatedOnToolsVersion = 13.2.1;
 					};
-					C06C1614294EAFF70022ADCA = {
+					C0A81F732ABDDF4800CDF309 = {
 						CreatedOnToolsVersion = 13.2.1;
 					};
 				};
@@ -691,7 +745,7 @@
 			projectRoot = "";
 			targets = (
 				C03E44412839CECC00864631 /* TinyJS */,
-				C06C1614294EAFF70022ADCA /* TinyJsLib */,
+				C0A81F732ABDDF4800CDF309 /* TinyJsStaticLib */,
 			);
 		};
 /* End PBXProject section */
@@ -736,6 +790,7 @@
 			isa = PBXSourcesBuildPhase;
 			buildActionMask = 2147483647;
 			files = (
+				C006BAA72AAC9E840045EA52 /* StringParser.cpp in Sources */,
 				C06C1605294DD6A00022ADCA /* PromiseTasks.cpp in Sources */,
 				C06C1606294DD6A00022ADCA /* TimerTasks.cpp in Sources */,
 				C06C1600294DD1150022ADCA /* VMRuntimeCommon.cpp in Sources */,
@@ -810,81 +865,134 @@
 			);
 			runOnlyForDeploymentPostprocessing = 0;
 		};
-		C06C1612294EAFF70022ADCA /* Sources */ = {
+		C0A81F712ABDDF4800CDF309 /* Sources */ = {
 			isa = PBXSourcesBuildPhase;
 			buildActionMask = 2147483647;
 			files = (
-				C05D73FE2954319C00294F50 /* JsObjectX.cpp in Sources */,
-				C06C1668294EB1580022ADCA /* CharEncodingMac.mm in Sources */,
-				C06C161E294EB0360022ADCA /* Array.cpp in Sources */,
-				C06C161F294EB0360022ADCA /* Boolean.cpp in Sources */,
-				C06C1620294EB0360022ADCA /* BuiltIn.cpp in Sources */,
-				C06C1621294EB0360022ADCA /* Error.cpp in Sources */,
-				C06C1622294EB0360022ADCA /* Date.cpp in Sources */,
-				C06C1623294EB0360022ADCA /* eval.cpp in Sources */,
-				C06C1624294EB0360022ADCA /* Function.cpp in Sources */,
-				C06C1625294EB0360022ADCA /* JSON.cpp in Sources */,
-				C06C1626294EB0360022ADCA /* Math.cpp in Sources */,
-				C06C1627294EB0360022ADCA /* Number.cpp in Sources */,
-				C06C1628294EB0360022ADCA /* Object.cpp in Sources */,
-				C06C1629294EB0360022ADCA /* Promise.cpp in Sources */,
-				C06C162A294EB0360022ADCA /* RegExp.cpp in Sources */,
-				C06C162B294EB0360022ADCA /* Reflect.cpp in Sources */,
-				C06C162C294EB0360022ADCA /* String.cpp in Sources */,
-				C06C162D294EB0360022ADCA /* Symbol.cpp in Sources */,
-				C06C162E294EB0360022ADCA /* Console.cpp in Sources */,
-				C06C162F294EB0360022ADCA /* Window.cpp in Sources */,
-				C06C1630294EB0360022ADCA /* WebAPI.cpp in Sources */,
-				C06C1631294EB0360022ADCA /* ConstStrings.cpp in Sources */,
-				C06C1632294EB0360022ADCA /* PromiseTasks.cpp in Sources */,
-				C06C1633294EB0360022ADCA /* TimerTasks.cpp in Sources */,
-				C06C1634294EB0360022ADCA /* Arguments.cpp in Sources */,
-				C06C1635294EB0360022ADCA /* VirtualMachine.cpp in Sources */,
-				C06C1636294EB0360022ADCA /* VirtualMachineTypes.cpp in Sources */,
-				C06C1637294EB0360022ADCA /* VMRuntime.cpp in Sources */,
-				C06C1638294EB0360022ADCA /* VMRuntimeCommon.cpp in Sources */,
-				C06C1639294EB0360022ADCA /* VMScope.cpp in Sources */,
-				C06C163A294EB0360022ADCA /* IJsIterator.cpp in Sources */,
-				C06C163B294EB0360022ADCA /* IJsObject.cpp in Sources */,
-				C06C163C294EB0360022ADCA /* JsArguments.cpp in Sources */,
-				C06C163D294EB0360022ADCA /* JsArray.cpp in Sources */,
-				C055400D299F62910057629E /* BinaryFileStream.cpp in Sources */,
-				C06C163E294EB0360022ADCA /* JsGlobalThis.cpp in Sources */,
-				C06C163F294EB0360022ADCA /* JsLibObject.cpp in Sources */,
-				C06C1640294EB0360022ADCA /* JsObject.cpp in Sources */,
-				C06C1641294EB0360022ADCA /* JsObjectFunction.cpp in Sources */,
-				C06C1642294EB0360022ADCA /* JsObjectLazy.cpp in Sources */,
-				C06C1643294EB0360022ADCA /* JsPrimaryObject.cpp in Sources */,
-				C06C1644294EB0360022ADCA /* JsRegExp.cpp in Sources */,
-				C06C1645294EB0360022ADCA /* JsPromiseObject.cpp in Sources */,
-				C06C1646294EB0360022ADCA /* ByteCodeStream.cpp in Sources */,
-				C06C1647294EB0360022ADCA /* Expression.cpp in Sources */,
-				C06C1648294EB0360022ADCA /* Lexer.cpp in Sources */,
-				C06C1649294EB0360022ADCA /* Parser.cpp in Sources */,
-				C06C164A294EB0360022ADCA /* ParserTypes.cpp in Sources */,
-				C06C164B294EB0360022ADCA /* Statement.cpp in Sources */,
-				C06C164C294EB0360022ADCA /* CommonString.cpp in Sources */,
-				C06C164D294EB0360022ADCA /* JsString.cpp in Sources */,
-				C06C164F294EB0360022ADCA /* StringView.cpp in Sources */,
-				C06C1650294EB0360022ADCA /* DateTime.cpp in Sources */,
-				C06C1651294EB0360022ADCA /* CharEncoding.cpp in Sources */,
-				C06C1652294EB0360022ADCA /* JsArray.cpp in Sources */,
-				C06C1653294EB0360022ADCA /* Lexer.cpp in Sources */,
-				C06C1654294EB0360022ADCA /* Parser.cpp in Sources */,
-				C06C1655294EB0360022ADCA /* RunJavaScript.cpp in Sources */,
-				C06C1656294EB0360022ADCA /* AllocatorPool.cpp in Sources */,
-				C06C1657294EB0360022ADCA /* Base64.cpp in Sources */,
-				C06C1658294EB0360022ADCA /* BinaryStream.cpp in Sources */,
-				C06C1659294EB0360022ADCA /* CharEncoding.cpp in Sources */,
-				C06C165A294EB0360022ADCA /* DateTime.cpp in Sources */,
-				C06C165B294EB0360022ADCA /* FileApi.cpp in Sources */,
-				C06C165C294EB0360022ADCA /* Hash.cpp in Sources */,
-				C06C165D294EB0360022ADCA /* LinkedString.cpp in Sources */,
-				C06C165E294EB0360022ADCA /* os.cpp in Sources */,
-				C06C165F294EB0360022ADCA /* StringView.cpp in Sources */,
-				C06C1660294EB0360022ADCA /* StringEx.cpp in Sources */,
-				C06C1661294EB0360022ADCA /* unittest.cpp in Sources */,
-				C06C1662294EB0360022ADCA /* XCharSeparatedValues.cpp in Sources */,
+				C0A81F7F2ABDDF9700CDF309 /* Array.cpp in Sources */,
+				C0A81F802ABDDF9700CDF309 /* Boolean.cpp in Sources */,
+				C0A81F812ABDDF9700CDF309 /* BuiltIn.cpp in Sources */,
+				C0A81F822ABDDF9700CDF309 /* BuiltIn.hpp in Sources */,
+				C0A81F832ABDDF9700CDF309 /* Error.cpp in Sources */,
+				C0A81F842ABDDF9700CDF309 /* Date.cpp in Sources */,
+				C0A81F852ABDDF9700CDF309 /* eval.cpp in Sources */,
+				C0A81F862ABDDF9700CDF309 /* Function.cpp in Sources */,
+				C0A81F872ABDDF9700CDF309 /* JSON.cpp in Sources */,
+				C0A81F882ABDDF9700CDF309 /* Math.cpp in Sources */,
+				C0A81F892ABDDF9700CDF309 /* Number.cpp in Sources */,
+				C0A81F8A2ABDDF9700CDF309 /* Object.cpp in Sources */,
+				C0A81F8B2ABDDF9700CDF309 /* Promise.cpp in Sources */,
+				C0A81F8C2ABDDF9700CDF309 /* RegExp.cpp in Sources */,
+				C0A81F8D2ABDDF9700CDF309 /* Reflect.cpp in Sources */,
+				C0A81F8E2ABDDF9700CDF309 /* String.cpp in Sources */,
+				C0A81F8F2ABDDF9700CDF309 /* Symbol.cpp in Sources */,
+				C0A81F902ABDDF9700CDF309 /* Console.cpp in Sources */,
+				C0A81F912ABDDF9700CDF309 /* Window.cpp in Sources */,
+				C0A81F922ABDDF9700CDF309 /* WebAPI.cpp in Sources */,
+				C0A81F932ABDDF9700CDF309 /* WebAPI.hpp in Sources */,
+				C0A81F942ABDDF9700CDF309 /* ConstStrings.cpp in Sources */,
+				C0A81F952ABDDF9700CDF309 /* ConstStrings.hpp in Sources */,
+				C0A81F962ABDDF9700CDF309 /* PromiseTasks.cpp in Sources */,
+				C0A81F972ABDDF9700CDF309 /* PromiseTasks.hpp in Sources */,
+				C0A81F982ABDDF9700CDF309 /* TimerTasks.cpp in Sources */,
+				C0A81F992ABDDF9700CDF309 /* TimerTasks.hpp in Sources */,
+				C0A81F9A2ABDDF9700CDF309 /* Arguments.cpp in Sources */,
+				C0A81F9B2ABDDF9700CDF309 /* Arguments.hpp in Sources */,
+				C0A81F9C2ABDDF9700CDF309 /* BinaryOperation.hpp in Sources */,
+				C0A81F9D2ABDDF9700CDF309 /* UnaryOperation.hpp in Sources */,
+				C0A81F9E2ABDDF9700CDF309 /* VirtualMachine.cpp in Sources */,
+				C0A81F9F2ABDDF9700CDF309 /* VirtualMachine.hpp in Sources */,
+				C0A81FA02ABDDF9700CDF309 /* VirtualMachineTypes.cpp in Sources */,
+				C0A81FA12ABDDF9700CDF309 /* VirtualMachineTypes.hpp in Sources */,
+				C0A81FA22ABDDF9700CDF309 /* VMRuntime.cpp in Sources */,
+				C0A81FA32ABDDF9700CDF309 /* VMRuntime.hpp in Sources */,
+				C0A81FA42ABDDF9700CDF309 /* VMRuntimeCommon.cpp in Sources */,
+				C0A81FA52ABDDF9700CDF309 /* VMRuntimeCommon.hpp in Sources */,
+				C0A81FA62ABDDF9700CDF309 /* VMScope.cpp in Sources */,
+				C0A81FA72ABDDF9700CDF309 /* VMScope.hpp in Sources */,
+				C0A81FA92ABDDF9700CDF309 /* IJsIterator.cpp in Sources */,
+				C0A81FAA2ABDDF9700CDF309 /* IJsIterator.hpp in Sources */,
+				C0A81FAB2ABDDF9700CDF309 /* IJsObject.cpp in Sources */,
+				C0A81FAC2ABDDF9700CDF309 /* IJsObject.hpp in Sources */,
+				C0A81FAD2ABDDF9700CDF309 /* JsArguments.cpp in Sources */,
+				C0A81FAE2ABDDF9700CDF309 /* JsArguments.hpp in Sources */,
+				C0A81FAF2ABDDF9700CDF309 /* JsArray.cpp in Sources */,
+				C0A81FB02ABDDF9700CDF309 /* JsArray.hpp in Sources */,
+				C0A81FB12ABDDF9700CDF309 /* JsDummyObject.hpp in Sources */,
+				C0A81FB22ABDDF9700CDF309 /* JsGlobalThis.cpp in Sources */,
+				C0A81FB32ABDDF9700CDF309 /* JsGlobalThis.hpp in Sources */,
+				C0A81FB42ABDDF9700CDF309 /* JsLibObject.cpp in Sources */,
+				C0A81FB52ABDDF9700CDF309 /* JsLibObject.hpp in Sources */,
+				C0A81FB62ABDDF9700CDF309 /* JsObject.cpp in Sources */,
+				C0A81FB72ABDDF9700CDF309 /* JsObject.hpp in Sources */,
+				C0A81FB82ABDDF9700CDF309 /* JsObjectFunction.cpp in Sources */,
+				C0A81FB92ABDDF9700CDF309 /* JsObjectFunction.hpp in Sources */,
+				C0A81FBA2ABDDF9700CDF309 /* JsObjectLazy.cpp in Sources */,
+				C0A81FBB2ABDDF9700CDF309 /* JsObjectLazy.hpp in Sources */,
+				C0A81FBC2ABDDF9700CDF309 /* JsPrimaryObject.cpp in Sources */,
+				C0A81FBD2ABDDF9700CDF309 /* JsPrimaryObject.hpp in Sources */,
+				C0A81FBE2ABDDF9700CDF309 /* JsRegExp.cpp in Sources */,
+				C0A81FBF2ABDDF9700CDF309 /* JsRegExp.hpp in Sources */,
+				C0A81FC02ABDDF9700CDF309 /* JsPromiseObject.cpp in Sources */,
+				C0A81FC12ABDDF9700CDF309 /* JsPromiseObject.hpp in Sources */,
+				C0A81FC22ABDDF9700CDF309 /* JsObjectX.cpp in Sources */,
+				C0A81FC32ABDDF9700CDF309 /* JsObjectX.hpp in Sources */,
+				C0A81FC42ABDDF9700CDF309 /* ByteCodeStream.cpp in Sources */,
+				C0A81FC52ABDDF9800CDF309 /* ByteCodeStream.hpp in Sources */,
+				C0A81FC62ABDDF9800CDF309 /* Expression.cpp in Sources */,
+				C0A81FC72ABDDF9800CDF309 /* Expression.hpp in Sources */,
+				C0A81FC82ABDDF9800CDF309 /* Lexer.cpp in Sources */,
+				C0A81FC92ABDDF9800CDF309 /* Lexer.hpp in Sources */,
+				C0A81FCA2ABDDF9800CDF309 /* Parser.cpp in Sources */,
+				C0A81FCB2ABDDF9800CDF309 /* Parser.hpp in Sources */,
+				C0A81FCC2ABDDF9800CDF309 /* ParserTypes.cpp in Sources */,
+				C0A81FCD2ABDDF9800CDF309 /* ParserTypes.hpp in Sources */,
+				C0A81FCE2ABDDF9800CDF309 /* Statement.cpp in Sources */,
+				C0A81FCF2ABDDF9800CDF309 /* Statement.hpp in Sources */,
+				C0A81FD02ABDDF9800CDF309 /* CommonString.cpp in Sources */,
+				C0A81FD12ABDDF9800CDF309 /* CommonString.hpp in Sources */,
+				C0A81FD22ABDDF9800CDF309 /* JsString.cpp in Sources */,
+				C0A81FD32ABDDF9800CDF309 /* JsString.hpp in Sources */,
+				C0A81FD42ABDDF9800CDF309 /* StringView.cpp in Sources */,
+				C0A81FD52ABDDF9800CDF309 /* DateTime.cpp in Sources */,
+				C0A81FD62ABDDF9800CDF309 /* CharEncoding.cpp in Sources */,
+				C0A81FD72ABDDF9800CDF309 /* JsArray.cpp in Sources */,
+				C0A81FD82ABDDF9800CDF309 /* Lexer.cpp in Sources */,
+				C0A81FD92ABDDF9800CDF309 /* Parser.cpp in Sources */,
+				C0A81FDA2ABDDF9800CDF309 /* RunJavaScript.cpp in Sources */,
+				C0A81FDB2ABDDF9800CDF309 /* AllocatorPool.cpp in Sources */,
+				C0A81FDC2ABDDF9800CDF309 /* AllocatorPool.h in Sources */,
+				C0A81FDD2ABDDF9800CDF309 /* Base64.cpp in Sources */,
+				C0A81FDE2ABDDF9800CDF309 /* base64.h in Sources */,
+				C0A81FDF2ABDDF9800CDF309 /* BinaryFileStream.cpp in Sources */,
+				C0A81FE02ABDDF9800CDF309 /* BinaryFileStream.h in Sources */,
+				C0A81FE12ABDDF9800CDF309 /* BinaryStream.cpp in Sources */,
+				C0A81FE22ABDDF9800CDF309 /* BinaryStream.h in Sources */,
+				C0A81FE32ABDDF9800CDF309 /* CharEncoding.cpp in Sources */,
+				C0A81FE42ABDDF9800CDF309 /* CharEncoding.h in Sources */,
+				C0A81FE52ABDDF9800CDF309 /* DateTime.cpp in Sources */,
+				C0A81FE62ABDDF9800CDF309 /* DateTime.h in Sources */,
+				C0A81FE72ABDDF9800CDF309 /* FileApi.cpp in Sources */,
+				C0A81FE82ABDDF9800CDF309 /* FileApi.h in Sources */,
+				C0A81FE92ABDDF9800CDF309 /* Hash.cpp in Sources */,
+				C0A81FEA2ABDDF9800CDF309 /* Hash.h in Sources */,
+				C0A81FEB2ABDDF9800CDF309 /* LinkedString.cpp in Sources */,
+				C0A81FEC2ABDDF9800CDF309 /* LinkedString.hpp in Sources */,
+				C0A81FED2ABDDF9800CDF309 /* CharEncodingMac.mm in Sources */,
+				C0A81FEE2ABDDF9800CDF309 /* os.cpp in Sources */,
+				C0A81FEF2ABDDF9800CDF309 /* os.h in Sources */,
+				C0A81FF02ABDDF9800CDF309 /* StringView.cpp in Sources */,
+				C0A81FF12ABDDF9800CDF309 /* StringView.h in Sources */,
+				C0A81FF22ABDDF9800CDF309 /* StringEx.cpp in Sources */,
+				C0A81FF32ABDDF9800CDF309 /* StringEx.h in Sources */,
+				C0A81FF42ABDDF9800CDF309 /* unittest.cpp in Sources */,
+				C0A81FF52ABDDF9800CDF309 /* unittest.h in Sources */,
+				C0A81FF62ABDDF9800CDF309 /* Utils.h in Sources */,
+				C0A81FF72ABDDF9800CDF309 /* UtilsTypes.h in Sources */,
+				C0A81FF82ABDDF9800CDF309 /* XCharSeparatedValues.cpp in Sources */,
+				C0A81FF92ABDDF9800CDF309 /* XCharSeparatedValues.h in Sources */,
+				C0A81FFA2ABDDF9800CDF309 /* StringParser.cpp in Sources */,
+				C0A81FFB2ABDDF9800CDF309 /* StringParser.hpp in Sources */,
 			);
 			runOnlyForDeploymentPostprocessing = 0;
 		};
@@ -951,7 +1059,11 @@
 				GCC_WARN_UNINITIALIZED_AUTOS = YES_AGGRESSIVE;
 				GCC_WARN_UNUSED_FUNCTION = YES;
 				GCC_WARN_UNUSED_VARIABLE = YES;
-				HEADER_SEARCH_PATHS = "${SRCROOT}/../third-parties/googletest/include";
+				HEADER_SEARCH_PATHS = (
+					"${SRCROOT}/../third-parties/googletest/include",
+					"${SRCROOT}",
+					"${SRCROOT}/../third-parties/rapidjson",
+				);
 				MACOSX_DEPLOYMENT_TARGET = 12.0;
 				MTL_ENABLE_DEBUG_INFO = INCLUDE_SOURCE;
 				MTL_FAST_MATH = YES;
@@ -1006,7 +1118,11 @@
 				GCC_WARN_UNINITIALIZED_AUTOS = YES_AGGRESSIVE;
 				GCC_WARN_UNUSED_FUNCTION = YES;
 				GCC_WARN_UNUSED_VARIABLE = YES;
-				HEADER_SEARCH_PATHS = "${SRCROOT}/../third-parties/googletest/include";
+				HEADER_SEARCH_PATHS = (
+					"${SRCROOT}/../third-parties/googletest/include",
+					"${SRCROOT}",
+					"${SRCROOT}/../third-parties/rapidjson",
+				);
 				MACOSX_DEPLOYMENT_TARGET = 12.0;
 				MTL_ENABLE_DEBUG_INFO = NO;
 				MTL_FAST_MATH = YES;
@@ -1018,11 +1134,6 @@
 			isa = XCBuildConfiguration;
 			buildSettings = {
 				CODE_SIGN_STYLE = Automatic;
-				HEADER_SEARCH_PATHS = (
-					"${SRCROOT}/../third-parties/googletest/include",
-					"${SRCROOT}",
-					"${SRCROOT}/../third-parties/rapidjson",
-				);
 				LIBRARY_SEARCH_PATHS = (
 					"$(inherited)",
 					"$(PROJECT_DIR)/../third-parties/asmjit/mac",
@@ -1035,11 +1146,6 @@
 			isa = XCBuildConfiguration;
 			buildSettings = {
 				CODE_SIGN_STYLE = Automatic;
-				HEADER_SEARCH_PATHS = (
-					"${SRCROOT}/../third-parties/googletest/include",
-					"${SRCROOT}",
-					"${SRCROOT}/../third-parties/rapidjson",
-				);
 				LIBRARY_SEARCH_PATHS = (
 					"$(inherited)",
 					"$(PROJECT_DIR)/../third-parties/asmjit/mac",
@@ -1048,39 +1154,25 @@
 			};
 			name = Release;
 		};
-		C06C161B294EAFF70022ADCA /* Debug */ = {
+		C0A81F7C2ABDDF4800CDF309 /* Debug */ = {
 			isa = XCBuildConfiguration;
 			buildSettings = {
 				CODE_SIGN_STYLE = Automatic;
-				DYLIB_COMPATIBILITY_VERSION = 1;
-				DYLIB_CURRENT_VERSION = 1;
 				EXECUTABLE_PREFIX = lib;
-				GCC_PREPROCESSOR_DEFINITIONS = (
-					"DEBUG=1",
-					"$(inherited)",
-				);
-				HEADER_SEARCH_PATHS = (
-					"${SRCROOT}/../third-parties/googletest/include",
-					"${SRCROOT}",
-					"${SRCROOT}/../third-parties/rapidjson",
-				);
+				GCC_ENABLE_CPP_EXCEPTIONS = YES;
+				GCC_ENABLE_CPP_RTTI = YES;
 				PRODUCT_NAME = "$(TARGET_NAME)";
 				SKIP_INSTALL = YES;
 			};
 			name = Debug;
 		};
-		C06C161C294EAFF70022ADCA /* Release */ = {
+		C0A81F7D2ABDDF4800CDF309 /* Release */ = {
 			isa = XCBuildConfiguration;
 			buildSettings = {
 				CODE_SIGN_STYLE = Automatic;
-				DYLIB_COMPATIBILITY_VERSION = 1;
-				DYLIB_CURRENT_VERSION = 1;
 				EXECUTABLE_PREFIX = lib;
-				HEADER_SEARCH_PATHS = (
-					"${SRCROOT}/../third-parties/googletest/include",
-					"${SRCROOT}",
-					"${SRCROOT}/../third-parties/rapidjson",
-				);
+				GCC_ENABLE_CPP_EXCEPTIONS = YES;
+				GCC_ENABLE_CPP_RTTI = YES;
 				PRODUCT_NAME = "$(TARGET_NAME)";
 				SKIP_INSTALL = YES;
 			};
@@ -1107,11 +1199,11 @@
 			defaultConfigurationIsVisible = 0;
 			defaultConfigurationName = Release;
 		};
-		C06C161D294EAFF70022ADCA /* Build configuration list for PBXNativeTarget "TinyJsLib" */ = {
+		C0A81F7E2ABDDF4800CDF309 /* Build configuration list for PBXNativeTarget "TinyJsStaticLib" */ = {
 			isa = XCConfigurationList;
 			buildConfigurations = (
-				C06C161B294EAFF70022ADCA /* Debug */,
-				C06C161C294EAFF70022ADCA /* Release */,
+				C0A81F7C2ABDDF4800CDF309 /* Debug */,
+				C0A81F7D2ABDDF4800CDF309 /* Release */,
 			);
 			defaultConfigurationIsVisible = 0;
 			defaultConfigurationName = Release;

@@ -157,8 +157,8 @@ inline bool canTokenBeMemberName(TokenType type) {
         || type == TK_NUMBER || type == TK_STRING;
 }
 
-uint8_t *parseNumber(uint8_t *start, uint8_t *end, double &retValue);
-uint8_t *parseNumber(const StringView &str, double &retValue);
+cstr_t parseNumber(cstr_t start, cstr_t end, double &retValue);
+cstr_t parseNumber(const StringView &str, double &retValue);
 bool jsStringToNumber(const StringView &str, double &retValue);
 
 class JSLexer {

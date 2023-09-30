@@ -19,7 +19,8 @@ bool isDirExist(const char *filename);
 bool readFileByBom(const char *fn, std::string &str);
 bool readFile(const char *fn, std::string &str);
 bool writeFile(cstr_t fn, const StringView &data);
-inline bool writeFile(cstr_t fn, const void *data, size_t len) { return writeFile(fn, StringView(data, len)); }
+inline bool writeFile(cstr_t fn, const void *data, size_t len)
+    { return writeFile(fn, StringView(data, len)); }
 
 bool filetruncate(FILE *fp, long nLen);
 
@@ -40,6 +41,10 @@ void dirStringAddSep(string &strDir);
 
 string dirStringJoin(cstr_t szDir, cstr_t szSubFileDir);
 string dirStringJoin(cstr_t szDir, cstr_t szSubFileDir1, cstr_t szSubFileDir2);
+inline string dirStringJoin(const string &dir, const string &subFileDir)
+    { return dirStringJoin(dir.c_str(), subFileDir.c_str()); }
+inline string dirStringJoin(const string &dir, const string &subFileDir1, const string &subFileDir2)
+    { return dirStringJoin(dir.c_str(), subFileDir1.c_str(), subFileDir2.c_str()); }
 
 void getRelatedPath(cstr_t szDir, cstr_t szBaseDir, char * szRelatedPath, int nRelatedPathLen);
 
@@ -83,11 +88,20 @@ private:
 
 public:
     FilePtr(FILE *fp) : m_fp(fp) { }
+    FilePtr() : m_fp(nullptr) { }
     ~FilePtr() { if (m_fp) fclose(m_fp); }
+
+    bool open(const char *fileName, const char *mode);
 
     operator FILE*() const { return (FILE*)m_fp; }
 
     FILE *ptr() { return m_fp; }
+
+    long fileSize();
+    bool seek(long pos, int whence);
+
+    size_t write(const void *buf, size_t len);
+    size_t read(void *buf, size_t len);
 
 protected:
     FILE                    *m_fp;

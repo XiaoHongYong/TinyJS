@@ -90,38 +90,52 @@ EncodingCodePage &getCharEncodingByID(CharEncodingType encoding);
 
 CharEncodingType detectFileEncoding(const void *lpData, size_t length, int &bomSize);
 cstr_t getFileEncodingBom(CharEncodingType fe);
-string insertWithFileBom(const string &text);
+void autoInsertWithUtf8Bom(string &text);
 
 string strToUtf8ByBom(const char *data, size_t size);
 
 // Is the string only including ANSI characters.
-bool isAnsiStr(const WCHAR *szStr);
+bool isAnsiStr(const utf16_t *szStr);
 bool isAnsiStr(const char *szStr);
 
 int mbcsToUtf8(const char *str, int nLen, string &strOut, int encodingID = ED_SYSDEF);
-int ucs2ToUtf8(const WCHAR *str, int nLen, string &strOut);
+int ucs2ToUtf8(const utf16_t *str, int nLen, string &strOut);
 int utf8ToUCS2(const char *str, int nLen, u16string &strOut);
 int utf8ToMbcs(const char *str, int nLen, string &strOut, int encodingID = ED_SYSDEF);
 
 uint32_t utf8ToUtf16Length(const uint8_t *str, uint32_t len);
-inline uint32_t utf8ToUtf16Length(const StringView &str) { return utf8ToUtf16Length(str.data, str.len); }
+inline uint32_t utf8ToUtf16Length(const char *str, uint32_t len)
+    { return utf8ToUtf16Length((uint8_t *)str, len); }
+inline uint32_t utf8ToUtf16Length(const StringView &str)
+    { return utf8ToUtf16Length((uint8_t *)str.data, str.len); }
+
 uint32_t utf8ToUtf16(const uint8_t *str, uint32_t len, utf16_t *u16BufOut, uint32_t sizeU16Buf);
+inline uint32_t utf8ToUtf16(const char *str, uint32_t len, utf16_t *u16BufOut, uint32_t sizeU16Buf)
+    { return utf8ToUtf16((const uint8_t *)str, len, u16BufOut, sizeU16Buf); }
+inline uint32_t utf8ToUtf16(const StringView &str, utf16_t *u16BufOut, uint32_t sizeU16Buf)
+    { return utf8ToUtf16((const uint8_t *)str.data, str.len, u16BufOut, sizeU16Buf); }
 
 uint32_t utf8FirstByteLength(uint8_t c);
 
 uint8_t *utf8ToUtf16Seek(const uint8_t *str, uint32_t len, uint32_t utf16Pos);
+inline char *utf8ToUtf16Seek(const char *str, uint32_t len, uint32_t utf16Pos)
+    { return (char *)utf8ToUtf16Seek((const uint8_t *)str, len, utf16Pos); }
 
 uint32_t utf8ToUtf32(const uint8_t *data, uint32_t len, utf32_t *bufOut, uint32_t capacityBufOut);
+inline uint32_t utf8ToUtf32(const char *data, uint32_t len, utf32_t *bufOut, uint32_t capacityBufOut)
+    { return utf8ToUtf32((const uint8_t *)data, len, bufOut, capacityBufOut); }
 
 // 将 utf-32 的 code 转换为 utf-8 编码, @bufOut 需要至少 4 个字节的长度
 // 返回填入 bufOut 的字节长度
 uint32_t utf32CodeToUtf8Length(uint32_t code);
 uint32_t utf32CodeToUtf8(uint32_t code, uint8_t *bufOut);
+inline uint32_t utf32CodeToUtf8(uint32_t code, char *bufOut)
+    { return utf32CodeToUtf8(code, (uint8_t *)bufOut); }
 void utf32CodeToUtf8(uint32_t code, string &out);
 
 uint32_t utf32CodeToUtf16Length(uint32_t code);
 
 // Big Endian to Little Endian, or vice versa
-void ucs2EncodingReverse(WCHAR *str, uint32_t nLen);
+void ucs2EncodingReverse(utf16_t *str, uint32_t nLen);
 
 #endif /* CharEncoding_hpp */

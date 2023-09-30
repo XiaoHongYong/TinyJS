@@ -198,7 +198,7 @@ public:
 
     const uint8_t *currentPtr() { return _pos; }
 
-    StringView readSizedStr(size_t len) {
+    StringView readString(size_t len) {
         if (_pos + len > _end) {
             throw BinaryStreamOutOfRange(__LINE__);
         }

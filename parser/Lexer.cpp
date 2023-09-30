@@ -14,7 +14,7 @@
 const uint64_t MAX_UINT64 = 0xFFFFFFFFFFFFFFFFL;
 static_assert((uint64_t)-1 == MAX_UINT64);
 
-uint8_t *parseNumber(uint8_t *start, uint8_t *end, double &retValue) {
+cstr_t parseNumber(cstr_t start, cstr_t end, double &retValue) {
     retValue = 0;
     if (start >= end) {
         return end;
@@ -141,13 +141,12 @@ uint8_t *parseNumber(uint8_t *start, uint8_t *end, double &retValue) {
     return start;
 }
 
-uint8_t *parseNumber(const StringView &str, double &retValue) {
+cstr_t parseNumber(const StringView &str, double &retValue) {
     return parseNumber(str.data, str.data + str.len, retValue);
 }
 
 bool jsStringToNumber(const StringView &org, double &retValue) {
-    auto str = org;
-    str.trim();
+    auto str = org.trim();
     if (str.len == 0) {
         retValue = 0;
         return true;
@@ -243,7 +242,7 @@ Keyword KEYWORDS[] = {
 struct KeywordCompareLess {
     bool operator()(const Keyword &left, const StringView &right) {
         const uint8_t *p1 = (uint8_t *)left.name;
-        const uint8_t *p2 = right.data, *p2End = right.data + right.len;
+        const uint8_t *p2 = (uint8_t *)right.data, *p2End = (uint8_t *)right.data + right.len;
 
         for (; *p1 && p2 < p2End; p1++, p2++) {
             if (*p1 == *p2) {
@@ -726,7 +725,7 @@ void JSLexer::_readString(uint8_t quote) {
 
 void JSLexer::_readNumber() {
     _bufPos--;
-    _bufPos = parseNumber(_bufPos, _bufEnd, _curToken.number);
+    _bufPos = (uint8_t *)parseNumber((char *)_bufPos, (char *)_bufEnd, _curToken.number);
 
     _curToken.type = TK_NUMBER;
 
@@ -759,12 +758,12 @@ void JSLexer::_readRegexp() {
         }
     } while (ch != '/' || inBracket);    // / or in []
 
-    str.len = (int)(_bufPos - str.data) - 1;
+    str.len = (int)((char *)_bufPos - str.data) - 1;
 
     // mods
     StringView mode(_bufPos, 0);
     _readName();
-    mode.len = uint32_t(_bufPos - mode.data);
+    mode.len = uint32_t((char *)_bufPos - mode.data);
     uint32_t flags = 0;
     if (!parseRegexpFlags(mode, flags)) {
         _parseError("Invalid flags supplied to RegExp constructor '%.*s'", mode.len, mode.data);
@@ -870,8 +869,8 @@ inline void escapeOctalSequences(uint8_t *&out, uint8_t *&p, const uint8_t *pEnd
 
 StringView JSLexer::_escapeString(const StringView &str) {
     uint8_t c;
-    auto p = str.data;
-    auto end = str.data + str.len;
+    auto p = (uint8_t *)str.data;
+    auto end = (uint8_t *)str.data + str.len;
     auto out = (uint8_t *)_resPool->pool.allocate(str.len);
     auto po = out;
 

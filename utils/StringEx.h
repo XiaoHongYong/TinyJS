@@ -39,6 +39,7 @@ void trimStr(VecStrings &vStrs, char ch = ' ');
 void trimStrRight(char * pszString, cstr_t pszChars = " ");
 
 void strSplit(const char *str, char sep, VecStrings &vStrs);
+void strSplit(const char *str, char sep, VecStringViews &vStrs);
 bool strSplit(const char *str, char sep, string &leftOut, string &rightOut);
 bool strSplit(const char *str, const char *sep, string &leftOut, string &rightOut);
 
@@ -153,7 +154,7 @@ inline cstr_t parseInt(cstr_t str, _int &value) {
 void multiStrToVStr(cstr_t szText, vector<string> &vStr);
 
 template<class _iterator>
-string strJoin(_iterator first, _iterator end, cstr_t format, cstr_t seperator) {
+string strJoin(_iterator first, _iterator end, cstr_t format, cstr_t separator) {
     string str;
     if (first != end) {
         str += stringPrintf(format, *first);
@@ -161,7 +162,7 @@ string strJoin(_iterator first, _iterator end, cstr_t format, cstr_t seperator) 
     }
 
     for (; first != end; ++first) {
-        str += seperator;
+        str += separator;
         str += stringPrintf(format, *first);
     }
 
@@ -169,7 +170,7 @@ string strJoin(_iterator first, _iterator end, cstr_t format, cstr_t seperator) 
 }
 
 template<class _iterator>
-string strJoin(_iterator first, _iterator end, cstr_t seperator) {
+string strJoin(_iterator first, _iterator end, cstr_t separator) {
     string str;
     if (first != end) {
         str += *first;
@@ -177,15 +178,23 @@ string strJoin(_iterator first, _iterator end, cstr_t seperator) {
     }
 
     for (; first != end; ++first) {
-        str += seperator;
+        str += separator;
         str += *first;
     }
 
     return str;
 }
 
+inline void strJoin(string &target, cstr_t separator, const StringView &another) {
+    if (!target.empty()) {
+        target.append(separator);
+    }
+
+    target.append((char *)another.data, another.len);
+}
+
 template<class _iterator>
-string strJoinConvert(_iterator first, _iterator end, cstr_t seperator) {
+string strJoinConvert(_iterator first, _iterator end, cstr_t separator) {
     string str;
     if (first != end) {
         str += std::to_string(*first);
@@ -193,7 +202,7 @@ string strJoinConvert(_iterator first, _iterator end, cstr_t seperator) {
     }
 
     for (; first != end; ++first) {
-        str += seperator;
+        str += separator;
         str += std::to_string(*first);
     }
 
@@ -291,3 +300,9 @@ public:
 };
 
 typedef set<string, SetStrLessICmp> SetICaseStr;
+
+#ifdef _WIN32
+#define SZ_NEW_LINE       "\r\n"
+#else
+#define SZ_NEW_LINE       "\n"
+#endif
