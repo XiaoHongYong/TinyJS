@@ -128,27 +128,24 @@ bool createDirectory(cstr_t lpPathName) {
 }
 
 bool createDirectoryAll(cstr_t szDir) {
-    char szTemp[512];
-    char *szBeg;
-
     string tmp = szDir;
+    auto path = tmp.c_str();
+    auto p = strchr((char *)tmp.c_str(), PATH_SEP_CHAR);
+    while (p != nullptr) {
+        *p = '\0';
 
-    szBeg = strchr((char *)tmp.c_str(), PATH_SEP_CHAR);
-    while (szBeg != nullptr) {
-        *szBeg = '\0';
-
-        if (!isEmptyString(szTemp) && !isDirExist(szTemp)) {
-            if (!createDirectory(szTemp)) {
+        if (!isEmptyString(path) && !isDirExist(path)) {
+            if (!createDirectory(path)) {
                 return false;
             }
         }
 
-        *szBeg = PATH_SEP_CHAR;
-        szBeg = strchr(szBeg + 1, PATH_SEP_CHAR);
+        *p = PATH_SEP_CHAR;
+        p = strchr(p + 1, PATH_SEP_CHAR);
     }
 
-    if (!isDirExist(szTemp)) {
-        if (!createDirectory(szDir)) {
+    if (!isDirExist(path)) {
+        if (!createDirectory(path)) {
             return false;
         }
     }
@@ -585,12 +582,20 @@ bool FilePtr::seek(long pos, int whence) {
     return fseek(m_fp, pos, whence) == 0;
 }
 
+long FilePtr::position() {
+    return ftell(m_fp);
+}
+
 size_t FilePtr::write(const void *buf, size_t len) {
     return fwrite(buf, 1, len, m_fp);
 }
 
 size_t FilePtr::read(void *buf, size_t len) {
     return fread(buf, 1, len, m_fp);
+}
+
+void FilePtr::flush() {
+    fflush(m_fp);
 }
 
 #if UNIT_TEST
@@ -618,28 +623,6 @@ TEST(FileApi, testFileNameStr) {
             FAIL() << stringPrintf("dirStringAddSep(stl), case: %d, %s", i, SZ_DIR_CMP_OK[i]).c_str();
         }
     }
-}
-
-TEST(FileApi, testGetRelatedDir) {
-    // #ifdef _WIN32
-    //         cstr_t        SZ_DIR[] =  { "c:\\a\\b\\c", "c:\\a\\b\\c", "c:\\a\\b\\c", "c:\\a\\b\\c", "c:\\a\\b\\c" };
-    //         cstr_t        SZ_DIR_BASE[] =  { "c:\\a", "c:\\a\\", "", "c:\\a\\b\\c\\d", "c:\\a\\b\\e" };
-    //         cstr_t        SZ_DIR_RELATED[] = { "b\\c", "b\\c", "c:\\a\\b\\c", "..\\", "..\\c" };
-    // #else
-    //         cstr_t        SZ_DIR[] =  { "/a/b/c", "/a/b/c", "/a/b/c", "/a/b/c", "/a/b/c" };
-    //         cstr_t        SZ_DIR_BASE[] =  { "/a", "/a/", "", "/a/b/c/d", "/a/b/e" };
-    //         cstr_t        SZ_DIR_RELATED[] = { "b/c", "b/c", "/a/b/c", "../", "../c" };
-    // #endif
-    //         char        szDirRelated[MAX_PATH];
-    //
-    //         assert(CountOf(SZ_DIR) == CountOf(SZ_DIR_BASE));
-    //         assert(CountOf(SZ_DIR) == CountOf(SZ_DIR_RELATED));
-    //         for (int i = 0; i < CountOf(SZ_DIR_RELATED); i++)
-    //         {
-    //             getRelatedPath(SZ_DIR[i], SZ_DIR_BASE[i], szDirRelated, CountOf(szDirRelated));
-    //             if (!(strcmp(szDirRelated, SZ_DIR_RELATED[i]) == 0))
-    //                 FAIL() << stringPrintf("GetRelatedDir, case: %d, %s", i, szDirRelated);
-    //         }
 }
 
 TEST(FileApi, testFileSetExt) {

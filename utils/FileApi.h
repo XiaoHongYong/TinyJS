@@ -89,9 +89,14 @@ private:
 public:
     FilePtr(FILE *fp) : m_fp(fp) { }
     FilePtr() : m_fp(nullptr) { }
-    ~FilePtr() { if (m_fp) fclose(m_fp); }
+    ~FilePtr() { close(); }
 
-    bool open(const char *fileName, const char *mode);
+    bool open(cstr_t fileName, cstr_t mode);
+    bool open(const string &fileName, cstr_t mode) { return open(fileName.c_str(), mode); }
+    void close() { if (m_fp) { fclose(m_fp); m_fp = nullptr; } }
+
+    bool isOK() { return m_fp != nullptr && ferror(m_fp) == 0; }
+    bool isEof() { return feof(m_fp) != 0; }
 
     operator FILE*() const { return (FILE*)m_fp; }
 
@@ -99,9 +104,14 @@ public:
 
     long fileSize();
     bool seek(long pos, int whence);
+    long position();
 
     size_t write(const void *buf, size_t len);
+    size_t write(const string &data) { return write(data.c_str(), data.size()); }
+    size_t write(const StringView &data) { return write(data.data, data.len); }
     size_t read(void *buf, size_t len);
+
+    void flush();
 
 protected:
     FILE                    *m_fp;

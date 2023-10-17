@@ -1,7 +1,6 @@
 /*
  * os.cpp
  *
- *  Copyright (c) 2019 River Security Technology Corporation, Ltd. All rights reserved.
  */
 
 #include <sys/stat.h>

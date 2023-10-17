@@ -77,6 +77,8 @@ inline char hexToChar(int n) { return n <= 9 ? n + '0' : 'A' + n - 10; }
 bool isNumeric(cstr_t szString);
 
 string hexToStr(const uint8_t *data, size_t len);
+inline string hexToStr(const StringView &data)
+    { return hexToStr((uint8_t *)data.data, data.len); }
 
 int hexToInt(int chHex);
 uint32_t hexToInt(cstr_t str);

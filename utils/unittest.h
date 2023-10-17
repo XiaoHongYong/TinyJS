@@ -10,7 +10,7 @@
 #ifndef unittest_hpp
 #define unittest_hpp
 
-#include "gtest/gtest.h"
+#include <gtest/gtest.h>
 
 const std::string &getSourceRootDir();
 

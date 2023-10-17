@@ -111,8 +111,8 @@ void BinaryFileInputStream::rfind(const StringView &pattern, int maxSearchSize) 
 
 #if UNIT_TEST
 
-#include "../TinyJS/utils/unittest.h"
-#include "../TinyJS/utils/FileApi.h"
+#include "unittest.h"
+#include "FileApi.h"
 
 TEST(BinaryFileStream, rfind) {
     auto path = getUnittestTempDir();
