@@ -7,7 +7,13 @@
 #include "os.h"
 #include "StringEx.h"
 #include "CharEncoding.h"
+#ifdef _MAC_OS
 #include <copyfile.h>
+#elif defined(WIN32)
+#else
+#include <fcntl.h>
+#include <sys/sendfile.h>
+#endif
 
 
 bool isFileExist(const char *filename) {
@@ -122,7 +128,7 @@ bool removeDirectory(cstr_t lpPathName) {
 }
 
 bool createDirectory(cstr_t lpPathName) {
-    int n = mkdir(lpPathName, S_IRWXU | S_IRWXG | S_IROTH);
+    int n = mkdir(lpPathName, S_IRWXU | S_IRWXG | S_IROTH | S_IXOTH);
 
     return n == 0;
 }
@@ -544,11 +550,37 @@ bool copyFile(cstr_t existingFile, cstr_t newFile, bool failIfExists) {
         }
     }
 
+#ifdef _MAC_OS
     int n = copyfile(existingFile, newFile, 0, COPYFILE_STAT | COPYFILE_DATA);
     return n == 0;
+#elif defined(WIN32)
+    #error TODO...
+#else
+    int input, output;
+    if ((input = open(existingFile, O_RDONLY)) == -1) {
+        return false;
+    }
+    if ((output = creat(newFile, 0660)) == -1) {
+        close(input);
+        return false;
+    }
+
+    off_t bytesCopied = 0;
+    struct stat fileinfo = {0};
+    fstat(input, &fileinfo);
+    int bytesSent = sendfile(output, input, &bytesCopied, fileinfo.st_size);
+
+    close(input);
+    close(output);
+
+    return bytesSent != -1;
+#endif
 }
 
 bool getFileStatInfo(cstr_t file, FileStatInfo &infoOut) {
+#ifdef WIN32
+    #error TODO ...
+#else
     struct stat filestat;
 
     memset(&filestat, 0, sizeof(filestat));
@@ -558,9 +590,16 @@ bool getFileStatInfo(cstr_t file, FileStatInfo &infoOut) {
     }
 
     infoOut.fileSize = filestat.st_size;
-    infoOut.createdTime = filestat.st_birthtime;
     infoOut.moifiedTime = filestat.st_mtime;
     infoOut.isDirectory = S_ISDIR(filestat.st_mode);
+
+#ifdef _MAC_OS
+    infoOut.createdTime = filestat.st_birthtime;
+#else
+    infoOut.createdTime = filestat.st_ctime;
+#endif
+#endif
+
     return true;
 }
 

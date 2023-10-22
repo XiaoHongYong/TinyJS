@@ -1,3 +1,4 @@
+#include <cstdarg>
 #include <math.h>
 #include "UtilsTypes.h"
 #include "StringEx.h"
@@ -143,7 +144,7 @@ void strrep(string &str, const char *szSrc, const char *szDest) {
     }
 }
 
-char * __cdecl strrep(char * str, char chSrc, char chDest) {
+char *strrep(char * str, char chSrc, char chDest) {
     char *cp = (char *) str;
     while (*cp) {
         if (*cp == chSrc) {
@@ -219,7 +220,7 @@ void strdel(char *szStr, char ch) {
 }
 
 
-char * __cdecl strchrtill (
+char *strchrtill (
     const char * string,
     int ch,
     int chTill

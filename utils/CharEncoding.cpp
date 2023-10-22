@@ -4,6 +4,7 @@
 //  Created by HongyongXiao on 2021/11/21.
 //
 
+#include <cstdarg>
 #include "CharEncoding.h"
 #include "FileApi.h"
 #include "StringEx.h"

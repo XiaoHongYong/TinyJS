@@ -10,6 +10,7 @@
 #include <cstddef>
 #include <stdint.h>
 #include <memory.h>
+#include <assert.h>
 #include <string>
 #include <vector>
 #include "Hash.h"

@@ -103,12 +103,8 @@ int mbcsToUtf8(const char *str, int size, string &strOut, int encodingID) {
     strOut.clear();
 
     if (encodingID == ED_UTF8) {
-        if (size == -1) {
-            strOut.assign(str);
-        } else {
-            strOut.assign(str, size);
-        }
-        return (int)strOut.size();
+        strOut.assign(str, size);
+        return (int)size;
     }
 
     NSString *temp = initNSString(str, size, encodingID);

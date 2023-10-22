@@ -2,6 +2,7 @@
 //  Copyright (c) 2021 CrintSoft, Ltd. All rights reserved.
 //
 
+#include <cstdarg>
 #include "BinaryStream.h"
 
 void BinaryOutputStream::writeFormat(const char *format, ...) {

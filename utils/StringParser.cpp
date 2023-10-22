@@ -5,6 +5,7 @@
 //  Created by henry_xiao on 2023/9/8.
 //
 
+#include <cstdarg>
 #include "StringParser.hpp"
 #include "StringEx.h"
 

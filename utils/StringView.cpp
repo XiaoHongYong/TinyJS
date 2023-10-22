@@ -5,6 +5,7 @@
 #include "UtilsTypes.h"
 #include "StringView.h"
 #include "CharEncoding.h"
+#include "StringEx.h"
 #include <ctype.h>
 #include <strings.h>
 #include <climits>
@@ -18,7 +19,7 @@ bool StringView::isNumeric() const {
     auto p = data;
 
     for (; p < end; ++p) {
-        if (!isnumber(*p)) {
+        if (!isDigit(*p)) {
             return false;
         }
     }
