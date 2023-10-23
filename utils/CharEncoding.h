@@ -97,6 +97,9 @@ string strToUtf8ByBom(const char *data, size_t size);
 // Is the string only including ANSI characters.
 bool isAnsiStr(const utf16_t *szStr);
 bool isAnsiStr(const char *szStr);
+bool isUTF8Encoding(cstr_t str, size_t nLen);
+inline bool isUTF8Encoding(const StringView &str)
+    { return isUTF8Encoding(str.data, str.len); }
 
 int mbcsToUtf8(const char *str, int nLen, string &strOut, int encodingID = ED_SYSDEF);
 int ucs2ToUtf8(const utf16_t *str, int nLen, string &strOut);
