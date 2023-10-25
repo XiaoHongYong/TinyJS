@@ -50,6 +50,7 @@ int mbcsToUtf8(const char *str, int size, string &strOut, int encodingID) {
 
 	iconv_t code = iconv_open(SZ_UTF8, g_encodingCodePages[encodingID].szIConvCode);
 	if (code == (iconv_t)-1) {
+		// Error occurs
 		return 0;
     }
 
@@ -59,9 +60,11 @@ int mbcsToUtf8(const char *str, int size, string &strOut, int encodingID) {
     char *outData = (char *)strOut.data();
 	size_t n = iconv(code, (char **)&str, &inBytesLeft, &outData, &outBytesLeft);
 	if (n == -1) {
+		// Error occurs
 		n = 0;
 	}
 
+	n = size_t(outData - strOut.data());
 	strOut.resize(n);
 	iconv_close(code);
 
@@ -80,6 +83,7 @@ int utf8ToMbcs(const char *str, int size, string &strOut, int encodingID) {
 
 	iconv_t code = iconv_open(g_encodingCodePages[encodingID].szIConvCode, SZ_UTF8);
 	if (code == (iconv_t)-1) {
+		// Error occurs
 		return 0;
     }
 
@@ -89,9 +93,11 @@ int utf8ToMbcs(const char *str, int size, string &strOut, int encodingID) {
     char *outData = (char *)strOut.data();
 	size_t n = iconv(code, (char **)&str, &inBytesLeft, &outData, &outBytesLeft);
 	if (n == -1) {
+		// Error occurs
 		n = 0;
 	}
 
+	n = size_t(outData - strOut.data());
 	strOut.resize(n);
 	iconv_close(code);
 

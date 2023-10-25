@@ -46,8 +46,6 @@ inline string dirStringJoin(const string &dir, const string &subFileDir)
 inline string dirStringJoin(const string &dir, const string &subFileDir1, const string &subFileDir2)
     { return dirStringJoin(dir.c_str(), subFileDir1.c_str(), subFileDir2.c_str()); }
 
-void getRelatedPath(cstr_t szDir, cstr_t szBaseDir, char * szRelatedPath, int nRelatedPathLen);
-
 cstr_t urlGetName(cstr_t szFile);
 cstr_t urlGetExt(cstr_t szFile);
 string urlGetTitle(cstr_t szFile);

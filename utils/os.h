@@ -27,8 +27,8 @@ public:
     bool findNext();
 
     const char *getCurName() { return _dirp->d_name; }
-
     bool isCurDir();
+    const string &path() const { return _path; }
 
 protected:
     dirent                      *_dirp;
