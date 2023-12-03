@@ -1,4 +1,4 @@
-//
+﻿//
 //  Math.cpp
 //  TinyJS
 //

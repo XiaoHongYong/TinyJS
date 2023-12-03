@@ -1,4 +1,4 @@
-//
+﻿//
 //  Expression.hpp
 //  TinyJS
 //

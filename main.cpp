@@ -1,24 +1,24 @@
-//
+﻿//
 //  main.cpp
 //  TinyJS
 //
 //  Created by henry_xiao on 2022/5/22.
 //
 
-#include "Parser.hpp"
-#include "VirtualMachine.hpp"
-#include "VMRuntime.hpp"
+#include "parser/Parser.hpp"
+#include "interpreter/VirtualMachine.hpp"
+#include "interpreter/VMRuntime.hpp"
 #include "utils/unittest.h"
 
 
 void test() {
     char buf[256];
-    double v = 1.0 / 0.0;
+    double v = 1.0 / 0.01;
     // printf("%d, %d\n", sizeof(double), sizeof (long double));
     floatToString(v, buf);
     printf("%lf, %s, %s\n", v, buf, std::to_string(v).c_str());
 
-    v = -1.0 / 0.0;
+    v = -1.0 / 0.01;
     floatToString(v, buf);
     printf("%lf, %s, %s\n", v, buf, std::to_string(v).c_str());
 
@@ -84,6 +84,16 @@ int main(int argc, const char * argv[]) {
 //        auto err = runtime->toStringView(ctx, ctx->errorMessage);
 //        printf("Got exception: %.*s\n", int(err.len), err.data);
 //    }
+
+    for (int i = 1; i < argc; i++) {
+        string code;
+        if (readFile(argv[i], code)) {
+            printf("Eval file: %s\n", argv[i]);
+            vm.eval(code.c_str(), code.size(), ctx, stackScopes, args);
+        } else {
+            printf("Can NOT read file: %s\n", argv[i]);
+        }
+    }
 
     return 0;
 }

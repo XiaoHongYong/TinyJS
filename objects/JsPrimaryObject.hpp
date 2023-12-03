@@ -1,4 +1,4 @@
-//
+﻿//
 //  JsPrimaryObject.hpp
 //  TinyJS
 //

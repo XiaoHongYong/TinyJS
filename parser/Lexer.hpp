@@ -1,4 +1,4 @@
-//
+﻿//
 //  Lexer.hpp
 //  TinyJS
 //
@@ -14,7 +14,7 @@
 
 class ResourcePool;
 
-enum TokenType : uint8_t {
+enum JsTokenType : uint8_t {
     TK_ERR,
     TK_EOF,
 
@@ -124,7 +124,7 @@ public:
 };
 
 struct Token {
-    TokenType               type;
+    JsTokenType             type;
     bool                    newLineBefore;
     union {
         OpCode              opr;        // 当 Token 为 TK_ASSIGN_X 和二元操作符是，对应的 OpCode.
@@ -144,15 +144,15 @@ inline StringView tokenToStringView(const Token &token) {
     return StringView(token.buf, token.len);
 }
 
-inline bool isKeyword(TokenType type) {
+inline bool isKeyword(JsTokenType type) {
     return type >= TK_EOF && type < _TK_END_KEYWORD;
 }
 
-inline bool canKeywordBeVarName(TokenType type) {
+inline bool canKeywordBeVarName(JsTokenType type) {
     return type >= TK_EOF && type < _TK_END_VAR_KEYWORD;
 }
 
-inline bool canTokenBeMemberName(TokenType type) {
+inline bool canTokenBeMemberName(JsTokenType type) {
     return (type >= TK_EOF && type < _TK_END_KEYWORD) || type == TK_NAME
         || type == TK_NUMBER || type == TK_STRING;
 }
@@ -198,7 +198,7 @@ protected:
     int                     _line, _col;
     bool                    _newLineBefore;
 
-    TokenType               _prevTokenType;
+    JsTokenType             _prevTokenType;
     uint8_t                 *_prevTokenEndPos;
 
 };

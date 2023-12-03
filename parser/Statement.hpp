@@ -1,4 +1,4 @@
-//
+﻿//
 //  Statements.hpp
 //  TinyJS
 //

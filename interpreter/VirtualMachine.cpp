@@ -1,4 +1,4 @@
-//
+﻿//
 //  VirtualMachine.cpp
 //  TinyJS
 //
@@ -6,17 +6,17 @@
 //
 
 #include "VirtualMachine.hpp"
-#include "Parser.hpp"
-#include "JsObject.hpp"
+#include "parser/Parser.hpp"
+#include "objects/JsObject.hpp"
 #include "VMRuntime.hpp"
-#include "JsArguments.hpp"
-#include "JsLibObject.hpp"
-#include "JsObjectFunction.hpp"
-#include "JsArray.hpp"
-#include "JsRegExp.hpp"
+#include "objects/JsArguments.hpp"
+#include "objects/JsLibObject.hpp"
+#include "objects/JsObjectFunction.hpp"
+#include "objects/JsArray.hpp"
+#include "objects/JsRegExp.hpp"
 #include "BinaryOperation.hpp"
 #include "UnaryOperation.hpp"
-#include "JsString.hpp"
+#include "strings/JsString.hpp"
 
 
 uint32_t makeTryCatchPointFlags(Function *function, VMScope *scope) {

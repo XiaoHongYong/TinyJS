@@ -1,4 +1,4 @@
-//
+﻿//
 //  CharEncoding.cpp
 //  TinyJS
 //
@@ -16,7 +16,11 @@
 TEST(CharEncoding, utf8ToUtf16Length) {
     cstr_t input;
 
+#ifdef _WIN32
+    input = "\xf0\x9d\x8c\x86";
+#else
     input = "𝌆"; // \xf0\x9d\x8c\x86
+#endif
     ASSERT_EQ(strlen(input), 4);
     ASSERT_EQ(utf8ToUtf16Length((uint8_t *)input, (int)strlen(input)), 2);
 }
@@ -25,7 +29,11 @@ TEST(CharEncoding, utf8ToUtf16) {
     cstr_t input;
     utf16_t buf[1024];
 
+#ifdef _WIN32
+    input = "\xf0\x9d\x8c\x86";
+#else
     input = "𝌆"; // \xf0\x9d\x8c\x86
+#endif
     ASSERT_EQ(strlen(input), 4);
     ASSERT_EQ(utf8ToUtf16((uint8_t *)input, (int)strlen(input), buf, CountOf(buf)), 2);
     ASSERT_EQ(buf[0], 0xD834);

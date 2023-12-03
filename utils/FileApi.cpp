@@ -1,20 +1,24 @@
-#include <sys/stat.h>
+﻿#include <sys/stat.h>
 #include <time.h>
+
+#ifdef _MAC_OS
+#include <copyfile.h>
+#elif defined(_WIN32)
+#define WIN32_LEAN_AND_MEAN		// Exclude rarely-used stuff from Windows headers
+#define _WIN32_WINNT	0x0500
+#include <windows.h>
+#include <io.h>
+#else
 #include <unistd.h>
+#include <fcntl.h>
+#include <sys/sendfile.h>
+#endif
 
 #include "UtilsTypes.h"
 #include "FileApi.h"
 #include "os.h"
 #include "StringEx.h"
 #include "CharEncoding.h"
-#ifdef _MAC_OS
-#include <copyfile.h>
-#elif defined(WIN32)
-#else
-#include <fcntl.h>
-#include <sys/sendfile.h>
-#endif
-
 
 bool isFileExist(const char *filename) {
     struct stat filestat;
@@ -24,10 +28,15 @@ bool isFileExist(const char *filename) {
 }
 
 bool isDirExist(const char *filename) {
+#ifdef _WIN32
+    auto attr = GetFileAttributesA(filename);
+    return attr != INVALID_FILE_ATTRIBUTES && (attr & FILE_ATTRIBUTE_DIRECTORY);
+#else // #ifdef _WIN32
     struct stat filestat;
 
     memset(&filestat, 0, sizeof(filestat));
     return stat(filename, &filestat) == 0 && S_ISDIR(filestat.st_mode);
+#endif // #ifdef _WIN32
 }
 
 bool readFile(FILE *fp, std::string &str) {
@@ -81,11 +90,26 @@ bool writeFile(cstr_t fn, const StringView &data) {
 }
 
 bool filetruncate(FILE *fp, long nLen) {
+#ifdef _WIN32
+    if (fseek(fp, nLen, SEEK_SET) != 0)
+        return false;
+
+    HANDLE	file;
+    file = (HANDLE)_get_osfhandle(_fileno(fp));
+    if (file)
+    {
+        if (!SetEndOfFile(file))
+            return false;
+    }
+
+    return true;
+#else
     if (ftruncate(fileno(fp), nLen) == -1) {
         return false;
     }
 
     return true;
+#endif
 }
 
 bool getFileLength(const char *fileName, uint64_t &length) {
@@ -124,13 +148,21 @@ bool moveFile(const char *oldname, const char *newname) {
 }
 
 bool removeDirectory(cstr_t lpPathName) {
+#ifdef _WIN32
+    return RemoveDirectoryA(lpPathName);
+#else
     return rmdir(lpPathName) == 0;
+#endif
 }
 
 bool createDirectory(cstr_t lpPathName) {
+#ifdef _WIN32
+    return CreateDirectoryA(lpPathName, nullptr);
+#else
     int n = mkdir(lpPathName, S_IRWXU | S_IRWXG | S_IROTH | S_IXOTH);
 
     return n == 0;
+#endif
 }
 
 bool createDirectoryAll(cstr_t szDir) {
@@ -168,7 +200,7 @@ bool isDirWritable(cstr_t szDir) {
         return false;
     }
 
-    if (!setFileAttributes(szDir, dwAttr)) {
+    if (!SetFileAttributesA(szDir, dwAttr)) {
         return false;
     }
 
@@ -403,12 +435,13 @@ const char _SZ_FILE_NAME_INVALID_CHARS[] = "/:*?\"<>|";
 #else
 const char _SZ_FILE_NAME_INVALID_CHARS[] = "\\:*?\"<>|";
 #endif
+
 bool fileNameIsIncInvalidChars(cstr_t szFile) {
     cstr_t szBeg;
 
     szBeg = szFile;
 
-#ifdef _WIN32_DESKTOP
+#ifdef _WIN32
     // Ignore string like "c:\\"
     if (IsCharAlpha(*szBeg)) {
         szBeg++;
@@ -418,7 +451,7 @@ bool fileNameIsIncInvalidChars(cstr_t szFile) {
             }
         }
     }
-#endif // _WIN32_DESKTOP
+#endif // _WIN32
 
     while (*szBeg) {
         cstr_t szInv;
@@ -440,7 +473,7 @@ string fileNameFilterInvalidChars(cstr_t szFile) {
     cstr_t szBeg = szFile;
     string strNewName;
 
-#ifdef _WIN32_DESKTOP
+#ifdef _WIN32
     if (IsCharAlpha(*szBeg)) {
         strNewName += *szBeg;
         szBeg++;
@@ -449,7 +482,7 @@ string fileNameFilterInvalidChars(cstr_t szFile) {
             szBeg += 2;
         }
     }
-#endif // _WIN32_DESKTOP
+#endif // _WIN32
 
     while (*szBeg) {
         cstr_t szInv;
@@ -471,49 +504,6 @@ string fileNameFilterInvalidChars(cstr_t szFile) {
 }
 
 const char _SZ_FILE_PATH_INVALID_CHARS[] = ":*?\"<>|" PATH_SEP_STR;
-
-void filePathFilterInvalidChars(char * szFile) {
-    char * szBeg;
-
-    szBeg = szFile;
-
-#ifdef _WIN32_DESKTOP
-    // Ignore string like "c:\\"
-    if (IsCharAlpha(*szBeg)) {
-        szBeg++;
-        if (*szBeg == ':') {
-            if (*(szBeg + 1) == PATH_SEP_CHAR) {
-                szBeg += 2;
-            }
-        }
-    }
-#endif // _WIN32_DESKTOP
-
-    while (*szBeg) {
-        cstr_t szInv;
-
-        szInv = _SZ_FILE_PATH_INVALID_CHARS;
-        while (*szInv && *szBeg != *szInv) {
-            szInv++;
-        }
-        if (*szInv != '\0') {
-            *szBeg = '_';
-        } else if (*szBeg == '.') {
-            char * szTemp;
-            szTemp = szBeg;
-            while (*szTemp == '.') {
-                szTemp++;
-            }
-            if (*szTemp == PATH_SEP_CHAR) {
-                while (szBeg != szTemp) {
-                    *szBeg = '_';
-                    szBeg++;
-                }
-            }
-        }
-        szBeg++;
-    }
-}
 
 bool copyDir(cstr_t lpExistingDir, cstr_t lpNewDir) {
     FileFind finder;
@@ -554,7 +544,7 @@ bool copyFile(cstr_t existingFile, cstr_t newFile, bool failIfExists) {
     int n = copyfile(existingFile, newFile, 0, COPYFILE_STAT | COPYFILE_DATA);
     return n == 0;
 #elif defined(WIN32)
-    #error TODO...
+    return CopyFileA(existingFile, newFile, failIfExists);
 #else
     int input, output;
     if ((input = open(existingFile, O_RDONLY)) == -1) {
@@ -577,9 +567,30 @@ bool copyFile(cstr_t existingFile, cstr_t newFile, bool failIfExists) {
 #endif
 }
 
+#ifdef WIN32
+// https://learn.microsoft.com/en-us/windows/win32/sysinfo/converting-a-time-t-value-to-a-file-time
+time_t fileTimeToTime(FILETIME& ft) {
+    ULARGE_INTEGER v;
+    v.LowPart = ft.dwLowDateTime;
+    v.HighPart = ft.dwHighDateTime;
+
+    return (v.QuadPart - 116444736000000000LL) / 10000000LL;
+}
+#endif
+
 bool getFileStatInfo(cstr_t file, FileStatInfo &infoOut) {
 #ifdef WIN32
-    #error TODO ...
+    WIN32_FILE_ATTRIBUTE_DATA attr;
+    if (!GetFileAttributesExA(file, GetFileExInfoStandard, &attr)) {
+        return false;
+    }
+
+    infoOut.createdTime = fileTimeToTime(attr.ftCreationTime);
+    infoOut.moifiedTime = fileTimeToTime(attr.ftLastWriteTime);
+    infoOut.fileSize = attr.nFileSizeLow | ((uint64_t)attr.nFileSizeHigh << 32);
+    infoOut.isDirectory = (attr.dwFileAttributes & FILE_ATTRIBUTE_DIRECTORY) != 0;
+
+    return true;
 #else
     struct stat filestat;
 
@@ -709,6 +720,7 @@ TEST(FileApi, testFileNameFilterInvalidChars) {
 
     for (int i = 0; i < CountOf(szFile); i += 2) {
         string strOut = fileNameFilterInvalidChars(szFile[i]);
+        // printf("%d: %s, %s\n", i, strOut.c_str(), szFile[i + 1]);
         ASSERT_TRUE(strcmp(strOut.c_str(), szFile[i + 1]) == 0);
     }
 }

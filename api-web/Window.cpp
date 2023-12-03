@@ -1,4 +1,4 @@
-//
+﻿//
 //  Console.cpp
 //  TinyJS
 //
@@ -67,10 +67,12 @@ static JsLibProperty globalFunctions[] = {
     { "clearTimeout", window_clearTimer },
 };
 
-static JsLibProperty windowPrototypeFunctions[] = { };
+static JsLibProperty windowPrototypeFunctions[] = {
+    { "", window_clearTimer },
+};
 
 void registerWindow(VMRuntimeCommon *rt) {
-    auto prototypeObj = new JsLibObject(rt, windowPrototypeFunctions, CountOf(windowPrototypeFunctions));
+    auto prototypeObj = new JsLibObject(rt, windowPrototypeFunctions, 0);
     rt->objPrototypeWindow = prototypeObj;
     rt->setPrototypeObject(jsValuePrototypeWindow, prototypeObj);
 

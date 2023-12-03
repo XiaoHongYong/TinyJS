@@ -1,4 +1,4 @@
-//
+﻿//
 //  Number.cpp
 //  TinyJS
 //
@@ -7,6 +7,7 @@
 
 #include "BuiltIn.hpp"
 #include "objects/JsPrimaryObject.hpp"
+#include "utils/StringEx.h"
 
 
 void numberConstructor(VMContext *ctx, const JsValue &thiz, const Arguments &args) {
@@ -364,7 +365,7 @@ void numberPrototypeToString(VMContext *ctx, const JsValue &thiz, const Argument
     char buf[2048];
     size_t size;
     if (value.type == JDT_INT32) {
-        size = itoa(value.value.n32, buf, radix);
+        size = itoa_ex(value.value.n32, buf, radix);
     } else {
         auto v = runtime->getDouble(value);
         size = floatToStringWithRadix(v, buf, sizeof(buf), radix);

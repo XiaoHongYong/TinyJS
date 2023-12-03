@@ -1,4 +1,4 @@
-//
+﻿//
 //  Arguments.hpp
 //  TinyJS
 //

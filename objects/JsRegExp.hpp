@@ -1,4 +1,4 @@
-//
+﻿//
 //  JsRegExp.hpp
 //  TinyJS
 //
@@ -14,7 +14,11 @@
 
 enum RegexpFlags {
     RF_CASE_INSENSITIVE = std::regex_constants::icase,      // i    Case-insensitive search.    ignoreCase
+#ifdef _WIN32
+    RF_MULTILINE        = 1 << 15,  // m    Allows ^ and $ to match newline characters.    multiline
+#else
     RF_MULTILINE        = std::regex_constants::multiline,  // m    Allows ^ and $ to match newline characters.    multiline
+#endif
     RF_DOT_ALL          = 1 << 16, // s    Allows . to match newline characters.    dotAll
     RF_UNICODE          = 1 << 17, // u    "Unicode"; treat a pattern as a sequence of Unicode code points.    unicode
     RF_STICKY           = 1 << 18, // y    Perform a "sticky" search that matches starting at the current

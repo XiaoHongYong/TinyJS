@@ -1,4 +1,4 @@
-//
+﻿//
 //  IJsObject.cpp
 //  TinyJS
 //

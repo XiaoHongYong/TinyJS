@@ -1,4 +1,4 @@
-//
+﻿//
 //  RunJavaScript.cpp
 //  TinyJS
 //

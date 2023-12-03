@@ -1,4 +1,4 @@
-//
+﻿//
 //  CharEncoding.hpp
 //  Mp3Player
 //

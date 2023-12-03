@@ -1,4 +1,4 @@
-//
+﻿//
 //  CharEncoding.cpp
 //
 //  Created by HongyongXiao on 2021/11/21.
@@ -10,9 +10,11 @@
 #include "StringEx.h"
 
 
+#ifndef _WIN32
 EncodingCodePage &getSysDefaultCharEncoding() {
     return g_encodingCodePages[ED_SYSDEF];
 }
+#endif
 
 CharEncodingType getCharEncodingID(const char *szEncoding) {
     if (isEmptyString(szEncoding)) {

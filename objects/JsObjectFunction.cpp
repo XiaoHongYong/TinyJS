@@ -1,4 +1,4 @@
-//
+﻿//
 //  JsObjectFunction.cpp
 //  TinyJS
 //

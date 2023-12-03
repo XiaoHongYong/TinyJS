@@ -1,4 +1,4 @@
-//
+﻿//
 //  BuiltIn.hpp
 //  TinyJS
 //

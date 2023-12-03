@@ -1,4 +1,4 @@
-#pragma once
+﻿#pragma once
 
 
 int64_t getTimeInMillisecond();

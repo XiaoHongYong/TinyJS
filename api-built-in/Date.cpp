@@ -1,10 +1,11 @@
-//
+﻿//
 //  Date.cpp
 //  TinyJS
 //
 //  Created by henry_xiao on 2022/7/18.
 //
 
+#include <functional>
 #include "BuiltIn.hpp"
 #include "objects/JsObjectLazy.hpp"
 #include "utils/DateTime.h"
@@ -116,13 +117,13 @@ void date_parse(VMContext *ctx, const JsValue &thiz, const Arguments &args) {
 }
 
 void date_UTC(VMContext *ctx, const JsValue &thiz, const Arguments &args) {
-    auto year = args.getIntAt(ctx, NAN);
-    auto monthIndex = args.getIntAt(ctx, 0);
-    auto day = args.getIntAt(ctx, 1);
-    auto hour = args.getIntAt(ctx, 0);
-    auto minute = args.getIntAt(ctx, 0);
-    auto second = args.getIntAt(ctx, 0);
-    auto millisecond = args.getIntAt(ctx, 0);
+    auto year = args.getDoubleAt(ctx, NAN);
+    auto monthIndex = args.getDoubleAt(ctx, 0);
+    auto day = args.getDoubleAt(ctx, 1);
+    auto hour = args.getDoubleAt(ctx, 0);
+    auto minute = args.getDoubleAt(ctx, 0);
+    auto second = args.getDoubleAt(ctx, 0);
+    auto millisecond = args.getDoubleAt(ctx, 0);
 
     if (isnan(year) || isnan(monthIndex) || isnan(day) || isnan(hour) || isnan(minute) || isnan(second) || isnan(millisecond)) {
         ctx->retValue = jsValueNaN;
@@ -133,7 +134,7 @@ void date_UTC(VMContext *ctx, const JsValue &thiz, const Arguments &args) {
         year += 1900;
     }
 
-    DateTime date(year, monthIndex + 1, day, hour, minute, second, millisecond, -1, false);
+    DateTime date((int)year, (int)monthIndex + 1, (int)day, (int)hour, (int)minute, (int)second, (int)millisecond, -1, false);
 
     ctx->retValue = ctx->runtime->pushDouble(date.getTimeInMs());
 }

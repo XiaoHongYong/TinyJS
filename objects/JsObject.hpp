@@ -1,4 +1,4 @@
-//
+﻿//
 //  JsObject.hpp
 //  TinyJS
 //

@@ -1,4 +1,4 @@
-//
+﻿//
 //  BinaryFileStream.cpp
 //  TinyJS
 //
@@ -6,6 +6,7 @@
 //
 
 #include <climits>
+#include <algorithm>
 #include "BinaryFileStream.h"
 
 
@@ -30,7 +31,7 @@ void BinaryFileInputStream::find(const StringView &pattern, int maxSearchSize) {
 
     long remaining = 0;
     while (true) {
-        auto len = fread(buf + remaining, 1, std::min((long)BUF_SIZE, offsetEnd - offset), m_fp);
+        auto len = fread(buf + remaining, 1, min((long)BUF_SIZE, offsetEnd - offset), m_fp);
         char *p = buf, *end = buf + remaining + len - pattern.len;
         for (; p <= end; p++) {
             if (*p == fc && memcmp(p + 1, ps, pl) == 0) {
@@ -83,7 +84,7 @@ void BinaryFileInputStream::rfind(const StringView &pattern, int maxSearchSize) 
 
     while (true) {
         // 本次读取的数据长度
-        long len = std::min((long)BUF_SIZE, offset - offsetStart);
+        long len = min((long)BUF_SIZE, offset - offsetStart);
         fseek(m_fp, offset - len, SEEK_SET);
         char *start = buf + BUF_SIZE - len;
         len = fread(start, 1, len, m_fp);

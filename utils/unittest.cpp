@@ -1,4 +1,4 @@
-//
+﻿//
 //  unittest.cpp
 //  TinyJS
 //
@@ -54,8 +54,8 @@ void runUnittest(int &argc, const char *argv[]) {
 
 std::string getUnittestTempDir() {
 #ifdef _WIN32
-    char path[MAX_PATH];
-    GetModulePath(path, NULL);
+    char path[MAX_PATH] = { 0 };
+    GetTempPathA(MAX_PATH, path);
     return path;
 #else
     return "/tmp/";

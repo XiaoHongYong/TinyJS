@@ -1,4 +1,4 @@
-#pragma once
+﻿#pragma once
 
 
 #ifndef INVALID_FILE_SIZE
@@ -62,7 +62,6 @@ bool fileIsExtSame(cstr_t szFile, cstr_t szExt);
 
 bool fileNameIsIncInvalidChars(cstr_t szFile);
 string fileNameFilterInvalidChars(cstr_t szFile);
-void filePathFilterInvalidChars(char * szFile);
 
 bool deleteFile(const char *fileName);
 bool moveFile(const char *oldname, const char *newname);

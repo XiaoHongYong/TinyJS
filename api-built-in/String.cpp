@@ -1,4 +1,4 @@
-//
+﻿//
 //  String.cpp
 //  TinyJS
 //

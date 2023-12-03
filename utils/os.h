@@ -1,19 +1,23 @@
-#pragma once
+﻿#pragma once
 
 #ifndef __os__
 #define __os__
 
 #include <stdio.h>
 #include <string>
+#ifndef _WIN32
 #include <dirent.h>
 #include <sys/stat.h>
+#endif
 
 
 time_t getTimeInSecond();
 
 int64_t getTickCount();
 
+#ifndef _WIN32
 void Sleep(uint32_t milliseconds);
+#endif
 
 class FileFind {
 public:
@@ -26,13 +30,28 @@ public:
 
     bool findNext();
 
-    const char *getCurName() { return _dirp->d_name; }
     bool isCurDir();
     const string &path() const { return _path; }
 
+#ifdef _WIN32
+    const char *getCurName() { return _findData.cFileName; }
+#else
+    const char *getCurName() { return _dirp ? _dirp->d_name : nullptr; }
+#endif
+
 protected:
-    dirent                      *_dirp;
-    DIR                         *_dp;
+    bool _openFind(const char *path);
+    bool _nextFile();
+
+#ifdef _WIN32
+    HANDLE                      _hfind = NULL;
+    WIN32_FIND_DATAA            _findData;
+    bool                        _isFirst = true;
+#else
+    dirent                      *_dirp = nullptr;
+    DIR                         *_dp = nullptr;
+#endif
+
     std::string                 _path;
     std::string                 _extFilter;
 

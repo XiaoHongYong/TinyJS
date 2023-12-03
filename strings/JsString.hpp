@@ -1,4 +1,4 @@
-//
+﻿//
 //  JsString.hpp
 //  TinyJS
 //
@@ -8,7 +8,7 @@
 #ifndef JsString_hpp
 #define JsString_hpp
 
-#include "JsObject.hpp"
+#include "objects/JsObject.hpp"
 
 
 IJsIterator *newJsStringIterator(VMContext *ctx, const JsValue &str, bool includeProtoProps, bool includeNoneEnumerable = false);

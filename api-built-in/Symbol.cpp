@@ -1,4 +1,4 @@
-//
+﻿//
 //  Symbol.cpp
 //  TinyJS
 //

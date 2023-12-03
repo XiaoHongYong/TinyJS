@@ -1,4 +1,4 @@
-#include <cstdarg>
+﻿#include <cstdarg>
 #include <math.h>
 #include "UtilsTypes.h"
 #include "StringEx.h"
@@ -115,6 +115,7 @@ size_t strncpy_safe(char *strDestination, size_t nLenMax, const char *strSource,
     return org - nToCopy;
 }
 
+#ifndef WIN32
 size_t wcslen(const WCHAR *str) {
     auto p = str;
     while (*p) {
@@ -123,6 +124,7 @@ size_t wcslen(const WCHAR *str) {
 
     return size_t(p - str);
 }
+#endif
 
 void strrep(string &str, const char *szSrc, const char *szDest) {
     size_t nPos;
@@ -408,7 +410,7 @@ size_t itoa(int64_t num, char *buffer) {
 
 static const char NUM_TABLE[] = "0123456789abcdefghijklmnopqrstuvwxyz";
 
-size_t itoa(int64_t num, char *buffer, int radix) {
+size_t itoa_ex(int64_t num, char *buffer, int radix) {
     if (radix < 0 || radix >= CountOf(NUM_TABLE)) {
         return 0;
     }
@@ -446,14 +448,6 @@ size_t itoa(int64_t num, char *buffer, int radix) {
     }
 
     return i;
-}
-
-string itos(int64_t value) {
-    char buf[32];
-
-    size_t n = itoa(value, buf);
-
-    return string(buf, n);
 }
 
 void roundFloatString(char *buf, uint32_t &pos, uint32_t &zeroPos) {
@@ -657,7 +651,7 @@ uint32_t floatToStringWithRadix(double value, char *buf, size_t bufSize, int rad
         return (int)i + 3;
     }
 
-    i += itoa((int64_t)value, buf + i, radix);
+    i += itoa_ex((int64_t)value, buf + i, radix);
     value -= (int64_t)value;
 
     // zeroPos 用于记录最后一个非 0 的位置

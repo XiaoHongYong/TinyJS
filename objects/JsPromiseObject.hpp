@@ -1,4 +1,4 @@
-//
+﻿//
 //  JsPromiseObject.hpp
 //  TinyJS
 //

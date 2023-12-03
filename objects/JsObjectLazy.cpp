@@ -1,4 +1,4 @@
-//
+﻿//
 //  JsObjectLazy.cpp
 //  TinyJS
 //

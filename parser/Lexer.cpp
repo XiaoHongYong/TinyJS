@@ -1,4 +1,4 @@
-//
+﻿//
 //  Lexer.cpp
 //  TinyJS
 //
@@ -186,7 +186,7 @@ bool operator ==(const Token &token, const char *name) {
     return token.buf[0] == name[0] && tokenToStringView(token).equal(name);
 }
 
-bool isRegexAllowed(TokenType token) {
+bool isRegexAllowed(JsTokenType token) {
     if (token == TK_CLOSE_PAREN || token == TK_POSTFIX || token == TK_NAME ||
             token == TK_STRING || token == TK_CLOSE_BRACKET || token == TK_CLOSE_PAREN)
         return false;
@@ -200,7 +200,7 @@ bool isIdentifierStart(uint8_t code) {
 
 struct Keyword {
     cstr_t                  name;
-    TokenType               token;
+    JsTokenType             token;
 };
 
 //

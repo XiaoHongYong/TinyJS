@@ -1,8 +1,9 @@
-#include "UtilsTypes.h"
+﻿#include "UtilsTypes.h"
 #include "DateTime.h"
 #include "StringEx.h"
 #include <chrono>
 #include <math.h>
+#include <time.h>
 
 
 using namespace std::chrono;
@@ -83,7 +84,16 @@ time_t DateTime::getTime() const {
     t.tm_min = _minute;
     t.tm_sec = _second;
 
+#ifdef _WIN32
+    auto v = std::mktime(&t);
+    long seconds = 0;
+    if (!_isLocalTime && _get_timezone(&seconds) == 0) {
+        v -= seconds;
+    }
+    return v;
+#else
     return _isLocalTime ? timelocal(&t) : timegm(&t);
+#endif
 }
 
 void DateTime::fromTime(time_t time) {
@@ -314,7 +324,16 @@ void DateTime::update() {
     t.tm_min = _minute;
     t.tm_sec = _second;
 
+#ifdef _WIN32
+    int64_t time = std::mktime(&t);
+    long seconds = 0;
+    if (_get_timezone(&seconds)) {
+        time += seconds;
+    }
+#else
     int64_t time = _isLocalTime ? timelocal(&t) : timegm(&t);
+#endif
+
     time = time * 1000 + _ms;
 
     fromTimeInMs(time);

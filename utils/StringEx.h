@@ -1,4 +1,4 @@
-#pragma once
+﻿#pragma once
 
 #include "UtilsTypes.h"
 
@@ -26,8 +26,6 @@ size_t strlen_safe(const char * str, size_t maxLength);
 char *strcpy_safe(char *strDestination, size_t nLenMax, const char *strSource);
 size_t strncpy_safe(char *strDestination, size_t nLenMax, const char *strSource, size_t nToCopy);
 
-size_t wcslen(const WCHAR *str);
-
 char *strrep(char * str, char chSrc, char chDest);
 void strrep(string &str, char chSrc, char chDest);
 void strrep(string &str, const char *szSrc, const char *szDest);
@@ -44,8 +42,8 @@ bool strSplit(const char *str, char sep, string &leftOut, string &rightOut);
 bool strSplit(const char *str, const char *sep, string &leftOut, string &rightOut);
 
 size_t itoa(int64_t value, char *buffer);
-size_t itoa(int64_t value, char *buffer, int radix);
-string itos(int64_t value);
+size_t itoa_ex(int64_t value, char *buffer, int radix);
+inline string itos(int64_t value) { return std::to_string(value); }
 
 enum FloatToStringFlags {
     F_TRIM_TAILING_ZERO         = 1,
@@ -307,4 +305,7 @@ typedef set<string, SetStrLessICmp> SetICaseStr;
 #define SZ_NEW_LINE       "\r\n"
 #else
 #define SZ_NEW_LINE       "\n"
+
+size_t wcslen(const WCHAR* str);
+
 #endif

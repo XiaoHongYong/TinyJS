@@ -1,4 +1,4 @@
-//
+﻿//
 //  BinaryFileStream.h
 //  TinyJS
 //

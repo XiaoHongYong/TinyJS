@@ -1,4 +1,4 @@
-#pragma once
+﻿#pragma once
 
 #include <assert.h>
 #include <cstddef>
@@ -41,7 +41,17 @@ private:
 
 #define CountOf(arr)        (sizeof(arr) / sizeof(arr[0]))
 
-#ifndef _WIN32
+#ifdef _WIN32
+#pragma warning(disable : 4819)
+#pragma warning(disable : 4530)
+
+#define WIN32_LEAN_AND_MEAN		// Exclude rarely-used stuff from Windows headers
+#define _WIN32_WINNT	0x0500
+#include <windows.h>
+
+#define strcasecmp          _stricmp
+#define strncasecmp          _strnicmp
+#else // _WIN32
 // Windows types and defines.
 #define MAKEWORD(a, b)      ((uint16_t)(((uint8_t)((a) & 0xff)) | ((uint16_t)((uint8_t)((b) & 0xff))) << 8))
 #define MAKEINT(a, b)       ((uint32_t)(((uint16_t)((a) & 0xffff)) | ((uint16_t)((uint16_t)((b) & 0xffff))) << 16))
@@ -53,7 +63,9 @@ private:
 inline uint32_t RGB(uint8_t r, uint8_t g, uint8_t b) { return r | (g << 8) | (b << 16); }
 
 #define MAX_PATH            260
-#endif
+
+typedef char16_t WCHAR;
+#endif // _WIN32
 
 template<typename T1, typename T2>
 inline bool isFlagSet(T1 n, T2 flags) { return (n & flags) == flags; }
@@ -61,7 +73,6 @@ inline bool isFlagSet(T1 n, T2 flags) { return (n & flags) == flags; }
 template<typename T>
 inline bool tobool(T v) { return v != 0; }
 
-typedef char16_t WCHAR;
 typedef const char * cstr_t;
 typedef const WCHAR * cwstr_t;
 

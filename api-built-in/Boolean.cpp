@@ -1,4 +1,4 @@
-//
+﻿//
 //  Boolean.cpp
 //  TinyJS
 //

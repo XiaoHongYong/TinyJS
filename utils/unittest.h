@@ -1,4 +1,4 @@
-//
+﻿//
 //  unittest.hpp
 //  TinyJS
 //
@@ -11,6 +11,7 @@
 #define unittest_hpp
 
 #include <gtest/gtest.h>
+#include <functional>
 
 const std::string &getSourceRootDir();
 

@@ -1,10 +1,7 @@
 ﻿
 
-#include "stringex_t.h"
-#include "CharEncoding.h"
-#include "string.h"
-#include "safestr.h"
-#include "xstr.h"
+#include "../CharEncoding.h"
+#include "utils/StringEx.h"
 
 
 #ifndef HANGUL_CHARSET
@@ -12,9 +9,9 @@
 #endif
 
 //
-// ED_XXX 的定义和 __encodingCodepage 的索引顺序是一直的。
-// 即__encodingCodepage[ED_XXX].encodingID = ED_XXX
-EncodingCodePage    __encodingCodepage[] = {
+// ED_XXX 的定义和 g_encodingCodePages 的索引顺序是一直的。
+// 即g_encodingCodePages[ED_XXX].encodingID = ED_XXX
+EncodingCodePage    g_encodingCodePages[] = {
     { ED_SYSDEF, CP_ACP, DEFAULT_CHARSET, "", "", "Default" },
     { ED_UNICODE, 0, DEFAULT_CHARSET, "unicode", "", "Unicode" },
     { ED_UNICODE_BIG_ENDIAN, 0, DEFAULT_CHARSET, "Unicode (Big-Endian)", "", "Unicode (Big-Endian)" },
@@ -44,57 +41,71 @@ EncodingCodePage    __encodingCodepage[] = {
     { ED_RUSSIAN_WINDOWS, 1251, RUSSIAN_CHARSET, "Windows-1251", "russian", "Russian (Windows)" },
 };
 
-#define         __MaxEncodings        CountOf(__encodingCodepage)
+#define         __MaxEncodings        CountOf(g_encodingCodePages)
 
 int getCharEncodingCount() { return __MaxEncodings; }
 
 EncodingCodePage &getSysDefaultCharEncoding() {
-    uint32_t codePage;
-
-    codePage = GetACP();
+    uint32_t codePage = GetACP();
     for (int i = 0; i < __MaxEncodings; i++) {
-        if (codePage == __encodingCodepage[i].codePage) {
-            return __encodingCodepage[i];
+        if (codePage == g_encodingCodePages[i].codePage) {
+            return g_encodingCodePages[i];
         }
     }
 
-    return __encodingCodepage[0];
+    return g_encodingCodePages[0];
 }
 
-int utf8ToMbcs(const char *str, int nLen, char *strOut, int nOut, int encodingID) {
+int utf8ToMbcs(const char* str, int size, string& strOut, int encodingID) {
+    if (size == -1) {
+        size = (int)strlen(str);
+    }
+
     if (encodingID == ED_UTF8) {
-        if (nLen == -1) {
-            strcpy_safe(strOut, nOut, str);
-            return strlen(strOut);
-        } else {
-            strncpysz_safe(strOut, nOut, str, nLen);
-            return nLen;
-        }
+        strOut.assign(str, size);
+        return (int)strOut.size();
     }
 
     // Convert to UCS2
-    string ucs2;
-    utf8ToUCS2(str, nLen, ucs2);
+    u16string ucs2;
+    utf8ToUCS2(str, size, ucs2);
 
     // Convert UCS2 to MBCS
-    return ucs2ToMbcs(ucs2.c_str(), ucs2.size(), strOut, nOut, encodingID);
+    strOut.resize(ucs2.size() * 3);
+
+    int n = WideCharToMultiByte(g_encodingCodePages[encodingID].codePage, 0, 
+        (LPCWCH)ucs2.c_str(), ucs2.size(), (char *)strOut.data(), strOut.capacity(), nullptr, nullptr);
+    if (n <= 0) {
+        // Error occured.
+        n = 0;
+    }
+    strOut.resize(n);
+    return n;
 }
 
-int mbcsToUtf8(const char *str, int nLen, char *strOut, int nOut, int encodingID) {
+int mbcsToUtf8(const char* str, int size, string& strOut, int encodingID) {
+    if (size == -1) {
+        size = (int)strlen(str);
+    }
+
+    strOut.clear();
+
     if (encodingID == ED_UTF8) {
-        if (nLen == -1) {
-            strcpy_safe(strOut, nOut, str);
-            return strlen(strOut);
-        } else {
-            strncpysz_safe(strOut, nOut, str, nLen);
-            return nLen;
-        }
+        strOut.assign(str, size);
+        return (int)size;
     }
 
     // Convert to UCS2
-    string ucs2;
-    mbcsToUCS2(str, nLen, ucs2, encodingID);
+    u16string ucs2;
+
+    int n = MultiByteToWideChar(g_encodingCodePages[encodingID].codePage, 0, str, size,
+        (LPWSTR)ucs2.data(), ucs2.capacity());
+    if (n <= 0) {
+        // Error occured.
+        n = 0;
+    }
+    ucs2.resize(n);
 
     // Convert UCS2 to Utf8
-    return ucs2ToUtf8(ucs2.c_str(), ucs2.size(), strOut, nOut);
+    return ucs2ToUtf8(ucs2.c_str(), ucs2.size(), strOut);
 }

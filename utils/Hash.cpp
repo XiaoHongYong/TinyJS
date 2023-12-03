@@ -1,4 +1,4 @@
-#include "UtilsTypes.h"
+﻿#include "UtilsTypes.h"
 #include "Hash.h"
 
 

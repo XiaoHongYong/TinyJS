@@ -1,4 +1,4 @@
-//
+﻿//
 //  JsLibObject.hpp
 //  TinyJS
 //
@@ -12,7 +12,7 @@
 
 
 struct JsLibProperty {
-    StringView                 name;
+    StringView                  name;
     JsNativeFunction            function;
     const char                  *strValue;
     JsValue                     prop;

@@ -1,4 +1,4 @@
-//
+﻿//
 //  VMScope.cpp
 //  TinyJS
 //

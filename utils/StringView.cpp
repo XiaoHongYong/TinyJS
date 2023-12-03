@@ -1,4 +1,4 @@
-//
+﻿//
 //  Created by HongyongXiao on 2021/11/12.
 //
 
@@ -7,7 +7,6 @@
 #include "CharEncoding.h"
 #include "StringEx.h"
 #include <ctype.h>
-#include <strings.h>
 #include <climits>
 
 

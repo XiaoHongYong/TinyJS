@@ -1,4 +1,4 @@
-//
+﻿//
 //  StringView.cpp
 //  TinyJS
 //
@@ -20,7 +20,7 @@ TEST(DateTime, fromTime) {
     time(&timeCur);
     tm *tmCur = gmtime(&timeCur);
 
-    DateTime t((uint64_t)timeCur * 1000, false);
+    DateTime t((uint64_t)timeCur * 1000 + 1, false);
 
     ASSERT_EQ(tmCur->tm_year + 1900, t.year());
     ASSERT_EQ(tmCur->tm_mon + 1, t.month());
@@ -28,8 +28,14 @@ TEST(DateTime, fromTime) {
     ASSERT_EQ(tmCur->tm_hour, t.hour());
     ASSERT_EQ(tmCur->tm_min, t.minute());
     ASSERT_EQ(tmCur->tm_sec, t.second());
-    ASSERT_EQ(0, t.ms());
+    ASSERT_EQ(1, t.ms());
+    ASSERT_EQ(timeCur - t.getTime(), 0);
     ASSERT_EQ(timeCur, t.getTime());
+
+    {
+        DateTime t((uint64_t)timeCur * 1000, true);
+        ASSERT_EQ(timeCur - t.getTime(), 0);
+    }
 
     t.setMonth(12);
     DateTime t2;

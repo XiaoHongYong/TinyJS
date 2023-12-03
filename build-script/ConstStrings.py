@@ -33,7 +33,7 @@ CPP_TEMPLATE = '''/**
  * 此文件由 {} 自动创建，请不要手动修改
  */
 
-#include "VMRuntime.hpp"
+#include "interpreter/VMRuntime.hpp"
 
 
 {}
@@ -104,13 +104,17 @@ CONST_STRINGS = [
 
 def write_file_cmp(fn, content):
     fn = os.path.abspath(fn)
+
+    if type(content) is str:
+        content = content.encode('utf-8')
+
+    if os.path.exists(fn):
+        with open(fn, 'rb') as fp:
+            if content == fp.read():
+                print('No changes of file: {}, ignore wrtting'.format(fn))
+                return
+
     print('Write {}, length: {}'.format(fn, len(content)))
-
-    with open(fn, 'rb') as fp:
-        if content == fp.read():
-            print('No changes of file: {}, ignore wrtting'.format(fn))
-            return
-
     with open(fn, 'wb') as fp:
         fp.write(content)
 
@@ -140,6 +144,10 @@ def build():
     work_dir = os.path.abspath(os.path.dirname(__file__))
     fn_header = os.path.join(work_dir, '../generated/ConstStrings.hpp')
     fn_cpp = os.path.join(work_dir, '../generated/ConstStrings.cpp')
+
+    path = os.path.dirname(fn_cpp)
+    if not os.path.exists(path):
+        os.mkdir(path)
 
     write_file_cmp(fn_header, HEADER_TEMPLATE.format(this_py_file,
         '\n'.join(EXTERN_SS_XXS),

@@ -1,4 +1,4 @@
-#pragma once
+﻿#pragma once
 
 //
 //  Copyright (c) 2021 CrintSoft, Ltd. All rights reserved.

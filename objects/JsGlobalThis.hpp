@@ -1,4 +1,4 @@
-//
+﻿//
 //  JsGlobalThis.hpp
 //  TinyJS
 //

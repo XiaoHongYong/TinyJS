@@ -1,4 +1,4 @@
-//
+﻿//
 //  TimerTasks.hpp
 //  TinyJS
 //

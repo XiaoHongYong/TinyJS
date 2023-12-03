@@ -1,4 +1,4 @@
-//
+﻿//
 //  StringParser.cpp
 //  TinyJS
 //

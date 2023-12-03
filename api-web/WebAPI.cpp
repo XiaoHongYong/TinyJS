@@ -1,4 +1,4 @@
-//
+﻿//
 //  WebAPI.cpp
 //  TinyJS
 //

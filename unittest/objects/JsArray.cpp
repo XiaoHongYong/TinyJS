@@ -1,4 +1,4 @@
-//
+﻿//
 //  JsArray.cpp
 //  TinyJS
 //

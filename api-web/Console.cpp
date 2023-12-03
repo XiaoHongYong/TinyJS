@@ -1,4 +1,4 @@
-//
+﻿//
 //  Console.cpp
 //  TinyJS
 //

@@ -1,4 +1,4 @@
-//
+﻿//
 //  Lexer.cpp
 //  TinyJS
 //

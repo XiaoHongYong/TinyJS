@@ -1,4 +1,4 @@
-//
+﻿//
 //  RegExp.cpp
 //  TinyJS
 //

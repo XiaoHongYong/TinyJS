@@ -1,4 +1,4 @@
-//
+﻿//
 //  CommonString.cpp
 //  TinyJS
 //
@@ -6,7 +6,7 @@
 //
 
 #include "CommonString.hpp"
-#include "VirtualMachine.hpp"
+#include "interpreter/VirtualMachine.hpp"
 
 
 StringView makeCommonString(const char *str) {

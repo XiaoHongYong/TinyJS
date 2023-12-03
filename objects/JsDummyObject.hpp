@@ -1,4 +1,4 @@
-//
+﻿//
 //  JsDummyObject.hpp
 //  TinyJS
 //

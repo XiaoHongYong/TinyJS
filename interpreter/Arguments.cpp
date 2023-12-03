@@ -1,4 +1,4 @@
-//
+﻿//
 //  Arguments.cpp
 //  TinyJS
 //
@@ -121,7 +121,7 @@ LockedStringViewWrapper Arguments::getStringAt(VMContext *ctx, uint32_t index, c
 void Arguments::copy(const Arguments &other, uint32_t minSize) {
     assert(!needFree);
 
-    capacity = std::max(other.count, minSize);
+    capacity = max(other.count, minSize);
     data = new JsValue[capacity];
     memcpy((void *)data, other.data, sizeof(data[0]) * other.count);
     count = other.count;

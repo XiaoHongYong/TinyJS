@@ -1,4 +1,4 @@
-//
+﻿//
 //  ByteCodeStream.cpp
 //  TinyJS
 //

@@ -1,4 +1,4 @@
-//
+﻿//
 //  Parser.cpp
 //  TinyJS
 //
@@ -6,7 +6,7 @@
 //
 
 #include "Parser.hpp"
-#include "VirtualMachine.hpp"
+#include "interpreter/VirtualMachine.hpp"
 #include "Statement.hpp"
 
 
@@ -532,7 +532,7 @@ void JSParser::_expectArgumentsList(VecJsNodes &args) {
  *   var [a, b]; // initFromStackTop 为 false
  *   var [a, b] = []; // initFromStackTop 为 true
  */
-JsNodeVarDeclarationList *JSParser::_expectVariableDeclarationList(TokenType declareType, bool initFromStackTop) {
+JsNodeVarDeclarationList *JSParser::_expectVariableDeclarationList(JsTokenType declareType, bool initFromStackTop) {
     auto expr = PoolNew(_pool, JsNodeVarDeclarationList)(_resPool);
 
     while (true) {
@@ -552,7 +552,7 @@ JsNodeVarDeclarationList *JSParser::_expectVariableDeclarationList(TokenType dec
 /**
  * 解析变量声明
  */
-IJsNode *JSParser::_expectVariableDeclaration(TokenType declareType, bool initFromStackTop) {
+IJsNode *JSParser::_expectVariableDeclaration(JsTokenType declareType, bool initFromStackTop) {
     IJsNode *left = nullptr, *right = nullptr;
 
     switch (_curToken.type) {
@@ -611,7 +611,7 @@ IJsNode *JSParser::_expectVariableDeclaration(TokenType declareType, bool initFr
     }
 }
 
-IJsNode *JSParser::_expectArrayAssignable(TokenType declareType) {
+IJsNode *JSParser::_expectArrayAssignable(JsTokenType declareType) {
     auto arr = PoolNew(_pool, JsExprArray)(_resPool);
 
     int index = 0;
@@ -637,11 +637,11 @@ IJsNode *JSParser::_expectArrayAssignable(TokenType declareType) {
     return arr;
 }
 
-IJsNode *JSParser::_expectObjectAssignable(TokenType declareType) {
+IJsNode *JSParser::_expectObjectAssignable(JsTokenType declareType) {
     return nullptr;
 }
 
-void JSParser::_expectToken(TokenType expected) {
+void JSParser::_expectToken(JsTokenType expected) {
     if (_curToken.type != expected) {
         _parseError("Unexpected token: %d, expected: %d.", _curToken.type, expected);
     } else {

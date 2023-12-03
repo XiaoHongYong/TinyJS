@@ -1,4 +1,4 @@
-//
+﻿//
 //  JSON.cpp
 //  TinyJS
 //

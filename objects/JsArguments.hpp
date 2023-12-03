@@ -1,4 +1,4 @@
-//
+﻿//
 //  JsArguments.hpp
 //  TinyJS
 //

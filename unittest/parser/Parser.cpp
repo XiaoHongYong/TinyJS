@@ -1,4 +1,4 @@
-//
+﻿//
 //  Parser.cpp
 //  TinyJS
 //

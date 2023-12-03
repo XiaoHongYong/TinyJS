@@ -1,4 +1,4 @@
-//
+﻿//
 //  Parser.hpp
 //  TinyJS
 //
@@ -75,10 +75,10 @@ protected:
     IJsNode *_expectSwitchStmt();
     IJsNode *_expectTryStmt();
     void _expectArgumentsList(VecJsNodes &args);
-    JsNodeVarDeclarationList *_expectVariableDeclarationList(TokenType declareType, bool initFromStackTop = false);
-    IJsNode *_expectVariableDeclaration(TokenType declareType, bool initFromStackTop = false);
-    IJsNode *_expectArrayAssignable(TokenType declareType);
-    IJsNode *_expectObjectAssignable(TokenType declareType);
+    JsNodeVarDeclarationList *_expectVariableDeclarationList(JsTokenType declareType, bool initFromStackTop = false);
+    IJsNode *_expectVariableDeclaration(JsTokenType declareType, bool initFromStackTop = false);
+    IJsNode *_expectArrayAssignable(JsTokenType declareType);
+    IJsNode *_expectObjectAssignable(JsTokenType declareType);
 
     IJsNode *_expectFunctionDeclaration();
     IJsNode *_expectFunctionExpression(uint32_t functionFlags, bool ignoreFirstToken = true);
@@ -99,7 +99,7 @@ protected:
 
     JsExprIdentifier *_newExprIdentifier(const Token &token);
 
-    void _expectToken(TokenType expected);
+    void _expectToken(JsTokenType expected);
     void _expectSemiColon();
     void _unexpectToken();
 
