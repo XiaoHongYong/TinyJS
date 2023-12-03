@@ -151,7 +151,7 @@ inline cstr_t parseInt(cstr_t str, _int &value) {
     return str;
 }
 
-void multiStrToVStr(cstr_t szText, vector<string> &vStr);
+void multiStrToVStr(cstr_t szText, VecStrings &vStr);
 
 template<class _iterator>
 string strJoin(_iterator first, _iterator end, cstr_t format, cstr_t separator) {
@@ -299,7 +299,7 @@ public:
     }
 };
 
-typedef set<string, SetStrLessICmp> SetICaseStr;
+typedef std::set<string, SetStrLessICmp> SetICaseStr;
 
 #ifdef _WIN32
 #define SZ_NEW_LINE       "\r\n"

@@ -140,7 +140,7 @@ protected:
     // 保存了被引用到的 Identifier 实例，声明的不能添加到此列表中
     JsExprIdentifier            *_headIdRefs;
 
-    vector<JsExprObject *>      _checkingExprObjs;
+    std::vector<JsExprObject *> _checkingExprObjs;
 
     MapStringToIdx              _strings;
     MapDoubleToIdx              _doubles;
@@ -153,7 +153,7 @@ protected:
     Scope                       *_curFuncScope;
     Scope                       *_curScope;
 
-    list<bool>                  _stackBreakContinueAreas;
+    std::list<bool>             _stackBreakContinueAreas;
 
 };
 

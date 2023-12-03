@@ -61,7 +61,7 @@ void reflect_ownKeys(VMContext *ctx, const JsValue &thiz, const Arguments &args)
     }
 
     auto obj = ctx->runtime->getObject(objVal);
-    shared_ptr<IJsIterator> it(obj->getIteratorObject(ctx, false, true));
+    std::shared_ptr<IJsIterator> it(obj->getIteratorObject(ctx, false, true));
     JsValue key;
     auto arrObj = new JsArray();
     auto arr = ctx->runtime->pushObject(arrObj);

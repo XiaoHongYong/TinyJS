@@ -653,7 +653,7 @@ void JSLexer::_readToken() {
                 _readName();
 
                 StringView str(_curToken.buf, (size_t)(_bufPos - _curToken.buf));
-                auto p = lower_bound(KEYWORDS, KEYWORDS + CountOf(KEYWORDS), str, KeywordCompareLess());
+                auto p = std::lower_bound(KEYWORDS, KEYWORDS + CountOf(KEYWORDS), str, KeywordCompareLess());
                 if (p < KEYWORDS + CountOf(KEYWORDS)) {
                     if (str.equal(p->name)) {
                         _curToken.type = p->token;

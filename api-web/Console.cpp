@@ -10,7 +10,7 @@
 #include "objects/JsArray.hpp"
 
 
-using SetUInts = set<uint32_t>;
+using SetUInts = std::set<uint32_t>;
 
 void dumpObject(VMContext *ctx, const JsValue &obj, string &out, SetUInts &historyObjs) {
     assert(obj.type >= JDT_OBJECT);
@@ -30,8 +30,8 @@ void dumpObject(VMContext *ctx, const JsValue &obj, string &out, SetUInts &histo
 
     StringView key;
     JsValue value;
-    vector<string> vs;
-    vector<string> kvs;
+    VecStrings vs;
+    VecStrings kvs;
 
     while (it->next(&key, nullptr, &value)) {
         if (obj.type == JDT_ARRAY && key.equal(SS_LENGTH)) continue;

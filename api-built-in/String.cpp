@@ -983,7 +983,7 @@ void stringPrototypeSplit(VMContext *ctx, const JsValue &thiz, const Arguments &
         auto sepStr = runtime->toStringViewStrictly(ctx, sep);
         if (sepStr.len == 0) {
             // 分为 utf-16 的字符串数组
-            vector<utf16_t> u16s;
+            std::vector<utf16_t> u16s;
             u16s.resize(min(str.len, (uint32_t)limit));
             auto len = utf8ToUtf16(str.data, str.len, u16s.data(), (uint32_t)u16s.size());
 

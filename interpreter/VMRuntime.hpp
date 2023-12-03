@@ -13,8 +13,8 @@
 #include "PromiseTasks.hpp"
 
 
-using VecVMScopes = vector<VMScope *>;
-using MapIndexToJsObjs = unordered_map<int, IJsObject *>;
+using VecVMScopes = std::vector<VMScope *>;
+using MapIndexToJsObjs = std::unordered_map<int, IJsObject *>;
 
 class IConsole {
 public:

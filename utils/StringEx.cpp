@@ -803,7 +803,7 @@ string hexToStr(const uint8_t *data, size_t len) {
     return str;
 }
 
-void multiStrToVStr(cstr_t szText, vector<string> &vStr) {
+void multiStrToVStr(cstr_t szText, VecStrings &vStr) {
     while (*szText) {
         vStr.push_back(szText);
         while (*szText != '\0') {

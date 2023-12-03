@@ -21,7 +21,7 @@ public:
         PromiseTask(JsPromiseObject *promise) : promise(promise) { }
     };
 
-    using ListPromiseTasks = list<PromiseTask>;
+    using ListPromiseTasks = std::list<PromiseTask>;
 
 public:
     PromiseTasks() { }

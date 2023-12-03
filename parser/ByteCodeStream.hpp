@@ -28,13 +28,13 @@ public:
     struct BreakContinueArea {
         bool                        allowContinue;
         VMAddress                   continueAddr;
-        vector<VMAddress*>          breakAddrs;
+        std::vector<VMAddress*>     breakAddrs;
 
         BreakContinueArea(VMAddress continueAddr, bool allowContinue) : continueAddr(continueAddr), allowContinue(allowContinue) { }
     };
 
 protected:
-    list<BreakContinueArea>         _stackBreakContineAreas;
+    std::list<BreakContinueArea>    _stackBreakContineAreas;
 
 };
 

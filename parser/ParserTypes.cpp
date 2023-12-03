@@ -514,10 +514,10 @@ VMAddress SwitchJump::findAddress(VMRuntime *runtime, uint16_t poolIndex, const 
         stmtSwitch->buildCaseJumps(runtime, poolIndex, this);
         stmtSwitch = nullptr;
 
-        sort(caseJumps, caseJumpsEnd, CaseJumpLessCmp(runtime));
+        std::sort(caseJumps, caseJumpsEnd, CaseJumpLessCmp(runtime));
     }
 
-    auto caseJump = lower_bound(caseJumps, caseJumpsEnd, cond, CaseJumpLessCmp(runtime));
+    auto caseJump = std::lower_bound(caseJumps, caseJumpsEnd, cond, CaseJumpLessCmp(runtime));
     if (caseJump != caseJumpsEnd) {
         if (relationalStrictEqual(runtime, cond, caseJump->caseConds)) {
             return caseJump->addr;

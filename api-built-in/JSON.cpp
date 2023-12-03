@@ -178,7 +178,7 @@ public:
     JsValue value() { return _value; }
 
 protected:
-    vector<StackItem>       _stack;
+    std::vector<StackItem>  _stack;
     Status                  _status;
     int                     _index;
 
@@ -270,7 +270,7 @@ void stringify(VMContext *ctx, Writer<StringBuffer> &writer, JsValue value) {
             writer.StartObject();
 
             auto obj = ctx->runtime->getObject(value);
-            unique_ptr<IJsIterator> it;
+            std::unique_ptr<IJsIterator> it;
             it.reset(obj->getIteratorObject(ctx));
 
             StringView key;

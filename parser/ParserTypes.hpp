@@ -25,13 +25,13 @@ class JsNodeParameters;
 class JsStmtSwitch;
 class VMRuntime;
 
-using MapNameToIdentifiers = unordered_map<StringView, IdentifierDeclare *, StringViewHash, SizedStrCmpEqual>;
-using VecScopes = vector<Scope *>;
-using VecFunctions = vector<Function *>;
-using VecResourcePools = vector<ResourcePool *>;
-using VecJsNodes = vector<IJsNode *>;
-using DequeJsNodes = deque<IJsNode *>;
-using DequeScopes = deque<Scope *>;
+using MapNameToIdentifiers = std::unordered_map<StringView, IdentifierDeclare *, StringViewHash, SizedStrCmpEqual>;
+using VecScopes = std::vector<Scope *>;
+using VecFunctions = std::vector<Function *>;
+using VecResourcePools = std::vector<ResourcePool *>;
+using VecJsNodes = std::vector<IJsNode *>;
+using DequeJsNodes = std::deque<IJsNode *>;
+using DequeScopes = std::deque<Scope *>;
 
 /**
  * 语法树结点的类型定义
@@ -377,7 +377,7 @@ struct RegexpInfo {
     uint32_t                flags;
 };
 
-using VecSwitchJumps = vector<SwitchJump>;
+using VecSwitchJumps = std::vector<SwitchJump>;
 
 /**
  * 负责在解析阶段的内存分配
@@ -389,10 +389,10 @@ public:
     uint32_t                nextFreeIdx; // 下一个空闲的索引位置
 
     AllocatorPool           pool;
-    VecStringViewUtf16s    strings;
-    vector<double>          doubles;
+    VecStringViewUtf16s     strings;
+    std::vector<double>     doubles;
     VecSwitchJumps          switchCaseJumps;
-    vector<RegexpInfo>      regexps;
+    std::vector<RegexpInfo> regexps;
 
     // 当 ResourcePool 被释放时，需要调用 toDestructNodes, toDestructScopes 的析构函数
     DequeJsNodes            toDestructNodes;

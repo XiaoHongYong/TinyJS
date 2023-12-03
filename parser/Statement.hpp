@@ -382,7 +382,7 @@ public:
 
     void push(JsSwitchBranch *node) { branches.push_back(node); }
 
-    vector<JsSwitchBranch *>    branches;
+    std::vector<JsSwitchBranch *> branches;
 
     ResourcePool                *resPool;
     IJsNode                     *cond;

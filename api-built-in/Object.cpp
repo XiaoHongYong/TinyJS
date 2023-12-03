@@ -22,7 +22,7 @@ static void objectConstructor(VMContext *ctx, const JsValue &thiz, const Argumen
     }
 }
 
-using IJsIteratorPtr = shared_ptr<IJsIterator>;
+using IJsIteratorPtr = std::shared_ptr<IJsIterator>;
 
 IJsIteratorPtr getJsIteratorPtr(VMContext *ctx, const JsValue &obj, bool includeNoneEnumerable = false, bool includeProtoProps = false) {
     IJsIterator *it = nullptr;
@@ -219,7 +219,7 @@ void objectDefineProperties(VMContext *ctx, const JsValue &thiz, const Arguments
 
     auto obj = args[0];
     auto propsObj = runtime->getObject(args[1]);
-    unique_ptr<IJsIterator> it;
+    std::unique_ptr<IJsIterator> it;
     it.reset(propsObj->getIteratorObject(ctx));
 
     JsValue key, descriptor;

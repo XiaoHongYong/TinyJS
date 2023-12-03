@@ -24,7 +24,7 @@ public:
         Timer(VMContext *ctx, JsValue callback, int32_t duration, bool repeat, int timerId);
     };
 
-    using ListTimers = list<Timer>;
+    using ListTimers = std::list<Timer>;
     using ListTimersIterator = ListTimers::iterator;
 
 public:

@@ -11,13 +11,19 @@
 #include <set>
 #include <mutex>
 
+
 using namespace std;
 
-using ListStrings = list<string>;
-using VecStrings = vector<string>;
-using VecInts = vector<int>;
-using MapStrings = map<string, string>;
-using SetStrings = set<string>;
+using string = std::string;
+using u16string = std::u16string;
+using mutex = std::mutex;
+using recursive_mutex = std::recursive_mutex;
+
+using ListStrings = std::list<string>;
+using VecStrings = std::vector<string>;
+using VecInts = std::vector<int>;
+using MapStrings = std::map<string, string>;
+using SetStrings = std::set<string>;
 
 class MutexAutolock {
 public:
@@ -48,6 +54,9 @@ private:
 #define WIN32_LEAN_AND_MEAN		// Exclude rarely-used stuff from Windows headers
 #define _WIN32_WINNT	0x0500
 #include <windows.h>
+
+#undef max
+#undef min
 
 #define strcasecmp          _stricmp
 #define strncasecmp          _strnicmp

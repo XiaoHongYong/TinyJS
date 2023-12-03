@@ -32,12 +32,13 @@ bool createDirectoryAll(cstr_t szDir);
 
 bool isDirWritable(cstr_t szDir);
 
-bool enumFilesInDir(cstr_t szBaseDir, cstr_t extFilter, vector<string> &vFiles, bool bEnumFullPath);
+bool enumFilesInDir(cstr_t szBaseDir, cstr_t extFilter, VecStrings &vFiles, bool bEnumFullPath);
 
 typedef void (*FUNProcessFile)(cstr_t szFileName, cstr_t szDir, void *lpUserData);
 bool processFilesInfolder(cstr_t szBaseDir, FUNProcessFile funProc, void *lpUserData);
 
 void dirStringAddSep(string &strDir);
+bool isAbsPath(cstr_t path);
 
 string dirStringJoin(cstr_t szDir, cstr_t szSubFileDir);
 string dirStringJoin(cstr_t szDir, cstr_t szSubFileDir1, cstr_t szSubFileDir2);

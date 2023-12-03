@@ -60,7 +60,7 @@ struct TryCatchPoint {
     }
 };
 
-using StackTryCatchPoint = stack<TryCatchPoint>;
+using StackTryCatchPoint = std::stack<TryCatchPoint>;
 
 /**
  * 运行时的函数调用上下文，包括了当前的调用堆栈等信息

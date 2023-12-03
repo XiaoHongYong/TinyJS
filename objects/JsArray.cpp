@@ -751,7 +751,7 @@ JsError JsArray::extend(VMContext *ctx, const JsValue &other, uint32_t depth) {
         VecBlocks::iterator         itBlock, itBlockEnd;
         DequeJsProperties::iterator itItems, itItemsEnd;
     };
-    vector<Status> stack;
+    std::vector<Status> stack;
 
     auto otherArr = (JsArray *)ctx->runtime->getObject(other);
 
@@ -852,7 +852,7 @@ void JsArray::reverse(VMContext *ctx) {
     }
 }
 
-static set<uint32_t> toStringCallStack;
+static std::set<uint32_t> toStringCallStack;
 
 void JsArray::toString(VMContext *ctx, const JsValue &thiz, BinaryOutputStream &stream) {
     uint32_t lastIdx = 0;

@@ -85,7 +85,7 @@ public:
         Block() { index = 0; hasPropDescriptor = false; }
         ~Block() { }
     };
-    using VecBlocks = vector<Block *>;
+    using VecBlocks = std::vector<Block *>;
     using VecBlocksIterator = VecBlocks::iterator;
 
 protected:

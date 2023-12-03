@@ -24,7 +24,7 @@ public:
         JsValue                 funcFulfilled, funcRejected, funcFinally;
         JsPromiseObject         *nextPromise;
     };
-    using VecPromiseChain = vector<PromiseChain>;
+    using VecPromiseChain = std::vector<PromiseChain>;
 
 public:
     JsPromiseObject(VMContext *ctx);

@@ -16,10 +16,9 @@
 #include "Hash.h"
 
 
-using namespace std;
-
 using utf16_t = char16_t;
 using utf32_t = char32_t;
+using string = std::string;
 
 class StringView {
 public:

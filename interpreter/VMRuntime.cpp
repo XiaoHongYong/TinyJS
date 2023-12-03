@@ -1004,7 +1004,7 @@ void VMRuntime::markReferIdx(VMScope *scope) {
 
 void VMRuntime::markJoinedStringReferIdx(const JsJoinedString &joinedString) {
     // 使用 stackStrings 避免函数嵌套调用堆栈溢出
-    vector<int> stackStrings;
+    VecInts stackStrings;
 
     if (joinedString.isStringIdxInResourcePool) {
         markResourcePoolReferIdx(joinedString.stringIdx);

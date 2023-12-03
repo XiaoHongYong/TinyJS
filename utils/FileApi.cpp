@@ -217,7 +217,7 @@ bool isDirWritable(cstr_t szDir) {
     return true;
 }
 
-bool enumFilesInDir(cstr_t szBaseDir, cstr_t extFilter, vector<string> &vFiles, bool bEnumFullPath) {
+bool enumFilesInDir(cstr_t szBaseDir, cstr_t extFilter, VecStrings &vFiles, bool bEnumFullPath) {
     FileFind find;
 
     if (!find.openDir(szBaseDir, extFilter)) {
@@ -243,7 +243,7 @@ bool enumFilesInDir(cstr_t szBaseDir, cstr_t extFilter, vector<string> &vFiles, 
     return true;
 }
 
-bool enumDirsInDir(cstr_t szBaseDir, vector<string> &vFiles, bool bEnumFullPath) {
+bool enumDirsInDir(cstr_t szBaseDir, VecStrings &vFiles, bool bEnumFullPath) {
     FileFind find;
 
     if (!find.openDir(szBaseDir, "*")) {
@@ -298,7 +298,19 @@ void dirStringAddSep(string &dir) {
     }
 }
 
+bool isAbsPath(cstr_t path) {
+#ifdef _WIN32
+    return path[0] && path[1] == ':';
+#else
+    return path[0] == PATH_SEP_CHAR;
+#endif
+}
+
 string dirStringJoin(cstr_t szDir, cstr_t szSubFileDir) {
+    if (isAbsPath(szSubFileDir)) {
+        return szSubFileDir;
+    }
+
     string strFile = szDir;
 
     dirStringAddSep(strFile);
@@ -308,6 +320,14 @@ string dirStringJoin(cstr_t szDir, cstr_t szSubFileDir) {
 }
 
 string dirStringJoin(cstr_t szDir, cstr_t szSubFileDir1, cstr_t szSubFileDir2) {
+    if (isAbsPath(szSubFileDir2)) {
+        return szSubFileDir2;
+    }
+
+    if (isAbsPath(szSubFileDir1)) {
+        return dirStringJoin(szSubFileDir1, szSubFileDir2);
+    }
+
     string strFile = szDir;
 
     dirStringAddSep(strFile);
