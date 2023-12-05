@@ -101,10 +101,12 @@ bool isUTF8Encoding(cstr_t str, size_t nLen);
 inline bool isUTF8Encoding(const StringView &str)
     { return isUTF8Encoding(str.data, str.len); }
 
-int mbcsToUtf8(const char *str, int nLen, string &strOut, int encodingID = ED_SYSDEF);
-int ucs2ToUtf8(const utf16_t *str, int nLen, string &strOut);
-int utf8ToUCS2(const char *str, int nLen, u16string &strOut);
-int utf8ToMbcs(const char *str, int nLen, string &strOut, int encodingID = ED_SYSDEF);
+int mbcsToUtf8(const char *str, int len, string &strOut, int encodingID = ED_SYSDEF);
+int ucs2ToUtf8(const utf16_t *str, int len, string &strOut);
+inline string ucs2ToUtf8(const utf16_t *str, int len = -1) { string s; ucs2ToUtf8(str, len, s); return s; }
+int utf8ToUCS2(const char *str, int len, utf16string &strOut);
+inline utf16string utf8ToUCS2(const char *str, int len = -1) { utf16string s; utf8ToUCS2(str, len, s); return s; }
+int utf8ToMbcs(const char *str, int len, string &strOut, int encodingID = ED_SYSDEF);
 
 uint32_t utf8ToUtf16Length(const uint8_t *str, uint32_t len);
 inline uint32_t utf8ToUtf16Length(const char *str, uint32_t len)

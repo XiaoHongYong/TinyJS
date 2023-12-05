@@ -115,6 +115,22 @@ size_t strncpy_safe(char *strDestination, size_t nLenMax, const char *strSource,
     return org - nToCopy;
 }
 
+// 安全的字符串拷贝，如果超出长度范围，则进行截断
+char *strcat_safe(char *dst, size_t size, const char *src) {
+    char *cp = dst;
+    char *endcp = dst + size - 1;
+
+    while (*cp) {
+        cp++; /* find end of dst */
+    }
+
+    while ((cp < endcp) && (*cp++ = *src++)) ;       /* copy src to end of dst */
+
+    *cp = '\0';
+
+    return dst; /* return dst */
+}
+
 #ifndef WIN32
 size_t wcslen(const WCHAR *str) {
     auto p = str;

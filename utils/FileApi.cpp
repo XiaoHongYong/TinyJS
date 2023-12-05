@@ -1,8 +1,9 @@
-﻿#include <sys/stat.h>
+#include <sys/stat.h>
 #include <time.h>
 
 #ifdef _MAC_OS
 #include <copyfile.h>
+#include <unistd.h>
 #elif defined(_WIN32)
 #define WIN32_LEAN_AND_MEAN		// Exclude rarely-used stuff from Windows headers
 #define _WIN32_WINNT	0x0500
@@ -21,15 +22,20 @@
 #include "CharEncoding.h"
 
 bool isFileExist(const char *filename) {
+#ifdef _WIN32
+    auto attr = GetFileAttributesW(utf8ToUCS2(filename).c_str());
+    return attr != INVALID_FILE_ATTRIBUTES;
+#else // #ifdef _WIN32
     struct stat filestat;
 
     memset(&filestat, 0, sizeof(filestat));
     return stat(filename, &filestat) == 0;
+#endif // #ifdef _WIN32
 }
 
 bool isDirExist(const char *filename) {
 #ifdef _WIN32
-    auto attr = GetFileAttributesA(filename);
+    auto attr = GetFileAttributesW(utf8ToUCS2(filename).c_str());
     return attr != INVALID_FILE_ATTRIBUTES && (attr & FILE_ATTRIBUTE_DIRECTORY);
 #else // #ifdef _WIN32
     struct stat filestat;
@@ -61,11 +67,14 @@ bool readFile(FILE *fp, std::string &str) {
 }
 
 bool readFile(const char *fileName, std::string &str) {
-    FILE *fp;
-
     str.clear();
 
-    fp = fopen(fileName, "rb");
+#ifdef _WIN32
+    auto fp = _wfopen(utf8ToUCS2(fileName).c_str(), L"rb");
+#else
+    auto fp = fopen(fileName, "rb");
+#endif
+
     if (fp == nullptr) {
         printf("E::%d\n", errno);
         return false;
@@ -78,7 +87,11 @@ bool readFile(const char *fileName, std::string &str) {
 }
 
 bool writeFile(cstr_t fn, const StringView &data) {
+#ifdef _WIN32
+    auto fp = _wfopen(utf8ToUCS2(fn).c_str(), L"wb");
+#else
     auto fp = fopen(fn, "wb");
+#endif
     if (fp == nullptr) {
         return false;
     }
@@ -113,6 +126,16 @@ bool filetruncate(FILE *fp, long nLen) {
 }
 
 bool getFileLength(const char *fileName, uint64_t &length) {
+#ifdef WIN32
+    WIN32_FILE_ATTRIBUTE_DATA attr;
+    if (!GetFileAttributesExW(utf8ToUCS2(fileName).c_str(), GetFileExInfoStandard, &attr)) {
+        length = 0;
+        return false;
+    }
+
+    length = attr.nFileSizeLow | ((uint64_t)attr.nFileSizeHigh << 32);
+    return true;
+#else
     struct stat filestat;
 
     memset(&filestat, 0, sizeof(filestat));
@@ -124,6 +147,7 @@ bool getFileLength(const char *fileName, uint64_t &length) {
         length = 0;
         return false;
     }
+#endif
 }
 
 int64_t getFileLength(cstr_t fileName) {
@@ -136,7 +160,12 @@ int64_t getFileLength(cstr_t fileName) {
 }
 
 bool deleteFile(const char *fileName) {
-    if (unlink(fileName) == 0) {
+#ifdef _WIN32
+    if (_wunlink(utf8ToUCS2(fileName).c_str()) == 0)
+#else
+    if (unlink(fileName) == 0)
+#endif
+    {
         return true;
     }
 
@@ -144,22 +173,26 @@ bool deleteFile(const char *fileName) {
 }
 
 bool moveFile(const char *oldname, const char *newname) {
-    return rename(oldname, newname) == 0;
-}
-
-bool removeDirectory(cstr_t lpPathName) {
 #ifdef _WIN32
-    return RemoveDirectoryA(lpPathName);
+    return _wrename(utf8ToUCS2(oldname).c_str(), utf8ToUCS2(newname).c_str()) == 0;
 #else
-    return rmdir(lpPathName) == 0;
+    return rename(oldname, newname) == 0;
 #endif
 }
 
-bool createDirectory(cstr_t lpPathName) {
+bool removeDirectory(cstr_t pathName) {
 #ifdef _WIN32
-    return CreateDirectoryA(lpPathName, nullptr);
+    return RemoveDirectoryW(utf8ToUCS2(pathName).c_str());
 #else
-    int n = mkdir(lpPathName, S_IRWXU | S_IRWXG | S_IROTH | S_IXOTH);
+    return rmdir(pathName) == 0;
+#endif
+}
+
+bool createDirectory(cstr_t pathName) {
+#ifdef _WIN32
+    return CreateDirectoryW(utf8ToUCS2(pathName).c_str(), nullptr);
+#else
+    int n = mkdir(pathName, S_IRWXU | S_IRWXG | S_IROTH | S_IXOTH);
 
     return n == 0;
 #endif
@@ -195,12 +228,13 @@ bool isDirWritable(cstr_t szDir) {
 #ifdef _WIN32
     uint32_t dwAttr;
 
-    dwAttr = GetFileAttributes(szDir);
+    utf16string dirUcs2 = utf8ToUCS2(szDir);
+    dwAttr = GetFileAttributesW(dirUcs2.c_str());
     if (dwAttr == 0xFFFFFFFF) {
         return false;
     }
 
-    if (!SetFileAttributesA(szDir, dwAttr)) {
+    if (!SetFileAttributesW(dirUcs2.c_str(), dwAttr)) {
         return false;
     }
 
@@ -564,7 +598,7 @@ bool copyFile(cstr_t existingFile, cstr_t newFile, bool failIfExists) {
     int n = copyfile(existingFile, newFile, 0, COPYFILE_STAT | COPYFILE_DATA);
     return n == 0;
 #elif defined(WIN32)
-    return CopyFileA(existingFile, newFile, failIfExists);
+    return CopyFileW(utf8ToUCS2(existingFile).c_str(), utf8ToUCS2(newFile).c_str(), failIfExists);
 #else
     int input, output;
     if ((input = open(existingFile, O_RDONLY)) == -1) {
@@ -601,7 +635,7 @@ time_t fileTimeToTime(FILETIME& ft) {
 bool getFileStatInfo(cstr_t file, FileStatInfo &infoOut) {
 #ifdef WIN32
     WIN32_FILE_ATTRIBUTE_DATA attr;
-    if (!GetFileAttributesExA(file, GetFileExInfoStandard, &attr)) {
+    if (!GetFileAttributesExW(utf8ToUCS2(file).c_str(), GetFileExInfoStandard, &attr)) {
         return false;
     }
 
@@ -635,7 +669,12 @@ bool getFileStatInfo(cstr_t file, FileStatInfo &infoOut) {
 }
 
 bool FilePtr::open(const char *fileName, const char *mode) {
+#ifdef _WIN32
+    m_fp = _wfopen(utf8ToUCS2(fileName).c_str(), utf8ToUCS2(mode).c_str());
+#else
     m_fp = fopen(fileName, mode);
+#endif
+
     return m_fp != nullptr;
 }
 

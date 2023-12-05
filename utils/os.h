@@ -34,7 +34,7 @@ public:
     const string &path() const { return _path; }
 
 #ifdef _WIN32
-    const char *getCurName() { return _findData.cFileName; }
+    const char* getCurName();
 #else
     const char *getCurName() { return _dirp ? _dirp->d_name : nullptr; }
 #endif
@@ -45,8 +45,9 @@ protected:
 
 #ifdef _WIN32
     HANDLE                      _hfind = NULL;
-    WIN32_FIND_DATAA            _findData;
+    WIN32_FIND_DATAW            _findData;
     bool                        _isFirst = true;
+    string                      _curName;
 #else
     dirent                      *_dirp = nullptr;
     DIR                         *_dp = nullptr;

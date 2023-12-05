@@ -14,8 +14,13 @@
 
 using namespace std;
 
+#ifdef _WIN32
+using utf16string = std::wstring;
+#else // #ifdef _WIN32
+using utf16string = std::u16string;
+#endif
+
 using string = std::string;
-using u16string = std::u16string;
 using mutex = std::mutex;
 using recursive_mutex = std::recursive_mutex;
 
@@ -46,6 +51,7 @@ private:
 };
 
 #define CountOf(arr)        (sizeof(arr) / sizeof(arr[0]))
+#define ConstStrLen(str)     (sizeof(str) / sizeof(str[0]) - 1)
 
 #ifdef _WIN32
 #pragma warning(disable : 4819)

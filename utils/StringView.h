@@ -15,8 +15,12 @@
 #include <vector>
 #include "Hash.h"
 
-
+#ifdef _WIN32
+using utf16_t = wchar_t;
+#else // #ifdef _WIN32
 using utf16_t = char16_t;
+#endif
+
 using utf32_t = char32_t;
 using string = std::string;
 

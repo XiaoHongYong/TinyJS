@@ -25,6 +25,7 @@ const char * strignore(const char *str, const char *charsToIgnore);
 size_t strlen_safe(const char * str, size_t maxLength);
 char *strcpy_safe(char *strDestination, size_t nLenMax, const char *strSource);
 size_t strncpy_safe(char *strDestination, size_t nLenMax, const char *strSource, size_t nToCopy);
+char *strcat_safe(char *dst, size_t size, const char *src);
 
 char *strrep(char * str, char chSrc, char chDest);
 void strrep(string &str, char chSrc, char chDest);

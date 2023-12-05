@@ -18,6 +18,7 @@
 #include "StringEx.h"
 #include "os.h"
 #include "FileApi.h"
+#include "CharEncoding.h"
 
 
 time_t getTimeInSecond() {
@@ -126,7 +127,7 @@ bool FileFind::isCurDir() {
 
 bool FileFind::_openFind(const char *path) {
     memset(&_findData, 0, sizeof(_findData));
-    _hfind = FindFirstFileA(path, &_findData);
+    _hfind = FindFirstFileW((LPCWSTR)utf8ToUCS2(path).c_str(), &_findData);
     _isFirst = true;
 
     return _hfind != nullptr;
@@ -146,7 +147,7 @@ bool FileFind::_nextFile() {
             _isFirst = false;
             return true;
         } else {
-            return FindNextFileA(_hfind, &_findData);
+            return FindNextFileW(_hfind, &_findData);
         }
     }
     return false;
@@ -158,6 +159,11 @@ bool FileFind::isCurDir() {
     }
 
     return _findData.dwFileAttributes & FILE_ATTRIBUTE_DIRECTORY;
+}
+
+const char *FileFind::getCurName() {
+    _curName = ucs2ToUtf8(_findData.cFileName);
+    return _curName.c_str();
 }
 
 #endif // #ifndef _WIN32

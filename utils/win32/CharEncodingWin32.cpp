@@ -67,7 +67,7 @@ int utf8ToMbcs(const char* str, int size, string& strOut, int encodingID) {
     }
 
     // Convert to UCS2
-    u16string ucs2;
+    utf16string ucs2;
     utf8ToUCS2(str, size, ucs2);
 
     // Convert UCS2 to MBCS
@@ -96,7 +96,7 @@ int mbcsToUtf8(const char* str, int size, string& strOut, int encodingID) {
     }
 
     // Convert to UCS2
-    u16string ucs2;
+    utf16string ucs2;
 
     int n = MultiByteToWideChar(g_encodingCodePages[encodingID].codePage, 0, str, size,
         (LPWSTR)ucs2.data(), ucs2.capacity());

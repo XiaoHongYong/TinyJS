@@ -247,7 +247,7 @@ int ucs2ToUtf8(const utf16_t *str, int nLen, string &strOut) {
 #define UTF8_3_to_UCS2(in)  ((utf16_t) (MXS((in)[0],0xE0,12) | M80S((in)[1], 6) | M80S((in)[2], 0) ))
 #define UTF8_4_to_UCS4(in)  ((utf32_t) (MXS((in)[0],0xF0,18) | M80S((in)[1],12) | M80S((in)[2], 6) | M80S((in)[3], 0) ))
 
-int utf8ToUCS2(const char *str, int nLen, u16string &strOut) {
+int utf8ToUCS2(const char *str, int nLen, utf16string &strOut) {
     ensureInputStrLen(str, nLen);
 
     strOut.resize(nLen);

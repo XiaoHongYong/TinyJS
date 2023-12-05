@@ -59,9 +59,9 @@ static void checkFromString(cstr_t *strs, int count, int64_t expects[]) {
         DateTime date;
 
         if (date.fromString(strs[i], (uint32_t)strlen(strs[i]))) {
-            assert(date.getTimeInMs() == expects[i]);
+            ASSERT_EQ(date.getTimeInMs(), expects[i]);
         } else {
-            assert(0 == expects[i]);
+            ASSERT_EQ(0, expects[i]);
         }
     }
 }

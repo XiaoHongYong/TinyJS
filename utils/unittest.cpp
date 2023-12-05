@@ -7,6 +7,7 @@
 
 #include "unittest.h"
 #include "StringEx.h"
+#include "CharEncoding.h"
 
 
 static string g_srcRootDir;
@@ -54,9 +55,9 @@ void runUnittest(int &argc, const char *argv[]) {
 
 std::string getUnittestTempDir() {
 #ifdef _WIN32
-    char path[MAX_PATH] = { 0 };
-    GetTempPathA(MAX_PATH, path);
-    return path;
+    WCHAR path[MAX_PATH] = { 0 };
+    GetTempPathW(MAX_PATH, path);
+    return ucs2ToUtf8(path);
 #else
     return "/tmp/";
 #endif
