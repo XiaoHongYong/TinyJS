@@ -32,16 +32,7 @@ include_directories(
     ${PROJECT_SOURCE_DIR}/../third-parties/googletest
 )
 
-# set(SRC 
-#     ${PROJECT_SOURCE_DIR}/LyricsLib/LyricsKeywordFilter.cpp
-#     ${PROJECT_SOURCE_DIR}/MediaTags/LrcParser.cpp
-#     ${PROJECT_SOURCE_DIR}/MediaTags/LyricsData.cpp
-#     ${PROJECT_SOURCE_DIR}/MediaTags/LyrTimestamps.cpp
-#     ${PROJECT_SOURCE_DIR}/third-parties/tiny-AES-c/aes.c
-#     ${PROJECT_SOURCE_DIR}/third-parties/zlib/crc32.c
-#     ${PROJECT_SOURCE_DIR}/third-parties/http-parser/http_parser.c
-#     ${PROJECT_SOURCE_DIR}/third-parties/googletest/src/gtest-all.cc
-# )
+set(SRC )
 
 if (UT)
     set(SRC

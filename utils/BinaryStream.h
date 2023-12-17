@@ -1,4 +1,4 @@
-﻿//
+//
 //  Copyright (c) 2021 CrintSoft, Ltd. All rights reserved.
 //
 
@@ -194,6 +194,21 @@ public:
         uint64_t n = uint64FromBE(_pos);
         _pos += 8;
         return n;
+    }
+
+    uint32_t readUIntXBE(uint32_t bytes) {
+        if (_pos + bytes > _end) {
+            throw BinaryStreamOutOfRange(__LINE__);
+        }
+
+        int x = *_pos++;
+        auto end = _pos + bytes;
+        while (_pos < end) {
+            x <<= 8;
+            x |= *_pos++;
+        }
+
+        return x;
     }
 
     const uint8_t *currentPtr() { return _pos; }

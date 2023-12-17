@@ -312,12 +312,11 @@ bool processFilesInfolder(cstr_t szBaseDir, FUNProcessFile funProc, void *lpUser
     }
 
     while (find.findNext()) {
-        if (!find.isCurDir()) {
-            funProc(find.getCurName(), szBaseDir, lpUserData);
-        } else if (strcmp(find.getCurName(), ".") != 0
-            && strcmp(find.getCurName(), "..") != 0) {
+        if (find.isCurDir()) {
             string subDir = dirStringJoin(szBaseDir, find.getCurName());
             processFilesInfolder(subDir.c_str(), funProc, lpUserData);
+        } else {
+            funProc(find.getCurName(), szBaseDir, lpUserData);
         }
     }
 
@@ -557,7 +556,7 @@ string fileNameFilterInvalidChars(cstr_t szFile) {
     return strNewName;
 }
 
-const char _SZ_FILE_PATH_INVALID_CHARS[] = ":*?\"<>|" PATH_SEP_STR;
+// const char _SZ_FILE_PATH_INVALID_CHARS[] = ":*?\"<>|" PATH_SEP_STR;
 
 bool copyDir(cstr_t lpExistingDir, cstr_t lpNewDir) {
     FileFind finder;
@@ -703,8 +702,66 @@ size_t FilePtr::read(void *buf, size_t len) {
     return fread(buf, 1, len, m_fp);
 }
 
+string FilePtr::read(size_t len) {
+    string str;
+    str.resize(len);
+    len = fread((char *)str.data(), 1, len, m_fp);
+    str.resize(len);
+
+    return str;
+}
+
 void FilePtr::flush() {
     fflush(m_fp);
+}
+
+void InputBufferFile::bind(FILE *fp, size_t sizeBuf) {
+    _fp = fp;
+    _buf.resize(sizeBuf);
+}
+
+bool InputBufferFile::read(size_t size) {
+    assert(_fp);
+
+    int toRead = int(size) - (_end - _pos);
+    if (toRead > 0) {
+        if (_buf.capacity() < size) {
+            _buf.resize(size);
+        }
+
+        if (_pos + size > _buf.capacity()) {
+            _end = _end - _pos;
+            if (_end > 0) {
+                memmove(_buf.data(), _buf.data() + _pos, _end);
+            }
+            _pos = 0;
+        }
+
+        auto read = fread(_buf.data() + _end, 1, toRead, _fp);
+        _end += read;
+        assert(_end <= _buf.size());
+
+        return read > 0;
+    }
+
+    return true;
+}
+
+void InputBufferFile::forward(int offset) {
+    _pos += offset;
+    if (_pos > _end) {
+        fseek(_fp, _pos - _end, SEEK_CUR);
+        _pos = _end = 0;
+    }
+}
+
+uint32_t InputBufferFile::filePosition(const uint8_t *p) {
+    auto pos = uint32_t((cstr_t)p - _buf.data());
+
+    assert(_fp);
+    assert(pos >= _pos && pos <= _end);
+
+    return uint32_t(ftell(_fp) - (_end - pos));
 }
 
 #if UNIT_TEST

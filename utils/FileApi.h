@@ -1,4 +1,4 @@
-﻿#pragma once
+#pragma once
 
 
 #ifndef INVALID_FILE_SIZE
@@ -108,10 +108,33 @@ public:
     size_t write(const string &data) { return write(data.c_str(), data.size()); }
     size_t write(const StringView &data) { return write(data.data, data.len); }
     size_t read(void *buf, size_t len);
+    string read(size_t len);
 
     void flush();
 
 protected:
     FILE                    *m_fp;
+
+};
+
+class InputBufferFile {
+public:
+    void bind(FILE *fp, size_t sizeBuf);
+    bool fill() { return read(_buf.capacity()); }
+    bool read(size_t size);
+    void forward(int offset);
+    void clear() { _pos = _end = 0; }
+
+    StringView buf() const { return StringView(_buf.data() + _pos, int(_end - _pos)); }
+    bool empty() const { return _pos >= _end; }
+    uint8_t *data() const { return (uint8_t *)_buf.data() + _pos; }
+    int size() const { return _end - _pos; }
+
+    uint32_t filePosition(const uint8_t *p);
+
+protected:
+    std::vector<char>               _buf;
+    int                             _pos = 0, _end = 0;
+    FILE                            *_fp = nullptr;
 
 };
