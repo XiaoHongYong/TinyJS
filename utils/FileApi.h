@@ -16,6 +16,8 @@
 bool isFileExist(const char *filename);
 bool isDirExist(const char *filename);
 
+FILE *fopenUtf8(const char *fn, const char *mode);
+
 bool readFileByBom(const char *fn, std::string &str);
 bool readFile(const char *fn, std::string &str);
 bool writeFile(cstr_t fn, const StringView &data);

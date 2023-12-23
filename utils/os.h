@@ -19,6 +19,9 @@ int64_t getTickCount();
 void Sleep(uint32_t milliseconds);
 #endif
 
+bool executeCmd(cstr_t cmdLine);
+bool executeCmdAndWait(cstr_t cmdLine, uint32_t timeOut, DWORD *exitCodeOut);
+
 class FileFind {
 public:
     FileFind();
@@ -44,7 +47,7 @@ protected:
     bool _nextFile();
 
 #ifdef _WIN32
-    HANDLE                      _hfind = NULL;
+    HANDLE                      _hfind = INVALID_HANDLE_VALUE;
     WIN32_FIND_DATAW            _findData;
     bool                        _isFirst = true;
     string                      _curName;

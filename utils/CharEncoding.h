@@ -103,9 +103,16 @@ inline bool isUTF8Encoding(const StringView &str)
 
 int mbcsToUtf8(const char *str, int len, string &strOut, int encodingID = ED_SYSDEF);
 int ucs2ToUtf8(const utf16_t *str, int len, string &strOut);
-inline string ucs2ToUtf8(const utf16_t *str, int len = -1) { string s; ucs2ToUtf8(str, len, s); return s; }
+inline string ucs2ToUtf8(const utf16_t *str, int len = -1)
+    { string s; ucs2ToUtf8(str, len, s); return s; }
+inline string ucs2ToUtf8(const utf16string &str)
+    { string s; ucs2ToUtf8(str.c_str(), (int)str.size(), s); return s; }
+
 int utf8ToUCS2(const char *str, int len, utf16string &strOut);
-inline utf16string utf8ToUCS2(const char *str, int len = -1) { utf16string s; utf8ToUCS2(str, len, s); return s; }
+inline utf16string utf8ToUCS2(const char *str, int len = -1)
+    { utf16string s; utf8ToUCS2(str, len, s); return s; }
+inline utf16string utf8ToUCS2(const std::string &str)
+    { utf16string s; utf8ToUCS2(str.c_str(), (int)str.size(), s); return s; }
 int utf8ToMbcs(const char *str, int len, string &strOut, int encodingID = ED_SYSDEF);
 
 uint32_t utf8ToUtf16Length(const uint8_t *str, uint32_t len);

@@ -152,7 +152,12 @@ inline cstr_t parseInt(cstr_t str, _int &value) {
     return str;
 }
 
+//
+// multiStr 是指使用 \0 分割的字符串, 以 \0\0  结束
+//
 void multiStrToVStr(cstr_t szText, VecStrings &vStr);
+void multiStrToVStr(cwstr_t szText, VecUtf16Strings& vStr);
+size_t getMultiStrLength(cstr_t szText);
 
 template<class _iterator>
 string strJoin(_iterator first, _iterator end, cstr_t format, cstr_t separator) {

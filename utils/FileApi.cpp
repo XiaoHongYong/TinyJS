@@ -66,6 +66,14 @@ bool readFile(FILE *fp, std::string &str) {
     return true;
 }
 
+FILE *fopenUtf8(const char *fn, const char *mode) {
+#ifdef _WIN32
+    return _wfopen(utf8ToUCS2(fn).c_str(), utf8ToUCS2(mode).c_str());
+#else
+    return fopen(fn, mode);
+#endif
+}
+
 bool readFile(const char *fileName, std::string &str) {
     str.clear();
 

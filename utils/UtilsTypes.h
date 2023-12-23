@@ -26,6 +26,7 @@ using recursive_mutex = std::recursive_mutex;
 
 using ListStrings = std::list<string>;
 using VecStrings = std::vector<string>;
+using VecUtf16Strings = std::vector<utf16string>;
 using VecInts = std::vector<int>;
 using MapStrings = std::map<string, string>;
 using SetStrings = std::set<string>;

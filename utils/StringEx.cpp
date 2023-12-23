@@ -829,6 +829,28 @@ void multiStrToVStr(cstr_t szText, VecStrings &vStr) {
     }
 }
 
+void multiStrToVStr(cwstr_t text, std::vector<utf16string>& vStr) {
+    while (*text) {
+        vStr.push_back(text);
+        while (*text != '\0') {
+            text++;
+        }
+        text++;
+    }
+}
+
+size_t getMultiStrLength(cstr_t text) {
+    auto p = text;
+    do {
+        while (*p != '\0') {
+            p++;
+        }
+        p++;
+    } while (*p);
+
+    return p - text + 1;
+}
+
 // "#FFFFFF"
 template<class _TCHARPTR, class _int_t>
 _TCHARPTR readColorValue_t(_TCHARPTR szColor, _int_t &nClr) {
@@ -855,7 +877,9 @@ _TCHARPTR readColorValue_t(_TCHARPTR szColor, _int_t &nClr) {
         szColor++;
     }
 
+#ifndef _WIN32
     nClr = ((nClr & 0xFF) << 16) + (nClr & 0xFF00) + ((nClr & 0xFF0000) >> 16);
+#endif
 
     return szColor;
 }

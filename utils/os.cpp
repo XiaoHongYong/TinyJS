@@ -127,22 +127,23 @@ bool FileFind::isCurDir() {
 
 bool FileFind::_openFind(const char *path) {
     memset(&_findData, 0, sizeof(_findData));
-    _hfind = FindFirstFileW((LPCWSTR)utf8ToUCS2(path).c_str(), &_findData);
+    utf16string pattern = utf8ToUCS2(path) + L"\\*";
+    _hfind = FindFirstFileW(pattern.c_str(), &_findData);
     _isFirst = true;
 
-    return _hfind != nullptr;
+    return _hfind != INVALID_HANDLE_VALUE;
 }
 
 void FileFind::close() {
-    if (_hfind) {
+    if (_hfind != INVALID_HANDLE_VALUE) {
         FindClose(_hfind);
-        _hfind = nullptr;
+        _hfind = INVALID_HANDLE_VALUE;
         memset(&_findData, 0, sizeof(_findData));
     }
 }
 
 bool FileFind::_nextFile() {
-    if (_hfind) {
+    if (_hfind != INVALID_HANDLE_VALUE) {
         if (_isFirst) {
             _isFirst = false;
             return true;
@@ -154,7 +155,7 @@ bool FileFind::_nextFile() {
 }
 
 bool FileFind::isCurDir() {
-    if (!_hfind) {
+    if (_hfind == INVALID_HANDLE_VALUE) {
         return false;
     }
 
@@ -167,3 +168,53 @@ const char *FileFind::getCurName() {
 }
 
 #endif // #ifndef _WIN32
+
+#ifdef _WIN32
+
+bool executeCmd(cstr_t cmdLine) {
+    STARTUPINFOW startInfo;
+    PROCESS_INFORMATION procInfo;
+
+    memset(&startInfo, 0, sizeof(startInfo));
+    memset(&procInfo, 0, sizeof(procInfo));
+
+    utf16string utf16CmdLine = utf8ToUCS2(cmdLine);
+    if (!CreateProcessW(nullptr, (LPWSTR)utf16CmdLine.c_str(), nullptr, nullptr, false, 0, nullptr, nullptr, &startInfo, &procInfo)) {
+        return false;
+    }
+
+    CloseHandle(procInfo.hProcess);
+    CloseHandle(procInfo.hThread);
+
+    return true;
+}
+
+bool executeCmdAndWait(cstr_t cmdLine, uint32_t timeOut, DWORD *exitCodeOut) {
+    STARTUPINFOW startInfo;
+    PROCESS_INFORMATION procInfo;
+
+    memset(&startInfo, 0, sizeof(startInfo));
+    memset(&procInfo, 0, sizeof(procInfo));
+
+    utf16string utf16CmdLine = utf8ToUCS2(cmdLine);
+    if (!CreateProcessW(nullptr, (LPWSTR)utf16CmdLine.c_str(), nullptr, nullptr, false, 0, nullptr, nullptr, &startInfo, &procInfo)) {
+        return false;
+    }
+
+    bool ret = true;
+    if (timeOut != 0 && WaitForSingleObject(procInfo.hProcess, timeOut) == WAIT_TIMEOUT) {
+        TerminateProcess(procInfo.hProcess, 0);
+        ret = false;
+    }
+
+    if (exitCodeOut && ret) {
+        GetExitCodeProcess(procInfo.hProcess, exitCodeOut);
+    }
+
+    CloseHandle(procInfo.hProcess);
+    CloseHandle(procInfo.hThread);
+
+    return ret;
+}
+
+#endif
