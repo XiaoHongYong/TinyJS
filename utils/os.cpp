@@ -1,4 +1,4 @@
-﻿/*
+/*
  * os.cpp
  *
  */
@@ -189,7 +189,7 @@ bool executeCmd(cstr_t cmdLine) {
     return true;
 }
 
-bool executeCmdAndWait(cstr_t cmdLine, uint32_t timeOut, DWORD *exitCodeOut) {
+bool executeCmdAndWait(cstr_t cmdLine, uint32_t timeOut, uint32_t *exitCodeOut) {
     STARTUPINFOW startInfo;
     PROCESS_INFORMATION procInfo;
 
@@ -208,7 +208,7 @@ bool executeCmdAndWait(cstr_t cmdLine, uint32_t timeOut, DWORD *exitCodeOut) {
     }
 
     if (exitCodeOut && ret) {
-        GetExitCodeProcess(procInfo.hProcess, exitCodeOut);
+        GetExitCodeProcess(procInfo.hProcess, (DWORD *)exitCodeOut);
     }
 
     CloseHandle(procInfo.hProcess);

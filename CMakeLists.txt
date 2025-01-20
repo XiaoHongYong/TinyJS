@@ -41,22 +41,37 @@ if (UT)
     )
 endif(UT)
 
-aux_source_directory(${PROJECT_SOURCE_DIR}/utils SRC)
-list(REMOVE_ITEM SRC "${PROJECT_SOURCE_DIR}/main.cpp") # 此文件需要被排除
-aux_source_directory(${PROJECT_SOURCE_DIR}/strings SRC)
-aux_source_directory(${PROJECT_SOURCE_DIR}/parser SRC)
-aux_source_directory(${PROJECT_SOURCE_DIR}/objects SRC)
-aux_source_directory(${PROJECT_SOURCE_DIR}/generated SRC)
-aux_source_directory(${PROJECT_SOURCE_DIR}/interpreter SRC)
-aux_source_directory(${PROJECT_SOURCE_DIR}/api-web SRC)
-aux_source_directory(${PROJECT_SOURCE_DIR}/api-built-in SRC)
-# message(SRC="${SRC}")
+set(SRC_PATHS
+    ${PROJECT_SOURCE_DIR}/utils
+    ${PROJECT_SOURCE_DIR}/strings
+    ${PROJECT_SOURCE_DIR}/parser
+    ${PROJECT_SOURCE_DIR}/objects
+    ${PROJECT_SOURCE_DIR}/generated
+    ${PROJECT_SOURCE_DIR}/interpreter
+    ${PROJECT_SOURCE_DIR}/api-web
+    ${PROJECT_SOURCE_DIR}/api-built-in
+)
 
 if (UT)
-    aux_source_directory(${PROJECT_SOURCE_DIR}/unittest/objects SRC)
-    aux_source_directory(${PROJECT_SOURCE_DIR}/unittest/parser SRC)
-    aux_source_directory(${PROJECT_SOURCE_DIR}/unittest/utils SRC)
+    set(SRC_PATHS ${SRC_PATHS}
+        ${PROJECT_SOURCE_DIR}/unittest/objects
+        ${PROJECT_SOURCE_DIR}/unittest/parser
+        ${PROJECT_SOURCE_DIR}/unittest/utils
+    )
 endif(UT)
+
+set(HEADER_FILES)
+
+foreach(_PATH ${SRC_PATHS})
+    aux_source_directory(${_PATH} SRC)
+
+    file(GLOB _HEADERS_H "${_PATH}/*.h")
+    file(GLOB _HEADERS_HPP "${_PATH}/*.hpp")
+    set(HEADER_FILES ${HEADER_FILES} ${_HEADERS_H} ${_HEADERS_HPP})
+endforeach()
+
+list(REMOVE_ITEM SRC "${PROJECT_SOURCE_DIR}/main.cpp") # 此文件需要被排除
+# message(SRC="${SRC}")
 
 set(LINK_OPT_FRAME_WORK)
 set(LINK_OPT_EXTRA)
@@ -78,8 +93,8 @@ set(SRC_TINY_JS
     ${SRC}
     ${PROJECT_SOURCE_DIR}/main.cpp
 )
-add_executable(${PROJECT_NAME} ${SRC_TINY_JS})
+add_executable(${PROJECT_NAME} ${SRC_TINY_JS} ${HEADER_FILES})
 target_link_libraries(${PROJECT_NAME} PRIVATE ${LINK_OPT_EXTRA})
 
-add_library(${PROJECT_NAME}_STATIC ${SRC})
+add_library(${PROJECT_NAME}_STATIC ${SRC} ${HEADER_FILES})
 target_link_libraries(${PROJECT_NAME}_STATIC PRIVATE ${LINK_OPT_EXTRA})

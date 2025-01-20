@@ -1,4 +1,4 @@
-﻿#pragma once
+#pragma once
 
 #ifndef __os__
 #define __os__
@@ -20,7 +20,7 @@ void Sleep(uint32_t milliseconds);
 #endif
 
 bool executeCmd(cstr_t cmdLine);
-bool executeCmdAndWait(cstr_t cmdLine, uint32_t timeOut, DWORD *exitCodeOut);
+bool executeCmdAndWait(cstr_t cmdLine, uint32_t timeOut, uint32_t *exitCodeOut);
 
 class FileFind {
 public:
