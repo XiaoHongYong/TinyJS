@@ -7,6 +7,7 @@
 #ifndef __BinaryStream__
 #define __BinaryStream__
 
+#include <stdexcept>
 #include "AllocatorPool.h"
 #include "LinkedString.hpp"
 

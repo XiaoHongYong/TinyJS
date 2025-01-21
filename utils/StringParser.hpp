@@ -8,6 +8,7 @@
 #ifndef StringParser_hpp
 #define StringParser_hpp
 
+#include <stdexcept>
 #include "StringView.h"
 #include "UtilsTypes.h"
 
