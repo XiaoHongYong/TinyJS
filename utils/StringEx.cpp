@@ -877,9 +877,7 @@ _TCHARPTR readColorValue_t(_TCHARPTR szColor, _int_t &nClr) {
         szColor++;
     }
 
-#ifndef _WIN32
     nClr = ((nClr & 0xFF) << 16) + (nClr & 0xFF00) + ((nClr & 0xFF0000) >> 16);
-#endif
 
     return szColor;
 }
@@ -921,7 +919,7 @@ string stringFromColor(COLORREF clr) {
 }
 
 void stringFromColor(char szStr[], COLORREF clr) {
-    sprintf(szStr, "#%02X%02X%02X", clr & 0xFF, (clr >> 8) & 0xff, (clr >> 16) & 0xff);
+    sprintf(szStr, "#%02X%02X%02X", GetRValue(clr), GetGValue(clr), GetBValue(clr));
 }
 
 #if UNIT_TEST
