@@ -1,4 +1,4 @@
-﻿#include <cstdarg>
+#include <cstdarg>
 #include <math.h>
 #include "UtilsTypes.h"
 #include "StringEx.h"
@@ -917,6 +917,12 @@ string stringFromColor(COLORREF clr) {
     stringFromColor(szColor, clr);
     return szColor;
 }
+
+#ifndef RGB
+#define GetRValue(rgb)      ((uint8_t)(rgb))
+#define GetGValue(rgb)      ((uint8_t)(((rgb) >> 8) & 0xFF))
+#define GetBValue(rgb)      ((uint8_t)((rgb)>>16))
+#endif
 
 void stringFromColor(char szStr[], COLORREF clr) {
     sprintf(szStr, "#%02X%02X%02X", GetRValue(clr), GetGValue(clr), GetBValue(clr));
