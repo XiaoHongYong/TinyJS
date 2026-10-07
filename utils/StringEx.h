@@ -217,6 +217,8 @@ string strJoinConvert(_iterator first, _iterator end, cstr_t separator) {
 
 int stringToInt(cstr_t str, int nDefault = 0);
 COLORREF stringToColor(cstr_t szColor, COLORREF nDefault = 0);
+// 解析 #RRGGBB 或 #RRGGBBAA；成功返回 true（6 位时 alphaOut=255）
+bool parseColorValue(cstr_t szColor, COLORREF &rgbOut, uint8_t &alphaOut);
 
 string stringFromInt(int n);
 string stringFromColor(COLORREF clr);

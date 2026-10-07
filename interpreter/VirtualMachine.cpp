@@ -820,7 +820,7 @@ void JsVirtualMachine::call(Function *function, VMContext *ctx, VecVMStackScopes
                 break;
             }
             // default:
-            //    ERR_LOG1("Unkown opcode: %d", code);
+            //    ERR_LOG1("Unknown opcode: %d", code);
             //    break;
             case OP_POP_STACK_TOP: {
                 assert(stack.size() >= 1);

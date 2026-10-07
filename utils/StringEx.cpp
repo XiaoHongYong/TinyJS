@@ -892,19 +892,40 @@ int stringToInt(cstr_t str, int nDefault) {
     return value;
 }
 
-// "#FFFFFF"
-COLORREF stringToColor(cstr_t szColor, COLORREF nDefault) {
+bool parseColorValue(cstr_t szColor, COLORREF &rgbOut, uint8_t &alphaOut) {
     if (isEmptyString(szColor)) {
-        return nDefault;
+        return false;
     }
 
     uint32_t clr;
     cstr_t p = readColorValue_t(szColor, clr);
-    if (*p != '\0') {
-        return nDefault;
-    } else {
-        return clr;
+    if (*p == '\0') {
+        rgbOut = clr;
+        alphaOut = 255;
+        return true;
     }
+    // 可选 AA（皮肤 theme 常用 #00000000 表示全透明）
+    if (isHexChar(p[0]) && isHexChar(p[1]) && p[2] == '\0') {
+        auto hexNibble = [](char ch) -> int {
+            if (ch >= '0' && ch <= '9') return ch - '0';
+            if (ch >= 'a' && ch <= 'f') return 10 + ch - 'a';
+            return 10 + ch - 'A';
+        };
+        rgbOut = clr;
+        alphaOut = (uint8_t)((hexNibble(p[0]) << 4) | hexNibble(p[1]));
+        return true;
+    }
+    return false;
+}
+
+// "#FFFFFF" 或 "#RRGGBBAA"（AA 对 COLORREF 忽略，仅校验格式）
+COLORREF stringToColor(cstr_t szColor, COLORREF nDefault) {
+    COLORREF rgb;
+    uint8_t alpha;
+    if (!parseColorValue(szColor, rgb, alpha)) {
+        return nDefault;
+    }
+    return rgb;
 }
 
 string stringFromInt(int value) {
@@ -1087,6 +1108,26 @@ TEST(StringEx, testReadColorValue_t) {
 
     p = readColorValue_t("576C910", clr);
     ASSERT_TRUE(*p == '0' && clr == RGB(0x57, 0x6c, 0x91));
+}
+
+TEST(StringEx, parseColorValueRRGGBBAA) {
+    COLORREF rgb = 0x123456;
+    uint8_t alpha = 1;
+
+    ASSERT_TRUE(parseColorValue("#00000000", rgb, alpha));
+    ASSERT_EQ(rgb, RGB(0, 0, 0));
+    ASSERT_EQ(alpha, 0);
+
+    ASSERT_TRUE(parseColorValue("#EEF2F8", rgb, alpha));
+    ASSERT_EQ(rgb, RGB(0xEE, 0xF2, 0xF8));
+    ASSERT_EQ(alpha, 255);
+
+    ASSERT_TRUE(parseColorValue("#11223380", rgb, alpha));
+    ASSERT_EQ(rgb, RGB(0x11, 0x22, 0x33));
+    ASSERT_EQ(alpha, 0x80);
+
+    ASSERT_FALSE(parseColorValue("#1122338", rgb, alpha)); // 7 位非法
+    ASSERT_EQ(stringToColor("#00000000", RGB(1, 2, 3)), RGB(0, 0, 0));
 }
 
 TEST(StringEx, testStrSplit) {

@@ -60,12 +60,17 @@ bool FileFind::openDir(const char *path, const char *extFilter) {
         _path.push_back(PATH_SEP_CHAR);
     }
 
-    if (extFilter) {
-        if (extFilter[0] == '.') {
-            _extFilter.assign(extFilter);
-        } else {
+    // extFilter 为空则枚举全部；可为 ".ini"、"ini" 或 "*.ini"
+    if (extFilter && extFilter[0]) {
+        const char *p = extFilter;
+        while (*p == '*') {
+            p++;
+        }
+        if (p[0] == '.') {
+            _extFilter.assign(p);
+        } else if (p[0]) {
             _extFilter = ".";
-            _extFilter.append(extFilter);
+            _extFilter.append(p);
         }
     }
 
