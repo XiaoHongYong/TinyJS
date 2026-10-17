@@ -1149,12 +1149,15 @@ IJsNode *JSParser::_expectExpression(Precedence pred, bool enableIn) {
     while (true) {
         switch (_curToken.type) {
             case TK_CONDITIONAL: {
-                if (pred >= PRED_ADD)
+                // 三元优先级低于比较/逻辑等（PRED_CONDITIONAL），不能用 PRED_ADD，
+                // 否则 a > b ? c : d 会被拆成 a > (b ? c : d)
+                if (pred >= PRED_CONDITIONAL)
                     return expr;
                 _readToken();
-                auto exprTrue = _expectExpression();
+                // 真/假分支为 AssignmentExpression，允许嵌套三元（右结合）与赋值
+                auto exprTrue = _expectExpression(PRED_ASSIGNMENT, enableIn);
                 _expectToken(TK_COLON);
-                auto exprFalse = _expectExpression();
+                auto exprFalse = _expectExpression(PRED_ASSIGNMENT, enableIn);
                 expr = PoolNew(_pool, JsExprConditional)(expr, exprTrue, exprFalse);
                 break;
             }
