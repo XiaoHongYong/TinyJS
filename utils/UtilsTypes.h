@@ -1,5 +1,13 @@
 ﻿#pragma once
 
+#ifdef _WIN32
+// 必须在 <cstddef> 之前：C++17 的 std::byte 与 Windows SDK（rpcndr.h）的 byte 冲突。
+// 本头文件有 using namespace std，会把 std::byte 拉进全局命名空间。
+#ifndef _HAS_STD_BYTE
+#define _HAS_STD_BYTE 0
+#endif
+#endif
+
 #include <assert.h>
 #include <cstddef>
 #include <stdint.h>
